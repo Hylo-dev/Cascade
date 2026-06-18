@@ -1,0 +1,23 @@
+# ─── macOS ──────────────────────────────────────────────────────────
+.DS_Store
+
+# ─── Xcode ──────────────────────────────────────────────────────────
+# Build products and per-user state — regenerable or machine-specific.
+build/
+DerivedData/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+# Per-user Xcode data: schemes management, breakpoints, window layout.
+# Matches Cascade.xcodeproj/xcuserdata and Cascade.xcworkspace/xcuserdata.
+xcuserdata/
+
+# ─── Swift Package Manager ─────────────────────────────────────────
+# SwiftPM build output (e.g. CascadeKit/.build) and local package state —
+# this is the "merda" that must never be committed.
+.build/
+.swiftpm/
+
+# ─── Misc ───────────────────────────────────────────────────────────
+*.swp
+*~
