@@ -21,6 +21,16 @@ protocol EventMonitoring: AnyObject {
     /// reasons to re-resolve which display we should be following.
     var onActiveDisplayMayHaveChanged: (() -> Void)? { get set }
 
+    /// Fired when the active Space changes — this covers both a desktop swipe
+    /// (notch should stay open) and Mission Control opening (notch should close).
+    /// The controller disambiguates the two; the monitor just reports the event.
+    var onSpaceChanged: (() -> Void)? { get set }
+
+    /// Fired when the screen locks / unlocks. The overlay hides while locked so
+    /// it never appears on the login / lock screen, and comes back on unlock.
+    var onScreenLocked  : (() -> Void)? { get set }
+    var onScreenUnlocked: (() -> Void)? { get set }
+
     func start()
     func stop()
 }

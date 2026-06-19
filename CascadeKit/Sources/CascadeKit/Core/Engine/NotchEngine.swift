@@ -24,9 +24,10 @@ public final class NotchEngine {
         let hostView = NotchHostView(frame: .zero)
         let panel    = NotchPanel(contentView: hostView)
 
-        let resolver    = SafeAreaNotchDetector()
-        let monitor     = MouseEventMonitor()
-        let morphEngine = DisplayLinkMorphEngine(view: hostView)
+        let resolver     = SafeAreaNotchDetector()
+        let monitor      = MouseEventMonitor()
+        let morphEngine  = DisplayLinkMorphEngine(view: hostView)
+        let windowPinner = SkyLightWindowPinner()
 
         self.hostView   = hostView
         self.panel      = panel
@@ -36,7 +37,8 @@ public final class NotchEngine {
             monitor      : monitor,
             morphEngine  : morphEngine,
             panel        : panel,
-            hostView     : hostView
+            hostView     : hostView,
+            windowPinner : windowPinner
         )
     }
 

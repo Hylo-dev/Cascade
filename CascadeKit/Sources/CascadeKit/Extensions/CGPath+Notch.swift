@@ -95,6 +95,9 @@ extension CGPath {
 
         path.closeSubpath()
 
-        return path.copy() ?? path
+        // Return the mutable path directly: it's built fresh each frame and
+        // never mutated after, and `CAShapeLayer.path` copies on assignment —
+        // so an extra `.copy()` here would just be a wasted per-frame allocation.
+        return path
     }
 }

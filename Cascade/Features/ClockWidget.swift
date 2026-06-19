@@ -6,17 +6,20 @@
 import SwiftUI
 import CascadeKit
 
-/// ClockWidget is a demo widget: a live clock shown in the expanded notch.
+/// ClockWidget is a demo widget: a live clock placed on the notch grid.
 ///
-/// It exists to exercise the widget SDK end to end — registration, region
-/// placement, lifecycle and SwiftUI content — without touching any engine
-/// internals. It talks to nothing but the `NotchWidget` protocol, which is the
-/// whole point: widgets are decoupled from the app and the engine.
+/// It exists to exercise the widget SDK end to end — id/kind, grid size,
+/// lifecycle and SwiftUI content — without touching any engine internals. It
+/// talks to nothing but the `NotchWidget` protocol, which is the whole point:
+/// widgets are decoupled from the app and the engine.
 final class ClockWidget: NotchWidget {
 
-    static let identifier = WidgetIdentifier("com.cascade.clock")
+    let id = WidgetIdentifier("clock-1") // UUID().uuidString
 
-    let preferredRegion: NotchRegion = .expanded
+    static let kind = WidgetKind("com.cascade.clock")
+
+    /// A wide, one-row tile (compact): two columns by one row.
+    let size = GridSpan(columns: 4, rows: 1)
 
     func makeContentView() -> AnyView {
         AnyView(ClockContentView())
@@ -32,10 +35,12 @@ private struct ClockContentView: View {
 
         TimelineView(.periodic(from: .now, by: 1)) { context in
 
-            Text(context.date, format: .dateTime.hour().minute().second())
-                .font(.system(size: 34, weight: .semibold, design: .rounded))
+            Text(context.date, format: .dateTime.hour().minute())
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white)
                 .monospacedDigit()
+                .minimumScaleFactor(0.5)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 }

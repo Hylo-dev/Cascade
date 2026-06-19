@@ -5,7 +5,6 @@
 
 import AppKit
 import Observation
-import os
 import QuartzCore
 
 /// NotchController is the brain of the notch: it owns the discrete state, wires
@@ -33,12 +32,10 @@ final class NotchController {
     @ObservationIgnored private let morphEngine  : MorphEngineDriving
     @ObservationIgnored private let panel        : NotchPanel
     @ObservationIgnored private let hostView     : NotchHostView
+    @ObservationIgnored private let windowPinner : WindowPinning
 
     @ObservationIgnored private var leadingSpring : Spring
     @ObservationIgnored private var trailingSpring: Spring
-
-    @ObservationIgnored
-    private let log = Logger(subsystem: "hylo.Cascade", category: "NotchController")
 
     /// Slack (in points) added around the stay-open region. It absorbs pointer
     /// jitter at the edges and — crucially — extends the region past the very
@@ -49,13 +46,24 @@ final class NotchController {
 
     @ObservationIgnored private let widgetHost = WidgetHost()
 
+    /// The previous pointer sample, so we can test the *segment* travelled since
+    /// the last event — a fast flick can land samples on both sides of the small
+    /// trigger band without ever sampling inside it.
+    @ObservationIgnored private var lastPointer: CGPoint?
+
+    /// Cached "is Mission Control showing" flag, updated on Space changes. It
+    /// lets the hover path block opening with a cheap bool check instead of a
+    /// window-list query on every open; it self-heals in `handlePointer`.
+    @ObservationIgnored private var isMissionControlShowing = false
+
     init(
         configuration: NotchConfiguration,
         resolver     : ActiveDisplayResolving,
         monitor      : EventMonitoring,
         morphEngine  : MorphEngineDriving,
         panel        : NotchPanel,
-        hostView     : NotchHostView
+        hostView     : NotchHostView,
+        windowPinner : WindowPinning
     ) {
         self.configuration  = configuration
         self.resolver       = resolver
@@ -63,6 +71,7 @@ final class NotchController {
         self.morphEngine    = morphEngine
         self.panel          = panel
         self.hostView       = hostView
+        self.windowPinner   = windowPinner
         self.leadingSpring  = Spring(parameters: configuration.spring)
         self.trailingSpring = Spring(parameters: configuration.spring)
     }
@@ -88,10 +97,21 @@ final class NotchController {
             self?.refreshActiveDisplay()
         }
 
-        monitor.start()
-        panel.orderFrontRegardless()
+        monitor.onSpaceChanged = { [weak self] in
+            self?.handleSpaceChange()
+        }
 
-        log.notice("Notch started. panel=\(NSStringFromRect(self.panel.frame), privacy: .public) visible=\(self.panel.isVisible, privacy: .public) level=\(self.panel.level.rawValue, privacy: .public)")
+        monitor.onScreenLocked = { [weak self] in
+            // Hide while locked so the overlay never shows on the login screen.
+            self?.panel.orderOut(nil)
+        }
+
+        monitor.onScreenUnlocked = { [weak self] in
+            self?.presentPanel()
+        }
+
+        monitor.start()
+        presentPanel()
     }
 
     /// Hide the overlay and stop all observation and animation.
@@ -99,6 +119,15 @@ final class NotchController {
         monitor.stop()
         morphEngine.stop()
         panel.orderOut(nil)
+    }
+
+    /// Order the panel on screen and pin it into its SkyLight space. Pinning has
+    /// to come after the panel is visible (it needs a valid `windowNumber`); we
+    /// also call this on unlock, because hiding the window can drop its space
+    /// membership and it must be re-pinned to stay anchored.
+    private func presentPanel() {
+        panel.orderFrontRegardless()
+        windowPinner.pin(panel)
     }
 
     /// Register a widget with the host. Safe to call before or after `start()`.
@@ -120,8 +149,6 @@ final class NotchController {
         let didChange = display.displayID != activeDisplay?.displayID
 
         activeDisplay = display
-
-        log.notice("Active display \(display.displayID, privacy: .public) frame=\(NSStringFromRect(display.frame), privacy: .public) hasHardwareNotch=\(display.hasHardwareNotch, privacy: .public) changed=\(didChange, privacy: .public)")
 
         guard didChange else {
             return
@@ -157,12 +184,33 @@ final class NotchController {
     private func handlePointer(at location: CGPoint) {
 
         guard let display = activeDisplay else {
+            lastPointer = location
             return
         }
 
+        // Remember this sample for the next segment test, whatever we decide.
+        defer { lastPointer = location }
+
         if state.isClosed {
-            if restingTriggerZone(for: display).contains(location) {
-                setState(.open)
+            // Test the segment the pointer travelled since the last sample, not
+            // just where it is now: a fast flick can skip clean over the small
+            // trigger band between two events and never land inside it.
+            let zone = restingTriggerZone(for: display)
+
+            if zone.intersects(segmentFrom: lastPointer ?? location, to: location) {
+
+                // Don't let a hover re-open the notch while Mission Control is up
+                // (that open/close fight with the space-change close is the
+                // flicker). The cached flag keeps the common case a cheap bool;
+                // only when it's set do we pay for a window-list re-check, which
+                // also clears the flag once Mission Control has dismissed.
+                if isMissionControlShowing {
+                    isMissionControlShowing = isMissionControlActive()
+                }
+
+                if !isMissionControlShowing {
+                    setState(.open)
+                }
             }
         } else {
             // Inset negatively to grow the region, so the top screen edge and a
@@ -201,6 +249,74 @@ final class NotchController {
             width : configuration.expandedHalfWidth * 2,
             height: configuration.expandedHeight
         )
+    }
+
+    // MARK: - Spaces / Mission Control
+
+    /// `activeSpaceDidChange` fires for *both* a desktop swipe and Mission
+    /// Control opening, so we disambiguate by what is on screen: Mission Control
+    /// (and Exposé / show-desktop) puts up a full-screen Dock-owned window, a
+    /// plain swipe does not.
+    ///
+    /// - Mission Control → collapse, animated (the mouse-leave that normally
+    ///   closes the notch never arrives while the overview holds the events).
+    /// - Plain swipe → do nothing: the notch stays open and anchored, because
+    ///   the panel joins all Spaces and is stationary. (We deliberately do *not*
+    ///   re-order the panel here — doing that on every fire is what made it
+    ///   flicker.)
+    private func handleSpaceChange() {
+
+        isMissionControlShowing = isMissionControlActive()
+
+        guard isMissionControlShowing else {
+            return
+        }
+
+        setState(.closed)
+        lastPointer = nil
+    }
+
+    /// Whether Mission Control / Exposé / show-desktop is currently on screen.
+    ///
+    /// Those overviews are drawn by the Dock (or WindowManager) as a window
+    /// roughly the size of the whole display; a normal desktop swipe puts up no
+    /// such window. We match on owner + bounds — never window *names* — and
+    /// exclude desktop elements (the wallpaper is also full-screen), so this
+    /// needs no screen-recording permission and won't false-positive on the
+    /// desktop.
+    private func isMissionControlActive() -> Bool {
+
+        guard let display = activeDisplay else {
+            return false
+        }
+
+        let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+
+        guard let windows = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else {
+            return false
+        }
+
+        let minWidth  = display.frame.width  * 0.9
+        let minHeight = display.frame.height * 0.9
+
+        for window in windows {
+
+            guard let owner = window[kCGWindowOwnerName as String] as? String,
+                  owner == "Dock" || owner == "WindowManager" else {
+                continue
+            }
+
+            guard let boundsDict = window[kCGWindowBounds as String] as? NSDictionary,
+                  let bounds = CGRect(dictionaryRepresentation: boundsDict as CFDictionary) else {
+                continue
+            }
+
+            if bounds.width >= minWidth, bounds.height >= minHeight {
+                return true
+            }
+        }
+
+        return false
     }
 
     // MARK: - State & morph
@@ -305,7 +421,7 @@ final class NotchController {
     /// it never touches the 120 Hz path.
     private func renderContent() {
 
-        guard activeDisplay != nil else {
+        guard let display = activeDisplay else {
             return
         }
 
@@ -320,9 +436,21 @@ final class NotchController {
         )
         .insetBy(dx: 20, dy: 16)
 
+        let notchWidth    = display.hasHardwareNotch ? display.notch.size.width  : 0
+        let topBandHeight = display.hasHardwareNotch ? display.notch.size.height : configuration.fallbackRestingSize.height
+
+        // The content host fills the whole band; the widgets are positioned
+        // inside it from the resolved frames (which are in host, y-up coords).
+        let content = widgetHost.makeContentView(
+            interior     : interior,
+            notchWidth   : notchWidth,
+            topBandHeight: topBandHeight,
+            hostHeight   : hostView.bounds.height
+        )
+
         hostView.setContent(
-            widgetHost.makeContentView(),
-            frame    : interior,
+            content,
+            frame    : hostView.bounds,
             isVisible: !state.isClosed
         )
     }

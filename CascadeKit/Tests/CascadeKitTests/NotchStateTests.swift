@@ -37,11 +37,4 @@ struct NotchStateTests {
         state.remove(.leading)
         #expect(state == .trailing)
     }
-
-    @Test
-    func regionsMapToTheStateThatRevealsThem() {
-        #expect(NotchRegion.leading.requiredState  == .leading)
-        #expect(NotchRegion.trailing.requiredState == .trailing)
-        #expect(NotchRegion.expanded.requiredState == .open)
-    }
 }

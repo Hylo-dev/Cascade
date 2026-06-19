@@ -46,7 +46,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Register the demo widget, then start. Widgets are added through the
         // engine's public API; the engine never sees their concrete type.
-        notch.register(ClockWidget())
+        for _ in 0...10 {
+            notch.register(ClockWidget())
+        }
 
         notch.start()
     }

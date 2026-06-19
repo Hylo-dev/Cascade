@@ -19,6 +19,9 @@ final class MouseEventMonitor: EventMonitoring {
 
     var onPointerMoved               : ((CGPoint) -> Void)?
     var onActiveDisplayMayHaveChanged: (() -> Void)?
+    var onSpaceChanged               : (() -> Void)?
+    var onScreenLocked               : (() -> Void)?
+    var onScreenUnlocked             : (() -> Void)?
 
     private var globalMouse: Any?
     private var localMouse : Any?
@@ -53,6 +56,32 @@ final class MouseEventMonitor: EventMonitoring {
             name    : NSApplication.didChangeScreenParametersNotification,
             object  : nil
         )
+
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(spaceChanged),
+            name    : NSWorkspace.activeSpaceDidChangeNotification,
+            object  : nil
+        )
+
+        // Screen lock / unlock — posted by loginwindow on the system-wide
+        // distributed center. We hide the overlay while locked so it never
+        // shows on the login / lock screen.
+        let distributed = DistributedNotificationCenter.default()
+
+        distributed.addObserver(
+            self,
+            selector: #selector(screenLocked),
+            name    : NSNotification.Name("com.apple.screenIsLocked"),
+            object  : nil
+        )
+
+        distributed.addObserver(
+            self,
+            selector: #selector(screenUnlocked),
+            name    : NSNotification.Name("com.apple.screenIsUnlocked"),
+            object  : nil
+        )
     }
 
     func stop() {
@@ -70,6 +99,7 @@ final class MouseEventMonitor: EventMonitoring {
 
         NSWorkspace.shared.notificationCenter.removeObserver(self)
         NotificationCenter.default.removeObserver(self)
+        DistributedNotificationCenter.default().removeObserver(self)
     }
 
     deinit {
@@ -92,5 +122,20 @@ final class MouseEventMonitor: EventMonitoring {
     @objc
     private func activeDisplayMayHaveChanged() {
         onActiveDisplayMayHaveChanged?()
+    }
+
+    @objc
+    private func spaceChanged() {
+        onSpaceChanged?()
+    }
+
+    @objc
+    private func screenLocked() {
+        onScreenLocked?()
+    }
+
+    @objc
+    private func screenUnlocked() {
+        onScreenUnlocked?()
     }
 }

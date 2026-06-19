@@ -5,101 +5,171 @@
 
 import SwiftUI
 
-/// WidgetHost owns the registered widgets and decides which are live.
+/// WidgetHost is the layout workspace: the widget instances (deduplicated), the
+/// pages, and the rendering of the current page onto the grid.
 ///
-/// It is the bridge between the discrete `NotchState` and the widgets: when a
-/// region becomes visible the host `activate`s its widgets (handing each a
-/// context) and when it hides the host `suspend`s them, so a closed notch holds
-/// no widget resources. It also builds the SwiftUI view the renderer shows
-/// inside the open notch.
+/// - `widgets` holds each instance once, keyed by id; a screen references widgets
+///   by id, so one widget shown on several screens is never duplicated.
+/// - `screens` are the ordered pages (the slider will page through them; for now
+///   there is one).
+/// - It owns the pure `NotchLayoutResolver` and turns the current screen's
+///   arrangement into a positioned SwiftUI `ZStack` for the renderer.
+///
+/// Lifecycle: when the notch opens the host `activate`s the current screen's
+/// widgets (handing each a context) and `suspend`s them when it closes, so a
+/// closed notch holds no widget resources.
 @MainActor
 final class WidgetHost {
 
     /// Fired when a widget asks for a content refresh; the controller re-renders.
     var onContentChanged: (() -> Void)?
 
-    private var widgets   : [NotchWidget] = []
-    private var contexts  : [WidgetIdentifier: WidgetContext] = [:]
-    private var liveState : NotchState = .closed
+    private var widgets : [WidgetIdentifier: NotchWidget] = [:]
+    private var screens : [NotchScreen] = [NotchScreen(id: 0)]
+    private var currentScreenIndex = 0
 
-    func register(_ widget: NotchWidget) {
-        widgets.append(widget)
+    private var contexts      : [WidgetIdentifier: WidgetContext] = [:]
+    private var activeWidgets : Set<WidgetIdentifier> = []
+
+    private let resolver: NotchLayoutResolver
+
+    init(metrics: NotchLayoutMetrics = .default) {
+        self.resolver = NotchLayoutResolver(metrics: metrics)
     }
 
-    /// React to a state transition: activate widgets whose region just became
-    /// visible, suspend those whose region just hid, and refresh the rest.
-    ///
-    /// Visibility is uniform: a region is visible when the state contains its
-    /// `requiredState` (`.expanded` needs both side bits, a side needs its own).
+    private var currentScreen: NotchScreen {
+        get { screens[currentScreenIndex] }
+        set { screens[currentScreenIndex] = newValue }
+    }
+
+    /// Add a widget instance and, if it isn't placed yet, auto-place it into the
+    /// first free block of the current screen's main rows.
+    func register(_ widget: NotchWidget) {
+
+        widgets[widget.id] = widget
+
+        guard currentScreen.arrangement[widget.id] == nil else {
+            return
+        }
+
+        if let placement = autoPlacement(for: widget.size) {
+            currentScreen.arrangement[widget.id] = placement
+        }
+    }
+
+    /// Activate the current screen's widgets when the notch is open, suspend them
+    /// all when it closes. (Per-screen activation; switching screens will re-run
+    /// this once paging exists.)
     func update(state: NotchState) {
 
-        for widget in widgets {
+        guard !state.isClosed else {
+            activeWidgets.forEach { widgets[$0]?.suspend() }
+            activeWidgets.removeAll()
+            contexts.removeAll()
+            return
+        }
 
-            let required   = widget.preferredRegion.requiredState
-            let isVisible  = state.contains(required)
-            let wasVisible = liveState.contains(required)
-            let id         = type(of: widget).identifier
+        for id in currentScreen.arrangement.keys {
 
-            if isVisible, !wasVisible {
+            guard let widget = widgets[id] else {
+                continue
+            }
+
+            if activeWidgets.contains(id) {
+                contexts[id]?.update(state: state)
+            } else {
                 let context = WidgetContext(state: state) { [weak self] in
                     self?.onContentChanged?()
                 }
                 contexts[id] = context
                 widget.activate(in: context)
-
-            } else if !isVisible, wasVisible {
-                widget.suspend()
-                contexts[id] = nil
-
-            } else if isVisible {
-                contexts[id]?.update(state: state)
+                activeWidgets.insert(id)
             }
         }
-
-        liveState = state
     }
 
-    /// Build the content shown inside the open notch: leading widgets on the
-    /// left, expanded in the middle, trailing on the right. Only currently
-    /// visible regions contribute.
-    func makeContentView() -> AnyView {
+    /// Build the current screen's content: resolve every placement to a frame and
+    /// drop each widget's view into a `ZStack` at that frame. Frames come back in
+    /// the host view's (y-up) coordinates, so we flip y for SwiftUI.
+    func makeContentView(
+        interior     : CGRect,
+        notchWidth   : CGFloat,
+        topBandHeight: CGFloat,
+        hostHeight   : CGFloat
+    ) -> AnyView {
 
-        let leading  = visibleWidgets(in: .leading)
-        let expanded = visibleWidgets(in: .expanded)
-        let trailing = visibleWidgets(in: .trailing)
+        let layout = resolver.resolve(
+            interior     : interior,
+            notchWidth   : notchWidth,
+            topBandHeight: topBandHeight,
+            placements   : currentScreen.arrangement
+        )
+
+        let placed = layout.frames.compactMap { id, rect -> PositionedWidget? in
+            guard let widget = widgets[id] else { return nil }
+            return PositionedWidget(id: id, view: widget.makeContentView(), rect: rect)
+        }
 
         return AnyView(
-            HStack(spacing: 12) {
+            ZStack(alignment: .topLeading) {
 
-                ForEach(leading.indices, id: \.self) { index in
-                    leading[index].makeContentView()
-                }
-
-                if !expanded.isEmpty {
-                    Spacer(minLength: 0)
-
-                    ForEach(expanded.indices, id: \.self) { index in
-                        expanded[index].makeContentView()
-                    }
-
-                    Spacer(minLength: 0)
-                }
-
-                ForEach(trailing.indices, id: \.self) { index in
-                    trailing[index].makeContentView()
+                ForEach(placed) { item in
+                    item.view
+                        .frame(width: item.rect.width, height: item.rect.height)
+                        .position(x: item.rect.midX, y: hostHeight - item.rect.midY)
                 }
             }
-            .padding(.horizontal, 16)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         )
     }
 
-    private func visibleWidgets(in region: NotchRegion) -> [NotchWidget] {
+    /// A widget's resolved view + frame, ready to position in the `ZStack`.
+    private struct PositionedWidget: Identifiable {
+        let id  : WidgetIdentifier
+        let view: AnyView
+        let rect: CGRect
+    }
 
-        guard liveState.contains(region.requiredState) else {
-            return []
+    /// First-fit placement in the main rows (1 and 2), skipping cells already
+    /// taken on the current screen. Row 0 (the notch band) is reserved for
+    /// explicit / drag-and-drop placement, since its availability depends on the
+    /// live notch geometry.
+    private func autoPlacement(for span: GridSpan) -> WidgetPlacement? {
+
+        let columns = resolver.metrics.columns
+
+        var occupied: Set<GridPosition> = []
+        for placement in currentScreen.arrangement.values {
+            for column in placement.position.column ..< placement.position.column + placement.span.columns {
+                for row in placement.position.row ..< placement.position.row + placement.span.rows {
+                    occupied.insert(GridPosition(column: column, row: row))
+                }
+            }
         }
 
-        return widgets.filter { $0.preferredRegion == region }
+        // A two-row widget can only originate at row 1 (covering rows 1–2); a
+        // one-row widget may sit in either main row.
+        let originRows = span.rows == 2 ? [1] : [1, 2]
+
+        for row in originRows {
+            for column in 0 ... max(0, columns - span.columns) {
+
+                var fits = true
+                for c in column ..< column + span.columns {
+                    for r in row ..< row + span.rows where occupied.contains(GridPosition(column: c, row: r)) {
+                        fits = false
+                    }
+                }
+
+                if fits {
+                    return WidgetPlacement(
+                        position: GridPosition(column: column, row: row),
+                        span    : span
+                    )
+                }
+            }
+        }
+
+        return nil
     }
 }
