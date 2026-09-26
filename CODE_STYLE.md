@@ -183,6 +183,13 @@ The SDK is planned, not implemented by this documentation update. New widget wor
 must include its required SDK milestone first. Existing implementations migrate
 in P3; only the generic presentation bridge will use the internal notch protocols.
 
+**Approved local exception (26 September 2026):** the file shelf may be mounted
+temporarily as a directly integrated Cascade page, like the existing music page,
+while the external addon launcher remains blocked. This exception covers only the
+file shelf and does not authorize other new widgets, in-host external code, or a
+relaxation of SDK grants, isolation or resource budgets. The shelf's external
+addon path remains subject to the native gate before activation.
+
 ## Legacy widget protocol (migration reference)
 
 The following sketch describes the earlier in-process model, not the public addon

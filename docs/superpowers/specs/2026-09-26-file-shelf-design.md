@@ -185,6 +185,19 @@ privilegiato del widget o dichiarare già risolti i vincoli del runtime addon.
 La pagina persistente si coordina con la specifica delle pagine contestuali,
 che è ancora in discussione; non si assume che quella navigazione sia già attiva.
 
+**Eccezione locale approvata il 26 settembre 2026.** In attesa del gate nativo,
+il ripiano può essere integrato direttamente in Cascade come la pagina Musica,
+senza attivare il launcher degli addon esterni. Il primo incremento include
+battito al drag-in, mazzo animato con quattro carte e contatore +N, elenco animato,
+persistenza fra riavvii e copia in uscita con rimozione della sola voce consegnata
+con successo. Gli originali restano intatti. Il ripiano occupato è la pagina
+predefinita all'apertura; la navigazione manuale resta possibile e gli
+aggiornamenti automatici non la sovrascrivono. La conversione rimane differita
+finché supervisione, annullamento e recupero non sono pronti; l'interfaccia non
+deve presentarla come disponibile prima di allora. L'eccezione è limitata a
+questa pagina: nessun codice addon esterno viene caricato nel processo host e
+non cambiano grant, quote o requisiti del launcher.
+
 ## 10. Verifica prevista
 
 - Drag di file, testo e finestre; ingresso, uscita, annullamento e rilascio valido.
