@@ -65,10 +65,29 @@ import Testing
         #expect(throws: AddonFailure.self) {
             try ProtocolNegotiator.negotiate(offer: offer(), manifestProtocol: ProtocolVersion(major: 1, minimumMinor: 1))
         }
-        for policy in [[], [3], [1, 3], [1, 1]] {
+        for policy in [[], [4], [1, 4], [1, 1]] {
             #expect(throws: AddonFailure.self) { try ProtocolNegotiator.negotiate(offer: offer(), manifestProtocol: requirement, contentSchemas: policy) }
         }
         #expect(throws: AddonFailure.self) { try ProtocolNegotiator.negotiate(offer: offer([2]), manifestProtocol: requirement, contentSchemas: [1]) }
+    }
+
+    @Test func schemaThreeRequiresInstalledFileWorkspaceRenderer() throws {
+        let requirement = try ProtocolVersion(major: 1, minimumMinor: 0)
+        let schemaThreeOffer = try offer([3, 2, 1])
+        #expect(throws: AddonFailure.self) {
+            try ProtocolNegotiator.negotiate(
+                offer          : schemaThreeOffer,
+                manifestProtocol: requirement,
+                contentSchemas : [1, 2, 3]
+            )
+        }
+        let negotiated = try ProtocolNegotiator.negotiate(
+            offer                       : schemaThreeOffer,
+            manifestProtocol            : requirement,
+            contentSchemas              : [1, 2, 3],
+            supportsFileWorkspaceContent: true
+        )
+        #expect(negotiated.contentSchemas == [1, 2, 3])
     }
 
     @Test func conservativeContextChecksEveryRepresentationAndFutureEntry() throws {
@@ -86,7 +105,7 @@ import Testing
                 }
             }
         }
-        for policy in [[], [3], [1, 3], [1, 1]] {
+        for policy in [[], [4], [1, 4], [1, 1]] {
             #expect(throws: AddonFailure.self) {
                 try output().validateContext(authenticatedAddonID: owner.addonID, expectedCompletion: nil, previousRevisions: [:], contentSchemas: policy)
             }

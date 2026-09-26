@@ -121,4 +121,17 @@ extension ContentNode {
         )
     }
 
+    public static func fileWorkspace(_ presentation: FileWorkspacePresentation) throws -> Self {
+        return try Self(
+            kind         : .fileWorkspace,
+            text         : nil,
+            assetID      : nil,
+            value        : nil,
+            deadline     : nil,
+            actionID     : nil,
+            children     : nil,
+            fileWorkspace: presentation
+        )
+    }
+
 }

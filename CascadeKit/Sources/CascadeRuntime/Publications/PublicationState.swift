@@ -103,29 +103,31 @@ struct PublicationState: Sendable {
     /// Failure preserves previous authority; successful replacement keeps publication
     /// history while issuing a fresh generation and sequence state.
     mutating func openConnection(
-        identity                  : VerifiedAddonIdentity,
-        verifiedDigest            : String,
-        manifestProtocol          : ProtocolVersion,
-        offer                     : ProtocolOffer,
-        authorizedPublications    : [PublicationID],
-        contentSchemas            : [Int] = [1, 2],
-        supportsKeyedStorageFrames: Bool = false,
-        supportsAssetFrames       : Bool = false,
-        serviceHost               : Bool = false,
-        subscriptionHost          : Bool = false
+        identity                    : VerifiedAddonIdentity,
+        verifiedDigest              : String,
+        manifestProtocol            : ProtocolVersion,
+        offer                       : ProtocolOffer,
+        authorizedPublications      : [PublicationID],
+        contentSchemas              : [Int] = [1, 2],
+        supportsKeyedStorageFrames  : Bool = false,
+        supportsAssetFrames         : Bool = false,
+        supportsFileWorkspaceContent: Bool = false,
+        serviceHost                 : Bool = false,
+        subscriptionHost            : Bool = false
     ) throws -> PublicationConnection {
         let admission = try sessions.open(
-            identity                  : identity,
-            verifiedDigest            : verifiedDigest,
-            manifestProtocol          : manifestProtocol,
-            offer                     : offer,
-            authorizedPublications    : authorizedPublications,
-            contentSchemas            : contentSchemas,
-            availableBytes            : maximumRetainedBytes - retainedBytes,
-            supportsKeyedStorageFrames: supportsKeyedStorageFrames,
-            supportsAssetFrames       : supportsAssetFrames,
-            serviceHost               : serviceHost,
-            subscriptionHost          : subscriptionHost
+            identity                    : identity,
+            verifiedDigest              : verifiedDigest,
+            manifestProtocol            : manifestProtocol,
+            offer                       : offer,
+            authorizedPublications      : authorizedPublications,
+            contentSchemas              : contentSchemas,
+            availableBytes              : maximumRetainedBytes - retainedBytes,
+            supportsKeyedStorageFrames  : supportsKeyedStorageFrames,
+            supportsAssetFrames         : supportsAssetFrames,
+            supportsFileWorkspaceContent: supportsFileWorkspaceContent,
+            serviceHost                 : serviceHost,
+            subscriptionHost            : subscriptionHost
         )
         retainedBytes += admission.additionalBytes
         advanceStateRevision()

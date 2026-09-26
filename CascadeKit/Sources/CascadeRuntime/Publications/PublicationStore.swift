@@ -35,20 +35,22 @@ public actor PublicationStore {
     /// openConnection delegates host-verified connection admission to the canonical
     /// synchronous state owned by this actor.
     public func openConnection(
-        identity              : VerifiedAddonIdentity,
-        verifiedDigest        : String,
-        manifestProtocol      : ProtocolVersion,
-        offer                 : ProtocolOffer,
-        authorizedPublications: [PublicationID],
-        contentSchemas        : [Int] = [1, 2]
+        identity                    : VerifiedAddonIdentity,
+        verifiedDigest              : String,
+        manifestProtocol            : ProtocolVersion,
+        offer                       : ProtocolOffer,
+        authorizedPublications      : [PublicationID],
+        contentSchemas              : [Int] = [1, 2],
+        supportsFileWorkspaceContent: Bool = false
     ) throws -> PublicationConnection {
         try state.openConnection(
-            identity              : identity,
-            verifiedDigest        : verifiedDigest,
-            manifestProtocol      : manifestProtocol,
-            offer                 : offer,
-            authorizedPublications: authorizedPublications,
-            contentSchemas        : contentSchemas
+            identity                    : identity,
+            verifiedDigest              : verifiedDigest,
+            manifestProtocol            : manifestProtocol,
+            offer                       : offer,
+            authorizedPublications      : authorizedPublications,
+            contentSchemas              : contentSchemas,
+            supportsFileWorkspaceContent: supportsFileWorkspaceContent
         )
     }
 

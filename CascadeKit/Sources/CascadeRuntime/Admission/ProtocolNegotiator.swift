@@ -40,28 +40,42 @@ public enum ProtocolNegotiator {
     /// dispatch may opt into 1.1; 1.2 additionally requires an asset-capable runtime
     /// adapter. An untrusted offer cannot enable either host capability.
     public static func negotiate(
-        offer                    : ProtocolOffer,
-        manifestProtocol         : ProtocolVersion,
-        contentSchemas           : [Int] = [1, 2],
-        supportsKeyedStorageFrames: Bool = false,
-        supportsAssetFrames      : Bool = false
+        offer                       : ProtocolOffer,
+        manifestProtocol            : ProtocolVersion,
+        contentSchemas              : [Int] = [1, 2],
+        supportsKeyedStorageFrames  : Bool = false,
+        supportsAssetFrames         : Bool = false,
+        supportsFileWorkspaceContent: Bool = false
     ) throws -> NegotiatedProtocol {
-        try negotiate(offer: offer, manifestProtocol: manifestProtocol, contentSchemas: contentSchemas,
-                      supportsKeyedStorageFrames: supportsKeyedStorageFrames,
-                      supportsAssetFrames: supportsAssetFrames, serviceHost: false)
+        try negotiate(
+            offer                       : offer,
+            manifestProtocol            : manifestProtocol,
+            contentSchemas              : contentSchemas,
+            supportsKeyedStorageFrames  : supportsKeyedStorageFrames,
+            supportsAssetFrames         : supportsAssetFrames,
+            supportsFileWorkspaceContent: supportsFileWorkspaceContent,
+            serviceHost                 : false
+        )
     }
 
     /// Only the complete runtime assembly may supply serviceHost; offers/profiles confer no authority.
     static func negotiate(
-        offer: ProtocolOffer, manifestProtocol: ProtocolVersion, contentSchemas: [Int] = [1, 2],
-        supportsKeyedStorageFrames: Bool, supportsAssetFrames: Bool, serviceHost: Bool, subscriptionHost: Bool = false
+        offer                       : ProtocolOffer,
+        manifestProtocol            : ProtocolVersion,
+        contentSchemas              : [Int] = [1, 2],
+        supportsKeyedStorageFrames  : Bool,
+        supportsAssetFrames         : Bool,
+        supportsFileWorkspaceContent: Bool = false,
+        serviceHost                 : Bool,
+        subscriptionHost            : Bool = false
     ) throws -> NegotiatedProtocol {
         try offer.validate()
         try manifestProtocol.validate()
         guard !contentSchemas.isEmpty,
-            contentSchemas.count <= 2,
+            contentSchemas.count <= 3,
             Set(contentSchemas).count == contentSchemas.count,
-            Set(contentSchemas).isSubset(of: [1, 2])
+            Set(contentSchemas).isSubset(of: [1, 2, 3]),
+            supportsFileWorkspaceContent || !contentSchemas.contains(3)
         else {
             throw AddonFailure(
                 code  : .invalidPayload,

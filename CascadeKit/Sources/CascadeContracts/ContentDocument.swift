@@ -49,8 +49,8 @@ public struct ContentDocument: Codable, Equatable, Sendable {
             maximum : 64
         )
         try ContractValidation.require(
-            !container.contains(.glassLights) || schemaVersion == 2,
-            "Glass lights require content schema 2"
+            !container.contains(.glassLights) || schemaVersion >= 2,
+            "Glass lights require content schema 2 or later"
         )
         if container.contains(.glassLights), try !container.decodeNil(forKey: .glassLights) {
             glassLights = try BoundedContractArray.decode(
@@ -65,10 +65,14 @@ public struct ContentDocument: Codable, Equatable, Sendable {
     }
 
     public func validate() throws {
-        try ContractValidation.require((1...2).contains(schemaVersion), "Unsupported content schema")
+        try ContractValidation.require((1...3).contains(schemaVersion), "Unsupported content schema")
         try ContractValidation.require(
-            glassLights == nil || schemaVersion == 2,
-            "Glass lights require content schema 2"
+            glassLights == nil || schemaVersion >= 2,
+            "Glass lights require content schema 2 or later"
+        )
+        try ContractValidation.require(
+            schemaVersion == 3 || !root.containsFileWorkspace,
+            "File workspace requires content schema 3"
         )
         try ContractValidation.require(
             (glassLights?.count ?? 0) <= GlassLight.maximumCount,

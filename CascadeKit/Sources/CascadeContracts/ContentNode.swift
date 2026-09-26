@@ -17,6 +17,7 @@ public struct ContentNode: Codable, Equatable, Sendable {
     public let deadline: Date?
     public let actionID: String?
     public let children: [ContentNode]?
+    public let fileWorkspace: FileWorkspacePresentation?
 
     public init(
         kind: Kind,
@@ -28,7 +29,8 @@ public struct ContentNode: Codable, Equatable, Sendable {
         children: [ContentNode]?,
         accessibilityLabel: String? = nil,
         actionPayload: Data? = nil,
-        clockFormat: ClockFormat? = nil
+        clockFormat: ClockFormat? = nil,
+        fileWorkspace: FileWorkspacePresentation? = nil
     ) throws {
         self.accessibilityLabel = accessibilityLabel
         self.actionPayload = actionPayload
@@ -40,6 +42,7 @@ public struct ContentNode: Codable, Equatable, Sendable {
         self.deadline = deadline
         self.actionID = actionID
         self.children = children
+        self.fileWorkspace = fileWorkspace
         try validate()
     }
 
@@ -105,6 +108,10 @@ public struct ContentNode: Codable, Equatable, Sendable {
             String.self,
             forKey: .actionID
         )
+        fileWorkspace = try container.decodeIfPresent(
+            FileWorkspacePresentation.self,
+            forKey: .fileWorkspace
+        )
         if container.contains(.children), try !container.decodeNil(forKey: .children) {
             var values = try container.nestedUnkeyedContainer(forKey: .children)
             try ContractValidation.require(
@@ -146,6 +153,10 @@ public struct ContentNode: Codable, Equatable, Sendable {
         )
         try ContractValidation.require(kind == .action || actionPayload == nil, "Unexpected action payload")
         try ContractValidation.require(kind == .clock || clockFormat == nil, "Unexpected clock format")
+        try ContractValidation.require(
+            kind == .fileWorkspace || fileWorkspace == nil,
+            "Unexpected file workspace payload"
+        )
         try ContractValidation.require((actionPayload?.count ?? 0) <= 4096, "Action payload exceeds 4 KiB")
         if kind == .image {
             try ContractValidation.require(accessibilityLabel != nil, "Image requires accessible label")
@@ -181,51 +192,58 @@ public struct ContentNode: Codable, Equatable, Sendable {
         case .text, .symbol:
             try ContractValidation.require(
                 text != nil && assetID == nil && value == nil && deadline == nil && actionID == nil
-                    && children == nil,
+                    && children == nil && fileWorkspace == nil,
                 "Invalid text or symbol node"
             )
         case .image:
             try ContractValidation.require(
                 assetID != nil && text == nil && value == nil && deadline == nil && actionID == nil
-                    && children == nil,
+                    && children == nil && fileWorkspace == nil,
                 "Invalid image node"
             )
         case .row, .column:
             try ContractValidation.require(
                 children != nil && text == nil && assetID == nil && value == nil && deadline == nil
-                    && actionID == nil,
+                    && actionID == nil && fileWorkspace == nil,
                 "Invalid layout node"
             )
         case .progress:
             try ContractValidation.require(
                 value != nil && text == nil && assetID == nil && deadline == nil && actionID == nil
-                    && children == nil,
+                    && children == nil && fileWorkspace == nil,
                 "Invalid progress node"
             )
         case .countdown:
             try ContractValidation.require(
                 deadline != nil && text == nil && assetID == nil && value == nil && actionID == nil
-                    && children == nil,
+                    && children == nil && fileWorkspace == nil,
                 "Invalid countdown node"
             )
         case .clock:
             try ContractValidation.require(
                 text == nil && assetID == nil && value == nil && deadline == nil && actionID == nil
-                    && children == nil,
+                    && children == nil && fileWorkspace == nil,
                 "Invalid clock node"
             )
         case .action:
             try ContractValidation.require(
                 actionID != nil && text != nil && assetID == nil && value == nil && deadline == nil
-                    && children == nil,
+                    && children == nil && fileWorkspace == nil,
                 "Invalid action node"
             )
+        case .fileWorkspace:
+            try ContractValidation.require(
+                fileWorkspace != nil && text == nil && assetID == nil && value == nil && deadline == nil
+                    && actionID == nil && children == nil,
+                "Invalid file workspace node"
+            )
+            try fileWorkspace?.validate()
         }
         var count = 0
         try validateTree(depth: 1, count: &count)
     }
     public enum Kind: String, Codable, Sendable {
-        case text, symbol, image, row, column, progress, countdown, clock, action
+        case text, symbol, image, row, column, progress, countdown, clock, action, fileWorkspace
     }
     func validateTree(depth: Int, count: inout Int) throws {
         count += 1
@@ -235,10 +253,15 @@ public struct ContentNode: Codable, Equatable, Sendable {
     var referencedAssets: Set<String> {
         var result = Set(children?.flatMap { $0.referencedAssets } ?? [])
         if let assetID { result.insert(assetID) }
+        if let fileWorkspace { result.formUnion(fileWorkspace.referencedAssets) }
         return result
     }
     var actionIdentifiers: [String] {
-        (actionID.map { [$0] } ?? []) + (children?.flatMap(\.actionIdentifiers) ?? [])
+        (actionID.map { [$0] } ?? []) + (fileWorkspace?.actionIdentifiers ?? [])
+            + (children?.flatMap(\.actionIdentifiers) ?? [])
+    }
+    var containsFileWorkspace: Bool {
+        kind == .fileWorkspace || (children?.contains(where: \.containsFileWorkspace) ?? false)
     }
     private enum CodingKeys: String, CodingKey, CaseIterable {
         case accessibilityLabel
@@ -251,5 +274,6 @@ public struct ContentNode: Codable, Equatable, Sendable {
         case deadline
         case actionID
         case children
+        case fileWorkspace
     }
 }

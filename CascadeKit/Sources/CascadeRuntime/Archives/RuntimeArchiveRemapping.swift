@@ -130,7 +130,49 @@ enum RuntimeArchiveRemapping {
             },
             accessibilityLabel: node.accessibilityLabel,
             actionPayload     : node.actionPayload,
-            clockFormat       : node.clockFormat
+            clockFormat       : node.clockFormat,
+            fileWorkspace     : node.fileWorkspace.map { presentation in
+                try fileWorkspace(
+                    presentation,
+                    aliases: aliases
+                )
+            }
+        )
+    }
+
+    /// fileWorkspace rewrites only admitted thumbnail aliases and preserves published actions.
+    private static func fileWorkspace(
+        _ presentation: FileWorkspacePresentation,
+        aliases       : [String: String]
+    ) throws -> FileWorkspacePresentation {
+        let entries = try presentation.snapshot.entries.map { entry in
+            try FileWorkspaceEntry(
+                id              : entry.id,
+                name            : entry.name,
+                typeIdentifier  : entry.typeIdentifier,
+                availability    : entry.availability,
+                ownership       : entry.ownership,
+                thumbnailAssetID: entry.thumbnailAssetID.map { previous in
+                    try alias(
+                        previous,
+                        in: aliases
+                    )
+                }
+            )
+        }
+        return try FileWorkspacePresentation(
+            snapshot: FileWorkspaceSnapshot(
+                revision  : presentation.snapshot.revision,
+                entries   : entries,
+                totalCount: presentation.snapshot.totalCount,
+                nextCursor: presentation.snapshot.nextCursor,
+                jobs      : presentation.snapshot.jobs
+            ),
+            mode            : presentation.mode,
+            selectedEntryIDs: presentation.selectedEntryIDs,
+            formats         : presentation.formats,
+            selectedFormatID: presentation.selectedFormatID,
+            actions         : presentation.actions
         )
     }
 

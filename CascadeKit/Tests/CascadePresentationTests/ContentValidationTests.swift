@@ -116,7 +116,7 @@ struct ContentValidationTests {
     func rejectsUnknownSchemaAndCrossModeFields() throws {
         #expect(throws: (any Error).self) {
             try ContentDocument(
-                schemaVersion: 3,
+                schemaVersion: 4,
                 root: .text("x"),
                 privacy: .publicContent,
                 accessibilityLabel: "x"

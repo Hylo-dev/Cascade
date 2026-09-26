@@ -72,9 +72,9 @@ public struct ProviderOutput: Codable, Equatable, Sendable {
         contentSchemas: [Int] = [1]
     ) throws {
         try ContractValidation.require(
-            !contentSchemas.isEmpty && contentSchemas.count <= 2
+            !contentSchemas.isEmpty && contentSchemas.count <= 3
                 && Set(contentSchemas).count == contentSchemas.count
-                && Set(contentSchemas).isSubset(of: [1, 2]),
+                && Set(contentSchemas).isSubset(of: [1, 2, 3]),
             "Invalid negotiated content schema policy"
         )
         for publication in publications {

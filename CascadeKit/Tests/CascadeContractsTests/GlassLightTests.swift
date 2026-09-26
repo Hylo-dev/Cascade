@@ -51,12 +51,13 @@ struct GlassLightTests {
     }
 
     @Test
-    func requiresSchemaTwoForEverySuppliedLightingField() throws {
+    func requiresSchemaTwoOrLaterForEverySuppliedLightingField() throws {
         for lights: Any in [[light], [], NSNull()] {
             let data = try documentData(schema: 1, lights: lights)
             #expect(throws: (any Error).self) { try ContentDocument.decode(data) }
         }
-        for schema in [0, 3, Int.max] {
+        _ = try ContentDocument.decode(documentData(schema: 3, lights: [light]))
+        for schema in [0, 4, Int.max] {
             let data = try documentData(schema: schema)
             #expect(throws: (any Error).self) { try ContentDocument.decode(data) }
         }

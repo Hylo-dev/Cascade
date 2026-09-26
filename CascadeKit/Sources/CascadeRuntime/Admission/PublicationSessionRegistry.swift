@@ -153,17 +153,18 @@ struct PublicationSessionRegistry: Sendable {
     /// open validates all inputs and capacity before changing either dictionary.
     /// Replacements keep the old authority until negotiation and reservation succeed.
     mutating func open(
-        identity                  : VerifiedAddonIdentity,
-        verifiedDigest            : String,
-        manifestProtocol          : ProtocolVersion,
-        offer                     : ProtocolOffer,
-        authorizedPublications    : [PublicationID],
-        contentSchemas            : [Int],
-        availableBytes            : Int,
-        supportsKeyedStorageFrames: Bool = false,
-        supportsAssetFrames       : Bool = false,
-        serviceHost               : Bool = false,
-        subscriptionHost          : Bool = false
+        identity                    : VerifiedAddonIdentity,
+        verifiedDigest              : String,
+        manifestProtocol            : ProtocolVersion,
+        offer                       : ProtocolOffer,
+        authorizedPublications      : [PublicationID],
+        contentSchemas              : [Int],
+        availableBytes              : Int,
+        supportsKeyedStorageFrames  : Bool = false,
+        supportsAssetFrames         : Bool = false,
+        supportsFileWorkspaceContent: Bool = false,
+        serviceHost                 : Bool = false,
+        subscriptionHost            : Bool = false
     ) throws -> (
         connection     : PublicationConnection,
         additionalBytes: Int
@@ -187,13 +188,14 @@ struct PublicationSessionRegistry: Sendable {
         }
         _ = try additionalBytes(identity: identity)
         let negotiated = try ProtocolNegotiator.negotiate(
-            offer                     : offer,
-            manifestProtocol          : manifestProtocol,
-            contentSchemas            : contentSchemas,
-            supportsKeyedStorageFrames: supportsKeyedStorageFrames,
-            supportsAssetFrames       : supportsAssetFrames,
-            serviceHost               : serviceHost,
-            subscriptionHost          : subscriptionHost
+            offer                       : offer,
+            manifestProtocol            : manifestProtocol,
+            contentSchemas              : contentSchemas,
+            supportsKeyedStorageFrames  : supportsKeyedStorageFrames,
+            supportsAssetFrames         : supportsAssetFrames,
+            supportsFileWorkspaceContent: supportsFileWorkspaceContent,
+            serviceHost                 : serviceHost,
+            subscriptionHost            : subscriptionHost
         )
         let isNewConnection = connections[identity.addonID] == nil
         let isNewNamespace  = publishers[identity.addonID] == nil

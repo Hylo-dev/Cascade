@@ -119,6 +119,11 @@ public enum ActionAuthorizer {
                 if let payload, payload != candidate { throw Failure.ambiguousPayload }
                 payload = candidate
             }
+            for action in node.fileWorkspace?.actions ?? [] where action.descriptor.id == request.actionID {
+                let candidate = action.descriptor.payload
+                if let payload, payload != candidate { throw Failure.ambiguousPayload }
+                payload = candidate
+            }
             for child in node.children ?? [] { try visit(child) }
         }
         for document in [presentation.widget, presentation.compactLeading,

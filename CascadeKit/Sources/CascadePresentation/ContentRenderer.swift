@@ -135,6 +135,16 @@ public struct ContentRenderer: View {
                     }
                 }
             )
+        case .fileWorkspace:
+            guard let presentation = node.fileWorkspace,
+                  let workspace = try? CascadeFileWorkspace(
+                    presentation,
+                    assets  : assets,
+                    dispatch: dispatch
+                  ) else {
+                return AnyView(EmptyView())
+            }
+            return AnyView(workspace)
         }
     }
 }
