@@ -153,6 +153,8 @@ dei binari richiede invece Cascade.xcodeproj/project.pbxproj.
 
 ### Task 6: Conversioni effettive e job recuperabili
 
+Checkpoint: la parte pura di formati, preset e parser del progresso è implementata nel sottotask [Preparare formati e avanzamento della conversione](../../../.scratch/cascade-product/issues/86-file-workspace-conversion-planning.md), commit `5c53ae5`. Non completa il task: coordinatore, persistenza job, motori nativi e processi supervisionati rimangono da implementare/qualificare.
+
 **Files:** Create under `CascadeKit/Sources/CascadeRuntime/FileWorkspace/`: `FileConversionCoordinator.swift`, `FileConverting.swift`, `FFmpegConverter.swift`, `NativeDocumentConverter.swift`, `FFmpegProgressParser.swift`, `FileConversionRequest.swift`; test under `CascadeKit/Tests/CascadeRuntimeTests/`: `FileConversionTests.swift`, `FFmpegProgressTests.swift`.
 
 **Interfaces:**
