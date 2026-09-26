@@ -41,6 +41,8 @@ Definire il piano applicativo globale di Cascade, basato sul codice esistente: u
 
 ## Decisions so far
 
+- [Preparare FFmpeg e ffprobe verificati nel bundle](issues/81-file-workspace-ffmpeg-bundle.md): sorgenti autenticati, helper arm64 firmati e conversione reale verificati; nessuna attivazione nativa.
+
 - [Aggiungere il componente condiviso e la lista animata del ripiano](issues/80-file-workspace-presentation.md): schema 3 e renderer condiviso revisionati, 86 test mirati e preview native locali; montaggio nel notch distinto.
 
 - [Persistire voci e ricevute del ripiano file](issues/78-file-workspace-persistence.md): conservazione e consegne per elemento implementate e revisionate, con 50 test mirati passati; integrazione nativa separata.
