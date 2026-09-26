@@ -11,6 +11,8 @@ Definire il piano applicativo globale di Cascade, basato sul codice esistente: u
 
 ## Notes
 
+- Consegna locale parziale del 26 settembre 2026: [verifica finale del ripiano](issues/90-file-shelf-local-delivery.md) resta aperta e disponibile. Build firmata, app aggiornata e riavvio PID 52683 verificati; suite SwiftPM 1.416/1.416 e test app 6/6 passati. QA Finder e del notch aperto non conclusa per errore ScreenCaptureKit `-3812` e mancata apertura ai click AX; non dedurre da queste prove drag reale, carte, persistenza UI o accessibilità. Conversione e promise in ingresso ancora indisponibili; launcher esterno bloccato.
+
 - Decisione del 26 settembre 2026: l'utente autorizza il [ripiano file direttamente integrato](../../docs/superpowers/specs/2026-09-26-file-shelf-design.md#9-inserimento-in-cascade), come la pagina Musica, mentre il launcher addon esterno resta bloccato. Il [piano locale](../../docs/superpowers/plans/2026-09-26-local-file-shelf.md) e i relativi ticket fissano il primo incremento: drag-in con battito, mazzo animato quattro carte +N, elenco animato, persistenza, originali conservati, copia in uscita e rimozione per sola consegna riuscita. Il ripiano occupato è la pagina iniziale predefinita senza impedire la navigazione manuale. Conversione differita fino a supervisione, annullamento e recupero; nessuna UI la dichiara disponibile in anticipo. Eccezione circoscritta al ripiano, senza codice addon esterno nel processo host né modifiche a grant, quote o gate nativo.
 
 - Tranche ripiano file del 26 settembre 2026: l’utente chiede di mappare tutti i task residui del [piano approvato](../../docs/superpowers/plans/2026-09-26-file-shelf.md) ed eseguirli in più ticket consecutivi con subagenti, GPT-6 Sol per task semplici e GPT-5.6 Sol per task complessi, revisione obbligatoria del root e riserva settimanale almeno 80%. Questa autorizzazione è prioritaria sulle soglie e sui modelli storici delle tranche precedenti per il solo ripiano file. Il [percorso interno già verificato](../../docs/superpowers/verification/2026-09-26-file-workspace-runtime.md) non qualifica il montaggio nativo: launcher e gate restano bloccati, senza bypass. I task di persistenza, presentazione e bundle FFmpeg possono avanzare indipendentemente dalla qualifica nativa. Il routing del ripiano segue la specifica approvata; [l’arbitraggio generale fra attività, pagine e contesti](issues/08-context-arbitration.md) resta una decisione distinta e aperta.
@@ -42,6 +44,8 @@ Definire il piano applicativo globale di Cascade, basato sul codice esistente: u
 - Le altre funzioni di Sapphire sono riferimenti da valutare, non requisiti automatici.
 
 ## Decisions so far
+
+- [Comporre la pagina locale e il drag in uscita per elemento](issues/89-file-shelf-local-composition.md): integrazione app e consegna per voce accettate dopo review root e 6 test app firmati; build finale, riavvio e QA nativa nel ticket di consegna.
 
 - [Instradare il ripiano locale e riconoscere il drag in ingresso](issues/88-file-shelf-local-routing.md): pagina contestuale e preview drag accettate dopo review root e 71 test mirati; composizione e QA nativa restano successive.
 

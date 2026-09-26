@@ -100,15 +100,16 @@ L'[eccezione approvata](../specs/2026-09-26-file-shelf-design.md#9-inserimento-i
 | --- | --- |
 | Host locale, consegna per voce | **Accettato**: commit `a0508ef`, review root con correzioni; 73 test indipendenti passati (53 runtime, 9 presentazione, 11 contratti), log SDD `root-task87-tests.log`. Nessuna consegna app da questo solo commit. |
 | Review root della pagina e del drag in ingresso (ticket 88) | **Accettato**: commit `ec14e70`, review root e 71/71 test mirati passati (`root-task88-tests.log`). Filtro combinato 139/140 con un test drag intermittente preesistente; nessuna qualifica nativa finale da questa prova. |
-| Review root della composizione e del drag in uscita (ticket 89) | **Pending**. Il solo `drag-ended` non è una ricevuta; il callback di copia riuscita per singola promise può arrivare dopo e rimuove soltanto quella voce. |
-| Suite completa dopo la composizione | **Pending**. |
-| Build firmata e controlli SDK/firma | **Pending**. |
-| Collegamento `/Applications/Cascade.app` alla build corrente | **Pending**. |
-| Chiusura, riavvio e verifica PID/percorso eseguibile | **Pending**. |
-| Finder: ingresso e uscita, copie leggibili e originali conservati | **Pending**. |
-| Drag annullato, destinazione che rifiuta e consegna parziale | **Pending**. |
-| Ripiano persistente dopo riavvio | **Pending**. |
-| Pagina predefinita occupata e navigazione manuale preservata | **Pending**. |
-| VoiceOver/accessibilità e Riduci movimento nel notch reale | **Pending**. |
+| Review root della composizione e del drag in uscita (ticket 89) | **Accettato**: commit `e25e75c`, incluse le correzioni per errore parziale persistente e rifiuto visibile. Il solo `drag-ended` non è una ricevuta; il callback di copia riuscita per singola promise può arrivare dopo e rimuove soltanto quella voce. |
+| Suite completa dopo la composizione | **Passata**: `swift test --package-path CascadeKit --no-parallel`, exit 0, 1.416/1.416 test passati (885 runtime, 122 presentazione/SDK, 290 CascadeKit, 102 contratti, 17 CLI), incluso il test drag prima intermittente; log SDD `root-local-full-tests.log`. Renderer invariato dopo la prova. |
+| Test app firmati | **Passati**: 6/6 test indipendenti root, firma Apple Development con `DEVELOPMENT_TEAM=A6A5HQL6K4` e `CODE_SIGN_IDENTITY='Apple Development'` solo da riga di comando; log SDD `root-local-app-tests-signed.log`. |
+| Build firmata e controlli SDK/firma | **Passati**: build finale exit 0 (`local-app-build.log`), controlli dei confini SDK e firma superati. |
+| Collegamento `/Applications/Cascade.app` alla build corrente | **Verificato**: symlink a `/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeFileShelf/Build/Products/Debug/Cascade.app`. |
+| Chiusura, riavvio e verifica PID/percorso eseguibile | **Verificato**: PID precedente 34695 non terminava via Quit CUA; TERM mirato, assenza verificata e riapertura via CUA. Nuovo PID 52683, avvio 26 settembre 2026 20:23:07 CEST, percorso nel bundle collegato, binario aggiornato alle 20:21:40. Screenshot del notch chiuso visibile. |
+| Finder: ingresso e uscita, copie leggibili e originali conservati | **Pending**: `getApp`/AX Finder ripetono errore ScreenCaptureKit `-3812` (`invalid parameter`); nessuna prova del drag reale. |
+| Drag annullato, destinazione che rifiuta e consegna parziale | **Pending**: non verificati nel Finder. Il callback promise individuale resta il criterio di rimozione, non `drag-ended`. |
+| Ripiano persistente dopo riavvio | **Pending**: test unitari passati, nessuna osservazione nella UI riavviata. |
+| Pagina predefinita occupata e navigazione manuale preservata | **Pending**: AX/screenshot Cascade disponibili, ma click alle coordinate 64/72 non aprono il notch. |
+| VoiceOver/accessibilità e Riduci movimento nel notch reale | **Pending**: test unitari Riduci movimento passati, nessuna prova manuale nel notch aperto. |
 
-I ticket addon esterni 77/79/82/83/84/85 restano aperti; nessuna riga pending equivale a qualifica nativa o disponibilità della conversione.
+Il ticket locale 90 resta aperto e disponibile per completare QA nativa. Le file promise in ingresso e Converti non sono disponibili. I ticket addon esterni 77/79/82/83/84/85 restano aperti; nessuna riga pending equivale a qualifica nativa o disponibilità della conversione. Riserva settimanale residua osservata: 95%.
