@@ -252,6 +252,18 @@ enum FileWorkspaceManagedRemovalConfirmation: Equatable, Sendable {
     case deleteOnlyManagedCopy
 }
 
+/// FileWorkspacePreparedEntry captures one exact store lifetime without retaining a delivery pin.
+struct FileWorkspacePreparedEntry: Equatable, Sendable {
+    let writerID      : UUID
+    let id            : UUID
+    let name          : String
+    let typeIdentifier: String
+    let ownership     : FileOwnership
+    let identity      : FileReferenceIdentity
+    let managedName   : String?
+    let generation    : UUID?
+}
+
 /// FileWorkspaceStore persists ordered shelf entries and per-item delivery receipts.
 actor FileWorkspaceStore {
     nonisolated let namespaceLifetime: FileWorkspaceNamespaceLifetime
@@ -280,6 +292,7 @@ actor FileWorkspaceStore {
         var reference     : StoredReference?
         let managedName   : String?
         let identity      : FileReferenceIdentity
+        let generation    : UUID?
     }
 
     private struct Delivery: Sendable {
@@ -441,7 +454,8 @@ actor FileWorkspaceStore {
                             identity: lease.identity
                         ),
                         managedName: nil,
-                        identity   : lease.identity
+                        identity   : lease.identity,
+                        generation : UUID()
                     )
                 )
                 known[lease.identity] = id
@@ -493,7 +507,8 @@ actor FileWorkspaceStore {
                         ownership     : .managed,
                         reference     : nil,
                         managedName   : name,
-                        identity      : output
+                        identity      : output,
+                        generation    : UUID()
                     )
                 )
                 candidate.revision = try Self.nextRevision(self.manifest.revision)
@@ -513,15 +528,19 @@ actor FileWorkspaceStore {
     }
 
     /// snapshot returns one revision-bound page and refreshes only identity-preserving bookmarks.
-    func snapshot(cursor: String?) async throws -> FileWorkspaceSnapshot {
+    func snapshot(
+        cursor  : String?,
+        pageSize: Int = 32
+    ) async throws -> FileWorkspaceSnapshot {
         try await withOperation { operation in
             try self.requireRestored()
+            guard (1...32).contains(pageSize) else { throw FileWorkspaceError.unsupported }
             let offset = try self.decodeCursor(cursor)
             guard offset <= self.manifest.entries.count else { throw FileWorkspaceError.staleRevision }
             var refreshed = self.manifest
             var page: [FileWorkspaceEntry] = []
             var index = offset
-            while index < refreshed.entries.count, page.count < 32 {
+            while index < refreshed.entries.count, page.count < pageSize {
                 let value = try await self.project(
                     entry    : refreshed.entries[index],
                     refreshed: &refreshed.entries[index]
@@ -558,6 +577,43 @@ actor FileWorkspaceStore {
         }
     }
 
+    /// prepareItems captures immutable lifetimes for deferred native file-promise callbacks.
+    func prepareItems(ids: [UUID]) async throws -> [FileWorkspacePreparedEntry] {
+        try await withOperation { _ in
+            try self.requireWritable()
+            guard !ids.isEmpty, ids.count <= 32, Set(ids).count == ids.count else {
+                throw FileWorkspaceError.unsupported
+            }
+            let byID = Dictionary(uniqueKeysWithValues: self.manifest.entries.map { ($0.id, $0) })
+            return try ids.map { id in
+                guard let entry = byID[id] else { throw FileWorkspaceError.unavailable }
+                return FileWorkspacePreparedEntry(
+                    writerID      : self.writerID,
+                    id            : entry.id,
+                    name          : entry.name,
+                    typeIdentifier: entry.typeIdentifier,
+                    ownership     : entry.ownership,
+                    identity      : entry.identity,
+                    managedName   : entry.managedName,
+                    generation    : entry.generation
+                )
+            }
+        }
+    }
+
+    /// beginDelivery accepts a prepared value only while its exact entry lifetime is current.
+    func beginDelivery(_ prepared: FileWorkspacePreparedEntry) async throws -> UUID {
+        try await withOperation { operation in
+            try self.requireWritable()
+            guard prepared.writerID == self.writerID,
+                  let entry = self.manifest.entries.first(where: { $0.id == prepared.id }),
+                  Self.sameLifetime(entry, prepared) else {
+                throw FileWorkspaceError.unavailable
+            }
+            return try await self.beginDelivery(selected: [entry], operation: operation)
+        }
+    }
+
     /// beginDelivery pins the exact entries selected for one per-item receipt session.
     func beginDelivery(ids: [UUID]) async throws -> UUID {
         try await withOperation { operation in
@@ -570,38 +626,79 @@ actor FileWorkspaceStore {
                 guard let entry = byID[id] else { throw FileWorkspaceError.unavailable }
                 return entry
             }
-            let retained = try selected.reduce(into: 0) { total, entry in
-                let count = try JSONEncoder().encode(entry).count + 256
-                let next  = total.addingReportingOverflow(count)
-                guard !next.overflow else { throw FileWorkspaceError.quotaExceeded }
-                total = next.partialValue
+            return try await self.beginDelivery(selected: selected, operation: operation)
+        }
+    }
+
+    /// lease resolves a prepared lifetime for a host-scoped preview or reveal operation.
+    func lease(for prepared: FileWorkspacePreparedEntry) async throws -> FileReferenceLease {
+        try await withOperation { _ in
+            try self.requireWritable()
+            guard prepared.writerID == self.writerID,
+                  let entry = self.manifest.entries.first(where: { $0.id == prepared.id }),
+                  Self.sameLifetime(entry, prepared) else {
+                throw FileWorkspaceError.unavailable
             }
-            try await self.namespaceLifetime.accountRetained(
-                bytes    : self.manifestBytes + self.deliveryRetainedBytes + retained,
-                operation: operation
+            return try await self.lease(for: entry)
+        }
+    }
+
+    /// removeExternalReference forgets a bookmark without touching the user's original file.
+    func removeExternalReference(
+        id      : UUID,
+        revision: UInt64
+    ) async throws {
+        try await withOperation { operation in
+            try self.requireWritable()
+            guard self.manifest.revision == revision else { throw FileWorkspaceError.staleRevision }
+            guard let index = self.manifest.entries.firstIndex(where: { $0.id == id }),
+                  self.manifest.entries[index].ownership == .externalReference else {
+                throw FileWorkspaceError.unavailable
+            }
+            var candidate = self.manifest
+            candidate.entries.remove(at: index)
+            candidate.revision = try Self.nextRevision(self.manifest.revision)
+            try await self.commit(candidate, operation: operation)
+        }
+    }
+
+    /// relinkExternalReference replaces a missing bookmark while preserving the row ID and order.
+    func relinkExternalReference(
+        id      : UUID,
+        to url  : URL,
+        revision: UInt64
+    ) async throws {
+        try await withOperation { operation in
+            try self.requireWritable()
+            guard self.manifest.revision == revision else { throw FileWorkspaceError.staleRevision }
+            guard let index = self.manifest.entries.firstIndex(where: { $0.id == id }),
+                  self.manifest.entries[index].ownership == .externalReference else {
+                throw FileWorkspaceError.unavailable
+            }
+            let lease: FileReferenceLease
+            do { lease = try await self.references.createReference(to: url) }
+            catch { throw FileWorkspaceError.unsupported }
+            defer { lease.close() }
+            guard !self.manifest.entries.enumerated().contains(where: {
+                $0.offset != index && $0.element.identity == lease.identity
+            }) else { throw FileWorkspaceError.unsupported }
+            let metadata = try Self.metadata(for: lease.url)
+            var candidate = self.manifest
+            candidate.entries[index] = StoredEntry(
+                id            : id,
+                name          : metadata.name,
+                typeIdentifier: metadata.type,
+                ownership     : .externalReference,
+                reference     : StoredReference(
+                    bookmark: lease.bookmark,
+                    identity: lease.identity
+                ),
+                managedName: nil,
+                identity   : lease.identity,
+                generation : UUID()
             )
-            do {
-                try await self.namespaceLifetime.addDeliveryPins(
-                    selected.count,
-                    writer   : self.writerID,
-                    operation: operation
-                )
-            } catch {
-                try? await self.namespaceLifetime.accountRetained(
-                    bytes    : self.manifestBytes + self.deliveryRetainedBytes,
-                    operation: operation
-                )
-                throw error
-            }
-            var pending: [UUID: StoredEntry] = [:]
-            for entry in selected {
-                pending[entry.id] = entry
-                if let name = entry.managedName { self.managedPins[name, default: 0] += 1 }
-            }
-            let deliveryID = UUID()
-            self.deliveries[deliveryID] = Delivery(pending: pending)
-            self.deliveryRetainedBytes += retained
-            return deliveryID
+            candidate.revision = try Self.nextRevision(self.manifest.revision)
+            try await self.commit(candidate, operation: operation)
         }
     }
 
@@ -616,22 +713,7 @@ actor FileWorkspaceStore {
             guard let entry = self.deliveries[deliveryID]?.pending[itemID] else {
                 throw FileWorkspaceError.unavailable
             }
-            switch entry.ownership {
-            case .externalReference:
-                guard let reference = entry.reference else { throw FileWorkspaceError.ioFailure }
-                let lease = try await self.references.resolve(reference.bookmark)
-                guard lease.identity == reference.identity else {
-                    lease.close()
-                    throw FileWorkspaceError.unavailable
-                }
-                return lease
-            case .managed:
-                guard let name = entry.managedName else { throw FileWorkspaceError.ioFailure }
-                return try self.managedLease(
-                    name    : name,
-                    identity: entry.identity
-                )
-            }
+            return try await self.lease(for: entry)
         }
     }
 
@@ -717,6 +799,60 @@ actor FileWorkspaceStore {
                 )
                 try await self.reconcile(operation: operation)
             }
+        }
+    }
+
+    private func beginDelivery(
+        selected : [StoredEntry],
+        operation: UUID
+    ) async throws -> UUID {
+        let retained = try selected.reduce(into: 0) { total, entry in
+            let count = try JSONEncoder().encode(entry).count + 256
+            let next  = total.addingReportingOverflow(count)
+            guard !next.overflow else { throw FileWorkspaceError.quotaExceeded }
+            total = next.partialValue
+        }
+        try await namespaceLifetime.accountRetained(
+            bytes    : manifestBytes + deliveryRetainedBytes + retained,
+            operation: operation
+        )
+        do {
+            try await namespaceLifetime.addDeliveryPins(
+                selected.count,
+                writer   : writerID,
+                operation: operation
+            )
+        } catch {
+            try? await namespaceLifetime.accountRetained(
+                bytes    : manifestBytes + deliveryRetainedBytes,
+                operation: operation
+            )
+            throw error
+        }
+        var pending: [UUID: StoredEntry] = [:]
+        for entry in selected {
+            pending[entry.id] = entry
+            if let name = entry.managedName { managedPins[name, default: 0] += 1 }
+        }
+        let deliveryID = UUID()
+        deliveries[deliveryID] = Delivery(pending: pending)
+        deliveryRetainedBytes += retained
+        return deliveryID
+    }
+
+    private func lease(for entry: StoredEntry) async throws -> FileReferenceLease {
+        switch entry.ownership {
+        case .externalReference:
+            guard let reference = entry.reference else { throw FileWorkspaceError.ioFailure }
+            let lease = try await references.resolve(reference.bookmark)
+            guard lease.identity == reference.identity else {
+                lease.close()
+                throw FileWorkspaceError.unavailable
+            }
+            return lease
+        case .managed:
+            guard let name = entry.managedName else { throw FileWorkspaceError.ioFailure }
+            return try managedLease(name: name, identity: entry.identity)
         }
     }
 
@@ -1156,6 +1292,18 @@ actor FileWorkspaceStore {
             && lhs.ownership == rhs.ownership
             && lhs.identity == rhs.identity
             && lhs.managedName == rhs.managedName
+            && lhs.generation == rhs.generation
+    }
+
+    private static func sameLifetime(
+        _ lhs: StoredEntry,
+        _ rhs: FileWorkspacePreparedEntry
+    ) -> Bool {
+        lhs.id == rhs.id
+            && lhs.ownership == rhs.ownership
+            && lhs.identity == rhs.identity
+            && lhs.managedName == rhs.managedName
+            && lhs.generation == rhs.generation
     }
 
     private static func map(_ error: any Error) -> FileWorkspaceError {

@@ -24,6 +24,7 @@ public actor ResourceGovernor {
     private var entries: [UUID: Entry] = [:]
     private var totals: [ResourceDimension: Int] = [:]
     private var owners: [AddonID: [ResourceDimension: Int]] = [:]
+    private var localFileWorkspaceLifetime: FileWorkspaceNamespaceLifetime?
 #if DEBUG
     /// assetTransferRefundFailures lets a focused test inject a protected-refund failure through
     /// the real disposal seam. It carries no policy and production code never arms it.
@@ -34,6 +35,27 @@ public actor ResourceGovernor {
 #endif
 
     public init(policy: ResourcePolicy = ResourcePolicy()) { self.policy = policy }
+
+    /// fileWorkspaceLifetime returns the process-wide lifetime for the one local app shelf.
+    func fileWorkspaceLifetime(
+        directory: URL,
+        owner    : AddonID
+    ) throws -> FileWorkspaceNamespaceLifetime {
+        if let localFileWorkspaceLifetime {
+            guard localFileWorkspaceLifetime.directory == directory.standardizedFileURL,
+                  localFileWorkspaceLifetime.owner == owner else {
+                throw FileWorkspaceError.interrupted
+            }
+            return localFileWorkspaceLifetime
+        }
+        let lifetime = FileWorkspaceNamespaceLifetime(
+            directory: directory,
+            owner    : owner,
+            resources: self
+        )
+        localFileWorkspaceLifetime = lifetime
+        return lifetime
+    }
 
     public func admit(_ request: ResourceRequest, owner: AddonID) throws -> ResourceReservation {
         let charges = try policy.charges(for: request)

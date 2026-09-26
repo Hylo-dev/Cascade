@@ -143,6 +143,25 @@ struct FileWorkspaceStoreTests {
     }
 
     @Test
+    func relinkingTheSameFileInvalidatesPreparedAndPendingLifetimes() async throws {
+        let fixture = try Fixture(owner: owner)
+        let source  = try fixture.file(name: "same.txt", contents: "same")
+        let store   = try await fixture.store()
+        let id      = try #require(try await store.addOriginals([source]).first)
+        let prepared = try #require(try await store.prepareItems(ids: [id]).first)
+        let delivery = try await store.beginDelivery(prepared)
+        let revision = try await store.snapshot(cursor: nil).revision
+
+        try await store.relinkExternalReference(id: id, to: source, revision: revision)
+
+        await #expect(throws: FileWorkspaceError.unavailable) {
+            _ = try await store.beginDelivery(prepared)
+        }
+        try await store.finishDelivery(delivery, itemID: id, result: .success(()))
+        #expect(try await store.snapshot(cursor: nil).entries.map(\.id) == [id])
+    }
+
+    @Test
     func managedCopyUsesRealQuotaAndStaysChargedWhenCleanupFails() async throws {
         let governor = ResourceGovernor()
         _ = try await governor.admit(
