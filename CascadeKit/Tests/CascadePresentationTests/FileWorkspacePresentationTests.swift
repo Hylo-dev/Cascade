@@ -81,6 +81,36 @@ struct FileWorkspacePresentationTests {
 
     @Test
     @MainActor
+    func optionalHostHooksDecorateEntriesWithoutChangingDefaultCallers() throws {
+        let presentation = try workspace(totalCount: 4, mode: .deck)
+        var thumbnails: Set<UUID> = []
+        var wrapped: Set<UUID> = []
+        let view = try CascadeFileWorkspace(
+            presentation,
+            assets  : PreviewAssets(),
+            dispatch: { _ in },
+            thumbnail: { entry in
+                thumbnails.insert(entry.id)
+                return Image(systemName: "doc.text.fill")
+            },
+            wrapEntry: { entry, _, content in
+                wrapped.insert(entry.id)
+                return content
+            },
+            conversionUnavailableExplanation: "Conversione non ancora disponibile"
+        )
+
+        _ = try render(
+            view.frame(width: 420, height: 190),
+            size: CGSize(width: 420, height: 190)
+        )
+
+        #expect(thumbnails == Set(presentation.snapshot.entries.map(\.id)))
+        #expect(wrapped == Set(presentation.snapshot.entries.map(\.id)))
+    }
+
+    @Test
+    @MainActor
     func rendersRepresentativeWorkspacePreviews() throws {
         let fixtures: [(String, FileWorkspaceMode, Int, CGSize, Bool, Bool)] = [
             ("deck-1", .deck, 1, CGSize(width: 360, height: 180), false, false),

@@ -5,6 +5,7 @@
 
 import AppKit
 import CascadeKit
+import CascadeRuntime
 import Observation
 
 nonisolated enum AuxiliaryInvocationOrigin {
@@ -149,6 +150,10 @@ final class CascadeServices {
     @ObservationIgnored
     private let notch: NotchEngine
     @ObservationIgnored
+    private let fileShelfGovernor: ResourceGovernor
+    @ObservationIgnored
+    private let fileShelfController: FileShelfController
+    @ObservationIgnored
     private var settings: (any CascadeSettingsPresenting)?
     @ObservationIgnored
     private let spotlight: SpotlightCoordinator
@@ -198,6 +203,10 @@ final class CascadeServices {
     @ObservationIgnored
     private var startupPermissionTask: Task<Void, Never>?
     @ObservationIgnored
+    private var fileShelfStartTask: Task<Void, Never>?
+    @ObservationIgnored
+    private var fileShelfNoticeRevision: UInt64 = 0
+    @ObservationIgnored
     private let audioPermissionRequester = AudioCapturePermissionRequester()
     private var startupAudioStatus: AudioSpectrumStatus = .stopped
     @ObservationIgnored
@@ -211,6 +220,15 @@ final class CascadeServices {
         )
         self.notch = notch
         self.displayPreferencesStore = displayPreferencesStore
+        let fileShelfGovernor = ResourceGovernor()
+        self.fileShelfGovernor = fileShelfGovernor
+        do {
+            let directory = try Self.makeFileShelfDirectory()
+            let host = try FileWorkspaceHost(directory: directory, governor: fileShelfGovernor)
+            fileShelfController = FileShelfController(host: host, preferenceChanged: { _ in })
+        } catch {
+            fileShelfController = FileShelfController(startupError: error, preferenceChanged: { _ in })
+        }
         spotlight = SpotlightCoordinator(
             anchor: { [weak notch] in
                 guard let notch,
@@ -274,6 +292,22 @@ final class CascadeServices {
         notch.onScreenLocked = { [weak self] in
             self?.spotlight.screenLocked()
         }
+        let fileShelfController = self.fileShelfController
+        fileShelfController.setContentChanged { [weak fileShelfController, weak notch] prefersDefault in
+            guard let fileShelfController else { return }
+            notch?.setContextualPage(fileShelfController, prefersDefault: prefersDefault)
+        }
+        notch.setContextualPage(fileShelfController, prefersDefault: false)
+        notch.configureFileDrop(
+            onHover: { [weak fileShelfController] urls in fileShelfController?.showHover(urls) },
+            onDrop: { [weak fileShelfController] urls in fileShelfController?.acceptDrop(urls) ?? false },
+            onUnsupported: { [weak self, weak fileShelfController] in
+                fileShelfController?.showUnsupportedDrop()
+                guard let self else { return }
+                self.fileShelfNoticeRevision &+= 1
+                self.notch.showNotice(FileShelfUnsupportedNotice(revision: self.fileShelfNoticeRevision))
+            }
+        )
     }
 
     /// openSettings uses the expanded target before presentation, even when
@@ -306,6 +340,9 @@ final class CascadeServices {
         notch.register(ClockWidget())
         notch.setHapticsEnabled(hapticsEnabled)
         notch.setSensitiveContentVisible(sensitiveContentVisible)
+        fileShelfStartTask = Task { [weak fileShelfController] in
+            await fileShelfController?.start()
+        }
         notch.start()
         updateSpotlight()
         startNetworkMonitoring()
@@ -355,6 +392,9 @@ final class CascadeServices {
         spotlight.stop()
         startupPermissionTask?.cancel()
         startupPermissionTask = nil
+        fileShelfStartTask?.cancel()
+        fileShelfStartTask = nil
+        fileShelfController.stop()
         startupAudioStatus = .stopped
         networkTask?.cancel()
         networkTask = nil
@@ -381,6 +421,24 @@ final class CascadeServices {
         if let mediaActivity { notch.endActivity(id: mediaActivity.id) }
         mediaActivity = nil
         notch.stop()
+    }
+
+    private static func makeFileShelfDirectory() throws -> URL {
+        let base = try FileManager.default.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+        let directory = base
+            .appendingPathComponent("Cascade", isDirectory: true)
+            .appendingPathComponent("FileShelf", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o700],
+            ofItemAtPath: directory.path
+        )
+        return directory
     }
 
     /// refreshNativeReplacement is called when the menu opens, allowing a newly

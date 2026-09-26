@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		CA5CADE10CA10CA10CA1A003 /* CascadeKit in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE10CA10CA10CA1A002 /* CascadeKit */; };
+		CA5CADE10CA10CA10CA1A004 /* CascadeRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE10CA10CA10CA1A005 /* CascadeRuntime */; };
 		CA5CADE20000000000000001 /* ffmpeg in Embed FFmpeg Helpers */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000011 /* ffmpeg */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		CA5CADE20000000000000002 /* ffprobe in Embed FFmpeg Helpers */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000012 /* ffprobe */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		CA5CADE20000000000000003 /* FFmpeg-LICENSE.md in Copy FFmpeg Notices */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000013 /* FFmpeg-LICENSE.md */; };
@@ -95,6 +96,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CA5CADE10CA10CA10CA1A003 /* CascadeKit in Frameworks */,
+				CA5CADE10CA10CA10CA1A004 /* CascadeRuntime in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -172,6 +174,7 @@
 			name = Cascade;
 			packageProductDependencies = (
 				CA5CADE10CA10CA10CA1A002 /* CascadeKit */,
+				CA5CADE10CA10CA10CA1A005 /* CascadeRuntime */,
 			);
 			productName = Cascade;
 			productReference = 040312672FE4355A00BA9823 /* Cascade.app */;
@@ -691,6 +694,10 @@
 		CA5CADE10CA10CA10CA1A002 /* CascadeKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = CascadeKit;
+		};
+		CA5CADE10CA10CA10CA1A005 /* CascadeRuntime */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CascadeRuntime;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

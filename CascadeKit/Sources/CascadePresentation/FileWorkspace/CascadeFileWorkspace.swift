@@ -15,6 +15,9 @@ public struct CascadeFileWorkspace: View {
     private let assets      : any ContentAssetResolving
     private let dispatch    : @MainActor (ActionDescriptor) -> Void
     private let reduceMotionOverride: Bool?
+    private let thumbnailOverride: (@MainActor (FileWorkspaceEntry) -> Image?)?
+    private let wrapEntry: (@MainActor (FileWorkspaceEntry, ActionDescriptor?, AnyView) -> AnyView)?
+    private let conversionUnavailableExplanation: String?
 
     @Environment(\.accessibilityReduceMotion)
     private var systemReduceMotion
@@ -25,17 +28,26 @@ public struct CascadeFileWorkspace: View {
     @State
     private var listIsVisible = false
 
+    @State
+    private var deckHasArrived = false
+
     public init(
         _ presentation: FileWorkspacePresentation,
         assets        : any ContentAssetResolving,
         dispatch      : @escaping @MainActor (ActionDescriptor) -> Void,
-        reduceMotion  : Bool? = nil
+        reduceMotion  : Bool? = nil,
+        thumbnail     : (@MainActor (FileWorkspaceEntry) -> Image?)? = nil,
+        wrapEntry     : (@MainActor (FileWorkspaceEntry, ActionDescriptor?, AnyView) -> AnyView)? = nil,
+        conversionUnavailableExplanation: String? = nil
     ) throws {
         try presentation.validate()
         self.presentation = presentation
         self.assets       = assets
         self.dispatch     = dispatch
         reduceMotionOverride = reduceMotion
+        thumbnailOverride = thumbnail
+        self.wrapEntry = wrapEntry
+        self.conversionUnavailableExplanation = conversionUnavailableExplanation
     }
 
     public var body: some View {
@@ -47,6 +59,8 @@ public struct CascadeFileWorkspace: View {
             }
         }
         .animation(reduceMotion ? nil : .spring(response: 0.24, dampingFraction: 0.78), value: presentation.mode)
+        .onAppear { animateDeckArrival() }
+        .onChange(of: deckEntryIDs) { _, _ in animateDeckArrival() }
     }
 
     private var deck: some View {
@@ -55,29 +69,9 @@ public struct CascadeFileWorkspace: View {
             reduceMotion: reduceMotion
         )
         return HStack(spacing: 16) {
-            actionControl(
-                presentation.action(for: .openList),
-                label: {
-                    ZStack(alignment: .trailing) {
-                        ForEach(Array(transforms.reversed()), id: \.index) { transform in
-                            if presentation.snapshot.entries.indices.contains(transform.index) {
-                                let entry = presentation.snapshot.entries[transform.index]
-                                card(
-                                    entry,
-                                    showsName: transform.index == 0
-                                )
-                                    .matchedGeometryEffect(id: entry.id, in: fileIdentity)
-                                    .rotationEffect(.degrees(transform.rotationDegrees))
-                                    .offset(x: transform.xOffset, y: transform.yOffset)
-                                    .scaleEffect(transform.scale)
-                            }
-                        }
-                    }
-                    .frame(width: 190, height: 118)
-                }
-            )
+            deckStack(transforms)
             .buttonStyle(.plain)
-            .accessibilityLabel("Open file list")
+            .accessibilityLabel("Apri elenco file")
 
             let overflow = FileWorkspaceLayout.overflowCount(
                 totalCount: presentation.snapshot.totalCount
@@ -86,33 +80,61 @@ public struct CascadeFileWorkspace: View {
                 Text("+\(overflow)")
                     .font(.headline.monospacedDigit())
                     .foregroundStyle(.secondary)
-                    .accessibilityLabel("\(overflow) more files")
+                    .accessibilityLabel("Altri \(overflow) file")
             }
-            actionButton(
-                presentation.action(for: .convert),
-                label : "Convert",
-                symbol: "arrow.triangle.2.circlepath",
-                iconOnly: false
-            )
+            conversionButton
         }
         .padding(14)
+    }
+
+    @ViewBuilder
+    private func deckStack(_ transforms: [FileCardTransform]) -> some View {
+        let action = presentation.action(for: .openList)
+        if wrapEntry == nil {
+            actionControl(action) { deckCards(transforms, action: nil) }
+        } else {
+            deckCards(transforms, action: action)
+        }
+    }
+
+    private func deckCards(
+        _ transforms: [FileCardTransform],
+        action          : ActionDescriptor?
+    ) -> some View {
+        ZStack(alignment: .trailing) {
+            ForEach(Array(transforms.reversed()), id: \.index) { transform in
+                if presentation.snapshot.entries.indices.contains(transform.index) {
+                    let entry = presentation.snapshot.entries[transform.index]
+                    wrappedEntry(
+                        entry,
+                        action : action,
+                        content: AnyView(card(entry, showsName: transform.index == 0))
+                    )
+                    .matchedGeometryEffect(id: entry.id, in: fileIdentity)
+                    .rotationEffect(.degrees(
+                        deckHasArrived || reduceMotion ? transform.rotationDegrees : 0
+                    ))
+                    .offset(
+                        x: deckHasArrived || reduceMotion ? transform.xOffset : 54,
+                        y: deckHasArrived || reduceMotion ? transform.yOffset : 0
+                    )
+                    .scaleEffect(deckHasArrived || reduceMotion ? transform.scale : 0.96)
+                }
+            }
+        }
+        .frame(width: 190, height: 118)
     }
 
     private var list: some View {
         VStack(spacing: 8) {
             HStack {
-                Text("Files")
+                Text("File")
                     .font(.headline)
                 Spacer()
-                actionButton(
-                    presentation.action(for: .convert),
-                    label : "Convert",
-                    symbol: "arrow.triangle.2.circlepath",
-                    iconOnly: false
-                )
+                conversionButton
                 actionButton(
                     presentation.action(for: .closeList),
-                    label : "Close list",
+                    label : "Chiudi elenco",
                     symbol: "rectangle.stack"
                 )
             }
@@ -135,7 +157,7 @@ public struct CascadeFileWorkspace: View {
             if presentation.snapshot.nextCursor != nil {
                 actionButton(
                     presentation.action(for: .nextPage),
-                    label : "Load more files",
+                    label : "Pagina successiva",
                     symbol: "chevron.down"
                 )
             }
@@ -291,9 +313,10 @@ public struct CascadeFileWorkspace: View {
 
     private func row(_ entry: FileWorkspaceEntry) -> some View {
         HStack(spacing: 9) {
-            actionControl(
-                presentation.action(for: .select, entryID: entry.id),
-                label: {
+            wrappedEntry(
+                entry,
+                action : presentation.action(for: .select, entryID: entry.id),
+                content: AnyView(
                     HStack(spacing: 9) {
                         thumbnail(entry)
                             .frame(width: 32, height: 32)
@@ -315,16 +338,16 @@ public struct CascadeFileWorkspace: View {
                         if presentation.selectedEntryIDs.contains(entry.id) {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundStyle(.tint)
-                                .accessibilityLabel("Selected")
+                                .accessibilityLabel("Selezionato")
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                }
+                )
             )
             .buttonStyle(.plain)
             .help(entry.name)
             if let remove = presentation.action(for: .remove, entryID: entry.id) {
-                Button("Remove", systemImage: "xmark") { dispatch(remove) }
+                Button("Rimuovi", systemImage: "xmark") { dispatch(remove) }
                     .labelStyle(.iconOnly)
                     .buttonStyle(.borderless)
             }
@@ -383,7 +406,12 @@ public struct CascadeFileWorkspace: View {
 
     @ViewBuilder
     private func thumbnail(_ entry: FileWorkspaceEntry) -> some View {
-        if let assetID = entry.thumbnailAssetID,
+        if let image = thumbnailOverride?(entry) {
+            image
+                .resizable()
+                .scaledToFit()
+                .accessibilityHidden(true)
+        } else if let assetID = entry.thumbnailAssetID,
            let image = assets.image(for: assetID) {
             image
                 .resizable()
@@ -397,6 +425,16 @@ public struct CascadeFileWorkspace: View {
                 .padding(5)
                 .accessibilityHidden(true)
         }
+    }
+
+    private func wrappedEntry(
+        _ entry : FileWorkspaceEntry,
+        action  : ActionDescriptor?,
+        content : AnyView
+    ) -> AnyView {
+        if let wrapEntry { return wrapEntry(entry, action, content) }
+        guard let action else { return content }
+        return AnyView(Button(action: { dispatch(action) }) { content })
     }
 
     @ViewBuilder
@@ -432,15 +470,33 @@ public struct CascadeFileWorkspace: View {
     }
 
     @ViewBuilder
+    private var conversionButton: some View {
+        if let action = presentation.action(for: .convert) {
+            actionButton(
+                action,
+                label   : "Converti",
+                symbol  : "arrow.triangle.2.circlepath",
+                iconOnly: false
+            )
+        } else if let explanation = conversionUnavailableExplanation {
+            Button("Converti", systemImage: "arrow.triangle.2.circlepath") {}
+                .labelStyle(.titleAndIcon)
+                .disabled(true)
+                .help(explanation)
+                .accessibilityHint(explanation)
+        }
+    }
+
+    @ViewBuilder
     private func entryMenu(_ entry: FileWorkspaceEntry) -> some View {
         let relink = presentation.action(for: .relink, entryID: entry.id)
         let preview = presentation.action(for: .preview, entryID: entry.id)
         let reveal = presentation.action(for: .reveal, entryID: entry.id)
         if relink != nil || preview != nil || reveal != nil {
-            Menu("More actions", systemImage: "ellipsis") {
-                if let relink { Button("Relink") { dispatch(relink) } }
-                if let preview { Button("Preview") { dispatch(preview) } }
-                if let reveal { Button("Reveal in Finder") { dispatch(reveal) } }
+            Menu("Altre azioni", systemImage: "ellipsis") {
+                if let relink { Button("Ricollega") { dispatch(relink) } }
+                if let preview { Button("Anteprima") { dispatch(preview) } }
+                if let reveal { Button("Mostra nel Finder") { dispatch(reveal) } }
             }
             .labelStyle(.iconOnly)
             .menuStyle(.borderlessButton)
@@ -470,9 +526,9 @@ public struct CascadeFileWorkspace: View {
 
     private func availabilityLabel(_ availability: FileAvailability) -> String {
         switch availability {
-        case .available: "Available"
-        case .unavailable: "Unavailable"
-        case .receiving: "Receiving"
+        case .available: "Disponibile"
+        case .unavailable: "Non disponibile"
+        case .receiving: "In ricezione"
         }
     }
 
@@ -487,5 +543,29 @@ public struct CascadeFileWorkspace: View {
 
     private var reduceMotion: Bool {
         reduceMotionOverride ?? systemReduceMotion
+    }
+
+    private var deckEntryIDs: [UUID] {
+        Array(presentation.snapshot.entries.prefix(FileWorkspaceLayout.maximumVisibleCards).map(\.id))
+    }
+
+    private func animateDeckArrival() {
+        guard !reduceMotion, presentation.mode == .deck, !deckEntryIDs.isEmpty else {
+            deckHasArrived = true
+            return
+        }
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { deckHasArrived = false }
+        Task { @MainActor in
+            await Task.yield()
+            guard !reduceMotion, presentation.mode == .deck else {
+                deckHasArrived = true
+                return
+            }
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
+                deckHasArrived = true
+            }
+        }
     }
 }
