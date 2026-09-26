@@ -17,6 +17,7 @@ actor GatedRuntimeResourceAccess: RuntimeResourceAccess {
     private var shouldGateTemporaryMemory = false
     private var shouldGateStateAdmission = false
     private var shouldGateJobAdmission = false
+    private var shouldGateWorkspaceReconcile = false
     private var hasArrived = false
     private var isReleased = false
     private var arrivalContinuation: CheckedContinuation<Void, Never>?
@@ -59,6 +60,12 @@ actor GatedRuntimeResourceAccess: RuntimeResourceAccess {
 
     func armJobAdmission() {
         shouldGateJobAdmission = true
+        hasArrived = false
+        isReleased = false
+    }
+
+    func armWorkspaceReconcile() {
+        shouldGateWorkspaceReconcile = true
         hasArrived = false
         isReleased = false
     }
@@ -215,6 +222,28 @@ actor GatedRuntimeResourceAccess: RuntimeResourceAccess {
         )
     }
 
+    func workspaceReconcileObservedDisk(
+        _ token      : ObservedDiskToken,
+        owner        : AddonID,
+        fromBytes    : Int,
+        measuredBytes: Int
+    ) async throws -> Bool {
+        let shouldGate = shouldGateWorkspaceReconcile
+        shouldGateWorkspaceReconcile = false
+        let result = try await resourceGovernorTarget.reconcileObservedDisk(
+            token,
+            owner        : owner,
+            fromBytes    : fromBytes,
+            measuredBytes: measuredBytes
+        )
+        guard shouldGate else { return result }
+        hasArrived = true
+        arrivalContinuation?.resume()
+        arrivalContinuation = nil
+        if isReleased { return result }
+        await waitForRelease()
+        return result
+    }
 }
 
 /// RuntimeServiceDecisionAccessBox exposes the wrapper assembled around the runtime's private broker.

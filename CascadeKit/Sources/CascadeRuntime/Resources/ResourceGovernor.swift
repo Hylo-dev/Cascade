@@ -14,6 +14,7 @@ public actor ResourceGovernor {
         let reservation: ResourceReservation
         var charges: [ResourceDimension: Int]
         var statePayloadBytes: Int?
+        var memoryPayloadBytes: Int?
         let retainedAssetSecret: UUID?
         let observedDiskSecret : UUID?
     }
@@ -37,17 +38,26 @@ public actor ResourceGovernor {
     public func admit(_ request: ResourceRequest, owner: AddonID) throws -> ResourceReservation {
         let charges = try policy.charges(for: request)
         let reservation = ResourceReservation(id: UUID(), owner: owner)
-        let statePayloadBytes: Int?
+        let statePayloadBytes : Int?
+        let memoryPayloadBytes: Int?
         if case .state(let bytes) = request { statePayloadBytes = bytes }
         else { statePayloadBytes = nil }
-        return try insert(reservation: reservation, charges: charges,
-                          statePayloadBytes: statePayloadBytes, retainedAssetSecret: nil)
+        if case .temporaryMemory(let bytes) = request { memoryPayloadBytes = bytes }
+        else { memoryPayloadBytes = nil }
+        return try insert(
+            reservation        : reservation,
+            charges            : charges,
+            statePayloadBytes  : statePayloadBytes,
+            memoryPayloadBytes : memoryPayloadBytes,
+            retainedAssetSecret: nil
+        )
     }
 
     private func insert(
         reservation        : ResourceReservation,
         charges            : [ResourceDimension: Int],
         statePayloadBytes  : Int?,
+        memoryPayloadBytes : Int? = nil,
         retainedAssetSecret: UUID?,
         observedDiskSecret : UUID? = nil
     ) throws -> ResourceReservation {
@@ -71,6 +81,7 @@ public actor ResourceGovernor {
             reservation        : reservation,
             charges            : charges,
             statePayloadBytes  : statePayloadBytes,
+            memoryPayloadBytes : memoryPayloadBytes,
             retainedAssetSecret: retainedAssetSecret,
             observedDiskSecret : observedDiskSecret
         )
@@ -150,6 +161,43 @@ public actor ResourceGovernor {
         entries[reservationID] = entry
         totals[dimension, default: 0] += chargeDelta
         owners[owner, default: [:]][dimension, default: 0] += chargeDelta
+        return true
+    }
+
+    /// resizeMemoryReservation changes one ordinary temporary-memory reservation in place.
+    /// It exists for host-owned retained buffers whose lifetime outlives one callback.
+    func resizeMemoryReservation(
+        _ reservationID: UUID,
+        owner    : AddonID,
+        fromBytes: Int,
+        toBytes  : Int
+    ) throws -> Bool {
+        guard var entry = entries[reservationID] else { return false }
+        guard entry.reservation.owner == owner else {
+            throw AddonFailure(
+                code  : .permissionDenied,
+                reason: "The reservation belongs to another addon."
+            )
+        }
+        guard entry.memoryPayloadBytes == fromBytes else { return false }
+        let desired   = try policy.charges(for: .temporaryMemory(bytes: toBytes))
+        let dimension = ResourceDimension.admittedMemoryBytes
+        let delta     = desired[dimension, default: 0] - entry.charges[dimension, default: 0]
+        if delta > 0 {
+            guard delta <= policy.ceiling(dimension, perOwner: false) - totals[dimension, default: 0],
+                  delta <= policy.ceiling(dimension, perOwner: true)
+                    - owners[owner, default: [:]][dimension, default: 0] else {
+                throw AddonFailure(
+                    code  : .resourceDenied,
+                    reason: "The resource budget is currently full."
+                )
+            }
+        }
+        entry.memoryPayloadBytes = toBytes
+        entry.charges[dimension] = desired[dimension]
+        entries[reservationID] = entry
+        totals[dimension, default: 0] += delta
+        owners[owner, default: [:]][dimension, default: 0] += delta
         return true
     }
 
