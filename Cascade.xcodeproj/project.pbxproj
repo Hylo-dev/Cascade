@@ -316,12 +316,11 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(DERIVED_FILE_DIR)/FFmpegVerification",
 				"$(DERIVED_FILE_DIR)/ffmpeg-verified.stamp",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -eu\nfor architecture in $ARCHS; do\n    CASCADE_FFMPEG_VERIFY_SCRATCH=\"$DERIVED_FILE_DIR/FFmpegVerification\" /bin/zsh \"$SRCROOT/scripts/verify-ffmpeg.sh\" \"$SRCROOT/Config/FFmpeg/Artifacts/arm64\" --arch \"$architecture\" --manifest \"$SRCROOT/Config/FFmpeg/manifest.json\"\ndone\n/usr/bin/touch \"$DERIVED_FILE_DIR/ffmpeg-verified.stamp\"\n";
+			shellScript = "set -eu\nfor architecture in $ARCHS; do\n    CASCADE_FFMPEG_VERIFY_SCRATCH=\"$TARGET_TEMP_DIR/FFmpegVerification\" /bin/zsh \"$SRCROOT/scripts/verify-ffmpeg.sh\" \"$SRCROOT/Config/FFmpeg/Artifacts/arm64\" --arch \"$architecture\" --manifest \"$SRCROOT/Config/FFmpeg/manifest.json\"\ndone\n/usr/bin/touch \"$DERIVED_FILE_DIR/ffmpeg-verified.stamp\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

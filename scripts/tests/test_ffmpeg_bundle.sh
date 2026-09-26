@@ -8,6 +8,7 @@ verifier=${project_directory}/scripts/verify-ffmpeg.sh
 builder=${project_directory}/scripts/build-ffmpeg.sh
 manifest=${project_directory}/Config/FFmpeg/manifest.json
 verified_helpers=${CASCADE_FFMPEG_TEST_HELPERS:-${project_directory}/Config/FFmpeg/Artifacts/arm64}
+project_file=${project_directory}/Cascade.xcodeproj/project.pbxproj
 scratch_directory=$(/usr/bin/mktemp -d "${TMPDIR:-/tmp}/cascade-ffmpeg-tests.XXXXXX")
 
 function cleanup {
@@ -131,5 +132,34 @@ space_directory=${scratch_directory}/helpers\ with\ spaces
 /bin/ln "$verified_helpers/ffmpeg" "$space_directory/ffmpeg"
 /bin/ln "$verified_helpers/ffprobe" "$space_directory/ffprobe"
 /bin/zsh "$verifier" "$space_directory" --manifest "$manifest"
+
+if [[ -x /usr/bin/sandbox-exec ]]; then
+    sandbox_scratch=${scratch_directory}/sandbox-scratch
+    sandbox_profile=${scratch_directory}/ffmpeg-verifier.sb
+    /bin/mkdir -p "$sandbox_scratch"
+    sandbox_scratch=${sandbox_scratch:A}
+    /usr/bin/printf '%s\n' \
+        '(version 1)' \
+        '(allow default)' \
+        "(deny file-write* (subpath \"${scratch_directory:A}\"))" \
+        "(allow file-read* file-write* (subpath \"$sandbox_scratch\"))" \
+        > "$sandbox_profile"
+    CASCADE_FFMPEG_VERIFY_SCRATCH="$sandbox_scratch" \
+        /usr/bin/sandbox-exec -f "$sandbox_profile" \
+            /bin/zsh "$verifier" "$verified_helpers" --manifest "$manifest"
+else
+    print "SKIP: Xcode-style sandbox scratch verification (sandbox-exec unavailable)"
+fi
+
+/usr/bin/grep -Fq \
+    'CASCADE_FFMPEG_VERIFY_SCRATCH=\"$TARGET_TEMP_DIR/FFmpegVerification\"' \
+    "$project_file" \
+    || { print -u2 "Xcode FFmpeg scratch must use TARGET_TEMP_DIR"; exit 1; }
+if /usr/bin/grep -Fq \
+    'CASCADE_FFMPEG_VERIFY_SCRATCH=\"$DERIVED_FILE_DIR/FFmpegVerification\"' \
+    "$project_file"; then
+    print -u2 "Xcode FFmpeg scratch still uses literal-only DERIVED_FILE_DIR output"
+    exit 1
+fi
 
 print "FFmpeg verifier positive and negative checks passed"
