@@ -76,6 +76,13 @@ struct ServiceSourceBinding: Sendable {
     let restartRequired: Bool
 }
 
+/// ServiceInvocationBinding is a one-call projection of canonically consumed work.
+struct ServiceInvocationBinding: Sendable {
+    let owner     : VerifiedAddonIdentity
+    let source    : ServiceSourceDescriptor
+    let invocation: ServiceInvocation
+}
+
 /// Bounded host rules and decisions. An adapter must authenticate sessions, execute decisions,
 /// and report observed process exit separately. No addon code runs in this actor.
 public actor ServiceBroker {
@@ -933,6 +940,77 @@ public actor ServiceBroker {
         leases.operations[id] = operation
         leases.requests[operation.requestKey]?.outcome = .dispatched
         return registry.interests[grant.interestID]!.sourceID
+    }
+
+    /// consumeInvocation validates an exact queued value before exposing canonical identities.
+    ///
+    /// This overload is for host service boundaries. The caller's `ServiceWork` is only a
+    /// correlation value: every field is matched against retained broker state before the
+    /// operation is marked dispatched.
+    func consumeInvocation(
+        _ work   : ServiceWork,
+        serviceID: String,
+        featureID: String,
+        operation: String,
+        now      : RuntimeInstant
+    ) throws -> ServiceInvocationBinding {
+        guard var storedOperation = leases.operations[work.id],
+              !storedOperation.consumed,
+              storedOperation.id == work.id,
+              storedOperation.contractID == serviceID,
+              storedOperation.operation == operation,
+              storedOperation.deadline == work.effectiveDeadline,
+              let grant = leases.grants[storedOperation.grantID],
+              let permission = permissions.entries[grant.permissionID]?.value,
+              permission.consumer == storedOperation.requestKey.consumer,
+              permission.serviceID == serviceID,
+              permission.binding.featureID == featureID,
+              permission.operation == operation,
+              let interest = registry.interests[grant.interestID],
+              interest.consumer == permission.consumer,
+              let source = registry.sources[interest.sourceID],
+              source.id == work.sourceID,
+              source.key == ServiceRegistry.SourceKey(permission),
+              let request = leases.requests[storedOperation.requestKey],
+              request.workID == work.id,
+              request.invocation == work.invocation,
+              request.requirementID == permission.binding.requirementID,
+              request.source == source.key,
+              request.outcome == .pending else {
+            throw Self.failure(.permissionDenied)
+        }
+        _ = try validateGrant(
+            storedOperation.grantID,
+            session: grant.session,
+            now    : now
+        )
+        guard now.monotonic < storedOperation.deadline else {
+            throw Self.failure(.deadlineExceeded)
+        }
+        storedOperation.consumed = true
+        leases.operations[work.id] = storedOperation
+        leases.requests[storedOperation.requestKey]?.outcome = .dispatched
+        return ServiceInvocationBinding(
+            owner     : permission.consumer,
+            source    : ServiceSourceDescriptor(
+                provider       : source.key.provider,
+                digest         : source.key.digest,
+                contractVersion: source.key.version,
+                serviceID      : source.key.serviceID,
+                partition      : source.key.partition,
+                featureID      : source.key.featureID,
+                operation      : source.key.operation
+            ),
+            invocation: request.invocation
+        )
+    }
+
+    /// finishConsumedInvocationAsUnknown retires work after a handler received it.
+    func finishConsumedInvocationAsUnknown(_ id: UUID) async -> Bool {
+        guard leases.operations[id]?.consumed == true else { return false }
+        finishOperation(id)
+        await reclaimTerminalResultCapacity()
+        return true
     }
 
     /// abandonInvocation preserves replay history while making a consumed decision
