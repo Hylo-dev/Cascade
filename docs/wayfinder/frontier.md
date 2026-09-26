@@ -2,7 +2,7 @@
 
 Aggiornata al 26 settembre 2026 e derivata dai metadati dei ticket. La [mappa](../../.scratch/cascade-product/map.md) resta canonica; questa vista non conserva le risoluzioni.
 
-90 ticket: 69 risolti, 0 in corso, 6 disponibili, 15 bloccati.
+91 ticket: 69 risolti, 0 in corso, 6 disponibili, 16 bloccati.
 
 Decisione del20settembre: l’utente mantiene il launcher bloccato e il requisito integrale di uscita dei processi gestiti. La [scelta è registrata](../../.scratch/cascade-product/issues/22-managed-process-exit-proof.md); resta aperta la prova tecnica, senza nuova richiesta della stessa eccezione.
 
@@ -18,7 +18,7 @@ La decisione di conservazione e il routing limitato al ripiano sono fissati dall
 - [Provare una UI SwiftUI esterna dentro il notch](../../.scratch/cascade-product/issues/19-extension-host-probe.md)
 - [Provare routing per app e output simultanei](../../.scratch/cascade-product/issues/20-audio-routing-probe.md)
 - [Definire una prova sicura di uscita dei processi gestiti](../../.scratch/cascade-product/issues/22-managed-process-exit-proof.md)
-- [Verificare e consegnare il primo ripiano file locale](../../.scratch/cascade-product/issues/90-file-shelf-local-delivery.md)
+- [Correggere l'acquisizione file nel drag nativo del ripiano](../../.scratch/cascade-product/issues/91-file-shelf-native-drop-regression.md)
 
 «Disponibile» significa che il ticket può essere preso in carico. Le prove dei processi gestiti e della scena SwiftUI restano distinte; nessuna disponibilità apre il gate nativo.
 
@@ -26,7 +26,7 @@ La decisione di conservazione e il routing limitato al ripiano sono fissati dall
 
 Concluso anche [Preparare formati e avanzamento della conversione](../../.scratch/cascade-product/issues/86-file-workspace-conversion-planning.md): 64 test indipendenti passati, build firmata e riavvio PID34695 verificati. La conversione completa conserva i suoi requisiti nativi; nessuna attivazione produttiva.
 
-Nel [piano locale autorizzato](../superpowers/plans/2026-09-26-local-file-shelf.md), host, pagina/ingresso e composizione/uscita sono risolti dopo review root e test. Build firmata e riavvio dell'app aggiornata sono verificati; la [verifica finale](../../.scratch/cascade-product/issues/90-file-shelf-local-delivery.md) resta aperta perché Finder/QA nel notch reale non sono riusciti. Questa tranche non apre il launcher addon e non abilita Converti.
+Nel [piano locale autorizzato](../superpowers/plans/2026-09-26-local-file-shelf.md), host, pagina/ingresso e composizione/uscita sono risolti dopo review root e test. La correzione per il [rilascio senza acquisizione](../../.scratch/cascade-product/issues/91-file-shelf-native-drop-regression.md) ha review, test, build firmata e riavvio verificati, ma resta aperta in attesa della conferma manuale: Finder via CUA fallisce con ScreenCaptureKit `-3811`. La [verifica finale](../../.scratch/cascade-product/issues/90-file-shelf-local-delivery.md) resta bloccata. Questa tranche non apre il launcher addon e non abilita Converti.
 
 Conclusi i tre task indipendenti: persistenza, componente condiviso e [bundle FFmpeg verificato](../../.scratch/cascade-product/issues/81-file-workspace-ffmpeg-bundle.md). Build firmata e riavvio della consegna precedente PID27461 verificati; riserva settimanale 93%. I ticket residui del ripiano attendono la qualifica nativa, senza riaprire il launcher.
 
@@ -156,7 +156,8 @@ Conclusi i tre task indipendenti: persistenza, componente condiviso e [bundle FF
 | [Preparare l'host locale e le copie verificate del ripiano](../../.scratch/cascade-product/issues/87-file-shelf-local-host.md) | Risolto | [Persistire voci e ricevute del ripiano file](../../.scratch/cascade-product/issues/78-file-workspace-persistence.md) |
 | [Instradare il ripiano locale e riconoscere il drag in ingresso](../../.scratch/cascade-product/issues/88-file-shelf-local-routing.md) | Risolto | [Aggiungere il componente condiviso e la lista animata del ripiano](../../.scratch/cascade-product/issues/80-file-workspace-presentation.md); [Preparare l'host locale e le copie verificate del ripiano](../../.scratch/cascade-product/issues/87-file-shelf-local-host.md) |
 | [Comporre la pagina locale e il drag in uscita per elemento](../../.scratch/cascade-product/issues/89-file-shelf-local-composition.md) | Risolto | [Preparare l'host locale e le copie verificate del ripiano](../../.scratch/cascade-product/issues/87-file-shelf-local-host.md); [Instradare il ripiano locale e riconoscere il drag in ingresso](../../.scratch/cascade-product/issues/88-file-shelf-local-routing.md) |
-| [Verificare e consegnare il primo ripiano file locale](../../.scratch/cascade-product/issues/90-file-shelf-local-delivery.md) | Disponibile | [Comporre la pagina locale e il drag in uscita per elemento](../../.scratch/cascade-product/issues/89-file-shelf-local-composition.md) |
+| [Verificare e consegnare il primo ripiano file locale](../../.scratch/cascade-product/issues/90-file-shelf-local-delivery.md) | Bloccato | [Comporre la pagina locale e il drag in uscita per elemento](../../.scratch/cascade-product/issues/89-file-shelf-local-composition.md); [Correggere l'acquisizione file nel drag nativo del ripiano](../../.scratch/cascade-product/issues/91-file-shelf-native-drop-regression.md) |
+| [Correggere l'acquisizione file nel drag nativo del ripiano](../../.scratch/cascade-product/issues/91-file-shelf-native-drop-regression.md) | Disponibile | [Instradare il ripiano locale e riconoscere il drag in ingresso](../../.scratch/cascade-product/issues/88-file-shelf-local-routing.md); [Comporre la pagina locale e il drag in uscita per elemento](../../.scratch/cascade-product/issues/89-file-shelf-local-composition.md) |
 
 ## Collegamento al lavoro addon
 
