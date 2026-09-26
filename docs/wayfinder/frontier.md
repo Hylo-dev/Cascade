@@ -2,7 +2,7 @@
 
 Aggiornata al 26 settembre 2026 e derivata dai metadati dei ticket. La [mappa](../../.scratch/cascade-product/map.md) resta canonica; questa vista non conserva le risoluzioni.
 
-85 ticket: 65 risolti, 0 in corso, 5 disponibili, 15 bloccati.
+86 ticket: 65 risolti, 1 in corso, 5 disponibili, 15 bloccati.
 
 Decisione del20settembre: l’utente mantiene il launcher bloccato e il requisito integrale di uscita dei processi gestiti. La [scelta è registrata](../../.scratch/cascade-product/issues/22-managed-process-exit-proof.md); resta aperta la prova tecnica, senza nuova richiesta della stessa eccezione.
 
@@ -22,6 +22,8 @@ La decisione di conservazione e il routing limitato al ripiano sono fissati dall
 «Disponibile» significa che il ticket può essere preso in carico. Le prove dei processi gestiti e della scena SwiftUI restano distinte; nessuna disponibilità apre il gate nativo.
 
 ## Tranche file-shelf mappata
+
+In corso: [Preparare formati e avanzamento della conversione](../../.scratch/cascade-product/issues/86-file-workspace-conversion-planning.md), sottocomponente puro del task conversioni.
 
 Conclusi i tre task indipendenti: persistenza, componente condiviso e [bundle FFmpeg verificato](../../.scratch/cascade-product/issues/81-file-workspace-ffmpeg-bundle.md). Build firmata e riavvio PID27461 verificati; riserva settimanale 93%. I ticket residui del ripiano attendono la qualifica nativa, senza riaprire il launcher.
 
@@ -143,10 +145,11 @@ Conclusi i tre task indipendenti: persistenza, componente condiviso e [bundle FF
 | [Acquisire e consegnare file con drag nativo per elemento](../../.scratch/cascade-product/issues/79-file-workspace-native-drag.md) | Bloccato | [Qualificare il percorso nativo del servizio files.workspace](../../.scratch/cascade-product/issues/77-file-workspace-native-path.md); [Persistire voci e ricevute del ripiano file](../../.scratch/cascade-product/issues/78-file-workspace-persistence.md) |
 | [Aggiungere il componente condiviso e la lista animata del ripiano](../../.scratch/cascade-product/issues/80-file-workspace-presentation.md) | Risolto | — |
 | [Preparare FFmpeg e ffprobe verificati nel bundle](../../.scratch/cascade-product/issues/81-file-workspace-ffmpeg-bundle.md) | Risolto | — |
-| [Eseguire conversioni file in job recuperabili](../../.scratch/cascade-product/issues/82-file-workspace-conversion-jobs.md) | Bloccato | [Qualificare il percorso nativo del servizio files.workspace](../../.scratch/cascade-product/issues/77-file-workspace-native-path.md); [Persistire voci e ricevute del ripiano file](../../.scratch/cascade-product/issues/78-file-workspace-persistence.md); [Preparare FFmpeg e ffprobe verificati nel bundle](../../.scratch/cascade-product/issues/81-file-workspace-ffmpeg-bundle.md) |
+| [Eseguire conversioni file in job recuperabili](../../.scratch/cascade-product/issues/82-file-workspace-conversion-jobs.md) | Bloccato | [Qualificare il percorso nativo del servizio files.workspace](../../.scratch/cascade-product/issues/77-file-workspace-native-path.md); [Persistire voci e ricevute del ripiano file](../../.scratch/cascade-product/issues/78-file-workspace-persistence.md); [Preparare FFmpeg e ffprobe verificati nel bundle](../../.scratch/cascade-product/issues/81-file-workspace-ffmpeg-bundle.md); [Preparare formati e avanzamento della conversione](../../.scratch/cascade-product/issues/86-file-workspace-conversion-planning.md) |
 | [Instradare il ripiano come pagina contestuale e battito del notch](../../.scratch/cascade-product/issues/83-file-workspace-routing.md) | Bloccato | [Acquisire e consegnare file con drag nativo per elemento](../../.scratch/cascade-product/issues/79-file-workspace-native-drag.md); [Aggiungere il componente condiviso e la lista animata del ripiano](../../.scratch/cascade-product/issues/80-file-workspace-presentation.md) |
 | [Comporre il provider del ripiano e i comandi di conversione](../../.scratch/cascade-product/issues/84-file-workspace-provider-composition.md) | Bloccato | [Qualificare il percorso nativo del servizio files.workspace](../../.scratch/cascade-product/issues/77-file-workspace-native-path.md); [Aggiungere il componente condiviso e la lista animata del ripiano](../../.scratch/cascade-product/issues/80-file-workspace-presentation.md); [Eseguire conversioni file in job recuperabili](../../.scratch/cascade-product/issues/82-file-workspace-conversion-jobs.md); [Instradare il ripiano come pagina contestuale e battito del notch](../../.scratch/cascade-product/issues/83-file-workspace-routing.md) |
 | [Verificare e consegnare il ripiano file integrato](../../.scratch/cascade-product/issues/85-file-workspace-integration.md) | Bloccato | [Persistire voci e ricevute del ripiano file](../../.scratch/cascade-product/issues/78-file-workspace-persistence.md); [Acquisire e consegnare file con drag nativo per elemento](../../.scratch/cascade-product/issues/79-file-workspace-native-drag.md); [Aggiungere il componente condiviso e la lista animata del ripiano](../../.scratch/cascade-product/issues/80-file-workspace-presentation.md); [Preparare FFmpeg e ffprobe verificati nel bundle](../../.scratch/cascade-product/issues/81-file-workspace-ffmpeg-bundle.md); [Eseguire conversioni file in job recuperabili](../../.scratch/cascade-product/issues/82-file-workspace-conversion-jobs.md); [Instradare il ripiano come pagina contestuale e battito del notch](../../.scratch/cascade-product/issues/83-file-workspace-routing.md); [Comporre il provider del ripiano e i comandi di conversione](../../.scratch/cascade-product/issues/84-file-workspace-provider-composition.md) |
+| [Preparare formati e avanzamento della conversione](../../.scratch/cascade-product/issues/86-file-workspace-conversion-planning.md) | In corso | [Contratti e confine autorizzato del ripiano file](../../.scratch/cascade-product/issues/76-file-workspace-contracts.md); [Preparare FFmpeg e ffprobe verificati nel bundle](../../.scratch/cascade-product/issues/81-file-workspace-ffmpeg-bundle.md) |
 
 ## Collegamento al lavoro addon
 
