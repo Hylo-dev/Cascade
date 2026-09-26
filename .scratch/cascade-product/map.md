@@ -43,6 +43,8 @@ Definire il piano applicativo globale di Cascade, basato sul codice esistente: u
 
 ## Decisions so far
 
+- [Preparare l'host locale e le copie verificate del ripiano](issues/87-file-shelf-local-host.md): facade e consegna verificata per voce accettate dopo review root e 73 test indipendenti; pagina e drag nativi seguono nel ticket successivo, senza attivazione addon.
+
 - [Preparare formati e avanzamento della conversione](issues/86-file-workspace-conversion-planning.md): parser e preset interni limitati e revisionati, 64 test passati; esecuzione e recupero dei job restano separati.
 
 - [Preparare FFmpeg e ffprobe verificati nel bundle](issues/81-file-workspace-ffmpeg-bundle.md): sorgenti autenticati, helper arm64 firmati e conversione reale verificati; nessuna attivazione nativa.
