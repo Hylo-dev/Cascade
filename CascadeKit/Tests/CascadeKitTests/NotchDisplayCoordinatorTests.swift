@@ -133,9 +133,14 @@ struct NotchDisplayCoordinatorTests {
         fixture.monitor.sendPointer(point)
         #expect(fixture.surfaces[20]?.fileDragRecognitionUpdates.isEmpty == true)
 
-        fixture.monitor.sendRecognizedFileDrag(active: true, point: point)
+        fixture.monitor.sendRecognizedFileDrag(
+            active: true,
+            point: point,
+            hasValidatedOfferHint: true
+        )
         #expect(fixture.surfaces[10]?.fileDragRecognitionUpdates.isEmpty == true)
         #expect(fixture.surfaces[20]?.fileDragRecognitionUpdates == [true])
+        #expect(fixture.surfaces[20]?.fileDragOfferHintUpdates == [true])
 
         fixture.monitor.sendLock()
         #expect(fixture.surfaces[20]?.fileDragRecognitionUpdates == [true, false])
@@ -1219,18 +1224,22 @@ private final class RecordingCoordinatorEventMonitor: EventMonitoring {
     var onScreenUnlocked             : (() -> Void)?
     private(set) var startCount = 0
     private(set) var stopCount = 0
-    private var fileDragRecognitionHandler: ((Bool, CGPoint) -> Void)?
+    private var fileDragRecognitionHandler: ((Bool, CGPoint, Bool) -> Void)?
     func start() { startCount += 1 }
     func stop() { stopCount += 1 }
     func sendLock() { onScreenLocked?() }
     func sendUnlock() { onScreenUnlocked?() }
     func sendPointer(_ point: CGPoint) { onPointerMoved?(point) }
     func sendButton(isPressed: Bool) { onPointerButtonChanged?(isPressed) }
-    func setFileDragRecognitionHandler(_ handler: ((Bool, CGPoint) -> Void)?) {
+    func setFileDragRecognitionHandler(_ handler: ((Bool, CGPoint, Bool) -> Void)?) {
         fileDragRecognitionHandler = handler
     }
-    func sendRecognizedFileDrag(active: Bool, point: CGPoint) {
-        fileDragRecognitionHandler?(active, point)
+    func sendRecognizedFileDrag(
+        active: Bool,
+        point: CGPoint,
+        hasValidatedOfferHint: Bool = false
+    ) {
+        fileDragRecognitionHandler?(active, point, hasValidatedOfferHint)
     }
 }
 
@@ -1274,6 +1283,7 @@ private final class RecordingDisplaySurface: NotchDisplayPresenting {
     private(set) var sensitiveContentUpdates: [Bool] = []
     private(set) var externalSurfaceUpdates: [Bool] = []
     private(set) var fileDragRecognitionUpdates: [Bool] = []
+    private(set) var fileDragOfferHintUpdates: [Bool] = []
     private(set) var fileDropEnabledUpdates: [Bool] = []
     private(set) var fileDragGestureEndCount = 0
     private(set) var calibrationStartCount = 0
@@ -1329,8 +1339,13 @@ private final class RecordingDisplaySurface: NotchDisplayPresenting {
     func setSensitiveContentVisible(_ isVisible: Bool) { sensitiveContentUpdates.append(isVisible) }
     func setFileDropEnabled(_ isEnabled: Bool) { fileDropEnabledUpdates.append(isEnabled) }
     func endRecognizedFileDragGesture() { fileDragGestureEndCount += 1 }
-    func setRecognizedFileDragActive(_ isActive: Bool, at point: CGPoint) {
+    func setRecognizedFileDragActive(
+        _ isActive: Bool,
+        at point: CGPoint,
+        hasValidatedOfferHint: Bool
+    ) {
         fileDragRecognitionUpdates.append(isActive)
+        fileDragOfferHintUpdates.append(hasValidatedOfferHint)
     }
     func stop() { isStopped = true; stopCount += 1 }
 

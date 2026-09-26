@@ -1409,6 +1409,112 @@ struct NotchControllerTests {
     }
 
     @Test
+    func recognizedFileDragMakesThePanelADestinationBeforeCrossingItsBoundary() {
+        let fixture = ControllerFixture(reducesMotion: true)
+        fixture.controller.start()
+        defer { fixture.controller.stop() }
+        let approachPoint = CGPoint(
+            x: fixture.panel.frame.midX,
+            y: fixture.panel.frame.minY - 20
+        )
+
+        fixture.controller.surface.handlePointer(at: approachPoint)
+        #expect(fixture.controller.state == .closed)
+        #expect(fixture.panel.ignoresMouseEvents)
+
+        fixture.controller.surface.setRecognizedFileDragActive(true, at: approachPoint)
+        #expect(fixture.controller.state == .closed)
+        #expect(fixture.panel.ignoresMouseEvents == false)
+
+        fixture.controller.surface.setRecognizedFileDragActive(false, at: approachPoint)
+        #expect(fixture.panel.ignoresMouseEvents)
+    }
+
+    @Test
+    func validatedOfferHintArmsBeforeNativeHoverAndMouseUpBlocksLateRearm() {
+        let edgeGuard = RecordingFileDragTopEdgeGuard()
+        let fixture = ControllerFixture(
+            reducesMotion: true,
+            fileDragTopEdgeGuard: edgeGuard
+        )
+        fixture.controller.start()
+        defer { fixture.controller.stop() }
+        let intakePoint = CGPoint(x: 500, y: 790)
+
+        fixture.controller.surface.setRecognizedFileDragActive(
+            true,
+            at: intakePoint,
+            hasValidatedOfferHint: true
+        )
+        #expect(fixture.controller.state == .open)
+        #expect(edgeGuard.startCount == 1)
+
+        fixture.controller.surface.endRecognizedFileDragGesture()
+        fixture.hostView.onFileDragHoverChanged?([
+            URL(fileURLWithPath: "/tmp/late-drop.txt")
+        ])
+
+        #expect(edgeGuard.startCount == 1)
+        #expect(edgeGuard.stopCount >= 1)
+    }
+
+    @Test
+    func nativeExitCanRearmTheGuardDuringTheSamePhysicalGesture() {
+        let edgeGuard = RecordingFileDragTopEdgeGuard()
+        let fixture = ControllerFixture(
+            reducesMotion: true,
+            fileDragTopEdgeGuard: edgeGuard
+        )
+        fixture.controller.start()
+        defer { fixture.controller.stop() }
+        let intakePoint = CGPoint(x: 500, y: 790)
+        fixture.controller.surface.setRecognizedFileDragActive(
+            true,
+            at: intakePoint,
+            hasValidatedOfferHint: true
+        )
+        #expect(edgeGuard.startCount == 1)
+
+        fixture.hostView.onFileDragHoverChanged?(nil)
+        fixture.hostView.onFileDragHoverChanged?([
+            URL(fileURLWithPath: "/tmp/reentered.txt")
+        ])
+
+        #expect(edgeGuard.startCount == 2)
+    }
+
+    @Test
+    func nativeHoverWithoutGlobalHintArmsWhenItsPendingOpeningIsGranted() throws {
+        let edgeGuard = RecordingFileDragTopEdgeGuard()
+        let fixture = ControllerFixture(
+            reducesMotion: true,
+            autoGrantExpansions: false,
+            fileDragTopEdgeGuard: edgeGuard
+        )
+        fixture.controller.start()
+        defer { fixture.controller.stop() }
+        let intakePoint = CGPoint(x: 500, y: 790)
+
+        fixture.controller.surface.setRecognizedFileDragActive(
+            true,
+            at: intakePoint,
+            hasValidatedOfferHint: false
+        )
+        #expect(fixture.controller.state == .closed)
+        #expect(edgeGuard.startCount == 0)
+
+        fixture.hostView.onFileDragHoverChanged?([
+            URL(fileURLWithPath: "/tmp/native-offer.txt")
+        ])
+        #expect(edgeGuard.startCount == 0)
+
+        try fixture.controller.grantPendingExpansion()
+
+        #expect(fixture.controller.state == .open)
+        #expect(edgeGuard.startCount == 1)
+    }
+
+    @Test
     func contextualPresentationRefreshesAnAlreadyArmedIntakeToItsFullHeight() {
         let fixture = ControllerFixture(reducesMotion: true)
         fixture.controller.start()
@@ -1731,6 +1837,26 @@ private final class ControllerGlowFixture: NotchLiveActivity {
 }
 
 @MainActor
+private final class RecordingFileDragTopEdgeGuard: FileDragTopEdgeGuardOperating {
+    private(set) var availability: FileDragTopEdgeGuard.Availability = .inactive
+    private(set) var startCount = 0
+    private(set) var stopCount = 0
+
+    func start(region: CGRect, screen: CGRect) -> Bool {
+        startCount += 1
+        availability = .active
+        return true
+    }
+
+    func update(region: CGRect, screen: CGRect) {}
+
+    func stop() {
+        stopCount += 1
+        if availability != .unavailable { availability = .inactive }
+    }
+}
+
+@MainActor
 private final class ControllerFixture {
     let resolver  : MutableDisplayResolver
     let monitor   : RecordingEventMonitor
@@ -1751,7 +1877,8 @@ private final class ControllerFixture {
         reducesMotion: Bool = false,
         motionPreference: (() -> Bool)? = nil,
         style        : ExternalNotchStyle = .notch,
-        autoGrantExpansions: Bool = true
+        autoGrantExpansions: Bool = true,
+        fileDragTopEdgeGuard: (any FileDragTopEdgeGuardOperating)? = nil
     ) {
         let morphEngine = morphEngine ?? RecordingMorphEngine()
         let performer   = performer ?? CountingHapticPerformer()
@@ -1783,6 +1910,7 @@ private final class ControllerFixture {
             sizeCalibration: NotchSizeCalibration(presenter: calibrationPresenter, store: sizeStore),
             activityHost  : activityHost,
             widgetHost    : widgetHost,
+            fileDragTopEdgeGuard: fileDragTopEdgeGuard,
             reducesMotion: { motionPreference?() ?? reducesMotion }
         )
         self.controller = ControllerTestDriver(
@@ -1945,6 +2073,11 @@ private final class ControllerTestDriver {
     }
     func setSensitiveContentVisible(_ isVisible: Bool) {
         surface.setSensitiveContentVisible(isVisible)
+    }
+
+    func grantPendingExpansion() throws {
+        let request = try #require(expansionRequests.last)
+        expand(activityID: request.activityID)
     }
 
     private func expand(activityID: String?) {

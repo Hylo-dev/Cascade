@@ -179,8 +179,22 @@ protocol NotchDisplayPresenting: AnyObject {
     func setSensitiveContentVisible(_ isVisible: Bool)
     func setFileDropEnabled(_ isEnabled: Bool)
     func endRecognizedFileDragGesture()
-    func setRecognizedFileDragActive(_ isActive: Bool, at point: CGPoint)
+    func setRecognizedFileDragActive(
+        _ isActive: Bool,
+        at point: CGPoint,
+        hasValidatedOfferHint: Bool
+    )
     func stop()
+}
+
+extension NotchDisplayPresenting {
+    func setRecognizedFileDragActive(_ isActive: Bool, at point: CGPoint) {
+        setRecognizedFileDragActive(
+            isActive,
+            at: point,
+            hasValidatedOfferHint: false
+        )
+    }
 }
 
 /// NotchDisplayCoordinator owns all process-global observation and content
@@ -259,6 +273,7 @@ final class NotchDisplayCoordinator {
     private var recognizedFileDragDisplayID: CGDirectDisplayID?
     private var nativeFileDragHoverDisplayID: CGDirectDisplayID?
     private var isRecognizedFileDragGestureActive = false
+    private var recognizedFileDragHasValidatedOfferHint = false
     private var fileDragGestureGeneration: UInt64 = 0
     private var fileDragReleaseTask: Task<Void, Never>?
     private var fileDropOnHover: (@MainActor ([URL]?) -> Void)?
@@ -368,8 +383,12 @@ final class NotchDisplayCoordinator {
             self.onScreenLocked?()
         }
         monitor.onScreenUnlocked = { [weak self] in self?.setVisible(true) }
-        monitor.setFileDragRecognitionHandler { [weak self] active, point in
-            self?.handleRecognizedFileDrag(active: active, at: point)
+        monitor.setFileDragRecognitionHandler { [weak self] active, point, hasValidatedOfferHint in
+            self?.handleRecognizedFileDrag(
+                active: active,
+                at: point,
+                hasValidatedOfferHint: hasValidatedOfferHint
+            )
         }
 
         // The host must grant capability before the first local factory runs.
@@ -428,6 +447,7 @@ final class NotchDisplayCoordinator {
         recognizedFileDragDisplayID = nil
         nativeFileDragHoverDisplayID = nil
         isRecognizedFileDragGestureActive = false
+        recognizedFileDragHasValidatedOfferHint = false
         fileDragReleaseTask?.cancel()
         fileDragReleaseTask = nil
         widgetHost.update(state: .closed)
@@ -1268,10 +1288,15 @@ final class NotchDisplayCoordinator {
         resolveFocusAndReconcile()
     }
 
-    private func handleRecognizedFileDrag(active: Bool, at point: CGPoint) {
+    private func handleRecognizedFileDrag(
+        active: Bool,
+        at point: CGPoint,
+        hasValidatedOfferHint: Bool
+    ) {
         guard contextualPage != nil, fileDropOnDrop != nil else { return }
         pointerLocation = point
         if active {
+            recognizedFileDragHasValidatedOfferHint = hasValidatedOfferHint
             if !isRecognizedFileDragGestureActive {
                 fileDropLog.info("phase=begin")
             }
@@ -1279,7 +1304,10 @@ final class NotchDisplayCoordinator {
             fileDragReleaseTask?.cancel()
             fileDragReleaseTask = nil
             isRecognizedFileDragGestureActive = true
-            routeRecognizedFileDrag(at: point)
+            routeRecognizedFileDrag(
+                at: point,
+                hasValidatedOfferHint: hasValidatedOfferHint
+            )
         } else {
             fileDropLog.notice(
                 "phase=mouseUp nativeHoverHeld=\(self.nativeFileDragHoverDisplayID != nil) intakePresent=\(self.recognizedFileDragDisplayID != nil)"
@@ -1288,6 +1316,7 @@ final class NotchDisplayCoordinator {
                 surfaces[displayID]?.surface.endRecognizedFileDragGesture()
             }
             isRecognizedFileDragGestureActive = false
+            recognizedFileDragHasValidatedOfferHint = false
             guard nativeFileDragHoverDisplayID == nil else { return }
             let generation = fileDragGestureGeneration
             fileDragReleaseTask?.cancel()
@@ -1303,22 +1332,35 @@ final class NotchDisplayCoordinator {
         }
     }
 
-    private func routeRecognizedFileDrag(at point: CGPoint) {
+    private func routeRecognizedFileDrag(
+        at point: CGPoint,
+        hasValidatedOfferHint: Bool = false
+    ) {
         guard isRecognizedFileDragGestureActive,
               contextualPage != nil, fileDropOnDrop != nil else { return }
         let pointed = surfaces.first { $0.value.entry.snapshot.frame.contains(point) }?.key
         guard pointed != recognizedFileDragDisplayID else { return }
         if let previous = recognizedFileDragDisplayID {
-            surfaces[previous]?.surface.setRecognizedFileDragActive(false, at: point)
+            surfaces[previous]?.surface.setRecognizedFileDragActive(
+                false,
+                at: point,
+                hasValidatedOfferHint: false
+            )
         }
         recognizedFileDragDisplayID = pointed
         if let pointed {
-            surfaces[pointed]?.surface.setRecognizedFileDragActive(true, at: point)
+            surfaces[pointed]?.surface.setRecognizedFileDragActive(
+                true,
+                at: point,
+                hasValidatedOfferHint: hasValidatedOfferHint
+                    || recognizedFileDragHasValidatedOfferHint
+            )
         }
     }
 
     private func clearRecognizedFileDrag(keepContextual: Bool = false) {
         isRecognizedFileDragGestureActive = false
+        recognizedFileDragHasValidatedOfferHint = false
         fileDragReleaseTask?.cancel()
         fileDragReleaseTask = nil
         let displayID = recognizedFileDragDisplayID
@@ -1327,7 +1369,11 @@ final class NotchDisplayCoordinator {
         recognizedFileDragDisplayID = nil
         nativeFileDragHoverDisplayID = nil
         if let displayID {
-            surfaces[displayID]?.surface.setRecognizedFileDragActive(false, at: pointerLocation)
+            surfaces[displayID]?.surface.setRecognizedFileDragActive(
+                false,
+                at: pointerLocation,
+                hasValidatedOfferHint: false
+            )
             setInteractionHold(.drag, on: displayID, active: false)
         }
         endFileDropPreview(keepContextual: keepContextual)

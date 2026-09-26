@@ -27,11 +27,24 @@ final class MouseEventMonitor: EventMonitoring {
     private var globalMouse: Any?
     private var localMouse : Any?
     private var lastEmit   : CFTimeInterval = 0
-    private var fileDragRecognitionHandler: ((Bool, CGPoint) -> Void)?
+    private var fileDragRecognitionHandler: ((Bool, CGPoint, Bool) -> Void)?
     private var fileDragRecognizer = NativeFileDragRecognitionReducer()
+    private let validatesNativeFileDragOfferHint: (NSPasteboard, Int) -> Bool
 
     /// Minimum spacing between forwarded pointer events (~120 Hz).
     private let throttleInterval: CFTimeInterval = 1.0 / 120.0
+
+    init(
+        validatesNativeFileDragOfferHint: ((NSPasteboard, Int) -> Bool)? = nil
+    ) {
+        self.validatesNativeFileDragOfferHint = validatesNativeFileDragOfferHint
+            ?? { pasteboard, changeCount in
+                NativeFileDragOfferHint.validates(
+                    pasteboard,
+                    changeCount: changeCount
+                )
+            }
+    }
 
     func start() {
 
@@ -118,7 +131,7 @@ final class MouseEventMonitor: EventMonitoring {
         globalMouse = nil
         localMouse  = nil
         if let active = fileDragRecognizer.cancel() {
-            fileDragRecognitionHandler?(active, NSEvent.mouseLocation)
+            fileDragRecognitionHandler?(active, NSEvent.mouseLocation, false)
         }
 
         NSWorkspace.shared.notificationCenter.removeObserver(self)
@@ -126,7 +139,7 @@ final class MouseEventMonitor: EventMonitoring {
         DistributedNotificationCenter.default().removeObserver(self)
     }
 
-    func setFileDragRecognitionHandler(_ handler: ((Bool, CGPoint) -> Void)?) {
+    func setFileDragRecognitionHandler(_ handler: ((Bool, CGPoint, Bool) -> Void)?) {
         if handler == nil {
             _ = fileDragRecognizer.cancel()
         }
@@ -177,26 +190,35 @@ final class MouseEventMonitor: EventMonitoring {
             if let active = fileDragRecognizer.consume(
                 .mouseDown(changeCount: pasteboard.changeCount)
             ) {
-                fileDragRecognitionHandler?(active, NSEvent.mouseLocation)
+                fileDragRecognitionHandler?(active, NSEvent.mouseLocation, false)
             }
         case .leftMouseDragged:
             let pasteboard = NSPasteboard(name: .drag)
+            let changeCount = pasteboard.changeCount
             guard fileDragRecognizer.shouldInspectDrag(
-                changeCount: pasteboard.changeCount
+                changeCount: changeCount
             ) else { return }
             if let active = fileDragRecognizer.consume(.dragged(
-                changeCount : pasteboard.changeCount,
+                changeCount : changeCount,
                 hasFileIntent: Self.hasFileIntent(pasteboard)
             )) {
-                fileDragRecognitionHandler?(active, NSEvent.mouseLocation)
+                let hasValidatedOfferHint = active && validatesNativeFileDragOfferHint(
+                    pasteboard,
+                    changeCount
+                )
+                fileDragRecognitionHandler?(
+                    active,
+                    NSEvent.mouseLocation,
+                    hasValidatedOfferHint
+                )
             }
         case .leftMouseUp:
             if let active = fileDragRecognizer.consume(.mouseUp) {
-                fileDragRecognitionHandler?(active, NSEvent.mouseLocation)
+                fileDragRecognitionHandler?(active, NSEvent.mouseLocation, false)
             }
         case .mouseMoved where NSEvent.pressedMouseButtons & 1 == 0:
             if let active = fileDragRecognizer.cancelStaleGesture() {
-                fileDragRecognitionHandler?(active, NSEvent.mouseLocation)
+                fileDragRecognitionHandler?(active, NSEvent.mouseLocation, false)
             }
         default:
             return

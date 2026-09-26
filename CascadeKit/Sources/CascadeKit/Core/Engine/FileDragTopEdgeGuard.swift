@@ -2,6 +2,15 @@ import AppKit
 import CoreGraphics
 import OSLog
 
+@MainActor
+protocol FileDragTopEdgeGuardOperating: AnyObject {
+    var availability: FileDragTopEdgeGuard.Availability { get }
+    @discardableResult
+    func start(region: CGRect, screen: CGRect) -> Bool
+    func update(region: CGRect, screen: CGRect)
+    func stop()
+}
+
 nonisolated struct FileDragTopEdgeGeometry: Equatable, Sendable {
     private static let edgeTolerance: CGFloat = 0.5
     private static let inset: CGFloat = 2
@@ -72,10 +81,12 @@ private nonisolated extension CGRect {
     }
 }
 
-/// A short-lived public Quartz event filter. Its owner must call `start` only
-/// after AppKit has validated an active native file drag for this shelf.
+/// A short-lived public Quartz event filter. Its owner may call `start` after
+/// AppKit validates a native offer or from a fresh, stable regular-file hint.
+/// The hint only protects UI routing; `NSDraggingInfo` remains the sole drop
+/// admission authority.
 @MainActor
-final class FileDragTopEdgeGuard {
+final class FileDragTopEdgeGuard: FileDragTopEdgeGuardOperating {
     enum Availability: Equatable {
         case inactive
         case active

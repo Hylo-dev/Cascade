@@ -38,14 +38,16 @@ protocol EventMonitoring: AnyObject {
     var onScreenLocked  : (() -> Void)? { get set }
     var onScreenUnlocked: (() -> Void)? { get set }
 
-    /// Installs the gesture-bound file-drag signal. The Bool is true once for a
-    /// freshly populated native drag pasteboard and false at the matching end.
-    func setFileDragRecognitionHandler(_ handler: ((Bool, CGPoint) -> Void)?)
+    /// Installs the gesture-bound file-drag signal. The first Bool is true once
+    /// for a freshly populated native drag pasteboard and false at its end. The
+    /// second Bool is a fresh, stable regular-file hint for early UI routing;
+    /// it never authorizes a drop.
+    func setFileDragRecognitionHandler(_ handler: ((Bool, CGPoint, Bool) -> Void)?)
 
     func start()
     func stop()
 }
 
 extension EventMonitoring {
-    func setFileDragRecognitionHandler(_ handler: ((Bool, CGPoint) -> Void)?) {}
+    func setFileDragRecognitionHandler(_ handler: ((Bool, CGPoint, Bool) -> Void)?) {}
 }
