@@ -53,3 +53,9 @@ No code, tests, build, app restart, or native fixture execution was performed fo
 - Weekly account budget at completion: 2% used, 98% remaining. The requested 80% reserve was preserved.
 
 The worktree remains attached on `codex/file-shelf`. The original checkout was not edited during implementation. The native prerequisite is the blocker for activation; it was not replaced with a privileged in-process path.
+
+## Persistenza interna — 26 settembre 2026
+
+Commit `bbe1144`, implementato da GPT-5.6 Sol e revisionato dal root: manifest POSIX atomico con fsync; gestione dell’incertezza del commit senza eliminare copie potenzialmente referenziate; bookmark con descriptor e scope; un solo writer per lifetime host, close esplicito prima della riapertura; copie gestite e ricevute parziali, pin sovrapposti, quote disco/stato/memoria reali. Test indipendente root: `DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer xcrun swift test --package-path CascadeKit --scratch-path /tmp/cascade-task2-build2 --filter 'FileWorkspace|ResourceGovernorTests'`, exit 0, 39 runtime + 4 SDK + 7 contratti = 50 test.
+
+Limiti: input promesso già completato, ricevitore nativo non implementato; nessun montaggio nella app. I consumer delle consegne devono usare il descriptor lease. Identità device/inode/generation conservativa dopo rimontaggio; filesystem senza generation significativa non danno identica protezione dal riuso inode. Dati sconosciuti e cleanup falliti restano preservati e addebitati. Build/riavvio della tranche corrente seguiranno gli altri incrementi indipendenti.

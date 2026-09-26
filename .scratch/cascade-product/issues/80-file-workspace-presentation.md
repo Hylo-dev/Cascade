@@ -5,8 +5,8 @@ Parent: cascade-product
 Type: task
 Labels: wayfinder:task
 Mode: AFK
-Status: open
-Assignee: none
+Status: claimed
+Assignee: codex/file-shelf
 Blocked by: 76
 
 ## Question
