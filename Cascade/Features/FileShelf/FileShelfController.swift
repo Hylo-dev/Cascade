@@ -13,9 +13,11 @@ final class FileShelfController: NotchContextualPage {
     let id = "cascade.file-shelf"
     let contentHeight: CGFloat = 187
     let accessibilityLabel = "Ripiano"
+    var keepsExpandedPresentation: Bool { isOccupied }
 
     private(set) var contentRevision: UInt64 = 0
     private(set) var isOccupied = false
+    private(set) var isClearing = false
     private(set) var statusMessage: String?
     private(set) var preparedFiles: [UUID: PreparedFile] = [:]
     private(set) var presentation: FileWorkspacePresentation
@@ -104,6 +106,7 @@ final class FileShelfController: NotchContextualPage {
         admissionTask?.cancel()
         admissionTask = nil
         admissionInFlight = false
+        isClearing = false
         hoverURLs = nil
         hoverIDs.removeAll()
         deliveryRefreshTask?.cancel()
@@ -117,6 +120,7 @@ final class FileShelfController: NotchContextualPage {
     }
 
     func showHover(_ urls: [URL]?) {
+        guard !isClearing else { return }
         if let urls {
             clearDeliveryFailure()
             let bounded = Array(urls.prefix(32))
@@ -137,7 +141,7 @@ final class FileShelfController: NotchContextualPage {
     }
 
     func showUnsupportedDrop() {
-        guard !admissionInFlight else { return }
+        guard !admissionInFlight, !isClearing else { return }
         clearDeliveryFailure()
         hoverURLs = nil
         hoverIDs.removeAll()
@@ -146,7 +150,8 @@ final class FileShelfController: NotchContextualPage {
     }
 
     func acceptDrop(_ urls: [URL]) -> Bool {
-        guard started, !admissionInFlight, !urls.isEmpty, urls.count <= 32 else { return false }
+        guard started, !admissionInFlight, !isClearing,
+              !urls.isEmpty, urls.count <= 32 else { return false }
         clearDeliveryFailure()
         admissionInFlight = true
         if hoverURLs != urls {
@@ -161,7 +166,7 @@ final class FileShelfController: NotchContextualPage {
 
     func acceptRegularFiles(_ urls: [URL]) async {
         guard let host else { return }
-        guard started, !urls.isEmpty, urls.count <= 32 else {
+        guard started, !isClearing, !urls.isEmpty, urls.count <= 32 else {
             if started { showUnsupportedDrop() }
             return
         }
@@ -189,7 +194,48 @@ final class FileShelfController: NotchContextualPage {
         admissionTask = nil
     }
 
+    func clearAll() async {
+        guard let host, started, isOccupied, !admissionInFlight, !isClearing else { return }
+        clearDeliveryFailure()
+        isClearing = true
+        statusMessage = "Svuotamento in corso…"
+        rebuildPresentation()
+        let generation = lifecycleGeneration
+        do {
+            while true {
+                guard started, generation == lifecycleGeneration else {
+                    throw FileWorkspaceError.interrupted
+                }
+                let page = try await host.snapshot()
+                guard page.totalCount > 0 else { break }
+                guard let entry = page.entries.first else {
+                    throw FileWorkspaceError.ioFailure
+                }
+                guard entry.ownership == .externalReference else {
+                    throw FileWorkspaceError.unsupported
+                }
+                try await host.removeExternalReference(
+                    id      : entry.id,
+                    revision: page.revision
+                )
+            }
+            guard started, generation == lifecycleGeneration else { return }
+            isClearing = false
+            selectedIDs = []
+            await reload(cursor: nil, mode: .deck, clearsStatus: true)
+        } catch {
+            guard started, generation == lifecycleGeneration else {
+                isClearing = false
+                return
+            }
+            isClearing = false
+            statusMessage = message(for: error)
+            await reload(cursor: nil, mode: .deck, clearsStatus: false)
+        }
+    }
+
     func perform(_ descriptor: ActionDescriptor) async {
+        guard !isClearing else { return }
         guard let action = actions[descriptor.id] else { return }
         if clearDeliveryFailure() { rebuildPresentation() }
         switch action {
@@ -218,6 +264,14 @@ final class FileShelfController: NotchContextualPage {
     }
 
     func makeContentView(in context: NotchContextualPageContext) -> AnyView {
+        let clearAllAction: (@MainActor () -> Void)?
+        if hoverURLs == nil, isOccupied {
+            clearAllAction = { [weak self] in
+                Task { await self?.clearAll() }
+            }
+        } else {
+            clearAllAction = nil
+        }
         let workspace = try? CascadeFileWorkspace(
             presentation,
             assets  : EmptyShelfAssets(),
@@ -250,7 +304,9 @@ final class FileShelfController: NotchContextualPage {
                     }
                 ))
             },
-            conversionUnavailableExplanation: "Conversione non ancora disponibile"
+            conversionUnavailableExplanation: "Conversione non ancora disponibile",
+            clearAll: clearAllAction,
+            clearAllDisabled: isClearing || admissionInFlight
         )
         return AnyView(
             VStack(spacing: 3) {

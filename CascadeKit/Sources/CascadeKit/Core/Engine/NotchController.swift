@@ -62,6 +62,7 @@ final class NotchController: NotchDisplayPresenting {
     @ObservationIgnored private let morphEngine  : MorphEngineDriving
     @ObservationIgnored private let panel        : NotchPanel
     @ObservationIgnored private let hostView     : NotchHostView
+    @ObservationIgnored let fileDropReceiverPanel: NotchFileDropReceiverPanel
     @ObservationIgnored private let windowPinner : WindowPinning
     @ObservationIgnored private let hoverFeedback: HoverFeedback
     @ObservationIgnored private let reducesMotion: () -> Bool
@@ -193,6 +194,7 @@ final class NotchController: NotchDisplayPresenting {
         sizeCalibration: NotchSizeCalibration,
         activityHost : LiveActivityHost,
         widgetHost   : WidgetHost,
+        fileDropReceiverPanel: NotchFileDropReceiverPanel? = nil,
         fileDragTopEdgeGuard: (any FileDragTopEdgeGuardOperating)? = nil,
         reducesMotion: @escaping () -> Bool = {
             NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
@@ -202,6 +204,7 @@ final class NotchController: NotchDisplayPresenting {
         self.morphEngine    = morphEngine
         self.panel          = panel
         self.hostView       = hostView
+        self.fileDropReceiverPanel = fileDropReceiverPanel ?? NotchFileDropReceiverPanel()
         self.windowPinner   = windowPinner
         self.hoverFeedback  = hoverFeedback
         self.reducesMotion  = reducesMotion
@@ -264,6 +267,7 @@ final class NotchController: NotchDisplayPresenting {
         fileDragPhysicalGestureEnded = true
         hasAttemptedFileDragTopEdgeGuard = false
         fileDragTopEdgeGuard.stop()
+        fileDropReceiverPanel.deactivate()
 
         hostView.setChromeColor(configuration.chromeColor)
         hostView.auxiliaryInteraction.onDismiss = { [weak self] in
@@ -309,6 +313,8 @@ final class NotchController: NotchDisplayPresenting {
         fileDragPhysicalGestureEnded = true
         hasAttemptedFileDragTopEdgeGuard = false
         fileDragTopEdgeGuard.stop()
+        fileDropReceiverPanel.deactivate()
+        fileDropReceiverPanel.orderOut(nil)
         lastPointer = nil
         hoverFeedback.update(isHovering: false)
         morphEngine.stop()
@@ -389,6 +395,9 @@ final class NotchController: NotchDisplayPresenting {
 
         displayPresentation = presentation
         presentationKey = nextKey
+        if keepsContextualPresentationExpanded {
+            cancelHoverExit()
+        }
         if !outgoing.isEmpty, !reducesMotion() {
             outgoingActivityRoots = outgoing
             retainsLiveActivityGeometry = outgoingWasLive
@@ -504,11 +513,21 @@ final class NotchController: NotchDisplayPresenting {
         return []
     }
 
+    private var keepsContextualPresentationExpanded: Bool {
+        displayPresentation?.contextualPageIsSelected == true
+            && displayPresentation?.contextualPage?.keepsExpandedPresentation == true
+    }
+
     /// Order the panel on screen and pin it into its SkyLight space. Pinning has
     /// to come after the panel is visible (it needs a valid `windowNumber`); we
     /// also call this on unlock, because hiding the window can drop its space
     /// membership and it must be re-pinned to stay anchored.
     private func presentPanel() {
+        // Keep the ignored receiver visible in the active AppKit Space before
+        // Finder starts its session. QA proved that a registered window in the
+        // private SkyLight space is excluded from native destination routing.
+        fileDropReceiverPanel.setFrame(panel.frame, display: false)
+        fileDropReceiverPanel.orderFrontRegardless()
         panel.orderFrontRegardless()
         windowPinner.pin(panel)
     }
@@ -699,6 +718,7 @@ final class NotchController: NotchDisplayPresenting {
             fileDragPhysicalGestureEnded = true
             hasAttemptedFileDragTopEdgeGuard = false
             hostView.setFileDropIntakeFrame(nil)
+            fileDropReceiverPanel.deactivate()
             fileDragTopEdgeGuard.stop()
             dragHeartbeatPhase = 0
             dragHeartbeatSpring.snap(to: 0)
@@ -829,6 +849,10 @@ final class NotchController: NotchDisplayPresenting {
                 }
             }
         } else {
+            if keepsContextualPresentationExpanded {
+                cancelHoverExit()
+                return
+            }
             // Inset negatively to grow the region, so the top screen edge and a
             // little slack around the island all count as "still hovering".
             let slack = clickedOpen ? CGFloat(20) : hoverHysteresis
@@ -869,13 +893,13 @@ final class NotchController: NotchDisplayPresenting {
             loggedFileDragWindowReady = false
             updateFileDropIntakeFrame(for: activeDisplay)
             let intake = activeDisplay.map(fileDragIntakeRegion(for:))
-            let ignoredPreviously = panel.ignoresMouseEvents
+            let ignoredPreviously = fileDropReceiverPanel.ignoresMouseEvents
             // Arm before crossing the panel boundary: changing interception
             // after entry failed native Finder QA. The usual lifecycle and
             // Mission Control guards still own whether the panel may receive.
             updatePanelMouseInterception(at: point)
             fileDropLog.notice(
-                "phase=panelReady recognized=true ignoredPreviously=\(ignoredPreviously) ignoredNow=\(self.panel.ignoresMouseEvents) pointerInsidePanel=\(self.panel.frame.contains(point)) pointerInsideIntake=\(intake?.contains(point) == true) windowVisible=\(self.panel.isVisible)"
+                "phase=panelReady recognized=true receiverIgnoredPreviously=\(ignoredPreviously) receiverIgnoredNow=\(self.fileDropReceiverPanel.ignoresMouseEvents) visualIgnored=\(self.panel.ignoresMouseEvents) pointerInsidePanel=\(self.panel.frame.contains(point)) pointerInsideIntake=\(intake?.contains(point) == true) windowVisible=\(self.panel.isVisible)"
             )
             if state.isClosed, !reducesMotion() {
                 dragHeartbeatPhase = 1
@@ -890,6 +914,7 @@ final class NotchController: NotchDisplayPresenting {
             hasAuthoritativeNativeFileHover = false
             fileDragPhysicalGestureEnded = true
             hostView.setFileDropIntakeFrame(nil)
+            fileDropReceiverPanel.deactivate()
             fileDragTopEdgeGuard.stop()
             dragHeartbeatPhase = 0
             dragHeartbeatSpring.snap(to: 0)
@@ -902,9 +927,17 @@ final class NotchController: NotchDisplayPresenting {
             fileDragHasValidatedOfferHint = false
             hasAuthoritativeNativeFileHover = false
             fileDragPhysicalGestureEnded = true
+            fileDropReceiverPanel.deactivate()
             fileDragTopEdgeGuard.stop()
         }
         hostView.setFileDropEnabled(isEnabled)
+        fileDropReceiverPanel.setFileDropDestination(
+            isEnabled ? hostView : nil,
+            enabled: isEnabled
+        )
+        fileDropLog.notice(
+            "phase=receiverReadiness enabled=\(isEnabled) registered=\(self.fileDropReceiverPanel.fileDropDestinationTypeCount) activeSpace=\(self.fileDropReceiverPanel.isOnActiveSpace) windowVisible=\(self.fileDropReceiverPanel.isVisible)"
+        )
     }
 
     func endRecognizedFileDragGesture() {
@@ -1014,13 +1047,16 @@ final class NotchController: NotchDisplayPresenting {
     private func updateFileDropIntakeFrame(for display: ActiveDisplay?) {
         guard isRecognizedFileDragActive, let display else {
             hostView.setFileDropIntakeFrame(nil)
+            fileDropReceiverPanel.deactivate()
             return
         }
         let screenFrame = fileDragIntakeRegion(for: display)
         guard !screenFrame.isNull, !screenFrame.isEmpty else {
             hostView.setFileDropIntakeFrame(nil)
+            fileDropReceiverPanel.deactivate()
             return
         }
+        fileDropReceiverPanel.setFrame(screenFrame, display: false)
         let localOrigin = hostView.convert(
             panel.convertPoint(fromScreen: screenFrame.origin),
             from: nil
@@ -1053,7 +1089,7 @@ final class NotchController: NotchDisplayPresenting {
               !state.isClosed,
               let display = activeDisplay else { return }
         let intake = fileDragIntakeRegion(for: display)
-        guard intake.contains(point), !panel.ignoresMouseEvents else { return }
+        guard intake.contains(point), !fileDropReceiverPanel.ignoresMouseEvents else { return }
         hasAttemptedFileDragTopEdgeGuard = true
         _ = fileDragTopEdgeGuard.start(region: intake, screen: display.frame)
     }
@@ -1099,7 +1135,8 @@ final class NotchController: NotchDisplayPresenting {
             guard !Task.isCancelled, let self, let point = self.pendingExitPoint else { return }
             self.hoverExitTask = nil
             self.pendingExitPoint = nil
-            guard !self.isSettingsFocused, !self.isControlDragActive,
+            guard !self.keepsContextualPresentationExpanded,
+                  !self.isSettingsFocused, !self.isControlDragActive,
                   !self.hostView.auxiliaryInteraction.contains(point) else { return }
             self.hoverFeedback.update(isHovering: false)
             self.setState(.closed)
@@ -2023,6 +2060,7 @@ final class NotchController: NotchDisplayPresenting {
         fileDragPhysicalGestureEnded = true
         hasAttemptedFileDragTopEdgeGuard = false
         hostView.setFileDropIntakeFrame(nil)
+        fileDropReceiverPanel.deactivate()
         fileDragTopEdgeGuard.stop()
         isAttachingSecondary = false
         presentedActivityID = nil
@@ -2036,6 +2074,8 @@ final class NotchController: NotchDisplayPresenting {
         renderContent()
         panel.ignoresMouseEvents = true
         panel.orderOut(nil)
+        fileDropReceiverPanel.deactivate()
+        fileDropReceiverPanel.orderOut(nil)
     }
 
     /// restoreAfterScreenUnlock takes a fresh display snapshot before showing
@@ -2060,17 +2100,20 @@ final class NotchController: NotchDisplayPresenting {
     private func updatePanelMouseInterception(at screenPoint: CGPoint) {
         guard isStarted, isPanelVisible, !sizeCalibration.isActive, !isExternalSurfacePresented else {
             panel.ignoresMouseEvents = true
+            fileDropReceiverPanel.deactivate()
             return
         }
 
         if isControlDragActive {
+            fileDropReceiverPanel.deactivate()
             panel.ignoresMouseEvents = false
             return
         }
 
         if isRecognizedFileDragActive, !isMissionControlShowing, let display = activeDisplay {
-            let ignoredPreviously = panel.ignoresMouseEvents
-            panel.ignoresMouseEvents = false
+            let ignoredPreviously = fileDropReceiverPanel.ignoresMouseEvents
+            panel.ignoresMouseEvents = true
+            fileDropReceiverPanel.activate(frame: fileDragIntakeRegion(for: display))
             if !loggedFileDragWindowReady {
                 loggedFileDragWindowReady = true
                 let intake = fileDragIntakeRegion(for: display)
@@ -2081,6 +2124,7 @@ final class NotchController: NotchDisplayPresenting {
             return
         }
 
+        fileDropReceiverPanel.deactivate()
         let windowPoint = panel.convertPoint(fromScreen: screenPoint)
         let viewPoint   = hostView.convert(windowPoint, from: nil)
         panel.ignoresMouseEvents = !hostView.containsInteractivePoint(viewPoint)

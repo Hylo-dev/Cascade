@@ -28,6 +28,7 @@ struct FileShelfControllerTests {
         await controller.acceptRegularFiles(files)
 
         #expect(controller.isOccupied)
+        #expect(controller.keepsExpandedPresentation)
         #expect(controller.presentation.snapshot.entries.count == 12)
         #expect(controller.presentation.snapshot.totalCount == 25)
         #expect(controller.presentation.actions.count <= 64)
@@ -91,6 +92,7 @@ struct FileShelfControllerTests {
 
         #expect(controller.statusMessage == "Sono accettati solo file locali regolari, non cartelle o file promessi.")
         #expect(!controller.isOccupied)
+        #expect(!controller.keepsExpandedPresentation)
     }
 
     @MainActor
@@ -109,6 +111,35 @@ struct FileShelfControllerTests {
 
         #expect(controller.presentation.snapshot.entries.isEmpty)
         #expect(try String(contentsOf: source, encoding: .utf8) == "resta")
+    }
+
+    @MainActor
+    @Test
+    func clearingEveryPageKeepsOriginalsAndStopsPreferringTheShelf() async throws {
+        let fixture = try FileShelfFixture()
+        var preferences: [Bool] = []
+        let controller = FileShelfController(
+            host: fixture.host,
+            preferenceChanged: { preferences.append($0) }
+        )
+        await controller.start()
+        let sources = try (0..<25).map {
+            try fixture.file(name: "clear-\($0).txt", contents: "original-\($0)")
+        }
+        await controller.acceptRegularFiles(sources)
+        #expect(controller.presentation.snapshot.totalCount == 25)
+
+        await controller.clearAll()
+
+        #expect(controller.presentation.snapshot.entries.isEmpty)
+        #expect(controller.presentation.snapshot.totalCount == 0)
+        #expect(!controller.isOccupied)
+        #expect(!controller.isClearing)
+        #expect(controller.statusMessage == nil)
+        #expect(preferences.last == false)
+        for (index, source) in sources.enumerated() {
+            #expect(try String(contentsOf: source, encoding: .utf8) == "original-\(index)")
+        }
     }
 
     @MainActor

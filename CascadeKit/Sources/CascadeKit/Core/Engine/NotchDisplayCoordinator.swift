@@ -264,6 +264,8 @@ final class NotchDisplayCoordinator {
     private var isSensitiveContentVisible = false
     private var contextualPage: (any NotchContextualPage)?
     private var contextualPagePrefersDefault = false
+    private var contextualPageKeepsExpanded = false
+    private var openedForPersistentContextualPage = false
     private var expandedPageSelection: ExpandedPageSelection = .automatic
     private var pendingExplicitPageSelection: (
         displayID: CGDirectDisplayID,
@@ -399,6 +401,7 @@ final class NotchDisplayCoordinator {
         reconcileInventory()
         focusMonitor.start()
         monitor.start()
+        reconcilePersistentContextualPresentation(wasKeepingExpanded: false)
     }
 
     /// stop tears down every panel before stopping the shared services once.
@@ -442,6 +445,7 @@ final class NotchDisplayCoordinator {
         externalReady = nil
         isExternalSurfaceActive = false
         expandedPageSelection = .automatic
+        openedForPersistentContextualPage = false
         pendingExplicitPageSelection = nil
         fileDropPreview = nil
         recognizedFileDragDisplayID = nil
@@ -509,8 +513,11 @@ final class NotchDisplayCoordinator {
         prefersDefault  : Bool
     ) {
         let wasPreferred = contextualPagePrefersDefault
+        let wasKeepingExpanded = contextualPageKeepsExpanded
         contextualPage = page
         contextualPagePrefersDefault = page != nil && prefersDefault
+        contextualPageKeepsExpanded = contextualPagePrefersDefault
+            && page?.keepsExpandedPresentation == true
         if page == nil {
             if case .contextual = expandedPageSelection {
                 selectOrdinaryPage()
@@ -523,6 +530,7 @@ final class NotchDisplayCoordinator {
             selectOrdinaryPage()
         }
         updateFileDropReadiness()
+        reconcilePersistentContextualPresentation(wasKeepingExpanded: wasKeepingExpanded)
         reconcilePresentations()
     }
 
@@ -542,6 +550,7 @@ final class NotchDisplayCoordinator {
     }
 
     func showOrdinaryPage(on requestedDisplayID: CGDirectDisplayID? = nil) {
+        guard !keepsContextualPageExpanded else { return }
         guard let displayID = requestedDisplayID ?? expandedDisplayID,
               surfaces[displayID] != nil else { return }
         if expandedDisplayID == displayID {
@@ -819,6 +828,7 @@ final class NotchDisplayCoordinator {
         closingGeneration = nil
         expandedDisplayID = nil
         expandedPageSelection = .automatic
+        openedForPersistentContextualPage = false
         fileDropPreview = nil
         activityHost.setExpansion(.none)
         if let pendingPreferences {
@@ -908,6 +918,46 @@ final class NotchDisplayCoordinator {
         applyOrdinarySelection(selection)
     }
 
+    private var keepsContextualPageExpanded: Bool {
+        contextualPageKeepsExpanded
+    }
+
+    private func reconcilePersistentContextualPresentation(wasKeepingExpanded: Bool) {
+        guard isStarted, isVisible else { return }
+        if keepsContextualPageExpanded, let contextualPage {
+            if expandedDisplayID != nil {
+                if !wasKeepingExpanded {
+                    openedForPersistentContextualPage = true
+                }
+                pendingExplicitPageSelection = nil
+                expandedPageSelection = .contextual(contextualPage.id, .defaultOccupied)
+                reconcilePresentations()
+                return
+            }
+            guard closingDisplayID == nil,
+                  let displayID = auxiliaryDisplayID
+                    ?? mainDisplay().flatMap({ surfaces[$0] == nil ? nil : $0 })
+                    ?? surfaces.keys.min() else { return }
+            openedForPersistentContextualPage = true
+            pendingExplicitPageSelection = (
+                displayID,
+                .contextual(contextualPage.id, .defaultOccupied)
+            )
+            requestExpansion(on: displayID, activityID: nil, trigger: .click)
+            return
+        }
+
+        guard wasKeepingExpanded else { return }
+        let shouldClose = openedForPersistentContextualPage
+        openedForPersistentContextualPage = false
+        if case .contextual = expandedPageSelection {
+            selectOrdinaryPage()
+        }
+        if shouldClose, let expandedDisplayID {
+            requestCollapse(on: expandedDisplayID)
+        }
+    }
+
     private func beginFileDropPreview(
         on displayID: CGDirectDisplayID,
         openedForPreview: Bool
@@ -976,6 +1026,7 @@ final class NotchDisplayCoordinator {
             closingGeneration = nil
             interactionOwnerDisplayID = nil
             expandedPageSelection = .automatic
+            openedForPersistentContextualPage = false
             pendingExplicitPageSelection = nil
             fileDropPreview = nil
             activityHost.setExpansion(.none)
@@ -1007,6 +1058,7 @@ final class NotchDisplayCoordinator {
         }
 
         resolveFocusAndReconcile()
+        reconcilePersistentContextualPresentation(wasKeepingExpanded: false)
         activateExternalSurfaceIfReady()
         onDisplaysChanged?(displayDescriptors)
     }
@@ -1420,6 +1472,7 @@ final class NotchDisplayCoordinator {
             interactionOwnerDisplayID = nil
             dragDisplayID = nil
             expandedPageSelection = .automatic
+            openedForPersistentContextualPage = false
             pendingExplicitPageSelection = nil
             fileDropPreview = nil
             for record in surfaces.values {
@@ -1432,6 +1485,7 @@ final class NotchDisplayCoordinator {
             for record in surfaces.values {
                 record.surface.setVisible(true)
             }
+            reconcilePersistentContextualPresentation(wasKeepingExpanded: false)
         }
         reconcilePresentations()
     }

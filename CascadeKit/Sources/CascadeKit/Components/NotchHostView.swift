@@ -194,25 +194,8 @@ final class NotchHostView: NSView {
             cachedFileOffer = nil
             rejectedFileOfferKey = nil
         }
-        (window as? NotchPanel)?.setFileDropDestination(self, enabled: isEnabled)
-        let panelRegistrationCount = (window as? NotchPanel)?.fileDropDestinationTypeCount ?? 0
         fileDropLog.notice(
-            "phase=readiness enabled=\(isEnabled) registered=\(self.registeredDraggedTypes.count) panelRegistered=\(panelRegistrationCount) windowAttached=\(self.window != nil)"
-        )
-    }
-
-    override func viewWillMove(toWindow newWindow: NSWindow?) {
-        if let oldPanel = window as? NotchPanel, oldPanel !== newWindow {
-            oldPanel.setFileDropDestination(nil, enabled: false)
-        }
-        super.viewWillMove(toWindow: newWindow)
-    }
-
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        (window as? NotchPanel)?.setFileDropDestination(
-            self,
-            enabled: isFileDropEnabled
+            "phase=readiness enabled=\(isEnabled) registered=\(self.registeredDraggedTypes.count) windowAttached=\(self.window != nil)"
         )
     }
 
@@ -505,7 +488,7 @@ final class NotchHostView: NSView {
     }
 
     override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
-        let point = convert(sender.draggingLocation, from: nil)
+        let point = fileDropPoint(for: sender)
         if loggedEnteredSequence != sender.draggingSequenceNumber {
             loggedEnteredSequence = sender.draggingSequenceNumber
             fileDropLog.notice(
@@ -516,7 +499,7 @@ final class NotchHostView: NSView {
     }
 
     override func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation {
-        let point = convert(sender.draggingLocation, from: nil)
+        let point = fileDropPoint(for: sender)
         if loggedUpdatedSequence != sender.draggingSequenceNumber {
             loggedUpdatedSequence = sender.draggingSequenceNumber
             fileDropLog.notice(
@@ -543,7 +526,7 @@ final class NotchHostView: NSView {
     }
 
     override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
-        let point = convert(sender.draggingLocation, from: nil)
+        let point = fileDropPoint(for: sender)
         guard containsFileDropPoint(point), resolveFileOffer(sender) == .copy,
               let offer = cachedFileOffer else {
             fileDropLog.notice("phase=drop error=invalidDestination")
@@ -557,7 +540,7 @@ final class NotchHostView: NSView {
     }
 
     override func prepareForDragOperation(_ sender: any NSDraggingInfo) -> Bool {
-        let point = convert(sender.draggingLocation, from: nil)
+        let point = fileDropPoint(for: sender)
         return containsFileDropPoint(point) && resolveFileOffer(sender) == .copy
     }
 
@@ -569,7 +552,7 @@ final class NotchHostView: NSView {
 
     private func resolveFileOffer(_ sender: any NSDraggingInfo) -> NSDragOperation {
         guard isFileDropEnabled else { return [] }
-        let point = convert(sender.draggingLocation, from: nil)
+        let point = fileDropPoint(for: sender)
         guard containsFileDropPoint(point) else { return [] }
         let changeCount = sender.draggingPasteboard.changeCount
         guard sender.draggingSourceOperationMask.contains(.copy) else {
@@ -635,6 +618,18 @@ final class NotchHostView: NSView {
         sender.numberOfValidItemsForDrop = urls.count
         publishFileDragHover(offer)
         return .copy
+    }
+
+    private func fileDropPoint(for sender: any NSDraggingInfo) -> CGPoint {
+        guard let destinationWindow = sender.draggingDestinationWindow,
+              let hostWindow = window,
+              destinationWindow !== hostWindow else {
+            return convert(sender.draggingLocation, from: nil)
+        }
+        let screenPoint = destinationWindow.convertPoint(
+            toScreen: sender.draggingLocation
+        )
+        return convert(hostWindow.convertPoint(fromScreen: screenPoint), from: nil)
     }
 
     private func containsFileDropPoint(_ point: CGPoint) -> Bool {

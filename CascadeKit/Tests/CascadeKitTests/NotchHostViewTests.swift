@@ -53,43 +53,59 @@ struct NotchHostViewTests {
     }
 
     @Test
-    func panelRegistersAndForwardsTheCompleteNativeDropLifecycle() throws {
+    func activeSpaceReceiverTranslatesAndForwardsTheCompleteNativeDropLifecycle() throws {
         let host = makeHost()
-        let panel = NotchPanel(contentView: host)
+        let visualPanel = NotchPanel(contentView: host)
+        visualPanel.setFrame(
+            CGRect(x: 300, y: 400, width: 400, height: 200),
+            display: false
+        )
+        let receiver = NotchFileDropReceiverPanel()
+        let receiverFrame = CGRect(x: 250, y: 350, width: 360, height: 180)
+        receiver.setFileDropDestination(host, enabled: true)
+        receiver.activate(frame: receiverFrame)
         let source = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
         try Data("file".utf8).write(to: source)
         defer { try? FileManager.default.removeItem(at: source) }
         let drag = HostDraggingInfo(
             pasteboard: makePasteboard(items: [source]),
-            location: CGPoint(x: 100, y: 100),
-            sequenceNumber: 11
+            location: CGPoint(x: 150, y: 150),
+            sequenceNumber: 11,
+            destinationWindow: receiver
         )
         let outside = HostDraggingInfo(
             pasteboard: drag.draggingPasteboard,
-            location: CGPoint(x: 10, y: 10),
-            sequenceNumber: 12
+            location: CGPoint(x: 60, y: 60),
+            sequenceNumber: 12,
+            destinationWindow: receiver
         )
         var dropped: [[URL]] = []
         host.onFileDrop = { dropped.append($0); return true }
 
-        #expect(panel.fileDropDestinationTypeCount == 3)
-        #expect(panel.responds(to: #selector(NSDraggingDestination.draggingEntered(_:))))
-        #expect(panel.draggingEntered(outside).isEmpty)
-        #expect(panel.prepareForDragOperation(outside) == false)
-        #expect(panel.performDragOperation(outside) == false)
-        #expect(panel.draggingEntered(drag) == .copy)
-        #expect(panel.draggingUpdated(drag) == .copy)
-        #expect(panel.prepareForDragOperation(drag))
-        #expect(panel.performDragOperation(drag))
-        panel.concludeDragOperation(drag)
+        #expect(receiver.fileDropDestinationTypeCount == 3)
+        #expect(receiver.responds(to: #selector(NSDraggingDestination.draggingEntered(_:))))
+        #expect(receiver.draggingEntered(outside).isEmpty)
+        #expect(receiver.prepareForDragOperation(outside) == false)
+        #expect(receiver.performDragOperation(outside) == false)
+        receiver.activate(frame: receiverFrame)
+        #expect(receiver.draggingEntered(drag) == .copy)
+        #expect(receiver.draggingUpdated(drag) == .copy)
+        receiver.draggingExited(drag)
+        #expect(receiver.ignoresMouseEvents == false)
+        #expect(receiver.draggingEntered(drag) == .copy)
+        #expect(receiver.prepareForDragOperation(drag))
+        #expect(receiver.performDragOperation(drag))
+        receiver.concludeDragOperation(drag)
         #expect(dropped == [[source]])
+        #expect(receiver.ignoresMouseEvents)
 
         host.setFileDropEnabled(false)
-        #expect(panel.fileDropDestinationTypeCount == 0)
-        #expect(panel.draggingEntered(drag).isEmpty)
-        #expect(panel.prepareForDragOperation(drag) == false)
-        #expect(panel.performDragOperation(drag) == false)
+        receiver.setFileDropDestination(nil, enabled: false)
+        #expect(receiver.fileDropDestinationTypeCount == 0)
+        #expect(receiver.draggingEntered(drag).isEmpty)
+        #expect(receiver.prepareForDragOperation(drag) == false)
+        #expect(receiver.performDragOperation(drag) == false)
     }
 
     @Test
@@ -402,7 +418,7 @@ private final class HostDraggingInfo: NSObject, @preconcurrency NSDraggingInfo {
     let draggingPasteboard: NSPasteboard
     let draggingLocation: NSPoint
     let draggingSequenceNumber: Int
-    let draggingDestinationWindow: NSWindow? = nil
+    let draggingDestinationWindow: NSWindow?
     let draggingSourceOperationMask: NSDragOperation
     let draggedImageLocation: NSPoint = .zero
     let draggedImage: NSImage? = nil
@@ -416,12 +432,14 @@ private final class HostDraggingInfo: NSObject, @preconcurrency NSDraggingInfo {
         pasteboard: NSPasteboard,
         location: NSPoint,
         sequenceNumber: Int,
-        operationMask: NSDragOperation = .copy
+        operationMask: NSDragOperation = .copy,
+        destinationWindow: NSWindow? = nil
     ) {
         draggingPasteboard = pasteboard
         draggingLocation = location
         draggingSequenceNumber = sequenceNumber
         draggingSourceOperationMask = operationMask
+        draggingDestinationWindow = destinationWindow
     }
 
     func slideDraggedImage(to screenPoint: NSPoint) {}

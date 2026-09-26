@@ -18,6 +18,8 @@ public struct CascadeFileWorkspace: View {
     private let thumbnailOverride: (@MainActor (FileWorkspaceEntry) -> Image?)?
     private let wrapEntry: (@MainActor (FileWorkspaceEntry, ActionDescriptor?, AnyView) -> AnyView)?
     private let conversionUnavailableExplanation: String?
+    private let clearAll: (@MainActor () -> Void)?
+    private let clearAllDisabled: Bool
 
     @Environment(\.accessibilityReduceMotion)
     private var systemReduceMotion
@@ -38,7 +40,9 @@ public struct CascadeFileWorkspace: View {
         reduceMotion  : Bool? = nil,
         thumbnail     : (@MainActor (FileWorkspaceEntry) -> Image?)? = nil,
         wrapEntry     : (@MainActor (FileWorkspaceEntry, ActionDescriptor?, AnyView) -> AnyView)? = nil,
-        conversionUnavailableExplanation: String? = nil
+        conversionUnavailableExplanation: String? = nil,
+        clearAll      : (@MainActor () -> Void)? = nil,
+        clearAllDisabled: Bool = false
     ) throws {
         try presentation.validate()
         self.presentation = presentation
@@ -48,6 +52,8 @@ public struct CascadeFileWorkspace: View {
         thumbnailOverride = thumbnail
         self.wrapEntry = wrapEntry
         self.conversionUnavailableExplanation = conversionUnavailableExplanation
+        self.clearAll = clearAll
+        self.clearAllDisabled = clearAllDisabled
     }
 
     public var body: some View {
@@ -82,7 +88,7 @@ public struct CascadeFileWorkspace: View {
                     .foregroundStyle(.secondary)
                     .accessibilityLabel("Altri \(overflow) file")
             }
-            conversionButton
+            deckActions
         }
         .padding(14)
     }
@@ -131,7 +137,7 @@ public struct CascadeFileWorkspace: View {
                 Text("File")
                     .font(.headline)
                 Spacer()
-                conversionButton
+                deckActions
                 actionButton(
                     presentation.action(for: .closeList),
                     label : "Chiudi elenco",
@@ -368,13 +374,14 @@ public struct CascadeFileWorkspace: View {
         _ entry : FileWorkspaceEntry,
         showsName: Bool
     ) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(spacing: 6) {
             thumbnail(entry)
-                .frame(height: 68)
+                .frame(width: 68, height: 68)
             if showsName {
                 Text(entry.name)
                     .font(.caption.weight(.medium))
                     .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .center)
                     .help(entry.name)
                 if entry.availability != .available {
                     Text(availabilityLabel(entry.availability))
@@ -383,9 +390,7 @@ public struct CascadeFileWorkspace: View {
                 }
             }
         }
-        .padding(9)
         .frame(width: 118, height: 106)
-        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
         .accessibilityElement(children: .combine)
     }
 
@@ -484,6 +489,19 @@ public struct CascadeFileWorkspace: View {
                 .disabled(true)
                 .help(explanation)
                 .accessibilityHint(explanation)
+        }
+    }
+
+    private var deckActions: some View {
+        VStack(spacing: 6) {
+            conversionButton
+            if let clearAll {
+                Button("Svuota", systemImage: "trash") { clearAll() }
+                    .labelStyle(.titleAndIcon)
+                    .disabled(clearAllDisabled)
+                    .help("Rimuovi tutti i file dal ripiano")
+                    .accessibilityHint("I file originali restano al loro posto")
+            }
         }
     }
 

@@ -1353,6 +1353,43 @@ struct NotchControllerTests {
     }
 
     @Test
+    func selectedPersistentContextualPageIgnoresPointerExitUntilItsFlagClears() {
+        let fixture = ControllerFixture(reducesMotion: true)
+        fixture.controller.start()
+        defer { fixture.controller.stop() }
+
+        func presentation(_ page: ControllerContextualPage) -> DisplayPresentation {
+            DisplayPresentation(
+                primary: nil,
+                secondary: nil,
+                notice: nil,
+                expanded: nil,
+                expandedIsLiveActivity: false,
+                showsWidgets: false,
+                contextualPage: page,
+                contextualPageIsSelected: true,
+                widgetContentRevision: 0,
+                style: .notch
+            )
+        }
+
+        fixture.controller.surface.applyPresentation(presentation(
+            ControllerContextualPage(contentHeight: 120, keepsExpanded: true)
+        ))
+        fixture.controller.surface.handlePointer(at: CGPoint(x: 50, y: 500))
+
+        #expect(fixture.controller.state == .open)
+        #expect(fixture.controller.collapseRequestCount == 0)
+
+        fixture.controller.surface.applyPresentation(presentation(
+            ControllerContextualPage(contentHeight: 120, keepsExpanded: false)
+        ))
+        fixture.controller.surface.handlePointer(at: CGPoint(x: 50, y: 500))
+
+        #expect(fixture.controller.collapseRequestCount == 1)
+    }
+
+    @Test
     func recognizedFileDragRunsOneFiniteHeartbeatAndNearHoverRequestsDragExpansion() {
         let morph = RecordingMorphEngine()
         let fixture = ControllerFixture(morphEngine: morph)
@@ -1392,24 +1429,28 @@ struct NotchControllerTests {
         fixture.controller.surface.handlePointer(at: intakePoint)
         #expect(fixture.controller.state == .closed)
         #expect(fixture.panel.ignoresMouseEvents)
+        #expect(fixture.controller.surface.fileDropReceiverPanel.ignoresMouseEvents)
 
         fixture.controller.surface.setRecognizedFileDragActive(true, at: intakePoint)
         #expect(fixture.controller.state == .open)
         #expect(fixture.controller.expansionRequests.last?.trigger == .drag)
-        #expect(fixture.panel.ignoresMouseEvents == false)
+        #expect(fixture.panel.ignoresMouseEvents)
+        #expect(fixture.controller.surface.fileDropReceiverPanel.ignoresMouseEvents == false)
 
         let expandedBottomPoint = CGPoint(x: 500, y: 580)
         fixture.controller.surface.handlePointer(at: expandedBottomPoint)
         #expect(fixture.controller.state == .open)
-        #expect(fixture.panel.ignoresMouseEvents == false)
+        #expect(fixture.panel.ignoresMouseEvents)
+        #expect(fixture.controller.surface.fileDropReceiverPanel.ignoresMouseEvents == false)
 
         fixture.controller.surface.handlePointer(at: intakePoint)
         fixture.controller.surface.setRecognizedFileDragActive(false, at: intakePoint)
         #expect(fixture.panel.ignoresMouseEvents)
+        #expect(fixture.controller.surface.fileDropReceiverPanel.ignoresMouseEvents)
     }
 
     @Test
-    func recognizedFileDragMakesThePanelADestinationBeforeCrossingItsBoundary() {
+    func recognizedFileDragActivatesTheReceiverBeforeCrossingItsBoundary() {
         let fixture = ControllerFixture(reducesMotion: true)
         fixture.controller.start()
         defer { fixture.controller.stop() }
@@ -1424,10 +1465,12 @@ struct NotchControllerTests {
 
         fixture.controller.surface.setRecognizedFileDragActive(true, at: approachPoint)
         #expect(fixture.controller.state == .closed)
-        #expect(fixture.panel.ignoresMouseEvents == false)
+        #expect(fixture.panel.ignoresMouseEvents)
+        #expect(fixture.controller.surface.fileDropReceiverPanel.ignoresMouseEvents == false)
 
         fixture.controller.surface.setRecognizedFileDragActive(false, at: approachPoint)
         #expect(fixture.panel.ignoresMouseEvents)
+        #expect(fixture.controller.surface.fileDropReceiverPanel.ignoresMouseEvents)
     }
 
     @Test
@@ -1946,6 +1989,7 @@ private final class ControllerTestDriver {
     private var style: ExternalNotchStyle
     private(set) var expansionRequests: [DisplayExpansionRequest] = []
     private(set) var cancelledExpansionGenerations: [UInt64] = []
+    private(set) var collapseRequestCount = 0
 
     var state: NotchState { surface.state }
     var activeDisplay: ActiveDisplay? { surface.activeDisplay }
@@ -1990,7 +2034,10 @@ private final class ControllerTestDriver {
         surface.onExpansionCancelled = { [weak self] generation in
             self?.cancelledExpansionGenerations.append(generation)
         }
-        surface.onCollapseRequested = { [weak self] in self?.collapse() }
+        surface.onCollapseRequested = { [weak self] in
+            self?.collapseRequestCount += 1
+            self?.collapse()
+        }
         surface.onCollapseFinished = { [weak self] _ in
             self?.isExpanded = false
             self?.expansionActivityID = nil
@@ -2336,10 +2383,14 @@ private final class ControllerContextualPage: NotchContextualPage {
     let id = "shelf"
     let contentRevision: UInt64 = 1
     let contentHeight: CGFloat
+    let keepsExpandedPresentation: Bool
     let accessibilityLabel = "Ripiano"
     private(set) var contexts: [NotchContextualPageContext] = []
 
-    init(contentHeight: CGFloat) { self.contentHeight = contentHeight }
+    init(contentHeight: CGFloat, keepsExpanded: Bool = false) {
+        self.contentHeight = contentHeight
+        self.keepsExpandedPresentation = keepsExpanded
+    }
 
     func makeContentView(in context: NotchContextualPageContext) -> AnyView {
         contexts.append(context)

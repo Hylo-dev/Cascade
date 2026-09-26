@@ -20,11 +20,7 @@ private let fileDropLog = Logger(subsystem: "hylo.Cascade", category: "FileDrop"
 /// under the cursor. This matters because the panel's frame spans the whole menu
 /// bar and AppKit cannot pass a click to another process using view hit-testing
 /// alone.
-final class NotchPanel: NSPanel, NSDraggingDestination {
-
-    private weak var fileDropDestination: NotchHostView?
-    private var loggedFileDragWindowSequence: Int?
-    private(set) var fileDropDestinationTypeCount = 0
+final class NotchPanel: NSPanel {
 
     init(contentView: NSView) {
 
@@ -54,6 +50,46 @@ final class NotchPanel: NSPanel, NSDraggingDestination {
         collectionBehavior          = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
     }
 
+    // A borderless panel refuses key/main by default; we state it explicitly so
+    // no future change can accidentally let the overlay grab focus.
+    override var canBecomeKey: Bool {
+        false
+    }
+
+    override var canBecomeMain: Bool {
+        false
+    }
+}
+
+/// A public-AppKit drag transport kept in the active user Space. The visual
+/// panel is pinned into a private SkyLight space and cannot participate in a
+/// Finder destination session, so this transparent panel forwards only native
+/// drag callbacks to the visual host's admission logic.
+final class NotchFileDropReceiverPanel: NSPanel, NSDraggingDestination {
+
+    private weak var fileDropDestination: NotchHostView?
+    private var loggedFileDragWindowSequence: Int?
+    private(set) var fileDropDestinationTypeCount = 0
+
+    init() {
+        super.init(
+            contentRect: .zero,
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        contentView = NSView(frame: .zero)
+        isFloatingPanel = true
+        isOpaque = false
+        backgroundColor = .clear
+        hasShadow = false
+        level = .statusBar
+        ignoresMouseEvents = true
+        hidesOnDeactivate = false
+        isMovableByWindowBackground = false
+        collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
+    }
+
     func setFileDropDestination(_ destination: NotchHostView?, enabled: Bool) {
         fileDropDestination = enabled ? destination : nil
         if enabled, destination != nil {
@@ -64,6 +100,17 @@ final class NotchPanel: NSPanel, NSDraggingDestination {
             fileDropDestinationTypeCount = 0
             loggedFileDragWindowSequence = nil
         }
+    }
+
+    func activate(frame: CGRect) {
+        if self.frame != frame {
+            setFrame(frame, display: false)
+        }
+        ignoresMouseEvents = false
+    }
+
+    func deactivate() {
+        ignoresMouseEvents = true
     }
 
     func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
@@ -86,6 +133,7 @@ final class NotchPanel: NSPanel, NSDraggingDestination {
 
     func draggingEnded(_ sender: any NSDraggingInfo) {
         fileDropDestination?.draggingEnded(sender)
+        deactivate()
     }
 
     func prepareForDragOperation(_ sender: any NSDraggingInfo) -> Bool {
@@ -101,15 +149,15 @@ final class NotchPanel: NSPanel, NSDraggingDestination {
         fileDropLog.notice(
             "phase=windowDrop sequence=\(sender.draggingSequenceNumber) accepted=\(accepted)"
         )
+        deactivate()
         return accepted
     }
 
     func concludeDragOperation(_ sender: (any NSDraggingInfo)?) {
         fileDropDestination?.concludeDragOperation(sender)
+        deactivate()
     }
 
-    // A borderless panel refuses key/main by default; we state it explicitly so
-    // no future change can accidentally let the overlay grab focus.
     override var canBecomeKey: Bool {
         false
     }

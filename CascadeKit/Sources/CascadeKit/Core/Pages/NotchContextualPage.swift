@@ -17,10 +17,12 @@ public protocol NotchContextualPage: AnyObject {
     var contentRevision: UInt64 { get }
     var contentHeight: CGFloat { get }
     var accessibilityLabel: String { get }
+    var keepsExpandedPresentation: Bool { get }
 
     func makeContentView(in context: NotchContextualPageContext) -> AnyView
 }
 
 public extension NotchContextualPage {
     var accessibilityLabel: String { id }
+    var keepsExpandedPresentation: Bool { false }
 }

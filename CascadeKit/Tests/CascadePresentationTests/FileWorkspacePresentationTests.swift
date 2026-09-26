@@ -85,6 +85,7 @@ struct FileWorkspacePresentationTests {
         let presentation = try workspace(totalCount: 4, mode: .deck)
         var thumbnails: Set<UUID> = []
         var wrapped: Set<UUID> = []
+        var clearCount = 0
         let view = try CascadeFileWorkspace(
             presentation,
             assets  : PreviewAssets(),
@@ -97,7 +98,8 @@ struct FileWorkspacePresentationTests {
                 wrapped.insert(entry.id)
                 return content
             },
-            conversionUnavailableExplanation: "Conversione non ancora disponibile"
+            conversionUnavailableExplanation: "Conversione non ancora disponibile",
+            clearAll: { clearCount += 1 }
         )
 
         _ = try render(
@@ -107,6 +109,7 @@ struct FileWorkspacePresentationTests {
 
         #expect(thumbnails == Set(presentation.snapshot.entries.map(\.id)))
         #expect(wrapped == Set(presentation.snapshot.entries.map(\.id)))
+        #expect(clearCount == 0)
     }
 
     @Test

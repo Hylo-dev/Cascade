@@ -12,6 +12,126 @@ import Testing
 struct NotchDisplayCoordinatorTests {
 
     @Test
+    func preferredPersistentContextualPageOpensAndStaysSelected() {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10])
+        let shelf = CoordinatorContextualPage(
+            id: "shelf",
+            contentRevision: 1,
+            keepsExpandedPresentation: true
+        )
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: true)
+
+        fixture.coordinator.start()
+
+        #expect(fixture.coordinator.expandedDisplayID == 10)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPage === shelf)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == true)
+
+        fixture.coordinator.showOrdinaryPage(on: 10)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == true)
+    }
+
+    @Test
+    func persistentContextualPageOpensWhenItBecomesOccupied() {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10])
+        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
+        fixture.coordinator.start()
+        #expect(fixture.coordinator.expandedDisplayID == nil)
+
+        shelf.keepsExpandedPresentation = true
+        shelf.contentRevision = 2
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: true)
+
+        #expect(fixture.coordinator.expandedDisplayID == 10)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == true)
+    }
+
+    @Test
+    func persistentTransitionOwnsAnAlreadyExpandedSurfaceUntilEmpty() throws {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10])
+        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
+        fixture.coordinator.start()
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger: .drag,
+            generation: 1
+        )
+
+        shelf.keepsExpandedPresentation = true
+        shelf.contentRevision = 2
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: true)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == true)
+
+        shelf.keepsExpandedPresentation = false
+        shelf.contentRevision = 3
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
+
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == false)
+        let generation = try #require(fixture.surfaces[10]?.closeRequests.last)
+        fixture.surfaces[10]?.finishCollapse(generation: generation)
+        #expect(fixture.coordinator.expandedDisplayID == nil)
+    }
+
+    @Test
+    func preferredOrdinaryContextualPageDoesNotOpenAClosedSurface() {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10])
+        fixture.coordinator.setContextualPage(
+            CoordinatorContextualPage(id: "shelf", contentRevision: 1),
+            prefersDefault: true
+        )
+
+        fixture.coordinator.start()
+
+        #expect(fixture.coordinator.expandedDisplayID == nil)
+        #expect(fixture.surfaces[10]?.presentations.last?.isExpanded == false)
+    }
+
+    @Test
+    func emptyingPersistentContextualPageReturnsToClosedOrdinaryState() throws {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10])
+        let shelf = CoordinatorContextualPage(
+            id: "shelf",
+            contentRevision: 1,
+            keepsExpandedPresentation: true
+        )
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: true)
+        fixture.coordinator.start()
+
+        shelf.keepsExpandedPresentation = false
+        shelf.contentRevision = 2
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
+
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == false)
+        let generation = try #require(fixture.surfaces[10]?.closeRequests.last)
+        fixture.surfaces[10]?.finishCollapse(generation: generation)
+        #expect(fixture.coordinator.expandedDisplayID == nil)
+        #expect(fixture.surfaces[10]?.presentations.last?.isExpanded == false)
+    }
+
+    @Test
+    func persistentContextualPageReopensAfterUnlock() {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10])
+        fixture.coordinator.setContextualPage(
+            CoordinatorContextualPage(
+                id: "shelf",
+                contentRevision: 1,
+                keepsExpandedPresentation: true
+            ),
+            prefersDefault: true
+        )
+        fixture.coordinator.start()
+
+        fixture.monitor.sendLock()
+        #expect(fixture.coordinator.expandedDisplayID == nil)
+
+        fixture.monitor.sendUnlock()
+        #expect(fixture.coordinator.expandedDisplayID == 10)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == true)
+    }
+
+    @Test
     func occupiedContextualPageIsDefaultOnlyForANewOpening() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10])
         let music = CoordinatorActivityFixture(id: "music")
@@ -1384,10 +1504,16 @@ private final class CoordinatorContextualPage: NotchContextualPage {
     var contentRevision: UInt64
     let contentHeight: CGFloat = 146
     let accessibilityLabel = "Ripiano"
+    var keepsExpandedPresentation: Bool
 
-    init(id: String, contentRevision: UInt64) {
+    init(
+        id: String,
+        contentRevision: UInt64,
+        keepsExpandedPresentation: Bool = false
+    ) {
         self.id = id
         self.contentRevision = contentRevision
+        self.keepsExpandedPresentation = keepsExpandedPresentation
     }
 
     func makeContentView(in context: NotchContextualPageContext) -> AnyView {
