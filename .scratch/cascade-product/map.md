@@ -3,13 +3,15 @@
 ID: cascade-product
 Labels: wayfinder:map
 Status: open
-Updated: 2026-09-25
+Updated: 2026-09-26
 
 ## Destination
 
 Definire il piano applicativo globale di Cascade, basato sul codice esistente: un notch macOS modulare con widget e Live Activities forniti da app esterne. La destinazione globale è un insieme coerente di decisioni che consenta di scrivere le specifiche dei sottosistemi e ordinare i rilasci senza inventare requisiti. Per le tranche esecutive ammesse nelle Notes, la destinazione comprende implementazione, valutazione indipendente e consegna verificata degli incrementi addon autorizzati.
 
 ## Notes
+
+- Tranche ripiano file del 26 settembre 2026: l’utente chiede di mappare tutti i task residui del [piano approvato](../../docs/superpowers/plans/2026-09-26-file-shelf.md) ed eseguirli in più ticket consecutivi con subagenti, GPT-6 Sol per task semplici e GPT-5.6 Sol per task complessi, revisione obbligatoria del root e riserva settimanale almeno 80%. Questa autorizzazione è prioritaria sulle soglie e sui modelli storici delle tranche precedenti per il solo ripiano file. Il [percorso interno già verificato](../../docs/superpowers/verification/2026-09-26-file-workspace-runtime.md) non qualifica il montaggio nativo: launcher e gate restano bloccati, senza bypass. I task di persistenza, presentazione e bundle FFmpeg possono avanzare indipendentemente dalla qualifica nativa; il routing generale attende la decisione contestuale ancora aperta.
 
 - Prosecuzione esplicita del 25 settembre 2026: mappare e implementare il notch multi-display secondo il piano del 24 settembre con subagenti, test e revisione. Questa tranche è autorizzata oltre i limiti storici delle tranche addon e ammette più ticket esecutivi consecutivi. Le proposte della specifica diventano impostazioni iniziali reversibili; focus finestra attiva confermato. Nessuna modifica al launcher addon. Modello complesso GPT-5.6 Sol; modello semplice in chiarimento perché «GPT-6 Sol» non è disponibile.
 
@@ -38,6 +40,10 @@ Definire il piano applicativo globale di Cascade, basato sul codice esistente: u
 - Le altre funzioni di Sapphire sono riferimenti da valutare, non requisiti automatici.
 
 ## Decisions so far
+
+- [Definire raccolta e durata dei file nel ripiano](issues/10-file-shelf.md): specifica approvata per acquisizione al drop, originali conservati, riferimenti persistenti e consegna verificata per elemento; arbitraggio generale dei contesti distinto.
+
+- [Contratti e confine autorizzato del ripiano file](issues/76-file-workspace-contracts.md): modelli pubblici, client SDK e autorità host interni verificati da 21 test mirati e review; qualifica nativa separata.
 
 - [Seguire la finestra attiva con fallback al puntatore](issues/70-focused-display.md): resolver e monitor a eventi implementati; 11 test e revisione PASS, integrazione successiva.
 
