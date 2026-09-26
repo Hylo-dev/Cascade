@@ -10,6 +10,8 @@
 
 **Spec:** [Specifica approvata](../specs/2026-09-26-file-shelf-design.md).
 
+**Percorso locale approvato il 26 settembre 2026:** il [piano supplementare](2026-09-26-local-file-shelf.md) sostituisce soltanto il prerequisito del gate addon per il primo ripiano direttamente integrato. Questo piano conserva il percorso addon esterno e la conversione completa, che non sono attivati dall'eccezione locale.
+
 ## Global Constraints
 
 - «Gli originali rimangono nella loro posizione.»
