@@ -10,6 +10,148 @@ import Testing
 @MainActor
 struct NotchHostViewTests {
     @Test
+    func fileDestinationAcceptsOneBoundedRegularBatchAndDeliversItOnce() throws {
+        let host = makeHost()
+        let source = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try Data("file".utf8).write(to: source)
+        defer { try? FileManager.default.removeItem(at: source) }
+        let pasteboard = makePasteboard(items: [source])
+        let drag = HostDraggingInfo(
+            pasteboard: pasteboard,
+            location: CGPoint(x: 100, y: 100),
+            sequenceNumber: 7
+        )
+        var hovered: [[URL]?] = []
+        var dropped: [[URL]] = []
+        host.onFileDragHoverChanged = { hovered.append($0) }
+        host.onFileDrop = { dropped.append($0); return true }
+
+        #expect(host.draggingEntered(drag) == .copy)
+        #expect(host.draggingUpdated(drag) == .copy)
+        #expect(host.performDragOperation(drag))
+        #expect(hovered == [[source], nil])
+        #expect(dropped == [[source]])
+    }
+
+    @Test
+    func fileDestinationCanResolveAfterTheDragEntersOutsideItsLiveShape() throws {
+        let host = makeHost()
+        let source = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try Data("file".utf8).write(to: source)
+        defer { try? FileManager.default.removeItem(at: source) }
+        let pasteboard = makePasteboard(items: [source])
+        let outside = HostDraggingInfo(
+            pasteboard: pasteboard,
+            location: CGPoint(x: 10, y: 10),
+            sequenceNumber: 8
+        )
+        let inside = HostDraggingInfo(
+            pasteboard: pasteboard,
+            location: CGPoint(x: 100, y: 100),
+            sequenceNumber: 8
+        )
+        var hovered: [[URL]?] = []
+        host.onFileDragHoverChanged = { hovered.append($0) }
+        host.onFileDrop = { _ in true }
+
+        #expect(host.draggingEntered(outside).isEmpty)
+        #expect(host.draggingUpdated(inside) == .copy)
+        #expect(host.performDragOperation(inside))
+        #expect(hovered == [[source], nil])
+    }
+
+    @Test
+    func performDropRevalidatesAPasteboardChangedDuringTheSameGesture() throws {
+        let host = makeHost()
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let first = directory.appendingPathComponent("first.txt")
+        let replacement = directory.appendingPathComponent("replacement.txt")
+        try Data("first".utf8).write(to: first)
+        try Data("replacement".utf8).write(to: replacement)
+        let pasteboard = makePasteboard(items: [first])
+        let drag = HostDraggingInfo(
+            pasteboard: pasteboard,
+            location: CGPoint(x: 100, y: 100),
+            sequenceNumber: 10
+        )
+        var dropped: [[URL]] = []
+        host.onFileDrop = { dropped.append($0); return true }
+
+        #expect(host.draggingEntered(drag) == .copy)
+        pasteboard.clearContents()
+        pasteboard.writeObjects([replacement as NSURL])
+        #expect(host.performDragOperation(drag))
+        #expect(dropped == [[replacement]])
+    }
+
+    @Test
+    func fileDestinationRejectsASourceThatDoesNotOfferCopy() throws {
+        let host = makeHost()
+        let source = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try Data("file".utf8).write(to: source)
+        defer { try? FileManager.default.removeItem(at: source) }
+        let drag = HostDraggingInfo(
+            pasteboard: makePasteboard(items: [source]),
+            location: CGPoint(x: 100, y: 100),
+            sequenceNumber: 9,
+            operationMask: .move
+        )
+
+        #expect(host.draggingEntered(drag).isEmpty)
+        #expect(host.performDragOperation(drag) == false)
+    }
+
+    @Test
+    func fileDestinationRejectsPromiseMixedOversizedAndPhysicalCutoutOffers() throws {
+        let host = makeHost()
+        host.setFileDropExclusionFrame(CGRect(x: 180, y: 160, width: 40, height: 40))
+        var unsupportedCount = 0
+        host.onUnsupportedFileDrop = { unsupportedCount += 1 }
+
+        let promiseBoard = NSPasteboard(name: .init("test.promise.\(UUID())"))
+        promiseBoard.clearContents()
+        let promise = NSPasteboardItem()
+        promise.setString("public.text", forType: .init("com.apple.pasteboard.promised-file-content-type"))
+        promiseBoard.writeObjects([promise])
+        #expect(host.draggingEntered(HostDraggingInfo(
+            pasteboard: promiseBoard,
+            location: CGPoint(x: 100, y: 100),
+            sequenceNumber: 1
+        )).isEmpty)
+
+        let source = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try Data("file".utf8).write(to: source)
+        defer { try? FileManager.default.removeItem(at: source) }
+        let mixedBoard = makePasteboard(items: [source], appendText: true)
+        #expect(host.draggingEntered(HostDraggingInfo(
+            pasteboard: mixedBoard,
+            location: CGPoint(x: 100, y: 100),
+            sequenceNumber: 2
+        )).isEmpty)
+
+        let oversized = makePasteboard(items: Array(repeating: source, count: 33))
+        #expect(host.draggingEntered(HostDraggingInfo(
+            pasteboard: oversized,
+            location: CGPoint(x: 100, y: 100),
+            sequenceNumber: 3
+        )).isEmpty)
+
+        let valid = makePasteboard(items: [source])
+        #expect(host.draggingEntered(HostDraggingInfo(
+            pasteboard: valid,
+            location: CGPoint(x: 200, y: 180),
+            sequenceNumber: 4
+        )).isEmpty)
+        #expect(unsupportedCount == 3)
+    }
+    @Test
     func glassHasNoOpaqueBackingBlockingTheDesktop() throws {
         guard #available(macOS 26, *),
               !NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency else { return }
@@ -137,4 +279,52 @@ struct NotchHostViewTests {
         )
         return host
     }
+
+    private func makePasteboard(items: [URL], appendText: Bool = false) -> NSPasteboard {
+        let pasteboard = NSPasteboard(name: .init("test.files.\(UUID())"))
+        pasteboard.clearContents()
+        var objects: [NSPasteboardWriting] = items as [NSURL]
+        if appendText { objects.append("unsupported" as NSString) }
+        pasteboard.writeObjects(objects)
+        return pasteboard
+    }
+}
+
+@MainActor
+private final class HostDraggingInfo: NSObject, @preconcurrency NSDraggingInfo {
+    let draggingPasteboard: NSPasteboard
+    let draggingLocation: NSPoint
+    let draggingSequenceNumber: Int
+    let draggingDestinationWindow: NSWindow? = nil
+    let draggingSourceOperationMask: NSDragOperation
+    let draggedImageLocation: NSPoint = .zero
+    let draggedImage: NSImage? = nil
+    let draggingSource: Any? = nil
+    var draggingFormation: NSDraggingFormation = .default
+    var animatesToDestination = false
+    var numberOfValidItemsForDrop = 0
+    let springLoadingHighlight: NSSpringLoadingHighlight = .none
+
+    init(
+        pasteboard: NSPasteboard,
+        location: NSPoint,
+        sequenceNumber: Int,
+        operationMask: NSDragOperation = .copy
+    ) {
+        draggingPasteboard = pasteboard
+        draggingLocation = location
+        draggingSequenceNumber = sequenceNumber
+        draggingSourceOperationMask = operationMask
+    }
+
+    func slideDraggedImage(to screenPoint: NSPoint) {}
+    override func namesOfPromisedFilesDropped(atDestination dropDestination: URL) -> [String]? { nil }
+    func enumerateDraggingItems(
+        options enumOpts: NSDraggingItemEnumerationOptions = [],
+        for view: NSView?,
+        classes classArray: [AnyClass],
+        searchOptions: [NSPasteboard.ReadingOptionKey: Any] = [:],
+        using block: @escaping (NSDraggingItem, Int, UnsafeMutablePointer<ObjCBool>) -> Void
+    ) {}
+    func resetSpringLoading() {}
 }

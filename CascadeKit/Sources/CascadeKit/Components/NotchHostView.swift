@@ -23,7 +23,18 @@ final class NotchHostView: NSView {
     let auxiliaryInteraction = NotchAuxiliaryInteraction()
 
     var onSettingsRequested: (() -> Void)?
+    var onContextualPageRequested: (() -> Void)?
+    var onOrdinaryPageRequested: (() -> Void)?
+    var onFileDragHoverChanged: (([URL]?) -> Void)?
+    var onFileDrop: (([URL]) -> Bool)?
+    var onUnsupportedFileDrop: (() -> Void)?
     private let settingsButton = NSButton()
+    private let pageChooser = NSSegmentedControl(
+        labels: ["", ""],
+        trackingMode: .selectOne,
+        target: nil,
+        action: nil
+    )
 
     private let shapeLayer       = CAShapeLayer()
     private let contentMaskLayer = CAShapeLayer()
@@ -34,6 +45,10 @@ final class NotchHostView: NSView {
     private var isChromeVisible = false
     private var materialProgress: CGFloat = 0
     private var glassLightSources = NotchGlassLightSources()
+    private var fileDropExclusionFrame: CGRect = .zero
+    private var cachedFileOffer: (sequence: Int, changeCount: Int, urls: [URL])?
+    private var hoveredFileOfferKey: (sequence: Int, changeCount: Int)?
+    private var rejectedFileOfferKey: (sequence: Int, changeCount: Int)?
 
     var borderAppearance: NotchBorderAppearance { borderRenderer.appearance }
 
@@ -109,6 +124,22 @@ final class NotchHostView: NSView {
         settingsButton.isHidden = true
         contentContainer.addSubview(settingsButton)
 
+        pageChooser.controlSize = .small
+        pageChooser.font = .systemFont(ofSize: 11, weight: .medium)
+        pageChooser.setAccessibilityIdentifier("notch.page-chooser")
+        pageChooser.setAccessibilityLabel("Pagina del notch")
+        pageChooser.setAccessibilityHelp("Scegli tra il ripiano e la pagina ordinaria")
+        pageChooser.target = self
+        pageChooser.action = #selector(selectPage)
+        pageChooser.isHidden = true
+        contentContainer.addSubview(pageChooser)
+
+        registerForDraggedTypes([
+            .fileURL,
+            .init("com.apple.pasteboard.promised-file-url"),
+            .init("com.apple.pasteboard.promised-file-content-type")
+        ])
+
         addSubview(borderRenderer.view)
         setBorderAppearance(.neutral, animated: false)
         accessibilityObserver = NSWorkspace.shared.notificationCenter.addObserver(
@@ -150,6 +181,32 @@ final class NotchHostView: NSView {
     }
 
     @objc private func openSettings() { onSettingsRequested?() }
+
+    func setPageChooser(
+        frame             : CGRect,
+        isVisible         : Bool,
+        contextualLabel   : String,
+        ordinaryLabel     : String,
+        selectsContextual : Bool
+    ) {
+        pageChooser.frame = frame
+        pageChooser.setLabel(contextualLabel, forSegment: 0)
+        pageChooser.setLabel(ordinaryLabel, forSegment: 1)
+        pageChooser.selectedSegment = selectsContextual ? 0 : 1
+        pageChooser.isHidden = !isVisible
+    }
+
+    @objc private func selectPage() {
+        if pageChooser.selectedSegment == 0 {
+            onContextualPageRequested?()
+        } else {
+            onOrdinaryPageRequested?()
+        }
+    }
+
+    func setFileDropExclusionFrame(_ frame: CGRect) {
+        fileDropExclusionFrame = frame
+    }
 
     /// Set the notch fill. Called once by the controller from the configuration;
     /// the renderer keeps the path moving, the color is stable. The SwiftUI
@@ -426,6 +483,116 @@ final class NotchHostView: NSView {
     /// pixels belong to the menu bar underneath and must remain clickable.
     func containsInteractivePoint(_ point: CGPoint) -> Bool {
         hitPath?.contains(point, using: .winding, transform: .identity) == true
+    }
+
+    override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        resolveFileOffer(sender)
+    }
+
+    override func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        let point = convert(sender.draggingLocation, from: nil)
+        guard containsFileDropPoint(point) else {
+            clearFileDragHover()
+            return []
+        }
+        return resolveFileOffer(sender)
+    }
+
+    override func draggingExited(_ sender: (any NSDraggingInfo)?) {
+        clearFileDragHover()
+        cachedFileOffer = nil
+        rejectedFileOfferKey = nil
+    }
+
+    override func draggingEnded(_ sender: any NSDraggingInfo) {
+        clearFileDragHover()
+        cachedFileOffer = nil
+        rejectedFileOfferKey = nil
+    }
+
+    override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        let point = convert(sender.draggingLocation, from: nil)
+        guard containsFileDropPoint(point), resolveFileOffer(sender) == .copy,
+              let offer = cachedFileOffer else {
+            clearFileDragHover()
+            return false
+        }
+        let accepted = onFileDrop?(offer.urls) ?? false
+        clearFileDragHover()
+        cachedFileOffer = nil
+        return accepted
+    }
+
+    private func resolveFileOffer(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        let point = convert(sender.draggingLocation, from: nil)
+        guard containsFileDropPoint(point),
+              sender.draggingSourceOperationMask.contains(.copy) else { return [] }
+        let changeCount = sender.draggingPasteboard.changeCount
+        if let cachedFileOffer,
+           cachedFileOffer.sequence == sender.draggingSequenceNumber,
+           cachedFileOffer.changeCount == changeCount {
+            publishFileDragHover(cachedFileOffer)
+            return .copy
+        }
+        guard let items = sender.draggingPasteboard.pasteboardItems,
+              !items.isEmpty, items.count <= 32 else {
+            rejectFileOffer(
+                sequence: sender.draggingSequenceNumber,
+                changeCount: changeCount
+            )
+            return []
+        }
+        let promiseTypes: Set<NSPasteboard.PasteboardType> = [
+            .init("com.apple.pasteboard.promised-file-url"),
+            .init("com.apple.pasteboard.promised-file-content-type")
+        ]
+        var urls: [URL] = []
+        urls.reserveCapacity(items.count)
+        for item in items {
+            guard promiseTypes.isDisjoint(with: item.types),
+                  item.types.contains(.fileURL),
+                  let value = item.string(forType: .fileURL),
+                  let url = URL(string: value), url.isFileURL,
+                  (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true else {
+                rejectFileOffer(
+                    sequence: sender.draggingSequenceNumber,
+                    changeCount: changeCount
+                )
+                return []
+            }
+            urls.append(url)
+        }
+        let offer = (sender.draggingSequenceNumber, changeCount, urls)
+        cachedFileOffer = offer
+        sender.numberOfValidItemsForDrop = urls.count
+        publishFileDragHover(offer)
+        return .copy
+    }
+
+    private func containsFileDropPoint(_ point: CGPoint) -> Bool {
+        containsInteractivePoint(point) && !fileDropExclusionFrame.contains(point)
+    }
+
+    private func publishFileDragHover(_ offer: (sequence: Int, changeCount: Int, urls: [URL])) {
+        guard hoveredFileOfferKey?.sequence != offer.sequence
+                || hoveredFileOfferKey?.changeCount != offer.changeCount else { return }
+        hoveredFileOfferKey = (offer.sequence, offer.changeCount)
+        onFileDragHoverChanged?(offer.urls)
+    }
+
+    private func clearFileDragHover() {
+        guard hoveredFileOfferKey != nil else { return }
+        hoveredFileOfferKey = nil
+        onFileDragHoverChanged?(nil)
+    }
+
+    private func rejectFileOffer(sequence: Int, changeCount: Int) {
+        clearFileDragHover()
+        cachedFileOffer = nil
+        guard rejectedFileOfferKey?.sequence != sequence
+                || rejectedFileOfferKey?.changeCount != changeCount else { return }
+        rejectedFileOfferKey = (sequence, changeCount)
+        onUnsupportedFileDrop?()
     }
 
     isolated deinit {

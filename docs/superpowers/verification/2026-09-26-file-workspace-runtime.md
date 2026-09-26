@@ -91,3 +91,24 @@ Verifica indipendente root: `DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents
 Build `scripts/build-development.sh` con DerivedData CascadeFileShelf riuscita, controllo confini SDK e firma completa passati, helper verificati dalla fase Xcode. Log `task6a-app-build.log`. Link Applications aggiornato, vecchio processo27461 chiuso e nuovo processo34695 verificato nella stessa build. Nessuna modifica al launcher, al gate, al trasporto o alla composizione produttiva. Il ticket dei job completi resta aperto con dipendenza nativa; non viene qualificata alcuna conversione del ripiano.
 
 Durante il checkpoint Git un pack del checkout originale su iCloud ha restituito un timeout; la successiva lettura dell’oggetto e `git verify-pack` sono riuscite. Nessuna riparazione/repack eseguita. Worktree conservata e pulita dopo i commit. Quota settimanale osservata7% usata/93% residua, riserva80% rispettata.
+
+## Primo incremento locale — verifica finale
+
+L'[eccezione approvata](../specs/2026-09-26-file-shelf-design.md#9-inserimento-in-cascade) permette una pagina ripiano direttamente integrata nell'app; non qualifica il launcher addon esterno né la conversione completa. Questa sezione registra prove solo quando osservate dal root.
+
+| Verifica | Stato ed evidenza |
+| --- | --- |
+| Host locale, consegna per voce | **Accettato**: commit `a0508ef`, review root con correzioni; 73 test indipendenti passati (53 runtime, 9 presentazione, 11 contratti), log SDD `root-task87-tests.log`. Nessuna consegna app da questo solo commit. |
+| Review root della pagina e del drag in ingresso (ticket 88) | **Pending**. |
+| Review root della composizione e del drag in uscita (ticket 89) | **Pending**. Il solo `drag-ended` non è una ricevuta; il callback di copia riuscita per singola promise può arrivare dopo e rimuove soltanto quella voce. |
+| Suite completa dopo la composizione | **Pending**. |
+| Build firmata e controlli SDK/firma | **Pending**. |
+| Collegamento `/Applications/Cascade.app` alla build corrente | **Pending**. |
+| Chiusura, riavvio e verifica PID/percorso eseguibile | **Pending**. |
+| Finder: ingresso e uscita, copie leggibili e originali conservati | **Pending**. |
+| Drag annullato, destinazione che rifiuta e consegna parziale | **Pending**. |
+| Ripiano persistente dopo riavvio | **Pending**. |
+| Pagina predefinita occupata e navigazione manuale preservata | **Pending**. |
+| VoiceOver/accessibilità e Riduci movimento nel notch reale | **Pending**. |
+
+I ticket addon esterni 77/79/82/83/84/85 restano aperti; nessuna riga pending equivale a qualifica nativa o disponibilità della conversione.

@@ -1296,6 +1296,89 @@ struct NotchControllerTests {
     }
 
     @Test
+    func contextualPageUsesItsDeclaredHeightAndExistingMaximum() throws {
+        let fixture = ControllerFixture(reducesMotion: true)
+        let page = ControllerContextualPage(contentHeight: 400)
+        fixture.controller.start()
+        defer { fixture.controller.stop() }
+
+        fixture.controller.surface.applyPresentation(DisplayPresentation(
+            primary: nil,
+            secondary: nil,
+            notice: nil,
+            expanded: nil,
+            expandedIsLiveActivity: false,
+            showsWidgets: false,
+            contextualPage: page,
+            contextualPageIsSelected: true,
+            widgetContentRevision: 0,
+            style: .notch
+        ))
+
+        let shape = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
+        let bounds = try #require(shape.path?.boundingBoxOfPath)
+        #expect(bounds.height == NotchConfiguration.default.maximumActivityExpandedHeight)
+        #expect(page.contexts.count == 1)
+        #expect(page.contexts[0].availableSize.height < 240)
+    }
+
+    @Test
+    func replacingAContextualPageInstanceWithTheSameIDAndRevisionRendersTheReplacement() {
+        let fixture = ControllerFixture(reducesMotion: true)
+        let first = ControllerContextualPage(contentHeight: 120)
+        let replacement = ControllerContextualPage(contentHeight: 120)
+        fixture.controller.start()
+        defer { fixture.controller.stop() }
+
+        func presentation(_ page: ControllerContextualPage) -> DisplayPresentation {
+            DisplayPresentation(
+                primary: nil,
+                secondary: nil,
+                notice: nil,
+                expanded: nil,
+                expandedIsLiveActivity: false,
+                showsWidgets: false,
+                contextualPage: page,
+                contextualPageIsSelected: true,
+                widgetContentRevision: 0,
+                style: .notch
+            )
+        }
+
+        fixture.controller.surface.applyPresentation(presentation(first))
+        fixture.controller.surface.applyPresentation(presentation(replacement))
+
+        #expect(first.contexts.count == 1)
+        #expect(replacement.contexts.count == 1)
+    }
+
+    @Test
+    func recognizedFileDragRunsOneFiniteHeartbeatAndNearHoverRequestsDragExpansion() {
+        let morph = RecordingMorphEngine()
+        let fixture = ControllerFixture(morphEngine: morph)
+        fixture.controller.start()
+        defer { fixture.controller.stop() }
+        morph.settle()
+
+        fixture.controller.surface.setRecognizedFileDragActive(
+            true,
+            at: CGPoint(x: 100, y: 100)
+        )
+        let starts = morph.startCount
+        fixture.controller.surface.setRecognizedFileDragActive(
+            true,
+            at: CGPoint(x: 100, y: 100)
+        )
+        #expect(morph.startCount == starts)
+        morph.settle()
+        #expect(!morph.isRunning)
+
+        fixture.controller.surface.handlePointer(at: CGPoint(x: 500, y: 790))
+        #expect(fixture.controller.state == .open)
+        #expect(fixture.controller.expansionRequests.last?.trigger == .drag)
+    }
+
+    @Test
     func expandedActivityKeepsTheCoveredWidgetSurfaceSuspended() {
         let fixture = ControllerFixture(reducesMotion: true)
         let widget = ControllerWidgetFixture()
@@ -2049,6 +2132,22 @@ private final class ControllerActivityFixture: NotchLiveActivity {
 
     private func recordFactoryActivationOrder() {
         if activations <= suspensions { factoryRanBeforeActivation = true }
+    }
+}
+
+@MainActor
+private final class ControllerContextualPage: NotchContextualPage {
+    let id = "shelf"
+    let contentRevision: UInt64 = 1
+    let contentHeight: CGFloat
+    let accessibilityLabel = "Ripiano"
+    private(set) var contexts: [NotchContextualPageContext] = []
+
+    init(contentHeight: CGFloat) { self.contentHeight = contentHeight }
+
+    func makeContentView(in context: NotchContextualPageContext) -> AnyView {
+        contexts.append(context)
+        return AnyView(Text("Shelf"))
     }
 }
 

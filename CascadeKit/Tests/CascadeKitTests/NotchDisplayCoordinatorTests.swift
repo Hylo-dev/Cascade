@@ -12,6 +12,158 @@ import Testing
 struct NotchDisplayCoordinatorTests {
 
     @Test
+    func occupiedContextualPageIsDefaultOnlyForANewOpening() throws {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10])
+        let music = CoordinatorActivityFixture(id: "music")
+        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        fixture.activityHost.present(music)
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: true)
+        fixture.coordinator.start()
+
+        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPage === shelf)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == true)
+
+        fixture.coordinator.showOrdinaryPage(on: 10)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == false)
+        #expect(fixture.surfaces[10]?.presentations.last?.expanded === music)
+
+        shelf.contentRevision = 2
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: true)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == false)
+        #expect(fixture.surfaces[10]?.presentations.last?.expanded === music)
+
+        fixture.surfaces[10]?.requestCollapse()
+        let generation = try #require(fixture.surfaces[10]?.closeRequests.last)
+        fixture.surfaces[10]?.finishCollapse(generation: generation)
+        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 2)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPage === shelf)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == true)
+    }
+
+    @Test
+    func emptyContextualPageRequiresExplicitSelectionAndReturnsToOrdinaryWhenEmptied() {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10])
+        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
+        fixture.coordinator.start()
+        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == false)
+        #expect(fixture.surfaces[10]?.presentations.last?.showsWidgets == true)
+
+        fixture.coordinator.showContextualPage(on: 10)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPage === shelf)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == true)
+
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: true)
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == false)
+        #expect(fixture.surfaces[10]?.presentations.last?.showsWidgets == true)
+    }
+
+    @Test
+    func explicitContextualSelectionSurvivesAnOwnershipHandoff() throws {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
+        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
+        fixture.coordinator.start()
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger: .click,
+            generation: 1
+        )
+
+        fixture.coordinator.showContextualPage(on: 20)
+        let generation = try #require(fixture.surfaces[10]?.closeRequests.last)
+        fixture.surfaces[10]?.finishCollapse(generation: generation)
+
+        #expect(fixture.coordinator.expandedDisplayID == 20)
+        #expect(fixture.surfaces[20]?.presentations.last?.contextualPage === shelf)
+        #expect(fixture.surfaces[20]?.presentations.last?.contextualPageIsSelected == true)
+    }
+
+    @Test
+    func dragHoverPreviewRestoresThePreviouslySelectedPageUnlessDropSucceeds() {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10])
+        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        let url = URL(fileURLWithPath: "/tmp/report.txt")
+        var hovered: [[URL]?] = []
+        var acceptsDrop = false
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
+        fixture.coordinator.configureFileDrop(
+            onHover: { hovered.append($0) },
+            onDrop: { _ in acceptsDrop },
+            onUnsupported: {}
+        )
+        fixture.coordinator.start()
+        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+
+        fixture.surfaces[10]?.sendFileDragHover([url])
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPage === shelf)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == true)
+        fixture.surfaces[10]?.sendFileDragHover(nil)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == false)
+
+        fixture.surfaces[10]?.sendFileDragHover([url])
+        #expect(fixture.surfaces[10]?.sendFileDrop([url]) == false)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == false)
+
+        fixture.surfaces[10]?.sendFileDragHover([url])
+        acceptsDrop = true
+        #expect(fixture.surfaces[10]?.sendFileDrop([url]) == true)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPage === shelf)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == true)
+        #expect(hovered == [[url], nil, [url], nil, [url], nil])
+    }
+
+    @Test
+    func recognizedFileDragRoutesToPointedDisplayAndLockClearsIt() {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
+        fixture.coordinator.setContextualPage(
+            CoordinatorContextualPage(id: "shelf", contentRevision: 1),
+            prefersDefault: false
+        )
+        fixture.coordinator.configureFileDrop(
+            onHover: { _ in }, onDrop: { _ in true }, onUnsupported: {}
+        )
+        fixture.coordinator.start()
+        let point = CGPoint(x: 1_050, y: 50)
+
+        fixture.monitor.sendPointer(point)
+        #expect(fixture.surfaces[20]?.fileDragRecognitionUpdates.isEmpty == true)
+
+        fixture.monitor.sendRecognizedFileDrag(active: true, point: point)
+        #expect(fixture.surfaces[10]?.fileDragRecognitionUpdates.isEmpty == true)
+        #expect(fixture.surfaces[20]?.fileDragRecognitionUpdates == [true])
+
+        fixture.monitor.sendLock()
+        #expect(fixture.surfaces[20]?.fileDragRecognitionUpdates == [true, false])
+    }
+
+    @Test
+    func mouseUpDoesNotRestorePreviewBeforeDestinationDropIsDelivered() async {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10])
+        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        let url = URL(fileURLWithPath: "/tmp/report.txt")
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
+        fixture.coordinator.configureFileDrop(
+            onHover: { _ in }, onDrop: { _ in true }, onUnsupported: {}
+        )
+        fixture.coordinator.start()
+        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.monitor.sendRecognizedFileDrag(active: true, point: CGPoint(x: 500, y: 790))
+        fixture.surfaces[10]?.sendFileDragHover([url])
+
+        fixture.monitor.sendRecognizedFileDrag(active: false, point: CGPoint(x: 500, y: 790))
+        #expect(fixture.surfaces[10]?.sendFileDrop([url]) == true)
+        await Task.yield()
+
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPage === shelf)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == true)
+    }
+
+    @Test
     func handoffWaitsForTheOldSurfaceToReachCompactGeometry() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
         fixture.coordinator.start()
@@ -103,6 +255,31 @@ struct NotchDisplayCoordinatorTests {
         #expect(fixture.coordinator.expandedDisplayID == nil)
         #expect(fixture.surfaces[10]?.isStopped == true)
         #expect(fixture.surfaces[20]?.presentations.last?.isExpanded == false)
+    }
+
+    @Test
+    func disconnectingAContextualPreviewOwnerClearsItsSelection() {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
+        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        let url = URL(fileURLWithPath: "/tmp/report.txt")
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
+        fixture.coordinator.configureFileDrop(
+            onHover: { _ in }, onDrop: { _ in true }, onUnsupported: {}
+        )
+        fixture.coordinator.start()
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger: .click,
+            generation: 1
+        )
+        fixture.surfaces[10]?.sendFileDragHover([url])
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == true)
+
+        fixture.inventory.entries = [fixture.entry(displayID: 20)]
+        fixture.inventory.sendChange()
+
+        #expect(fixture.coordinator.expandedDisplayID == nil)
+        #expect(fixture.surfaces[20]?.presentations.last?.contextualPageIsSelected == false)
     }
 
     @Test
@@ -997,12 +1174,19 @@ private final class RecordingCoordinatorEventMonitor: EventMonitoring {
     var onScreenUnlocked             : (() -> Void)?
     private(set) var startCount = 0
     private(set) var stopCount = 0
+    private var fileDragRecognitionHandler: ((Bool, CGPoint) -> Void)?
     func start() { startCount += 1 }
     func stop() { stopCount += 1 }
     func sendLock() { onScreenLocked?() }
     func sendUnlock() { onScreenUnlocked?() }
     func sendPointer(_ point: CGPoint) { onPointerMoved?(point) }
     func sendButton(isPressed: Bool) { onPointerButtonChanged?(isPressed) }
+    func setFileDragRecognitionHandler(_ handler: ((Bool, CGPoint) -> Void)?) {
+        fileDragRecognitionHandler = handler
+    }
+    func sendRecognizedFileDrag(active: Bool, point: CGPoint) {
+        fileDragRecognitionHandler?(active, point)
+    }
 }
 
 @MainActor
@@ -1017,6 +1201,11 @@ private final class RecordingDisplaySurface: NotchDisplayPresenting {
     var onInteractionHoldChanged: ((NotchInteractionKind, Bool) -> Void)?
     var onDragOwnershipChanged: ((Bool) -> Void)?
     var onRetainedActivityRootsChanged: (() -> Void)?
+    var onContextualPageRequested: (() -> Void)?
+    var onOrdinaryPageRequested: (() -> Void)?
+    var onFileDragHoverChanged: (([URL]?) -> Void)?
+    var onFileDrop: (([URL]) -> Bool)?
+    var onUnsupportedFileDrop: (() -> Void)?
     private var mountedActivityRoots: [any NotchActivity] = []
     private var outgoingActivityRoots: [any NotchActivity] = []
     var retainsOutgoingRootsOnReplacement = false
@@ -1041,6 +1230,7 @@ private final class RecordingDisplaySurface: NotchDisplayPresenting {
     private(set) var borderUpdates: [NotchBorderAppearance] = []
     private(set) var sensitiveContentUpdates: [Bool] = []
     private(set) var externalSurfaceUpdates: [Bool] = []
+    private(set) var fileDragRecognitionUpdates: [Bool] = []
     private(set) var calibrationStartCount = 0
     var acceptsCalibration = true
     var restingFrame: CGRect? {
@@ -1092,7 +1282,13 @@ private final class RecordingDisplaySurface: NotchDisplayPresenting {
     func setHapticsEnabled(_ isEnabled: Bool) { hapticsUpdates.append(isEnabled) }
     func setBorderAppearance(_ appearance: NotchBorderAppearance) { borderUpdates.append(appearance) }
     func setSensitiveContentVisible(_ isVisible: Bool) { sensitiveContentUpdates.append(isVisible) }
+    func setRecognizedFileDragActive(_ isActive: Bool, at point: CGPoint) {
+        fileDragRecognitionUpdates.append(isActive)
+    }
     func stop() { isStopped = true; stopCount += 1 }
+
+    func sendFileDragHover(_ urls: [URL]?) { onFileDragHoverChanged?(urls) }
+    func sendFileDrop(_ urls: [URL]) -> Bool { onFileDrop?(urls) ?? false }
 
     func requestExpansion(
         activityID: String?,
@@ -1117,6 +1313,23 @@ private final class RecordingDisplaySurface: NotchDisplayPresenting {
     func setDragOwner(_ isOwner: Bool) { onDragOwnershipChanged?(isOwner) }
     func setInteractionHold(_ kind: NotchInteractionKind, active: Bool) {
         onInteractionHoldChanged?(kind, active)
+    }
+}
+
+@MainActor
+private final class CoordinatorContextualPage: NotchContextualPage {
+    let id: String
+    var contentRevision: UInt64
+    let contentHeight: CGFloat = 146
+    let accessibilityLabel = "Ripiano"
+
+    init(id: String, contentRevision: UInt64) {
+        self.id = id
+        self.contentRevision = contentRevision
+    }
+
+    func makeContentView(in context: NotchContextualPageContext) -> AnyView {
+        AnyView(Text(id))
     }
 }
 

@@ -107,6 +107,29 @@ public final class NotchEngine {
 
     public func register(_ widget: NotchWidget) { coordinator.register(widget) }
     public func unregisterWidget(id: WidgetIdentifier) { coordinator.unregisterWidget(id: id) }
+    public func setContextualPage(
+        _ page: (any NotchContextualPage)?,
+        prefersDefault: Bool
+    ) {
+        coordinator.setContextualPage(page, prefersDefault: prefersDefault)
+    }
+    public func showContextualPage(on displayID: CGDirectDisplayID? = nil) {
+        coordinator.showContextualPage(on: displayID)
+    }
+    public func showOrdinaryPage(on displayID: CGDirectDisplayID? = nil) {
+        coordinator.showOrdinaryPage(on: displayID)
+    }
+    public func configureFileDrop(
+        onHover: (@MainActor ([URL]?) -> Void)?,
+        onDrop: (@MainActor ([URL]) -> Bool)?,
+        onUnsupported: (@MainActor () -> Void)?
+    ) {
+        coordinator.configureFileDrop(
+            onHover: onHover,
+            onDrop: onDrop,
+            onUnsupported: onUnsupported
+        )
+    }
     public func present(_ activity: any NotchLiveActivity) { coordinator.present(activity) }
     public func setExpandedFallback(_ activity: (any NotchLiveActivity)?) {
         coordinator.setExpandedFallback(activity)

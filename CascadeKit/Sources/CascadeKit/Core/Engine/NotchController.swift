@@ -71,6 +71,9 @@ final class NotchController: NotchDisplayPresenting {
     @ObservationIgnored private var heightSpring  : Spring
     @ObservationIgnored private var compactTrailingSpring: Spring
     @ObservationIgnored private var bubbleSpring: Spring
+    @ObservationIgnored private var dragHeartbeatSpring: Spring
+    @ObservationIgnored private var dragHeartbeatPhase = 0
+    @ObservationIgnored private var isRecognizedFileDragActive = false
     @ObservationIgnored private var isAttachingSecondary = false
     @ObservationIgnored private var presentedActivityID: String?
     @ObservationIgnored private var presentedSecondaryActivityID: String?
@@ -118,6 +121,11 @@ final class NotchController: NotchDisplayPresenting {
     @ObservationIgnored var onInteractionHoldChanged: ((NotchInteractionKind, Bool) -> Void)?
     @ObservationIgnored var onDragOwnershipChanged: ((Bool) -> Void)?
     @ObservationIgnored var onRetainedActivityRootsChanged: (() -> Void)?
+    @ObservationIgnored var onContextualPageRequested: (() -> Void)?
+    @ObservationIgnored var onOrdinaryPageRequested: (() -> Void)?
+    @ObservationIgnored var onFileDragHoverChanged: (([URL]?) -> Void)?
+    @ObservationIgnored var onFileDrop: (([URL]) -> Bool)?
+    @ObservationIgnored var onUnsupportedFileDrop: (() -> Void)?
 
     var retainedActivityRoots: [any NotchActivity] {
         let mounted = mountedActivityRoots
@@ -149,6 +157,10 @@ final class NotchController: NotchDisplayPresenting {
         let expandedRevision : UInt64?
         let expandedIsLiveActivity: Bool
         let showsWidgets     : Bool
+        let contextualPageIdentity: ObjectIdentifier?
+        let contextualPageID: String?
+        let contextualPageRevision: UInt64?
+        let contextualPageIsSelected: Bool
         let widgetContentRevision: UInt64
         let style            : ExternalNotchStyle
     }
@@ -195,11 +207,17 @@ final class NotchController: NotchDisplayPresenting {
         self.heightSpring   = Spring(parameters: configuration.spring)
         self.compactTrailingSpring = Spring(parameters: configuration.spring)
         self.bubbleSpring = Spring(parameters: configuration.spring)
+        self.dragHeartbeatSpring = Spring(parameters: configuration.spring)
         sizeCalibration.onChange = { [weak self] in self?.applySizeCalibrationPreview() }
         sizeCalibration.onFinish = { [weak self] in
             self?.finishSizeCalibrationPresentation()
             self?.onInteractionHoldChanged?(.calibration, false)
         }
+        hostView.onContextualPageRequested = { [weak self] in self?.onContextualPageRequested?() }
+        hostView.onOrdinaryPageRequested = { [weak self] in self?.onOrdinaryPageRequested?() }
+        hostView.onFileDragHoverChanged = { [weak self] in self?.onFileDragHoverChanged?($0) }
+        hostView.onFileDrop = { [weak self] in self?.onFileDrop?($0) ?? false }
+        hostView.onUnsupportedFileDrop = { [weak self] in self?.onUnsupportedFileDrop?() }
     }
 
     // MARK: - Lifecycle
@@ -282,6 +300,13 @@ final class NotchController: NotchDisplayPresenting {
         hostView.setContent(AnyView(EmptyView()), frame: .zero, isVisible: false)
         hostView.clearActivityContent()
         hostView.setSettingsButton(frame: .zero, isVisible: false)
+        hostView.setPageChooser(
+            frame: .zero,
+            isVisible: false,
+            contextualLabel: "",
+            ordinaryLabel: "",
+            selectsContextual: false
+        )
         onExpandedFrameChanged?(nil)
         panel.ignoresMouseEvents = true
         panel.orderOut(nil)
@@ -385,6 +410,10 @@ final class NotchController: NotchDisplayPresenting {
             expandedRevision : presentation.expanded?.contentRevision,
             expandedIsLiveActivity: presentation.expandedIsLiveActivity,
             showsWidgets     : presentation.showsWidgets,
+            contextualPageIdentity: presentation.contextualPage.map(ObjectIdentifier.init),
+            contextualPageID: presentation.contextualPage?.id,
+            contextualPageRevision: presentation.contextualPage?.contentRevision,
+            contextualPageIsSelected: presentation.contextualPageIsSelected,
             widgetContentRevision: presentation.widgetContentRevision,
             style            : presentation.style
         )
@@ -516,6 +545,12 @@ final class NotchController: NotchDisplayPresenting {
         return displayPresentation.secondary
     }
 
+    private var displayedContextualPage: (any NotchContextualPage)? {
+        guard !state.isClosed,
+              displayPresentation?.contextualPageIsSelected == true else { return nil }
+        return displayPresentation?.contextualPage
+    }
+
     /// Set whether accepted hover entries request AppKit haptic feedback.
     func setHapticsEnabled(_ isEnabled: Bool) {
         hoverFeedback.isEnabled = isEnabled
@@ -626,6 +661,9 @@ final class NotchController: NotchDisplayPresenting {
         isExternalSurfacePresented = isPresented
         lastPointer = nil
         if isPresented {
+            isRecognizedFileDragActive = false
+            dragHeartbeatPhase = 0
+            dragHeartbeatSpring.snap(to: 0)
             cancelHoverExit()
             clickedOpen = false
             isControlDragActive = false
@@ -698,6 +736,14 @@ final class NotchController: NotchDisplayPresenting {
         }
 
         if state.isClosed {
+            if isRecognizedFileDragActive {
+                let nearDropZone = restingTriggerZone(for: display)
+                    .insetBy(dx: -18, dy: -12)
+                if nearDropZone.intersects(segmentFrom: lastPointer ?? location, to: location) {
+                    setState(.open, trigger: .drag)
+                    return
+                }
+            }
             // Test the segment the pointer travelled since the last sample, not
             // just where it is now: a fast flick can skip clean over the small
             // trigger band between two events and never land inside it.
@@ -751,6 +797,30 @@ final class NotchController: NotchDisplayPresenting {
                 hoverFeedback.update(isHovering: false)
                 setState(.closed)
             }
+        }
+    }
+
+    func setRecognizedFileDragActive(_ isActive: Bool, at point: CGPoint) {
+        guard isStarted, isPanelVisible, !sizeCalibration.isActive,
+              !isExternalSurfacePresented else { return }
+        if isActive {
+            guard !isRecognizedFileDragActive else {
+                handlePointer(at: point)
+                return
+            }
+            isRecognizedFileDragActive = true
+            if state.isClosed, !reducesMotion() {
+                dragHeartbeatPhase = 1
+                dragHeartbeatSpring.snap(to: 0)
+                startMorphIfNeeded()
+            }
+            handlePointer(at: point)
+        } else {
+            guard isRecognizedFileDragActive || dragHeartbeatPhase != 0 else { return }
+            isRecognizedFileDragActive = false
+            dragHeartbeatPhase = 0
+            dragHeartbeatSpring.snap(to: 0)
+            renderCurrentFrame()
         }
     }
 
@@ -1021,6 +1091,8 @@ final class NotchController: NotchDisplayPresenting {
                 hostView.clearDetachedActivityContent()
             }
             heightSpring.snap(to: Double(targets.height))
+            dragHeartbeatPhase = 0
+            dragHeartbeatSpring.snap(to: 0)
             morphEngine.stop()
             renderCurrentFrame()
             finishCoordinatorCollapseIfNeeded()
@@ -1032,7 +1104,9 @@ final class NotchController: NotchDisplayPresenting {
            || !compactSpring.isSettled(at: targets.compact)
            || !compactTrailingSpring.isSettled(at: targets.compactTrailing)
            || !bubbleSpring.isSettled(at: targets.bubble)
-           || !heightSpring.isSettled(at: Double(targets.height)) else {
+           || !heightSpring.isSettled(at: Double(targets.height))
+           || dragHeartbeatPhase != 0
+           || !dragHeartbeatSpring.isSettled(at: dragHeartbeatTarget) else {
             if isReturningToBase {
                 finishReturnToBaseIfNeeded()
                 startMorphIfNeeded()
@@ -1074,6 +1148,8 @@ final class NotchController: NotchDisplayPresenting {
                 hostView.clearDetachedActivityContent()
             }
             heightSpring.snap(to: Double(targets.height))
+            dragHeartbeatPhase = 0
+            dragHeartbeatSpring.snap(to: 0)
             renderCurrentFrame()
             morphEngine.stop()
             finishCoordinatorCollapseIfNeeded()
@@ -1103,6 +1179,7 @@ final class NotchController: NotchDisplayPresenting {
             lowerBound: targets.compactTrailing == 0 ? 0 : nil
         )
         bubbleSpring.advance(toward: targets.bubble, dt: dt)
+        dragHeartbeatSpring.advance(toward: dragHeartbeatTarget, dt: dt)
         heightSpring.advance(
             toward    : Double(targets.height),
             dt        : dt,
@@ -1122,7 +1199,13 @@ final class NotchController: NotchDisplayPresenting {
             && compactTrailingSpring.isSettled(at: targets.compactTrailing, threshold: basePointThreshold)
             && bubbleSpring.isSettled(at: targets.bubble)
             && heightSpring.isSettled(at: Double(targets.height), threshold: basePointThreshold)
+            && dragHeartbeatSpring.isSettled(at: dragHeartbeatTarget)
         if settled {
+
+            if advanceDragHeartbeatPhase() {
+                renderCurrentFrame()
+                return
+            }
 
             leadingSpring.snap(to: targets.leading)
             trailingSpring.snap(to: targets.trailing)
@@ -1145,6 +1228,22 @@ final class NotchController: NotchDisplayPresenting {
                 finishCoordinatorCollapseIfNeeded()
             }
         }
+    }
+
+    private var dragHeartbeatTarget: Double {
+        dragHeartbeatPhase == 1 || dragHeartbeatPhase == 3 ? 1 : 0
+    }
+
+    private func advanceDragHeartbeatPhase() -> Bool {
+        guard dragHeartbeatPhase != 0 else { return false }
+        dragHeartbeatSpring.snap(to: dragHeartbeatTarget)
+        if dragHeartbeatPhase == 4 {
+            dragHeartbeatPhase = 0
+            dragHeartbeatSpring.snap(to: 0)
+            return false
+        }
+        dragHeartbeatPhase += 1
+        return true
     }
 
     private func finishReturnToBaseIfNeeded() {
@@ -1263,10 +1362,11 @@ final class NotchController: NotchDisplayPresenting {
         )
 
         let safeExtent = max(0, display.frame.width / 2 - resolved.topCornerRadius)
+        let heartbeat = max(0, CGFloat(dragHeartbeatSpring.value))
         let geometry = NotchGeometry(
-            leftExtent        : min(safeExtent, resolved.leftExtent),
-            rightExtent       : min(safeExtent, resolved.rightExtent),
-            height            : resolved.height,
+            leftExtent        : min(safeExtent, resolved.leftExtent + heartbeat * 5),
+            rightExtent       : min(safeExtent, resolved.rightExtent + heartbeat * 5),
+            height            : resolved.height + heartbeat * 3,
             bottomCornerRadius: resolved.bottomCornerRadius,
             topCornerRadius   : resolved.topCornerRadius
         )
@@ -1362,6 +1462,14 @@ final class NotchController: NotchDisplayPresenting {
 
     private func expandedTargetHeight(for display: ActiveDisplay) -> CGFloat {
         let resting = restingSize(for: display)
+        if let page = displayedContextualPage {
+            let declared = page.contentHeight
+            let contentHeight = declared.isFinite ? max(0, declared) : 0
+            let hardwareNotchHeight = display.hasHardwareNotch ? resting.height : 0
+            let requested = hardwareNotchHeight
+                + expandedTopInset + expandedBottomInset + contentHeight
+            return max(resting.height, min(normalizedActivityMaximumHeight(), requested))
+        }
         guard let activity = displayedPrimaryActivity else {
             return max(resting.height, normalizedMaximumExpandedHeight())
         }
@@ -1427,6 +1535,13 @@ final class NotchController: NotchDisplayPresenting {
         updatePreferredCompactSideWidth()
         onExpandedFrameChanged?(expandedFrame)
         hostView.setSettingsButton(frame: .zero, isVisible: false)
+        hostView.setPageChooser(
+            frame: .zero,
+            isVisible: false,
+            contextualLabel: "",
+            ordinaryLabel: "",
+            selectsContextual: false
+        )
 
         guard isStarted, isPanelVisible, !isReturningToBase, !sizeCalibration.isActive,
               let display = activeDisplay else {
@@ -1446,6 +1561,12 @@ final class NotchController: NotchDisplayPresenting {
         let contentTopY = topY - dropletDepth
         let hardwareNotchWidth = display.hasHardwareNotch ? resting.width : 0
         let hardwareNotchHeight = display.hasHardwareNotch ? resting.height : 0
+        hostView.setFileDropExclusionFrame(display.hasHardwareNotch ? CGRect(
+            x: centerX - resting.width / 2,
+            y: topY - resting.height,
+            width: resting.width,
+            height: resting.height
+        ) : .zero)
 
         if !state.isClosed {
             let buttonSize: CGFloat = 28
@@ -1459,6 +1580,23 @@ final class NotchController: NotchDisplayPresenting {
                 ),
                 isVisible: rightEdge - buttonSize >= centerX + hardwareNotchWidth / 2
             )
+            if let page = displayPresentation?.contextualPage {
+                let leftEdge = centerX - effectiveExpandedHalfWidth(for: display) + 12
+                let rightLimit = centerX - hardwareNotchWidth / 2 - 8
+                let chooserWidth = min(104, max(0, rightLimit - leftEdge))
+                hostView.setPageChooser(
+                    frame: CGRect(
+                        x: leftEdge,
+                        y: contentTopY - max(hardwareNotchHeight, buttonSize),
+                        width: chooserWidth,
+                        height: buttonSize
+                    ),
+                    isVisible: chooserWidth >= 72,
+                    contextualLabel: page.accessibilityLabel,
+                    ordinaryLabel: "Attività",
+                    selectsContextual: displayPresentation?.contextualPageIsSelected == true
+                )
+            }
         }
 
         if state.isClosed {
@@ -1531,6 +1669,28 @@ final class NotchController: NotchDisplayPresenting {
         }
 
         if !isAttachingSecondary { hostView.clearDetachedActivityContent() }
+        if let page = displayedContextualPage {
+            hostView.clearActivityContent()
+            let height = expandedTargetHeight(for: display)
+            let halfWidth = effectiveExpandedHalfWidth(for: display)
+            let pageFrame = CGRect(
+                x: centerX - halfWidth + expandedHorizontalInset,
+                y: contentTopY - height + expandedBottomInset,
+                width: max(0, halfWidth * 2 - expandedHorizontalInset * 2),
+                height: max(
+                    0,
+                    height - hardwareNotchHeight - expandedTopInset - expandedBottomInset
+                )
+            )
+            hostView.setContent(
+                page.makeContentView(in: NotchContextualPageContext(
+                    availableSize: pageFrame.size
+                )),
+                frame: pageFrame,
+                isVisible: true
+            )
+            return
+        }
         if let activity = displayedPrimaryActivity {
             hostView.setContent(AnyView(EmptyView()), frame: .zero, isVisible: false)
 
@@ -1713,6 +1873,9 @@ final class NotchController: NotchDisplayPresenting {
         compactSpring.snap(to: 0)
         compactTrailingSpring.snap(to: 0)
         bubbleSpring.snap(to: 0)
+        dragHeartbeatSpring.snap(to: 0)
+        dragHeartbeatPhase = 0
+        isRecognizedFileDragActive = false
         isAttachingSecondary = false
         presentedActivityID = nil
         presentedSecondaryActivityID = nil

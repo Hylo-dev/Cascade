@@ -49,11 +49,37 @@ struct DisplayPresentation {
     /// no-session fallback, even when both use the same provider protocol.
     let expandedIsLiveActivity: Bool
     let showsWidgets: Bool
+    let contextualPage: (any NotchContextualPage)?
+    let contextualPageIsSelected: Bool
     let widgetContentRevision: UInt64
     let style      : ExternalNotchStyle
 
+    init(
+        primary: (any NotchLiveActivity)?,
+        secondary: (any NotchLiveActivity)?,
+        notice: (any NotchTransientNotice)?,
+        expanded: (any NotchLiveActivity)?,
+        expandedIsLiveActivity: Bool,
+        showsWidgets: Bool,
+        contextualPage: (any NotchContextualPage)? = nil,
+        contextualPageIsSelected: Bool = false,
+        widgetContentRevision: UInt64,
+        style: ExternalNotchStyle
+    ) {
+        self.primary = primary
+        self.secondary = secondary
+        self.notice = notice
+        self.expanded = expanded
+        self.expandedIsLiveActivity = expandedIsLiveActivity
+        self.showsWidgets = showsWidgets
+        self.contextualPage = contextualPage
+        self.contextualPageIsSelected = contextualPageIsSelected
+        self.widgetContentRevision = widgetContentRevision
+        self.style = style
+    }
+
     var isExpanded: Bool {
-        expanded != nil || showsWidgets
+        expanded != nil || showsWidgets || contextualPageIsSelected
     }
 
     /// visibleActivityRoots mirrors the renderer's real mounted roots. An owner
@@ -63,7 +89,7 @@ struct DisplayPresentation {
         if let expanded {
             return [expanded]
         }
-        if showsWidgets {
+        if showsWidgets || contextualPageIsSelected {
             return []
         }
         if let notice {
@@ -101,6 +127,8 @@ struct DisplayPresentation {
             expanded    : validLive(expanded),
             expandedIsLiveActivity: expandedIsLiveActivity,
             showsWidgets: showsWidgets,
+            contextualPage: contextualPage,
+            contextualPageIsSelected: contextualPageIsSelected,
             widgetContentRevision: widgetContentRevision,
             style       : style
         )
@@ -122,6 +150,11 @@ protocol NotchDisplayPresenting: AnyObject {
     var onInteractionHoldChanged: ((NotchInteractionKind, Bool) -> Void)? { get set }
     var onDragOwnershipChanged  : ((Bool) -> Void)? { get set }
     var onRetainedActivityRootsChanged: (() -> Void)? { get set }
+    var onContextualPageRequested: (() -> Void)? { get set }
+    var onOrdinaryPageRequested: (() -> Void)? { get set }
+    var onFileDragHoverChanged: (([URL]?) -> Void)? { get set }
+    var onFileDrop: (([URL]) -> Bool)? { get set }
+    var onUnsupportedFileDrop: (() -> Void)? { get set }
     /// Exact provider instances still owned by the renderer, including its
     /// current mounted projection and roots leaving through a transition.
     var retainedActivityRoots: [any NotchActivity] { get }
@@ -143,6 +176,7 @@ protocol NotchDisplayPresenting: AnyObject {
     func setHapticsEnabled(_ isEnabled: Bool)
     func setBorderAppearance(_ appearance: NotchBorderAppearance)
     func setSensitiveContentVisible(_ isVisible: Bool)
+    func setRecognizedFileDragActive(_ isActive: Bool, at point: CGPoint)
     func stop()
 }
 
@@ -151,6 +185,23 @@ protocol NotchDisplayPresenting: AnyObject {
 /// expanded ownership through real collapse-completion callbacks.
 @MainActor
 final class NotchDisplayCoordinator {
+    private enum ContextualSelectionReason: Equatable {
+        case defaultOccupied
+        case manual
+        case preview
+    }
+
+    private enum ExpandedPageSelection: Equatable {
+        case automatic
+        case ordinary(ActivityExpansionSelection)
+        case contextual(String, ContextualSelectionReason)
+    }
+
+    private struct FileDropPreview {
+        let displayID: CGDirectDisplayID
+        let previousSelection: ExpandedPageSelection
+        let openedForPreview: Bool
+    }
     private struct SurfaceRecord {
         let surface: any NotchDisplayPresenting
         var entry  : DisplayInventoryEntry
@@ -194,6 +245,21 @@ final class NotchDisplayCoordinator {
     private var isHapticsEnabled = true
     private var borderAppearance: NotchBorderAppearance = .neutral
     private var isSensitiveContentVisible = false
+    private var contextualPage: (any NotchContextualPage)?
+    private var contextualPagePrefersDefault = false
+    private var expandedPageSelection: ExpandedPageSelection = .automatic
+    private var pendingExplicitPageSelection: (
+        displayID: CGDirectDisplayID,
+        selection: ExpandedPageSelection
+    )?
+    private var fileDropPreview: FileDropPreview?
+    private var recognizedFileDragDisplayID: CGDirectDisplayID?
+    private var isRecognizedFileDragGestureActive = false
+    private var fileDragGestureGeneration: UInt64 = 0
+    private var fileDragReleaseTask: Task<Void, Never>?
+    private var fileDropOnHover: (@MainActor ([URL]?) -> Void)?
+    private var fileDropOnDrop: (@MainActor ([URL]) -> Bool)?
+    private var fileDropOnUnsupported: (@MainActor () -> Void)?
     private var isReconciling = false
     private var needsReconciliation = false
 
@@ -298,6 +364,9 @@ final class NotchDisplayCoordinator {
             self.onScreenLocked?()
         }
         monitor.onScreenUnlocked = { [weak self] in self?.setVisible(true) }
+        monitor.setFileDragRecognitionHandler { [weak self] active, point in
+            self?.handleRecognizedFileDrag(active: active, at: point)
+        }
 
         // The host must grant capability before the first local factory runs.
         // Setting the global gate before inventory reconciliation makes that
@@ -324,6 +393,7 @@ final class NotchDisplayCoordinator {
         monitor.onSpaceChanged = nil
         monitor.onScreenLocked = nil
         monitor.onScreenUnlocked = nil
+        monitor.setFileDragRecognitionHandler(nil)
         activityHost.onChange = nil
         activityHost.onValidityChange = nil
         widgetHost.onContentChanged = nil
@@ -348,6 +418,13 @@ final class NotchDisplayCoordinator {
         externalDisplayID = nil
         externalReady = nil
         isExternalSurfaceActive = false
+        expandedPageSelection = .automatic
+        pendingExplicitPageSelection = nil
+        fileDropPreview = nil
+        recognizedFileDragDisplayID = nil
+        isRecognizedFileDragGestureActive = false
+        fileDragReleaseTask?.cancel()
+        fileDragReleaseTask = nil
         widgetHost.update(state: .closed)
         activityHost.stop()
         monitor.stop()
@@ -400,6 +477,71 @@ final class NotchDisplayCoordinator {
     func unregisterWidget(id: WidgetIdentifier) {
         widgetHost.unregister(id: id)
         reconcilePresentations()
+    }
+
+    func setContextualPage(
+        _ page          : (any NotchContextualPage)?,
+        prefersDefault  : Bool
+    ) {
+        let wasPreferred = contextualPagePrefersDefault
+        contextualPage = page
+        contextualPagePrefersDefault = page != nil && prefersDefault
+        if page == nil {
+            if case .contextual = expandedPageSelection {
+                selectOrdinaryPage()
+            }
+            pendingExplicitPageSelection = nil
+            endFileDropPreview(keepContextual: false)
+        } else if wasPreferred && !contextualPagePrefersDefault,
+                  case .contextual = expandedPageSelection {
+            selectOrdinaryPage()
+        }
+        reconcilePresentations()
+    }
+
+    func showContextualPage(on requestedDisplayID: CGDirectDisplayID? = nil) {
+        guard let contextualPage else { return }
+        let displayID = requestedDisplayID ?? expandedDisplayID ?? auxiliaryDisplayID
+        guard let displayID, surfaces[displayID] != nil else { return }
+        let selection = ExpandedPageSelection.contextual(contextualPage.id, .manual)
+        if expandedDisplayID == displayID {
+            pendingExplicitPageSelection = nil
+            expandedPageSelection = selection
+            reconcilePresentations()
+        } else {
+            pendingExplicitPageSelection = (displayID, selection)
+            requestExpansion(on: displayID, activityID: nil, trigger: .click)
+        }
+    }
+
+    func showOrdinaryPage(on requestedDisplayID: CGDirectDisplayID? = nil) {
+        guard let displayID = requestedDisplayID ?? expandedDisplayID,
+              surfaces[displayID] != nil else { return }
+        if expandedDisplayID == displayID {
+            pendingExplicitPageSelection = nil
+            selectOrdinaryPage()
+            reconcilePresentations()
+        } else {
+            let selection = ExpandedPageSelection.ordinary(
+                resolvedOrdinarySelection(on: displayID)
+            )
+            pendingExplicitPageSelection = (displayID, selection)
+            requestExpansion(on: displayID, activityID: nil, trigger: .click)
+        }
+    }
+
+    func configureFileDrop(
+        onHover      : (@MainActor ([URL]?) -> Void)?,
+        onDrop       : (@MainActor ([URL]) -> Bool)?,
+        onUnsupported: (@MainActor () -> Void)?
+    ) {
+        fileDropOnHover = onHover
+        fileDropOnDrop = onDrop
+        fileDropOnUnsupported = onUnsupported
+        if onDrop == nil {
+            endFileDropPreview(keepContextual: false)
+            clearRecognizedFileDrag()
+        }
     }
 
     func present(_ activity: any NotchLiveActivity) { activityHost.present(activity) }
@@ -648,6 +790,8 @@ final class NotchDisplayCoordinator {
         closingDisplayID = nil
         closingGeneration = nil
         expandedDisplayID = nil
+        expandedPageSelection = .automatic
+        fileDropPreview = nil
         activityHost.setExpansion(.none)
         if let pendingPreferences {
             preferences = pendingPreferences
@@ -669,23 +813,102 @@ final class NotchDisplayCoordinator {
               latestRequests[request.displayID] == request else {
             return
         }
+        let wasAlreadyOwner = expandedDisplayID == request.displayID
         expandedDisplayID = request.displayID
         pendingRequests.removeAll()
         pendingRequestOrder.removeAll()
 
-        let isRouted = routedDisplayIDs().contains(request.displayID)
-        if isRouted,
-           let activityID = request.activityID {
-            activityHost.setExpansion(.activity(activityID))
-        } else if isRouted,
-                  let primary = activityHost.selection.primary {
-            activityHost.setExpansion(.activity(primary.id))
-        } else if isRouted {
-            activityHost.setExpansion(.fallback)
-        } else {
-            activityHost.setExpansion(.widgets)
+        if request.trigger == .drag,
+           contextualPage != nil, fileDropOnDrop != nil {
+            beginFileDropPreview(on: request.displayID, openedForPreview: !wasAlreadyOwner)
+            setInteractionHold(.drag, on: request.displayID, active: true)
+        } else if let pendingExplicitPageSelection,
+                  pendingExplicitPageSelection.displayID == request.displayID {
+            expandedPageSelection = pendingExplicitPageSelection.selection
+            self.pendingExplicitPageSelection = nil
+            if case let .ordinary(selection) = expandedPageSelection {
+                applyOrdinarySelection(selection)
+            }
+        } else if let activityID = request.activityID {
+            let selection: ActivityExpansionSelection = routedDisplayIDs().contains(request.displayID)
+                ? .activity(activityID)
+                : .widgets
+            expandedPageSelection = .ordinary(selection)
+            activityHost.setExpansion(selection)
+        } else if !wasAlreadyOwner {
+            if let contextualPage, contextualPagePrefersDefault {
+                expandedPageSelection = .contextual(contextualPage.id, .defaultOccupied)
+                applyOrdinarySelection(resolvedOrdinarySelection(on: request.displayID))
+            } else {
+                expandedPageSelection = .automatic
+                applyOrdinarySelection(resolvedOrdinarySelection(on: request.displayID))
+            }
+        } else if case .automatic = expandedPageSelection {
+            applyOrdinarySelection(resolvedOrdinarySelection(on: request.displayID))
         }
         reconcilePresentations()
+    }
+
+    private func resolvedOrdinarySelection(
+        on displayID: CGDirectDisplayID
+    ) -> ActivityExpansionSelection {
+        let isRouted = routedDisplayIDs().contains(displayID)
+        if isRouted, let primary = activityHost.selection.primary {
+            return .activity(primary.id)
+        }
+        return isRouted ? .fallback : .widgets
+    }
+
+    private func applyOrdinarySelection(_ selection: ActivityExpansionSelection) {
+        if activityHost.expansionSelection != selection {
+            activityHost.setExpansion(selection)
+        }
+    }
+
+    private func selectOrdinaryPage() {
+        guard let displayID = expandedDisplayID else { return }
+        let selection: ActivityExpansionSelection
+        switch expandedPageSelection {
+        case let .ordinary(existing):
+            selection = existing
+        default:
+            selection = activityHost.expansionSelection == .none
+                ? resolvedOrdinarySelection(on: displayID)
+                : activityHost.expansionSelection
+        }
+        expandedPageSelection = .ordinary(selection)
+        applyOrdinarySelection(selection)
+    }
+
+    private func beginFileDropPreview(
+        on displayID: CGDirectDisplayID,
+        openedForPreview: Bool
+    ) {
+        guard let contextualPage else { return }
+        if fileDropPreview == nil {
+            fileDropPreview = FileDropPreview(
+                displayID: displayID,
+                previousSelection: expandedPageSelection,
+                openedForPreview: openedForPreview
+            )
+        }
+        expandedPageSelection = .contextual(contextualPage.id, .preview)
+    }
+
+    private func endFileDropPreview(keepContextual: Bool) {
+        guard let preview = fileDropPreview else { return }
+        fileDropPreview = nil
+        if keepContextual, let contextualPage {
+            expandedPageSelection = .contextual(contextualPage.id, .manual)
+            reconcilePresentations()
+            return
+        }
+        expandedPageSelection = preview.previousSelection
+        if preview.openedForPreview, expandedDisplayID == preview.displayID {
+            requestCollapse(on: preview.displayID)
+        } else {
+            reconcilePresentations()
+        }
     }
 
     private func reconcileInventory() {
@@ -712,6 +935,9 @@ final class NotchDisplayCoordinator {
             pendingTransientStyles.removeValue(forKey: displayID)
             if dragDisplayID == displayID { dragDisplayID = nil }
             if settingsDisplayID == displayID { settingsDisplayID = nil }
+            if pendingExplicitPageSelection?.displayID == displayID {
+                pendingExplicitPageSelection = nil
+            }
         }
 
         if ownerWasRemoved || interactionOwnerWasRemoved {
@@ -721,6 +947,9 @@ final class NotchDisplayCoordinator {
             closingDisplayID = nil
             closingGeneration = nil
             interactionOwnerDisplayID = nil
+            expandedPageSelection = .automatic
+            pendingExplicitPageSelection = nil
+            fileDropPreview = nil
             activityHost.setExpansion(.none)
         } else if closingDisplayID.map(removed.contains) == true {
             closingDisplayID = nil
@@ -790,6 +1019,21 @@ final class NotchDisplayCoordinator {
             guard self?.expandedDisplayID == displayID else { return }
             self?.onExpandedFrameChanged?(frame)
         }
+        surface.onFileDragHoverChanged = { [weak self] urls in
+            self?.handleFileDragHover(urls, on: displayID)
+        }
+        surface.onFileDrop = { [weak self] urls in
+            self?.handleFileDrop(urls, on: displayID) ?? false
+        }
+        surface.onUnsupportedFileDrop = { [weak self] in
+            self?.handleUnsupportedFileDrop(on: displayID)
+        }
+        surface.onContextualPageRequested = { [weak self] in
+            self?.showContextualPage(on: displayID)
+        }
+        surface.onOrdinaryPageRequested = { [weak self] in
+            self?.showOrdinaryPage(on: displayID)
+        }
     }
 
     private func clearCallbacks(on surface: any NotchDisplayPresenting) {
@@ -802,6 +1046,46 @@ final class NotchDisplayCoordinator {
         surface.onRetainedActivityRootsChanged = nil
         surface.onSettingsRequested = nil
         surface.onExpandedFrameChanged = nil
+        surface.onFileDragHoverChanged = nil
+        surface.onFileDrop = nil
+        surface.onUnsupportedFileDrop = nil
+        surface.onContextualPageRequested = nil
+        surface.onOrdinaryPageRequested = nil
+    }
+
+    private func handleFileDragHover(_ urls: [URL]?, on displayID: CGDirectDisplayID) {
+        guard contextualPage != nil, fileDropOnDrop != nil else { return }
+        fileDropOnHover?(urls)
+        if let urls, !urls.isEmpty {
+            if expandedDisplayID == displayID {
+                beginFileDropPreview(on: displayID, openedForPreview: false)
+                setInteractionHold(.drag, on: displayID, active: true)
+                reconcilePresentations()
+            } else {
+                requestExpansion(on: displayID, activityID: nil, trigger: .drag)
+            }
+        } else {
+            endFileDropPreview(keepContextual: false)
+            setInteractionHold(.drag, on: displayID, active: false)
+        }
+    }
+
+    private func handleFileDrop(_ urls: [URL], on displayID: CGDirectDisplayID) -> Bool {
+        guard displayID == expandedDisplayID,
+              contextualPage != nil,
+              let fileDropOnDrop else { return false }
+        let accepted = fileDropOnDrop(urls)
+        fileDropOnHover?(nil)
+        endFileDropPreview(keepContextual: accepted)
+        setInteractionHold(.drag, on: displayID, active: false)
+        return accepted
+    }
+
+    private func handleUnsupportedFileDrop(on displayID: CGDirectDisplayID) {
+        fileDropOnUnsupported?()
+        fileDropOnHover?(nil)
+        endFileDropPreview(keepContextual: false)
+        setInteractionHold(.drag, on: displayID, active: false)
     }
 
     private func resolveFocusAndReconcile() {
@@ -848,7 +1132,8 @@ final class NotchDisplayCoordinator {
             let routed = routedDisplayIDs()
             if let owner = expandedDisplayID,
                routed.contains(owner),
-               latestRequests[owner]?.activityID == nil {
+               latestRequests[owner]?.activityID == nil,
+               case .automatic = expandedPageSelection {
                 let expansion = activityHost.selection.primary.map {
                     ActivityExpansionSelection.activity($0.id)
                 } ?? .fallback
@@ -864,8 +1149,14 @@ final class NotchDisplayCoordinator {
             for displayID in surfaces.keys {
                 let receivesActivities = routed.contains(displayID)
                 let isOwner = expandedDisplayID == displayID
+                let contextualIsSelected: Bool
+                if case let .contextual(id, _) = expandedPageSelection {
+                    contextualIsSelected = isOwner && contextualPage?.id == id
+                } else {
+                    contextualIsSelected = false
+                }
                 let expandedIsLiveActivity: Bool
-                if case .activity = activityHost.expansionSelection {
+                if !contextualIsSelected, case .activity = activityHost.expansionSelection {
                     expandedIsLiveActivity = isOwner && selection.expanded != nil
                 } else {
                     expandedIsLiveActivity = false
@@ -874,9 +1165,11 @@ final class NotchDisplayCoordinator {
                     primary     : receivesActivities ? selection.primary : nil,
                     secondary   : receivesActivities ? selection.secondary : nil,
                     notice      : focusedDisplayID == displayID ? selection.notice : nil,
-                    expanded    : isOwner ? selection.expanded : nil,
+                    expanded    : isOwner && !contextualIsSelected ? selection.expanded : nil,
                     expandedIsLiveActivity: expandedIsLiveActivity,
-                    showsWidgets: isOwner && selection.expanded == nil,
+                    showsWidgets: isOwner && !contextualIsSelected && selection.expanded == nil,
+                    contextualPage: contextualPage,
+                    contextualPageIsSelected: contextualIsSelected,
                     widgetContentRevision: widgetContentRevision,
                     style       : style(for: displayID, preferences: preferences)
                 )
@@ -928,6 +1221,9 @@ final class NotchDisplayCoordinator {
 
     private func handlePointer(at point: CGPoint) {
         pointerLocation = point
+        if isRecognizedFileDragGestureActive {
+            routeRecognizedFileDrag(at: point)
+        }
         let pointed = surfaces.first { $0.value.entry.snapshot.frame.contains(point) }?.key
         var destinations = Set([pointed, previousPointerDisplayID, expandedDisplayID].compactMap { $0 })
         if let dragDisplayID { destinations.insert(dragDisplayID) }
@@ -936,6 +1232,59 @@ final class NotchDisplayCoordinator {
         }
         previousPointerDisplayID = pointed
         resolveFocusAndReconcile()
+    }
+
+    private func handleRecognizedFileDrag(active: Bool, at point: CGPoint) {
+        guard contextualPage != nil, fileDropOnDrop != nil else { return }
+        pointerLocation = point
+        if active {
+            fileDragGestureGeneration &+= 1
+            fileDragReleaseTask?.cancel()
+            fileDragReleaseTask = nil
+            isRecognizedFileDragGestureActive = true
+            routeRecognizedFileDrag(at: point)
+        } else {
+            isRecognizedFileDragGestureActive = false
+            let generation = fileDragGestureGeneration
+            fileDragReleaseTask?.cancel()
+            fileDragReleaseTask = Task { [weak self] in
+                await Task.yield()
+                guard let self,
+                      !Task.isCancelled,
+                      !self.isRecognizedFileDragGestureActive,
+                      self.fileDragGestureGeneration == generation else { return }
+                self.fileDragReleaseTask = nil
+                self.clearRecognizedFileDrag()
+            }
+        }
+    }
+
+    private func routeRecognizedFileDrag(at point: CGPoint) {
+        guard isRecognizedFileDragGestureActive,
+              contextualPage != nil, fileDropOnDrop != nil else { return }
+        let pointed = surfaces.first { $0.value.entry.snapshot.frame.contains(point) }?.key
+        guard pointed != recognizedFileDragDisplayID else { return }
+        if let previous = recognizedFileDragDisplayID {
+            surfaces[previous]?.surface.setRecognizedFileDragActive(false, at: point)
+        }
+        recognizedFileDragDisplayID = pointed
+        if let pointed {
+            surfaces[pointed]?.surface.setRecognizedFileDragActive(true, at: point)
+        }
+    }
+
+    private func clearRecognizedFileDrag() {
+        isRecognizedFileDragGestureActive = false
+        fileDragReleaseTask?.cancel()
+        fileDragReleaseTask = nil
+        guard let displayID = recognizedFileDragDisplayID else {
+            endFileDropPreview(keepContextual: false)
+            return
+        }
+        recognizedFileDragDisplayID = nil
+        surfaces[displayID]?.surface.setRecognizedFileDragActive(false, at: pointerLocation)
+        endFileDropPreview(keepContextual: false)
+        setInteractionHold(.drag, on: displayID, active: false)
     }
 
     private func handlePointerButton(isPressed: Bool) {
@@ -962,6 +1311,7 @@ final class NotchDisplayCoordinator {
         guard isVisible != visible else { return }
         isVisible = visible
         if !visible {
+            clearRecognizedFileDrag()
             if let externalDisplayID, isExternalSurfaceActive {
                 surfaces[externalDisplayID]?.surface.setExternalSurfacePresented(false)
             }
@@ -977,6 +1327,9 @@ final class NotchDisplayCoordinator {
             interactionHolds.removeAll()
             interactionOwnerDisplayID = nil
             dragDisplayID = nil
+            expandedPageSelection = .automatic
+            pendingExplicitPageSelection = nil
+            fileDropPreview = nil
             for record in surfaces.values {
                 record.surface.setVisible(false)
             }
