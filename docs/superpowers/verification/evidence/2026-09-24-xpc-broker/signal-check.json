@@ -1,0 +1,14 @@
+[
+  {
+    "mode": "raise",
+    "status": -9,
+    "stdout": "{\"return\":0,\"errno\":45}\n",
+    "stderr": ""
+  },
+  {
+    "mode": "kill",
+    "status": -9,
+    "stdout": "{\"return\":0,\"errno\":0}\n",
+    "stderr": ""
+  }
+]

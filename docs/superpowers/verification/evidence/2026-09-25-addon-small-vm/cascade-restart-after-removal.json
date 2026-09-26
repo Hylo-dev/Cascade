@@ -1,0 +1,16 @@
+{
+  "executable": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeDevelopment/Build/Products/Debug/Cascade.app/Contents/MacOS/Cascade",
+  "quitVerified": true,
+  "quitObserved": 1790418217.72195,
+  "previouslyObservedPID": [
+    50048
+  ],
+  "after": [
+    51080
+  ],
+  "stableAfterThreeSeconds": true,
+  "completed": 1790418260.5394619,
+  "freeBytes": 20563918848,
+  "vmDiskAbsent": true,
+  "vmRuntimeAbsent": true
+}

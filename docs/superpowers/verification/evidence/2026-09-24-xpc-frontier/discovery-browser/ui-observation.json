@@ -1,0 +1,8 @@
+{
+  "status": "BLOCKED",
+  "tool": "cua.getState",
+  "reason": "The Mac is locked and automatic unlock could not unlock it.",
+  "windowInspected": false,
+  "consentChanged": false,
+  "runnerExit": 0
+}

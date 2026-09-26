@@ -35,15 +35,24 @@ nonisolated struct Spring {
     /// notch), the first frame's delta can be huge, and an unclamped step would
     /// make the spring explode. Clamping to a sane maximum keeps the
     /// integration stable without a real cost in normal frames.
+    /// `lowerBound` models a solid surface: render the contact position for one
+    /// frame and return part of the incoming velocity as an outward rebound.
+    /// Losing energy at every impact lets the ordinary rest test stop the link.
     mutating func advance(
         toward target: Double,
-        dt           : Double
+        dt           : Double,
+        lowerBound   : Double? = nil
     ) {
         let step  = min(max(dt, 0), 1.0 / 30.0)
         let force = -parameters.stiffness * (value - target) - parameters.damping * velocity
 
         velocity += force * step
         value    += velocity * step
+
+        if let lowerBound, value < lowerBound {
+            value = lowerBound
+            if velocity < 0 { velocity *= -0.55 }
+        }
     }
 
     /// Whether the spring has effectively reached `target` and stopped moving.
@@ -51,9 +60,15 @@ nonisolated struct Spring {
     /// Both the position error and the velocity must fall under the rest
     /// threshold. The morph engine stops the display link once every spring is
     /// settled, so this predicate is what lets an idle notch cost zero CPU.
-    func isSettled(at target: Double) -> Bool {
-        abs(value - target) < parameters.restThreshold &&
-        abs(velocity)       < parameters.restThreshold
+    /// `threshold` lets axes measured in points use a subpixel tolerance rather
+    /// than the much smaller normalized-progress tolerance of the side springs.
+    func isSettled(
+        at target: Double,
+        threshold: Double? = nil
+    ) -> Bool {
+        let tolerance = threshold ?? parameters.restThreshold
+        return abs(value - target) < tolerance &&
+            abs(velocity)          < tolerance
     }
 
     /// Snap immediately to `value`, killing velocity. Used when the notch

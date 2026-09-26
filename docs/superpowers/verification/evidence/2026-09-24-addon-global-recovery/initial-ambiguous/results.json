@@ -1,0 +1,38 @@
+{
+  "cases": [
+    {
+      "mode": "normal",
+      "launcherAdmitted": false,
+      "observationError": "RuntimeError('client ended before client-ready')",
+      "verdict": "UNKNOWN",
+      "participants": [
+        {
+          "events": [
+            {
+              "event": "discovery",
+              "identities": [
+                "hylo.Cascade.AddonProbeContainer.Provider",
+                "hylo.Cascade.AddonProbeContainer.Provider",
+                "hylo.Cascade.AddonProbeContainer.Provider"
+              ]
+            },
+            {
+              "reason": "unexpectedIdentity",
+              "status": "FAIL"
+            }
+          ],
+          "label": "normal-first",
+          "hostPID": 35668,
+          "cleanup": {
+            "exit": null,
+            "hostStatus": 1,
+            "knownProviderExited": false
+          },
+          "exit": null
+        }
+      ],
+      "cleanupComplete": false
+    }
+  ],
+  "launcherAdmitted": false
+}

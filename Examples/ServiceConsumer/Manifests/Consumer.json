@@ -1,0 +1,40 @@
+{
+  "manifestVersion": 1,
+  "id": "com.example.serviceconsumer",
+  "version": "0.1.0",
+  "compatibility": {
+    "macOS": ">=14.0",
+    "cascadeProtocol": {
+      "major": 1,
+      "minimumMinor": 0
+    }
+  },
+  "execution": {
+    "owner": "cascade",
+    "activation": "onDemand",
+    "entryPoint": "ServiceConsumerProvider"
+  },
+  "bundledLibraries": [],
+  "REQUIRES": [
+    {
+      "kind": "service",
+      "id": "com.example.focus.sessions",
+      "version": ">=1.0.0 <2.0.0"
+    }
+  ],
+  "PROVIDES": [],
+  "features": [
+    {
+      "id": "summary",
+      "REQUIRES": [],
+      "actions": []
+    }
+  ],
+  "permissions": [],
+  "resources": {
+    "profile": "eventDriven",
+    "requestedMemoryMiB": 16,
+    "maximumConcurrentWork": 1,
+    "background": "none"
+  }
+}

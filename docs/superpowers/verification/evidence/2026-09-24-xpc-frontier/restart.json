@@ -1,0 +1,15 @@
+{
+  "applicationLink": "/Applications/Cascade.app",
+  "resolvedBundle": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeDevelopment/Build/Products/Debug/Cascade.app",
+  "expectedExecutable": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeDevelopment/Build/Products/Debug/Cascade.app/Contents/MacOS/Cascade",
+  "productBuildRequired": false,
+  "beforePIDs": [
+    29180
+  ],
+  "afterPIDs": [
+    32614
+  ],
+  "observedExecutable": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeDevelopment/Build/Products/Debug/Cascade.app/Contents/MacOS/Cascade",
+  "fixtureProcessSnapshot": [],
+  "verified": true
+}

@@ -1,0 +1,6 @@
+{
+  "status": 78,
+  "stdout": "",
+  "stderr": "C0d native execution is on HOLD: the pre-trace parent-selection safety gate is unresolved.\n",
+  "sha256": "687fb3086d41e821af684d49109c9c95f8d555cf88450bdcf809b2a708b1ddaa"
+}

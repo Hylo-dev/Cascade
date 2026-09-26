@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/private/tmp/cascade-addon-vm/tart.app/Contents/MacOS/tart",
+    "run",
+    "cascade-addon-small",
+    "--no-audio",
+    "--no-clipboard",
+    "--no-usb-accessories",
+    "--dir=probe:/private/tmp/cascade-addon-vm/share:ro"
+  ],
+  "started": 1790416305.93619,
+  "minimumFreeBytes": 3221225472,
+  "timeoutSeconds": 1800,
+  "pid": 47803
+}

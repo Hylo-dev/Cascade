@@ -1,0 +1,338 @@
+{
+  "schemaVersion": 1,
+  "scenario": "launcher-admission-direct-v1",
+  "policyID": "native-direct-control-v1",
+  "acceptedLimitations": [
+    "autonomousOSDelegation"
+  ],
+  "checks": {
+    "managedStop": false,
+    "hostExitCleanup": false,
+    "hostCrashCleanup": false,
+    "supervisorDeathStopsWorker": false,
+    "identitySafe": false,
+    "sessionInvalidatedAfterExec": false,
+    "cpuReadable": false,
+    "footprintReadable": false
+  },
+  "observations": {
+    "launcher": "unqualified launchd-owned direct-child group prototype",
+    "isolatedAuditProofPassed": true,
+    "groupCases": [
+      {
+        "mode": "same-group",
+        "workerReady": true,
+        "sandboxVerified": true,
+        "helperKilled": true,
+        "helperExitObserved": true,
+        "exitObserved": true,
+        "exitAfterKillSeconds": 0.00793700001668185,
+        "bootstrapReturnCode": 0,
+        "bootstrapStderr": "",
+        "guardDeadlineLowerBound": 702412.86744,
+        "helperKillTime": 702410.555224,
+        "bootoutReturnCode": 0,
+        "events": [
+          {
+            "event": "helper-session",
+            "pid": 69808,
+            "session": 1,
+            "group": 69808
+          },
+          {
+            "event": "guard-armed",
+            "workerPID": 69831,
+            "deadlineLowerBound": 702412.86744
+          },
+          {
+            "event": "worker-ready",
+            "pid": 69831,
+            "parentPID": 69808,
+            "oldGroup": 69808,
+            "group": 69808,
+            "changeResult": -2,
+            "changeErrno": 0,
+            "fileResult": -1,
+            "fileErrno": 1,
+            "socketResult": -1,
+            "socketErrno": 1,
+            "hardNproc": 0,
+            "raiseResult": -1,
+            "raiseErrno": 1
+          },
+          {
+            "event": "helper-ready",
+            "pid": 69808,
+            "workerPID": 69831,
+            "group": 69808,
+            "ready": true
+          },
+          {
+            "event": "helper-kill",
+            "time": 702410.555224
+          }
+        ],
+        "elapsedSeconds": 1.6628708749776706,
+        "supervisorDeathStopsWorker": true
+      },
+      {
+        "mode": "setsid",
+        "workerReady": true,
+        "sandboxVerified": true,
+        "helperKilled": true,
+        "helperExitObserved": true,
+        "exitObserved": true,
+        "exitAfterKillSeconds": 2.503438000101596,
+        "bootstrapReturnCode": 0,
+        "bootstrapStderr": "",
+        "guardDeadlineLowerBound": 702413.590589,
+        "helperKillTime": 702411.176928,
+        "bootoutReturnCode": 0,
+        "events": [
+          {
+            "event": "helper-session",
+            "pid": 69853,
+            "session": 1,
+            "group": 69853
+          },
+          {
+            "event": "guard-armed",
+            "workerPID": 69855,
+            "deadlineLowerBound": 702413.590589
+          },
+          {
+            "event": "worker-ready",
+            "pid": 69855,
+            "parentPID": 69853,
+            "oldGroup": 69853,
+            "group": 69855,
+            "changeResult": 69855,
+            "changeErrno": 0,
+            "fileResult": -1,
+            "fileErrno": 1,
+            "socketResult": -1,
+            "socketErrno": 1,
+            "hardNproc": 0,
+            "raiseResult": -1,
+            "raiseErrno": 1
+          },
+          {
+            "event": "helper-ready",
+            "pid": 69853,
+            "workerPID": 69855,
+            "group": 69853,
+            "ready": true
+          },
+          {
+            "event": "helper-kill",
+            "time": 702411.176928
+          }
+        ],
+        "elapsedSeconds": 3.117300249985419,
+        "supervisorDeathStopsWorker": false
+      },
+      {
+        "mode": "setpgid",
+        "workerReady": true,
+        "sandboxVerified": true,
+        "helperKilled": true,
+        "helperExitObserved": true,
+        "exitObserved": true,
+        "exitAfterKillSeconds": 2.548708999995142,
+        "bootstrapReturnCode": 0,
+        "bootstrapStderr": "",
+        "guardDeadlineLowerBound": 702416.798022,
+        "helperKillTime": 702414.350165,
+        "bootoutReturnCode": 0,
+        "events": [
+          {
+            "event": "helper-session",
+            "pid": 69874,
+            "session": 1,
+            "group": 69874
+          },
+          {
+            "event": "guard-armed",
+            "workerPID": 69875,
+            "deadlineLowerBound": 702416.798022
+          },
+          {
+            "event": "worker-ready",
+            "pid": 69875,
+            "parentPID": 69874,
+            "oldGroup": 69874,
+            "group": 69875,
+            "changeResult": 0,
+            "changeErrno": 0,
+            "fileResult": -1,
+            "fileErrno": 1,
+            "socketResult": -1,
+            "socketErrno": 1,
+            "hardNproc": 0,
+            "raiseResult": -1,
+            "raiseErrno": 1
+          },
+          {
+            "event": "helper-ready",
+            "pid": 69874,
+            "workerPID": 69875,
+            "group": 69874,
+            "ready": true
+          },
+          {
+            "event": "helper-kill",
+            "time": 702414.350165
+          }
+        ],
+        "elapsedSeconds": 3.288943666033447,
+        "supervisorDeathStopsWorker": false
+      },
+      {
+        "mode": "helper-joins-worker",
+        "workerReady": true,
+        "sandboxVerified": true,
+        "helperKilled": true,
+        "helperExitObserved": true,
+        "exitObserved": true,
+        "exitAfterKillSeconds": 2.4463890000479296,
+        "bootstrapReturnCode": 0,
+        "bootstrapStderr": "",
+        "guardDeadlineLowerBound": 702420.082213,
+        "helperKillTime": 702417.754839,
+        "bootoutReturnCode": 0,
+        "events": [
+          {
+            "event": "helper-session",
+            "pid": 69924,
+            "session": 1,
+            "group": 69924
+          },
+          {
+            "event": "helper-join",
+            "result": 0,
+            "errno": 0,
+            "session": 1,
+            "group": 69926
+          },
+          {
+            "event": "guard-armed",
+            "workerPID": 69926,
+            "deadlineLowerBound": 702420.082213
+          },
+          {
+            "event": "worker-ready",
+            "pid": 69926,
+            "parentPID": 69924,
+            "oldGroup": 69926,
+            "group": 69926,
+            "changeResult": -2,
+            "changeErrno": 0,
+            "fileResult": -1,
+            "fileErrno": 1,
+            "socketResult": -1,
+            "socketErrno": 1,
+            "hardNproc": 0,
+            "raiseResult": -1,
+            "raiseErrno": 1
+          },
+          {
+            "event": "helper-ready",
+            "pid": 69924,
+            "workerPID": 69926,
+            "group": 69926,
+            "ready": true
+          },
+          {
+            "event": "helper-kill",
+            "time": 702417.754839
+          }
+        ],
+        "elapsedSeconds": 3.240854915988166,
+        "supervisorDeathStopsWorker": false
+      }
+    ],
+    "auditProof": {
+      "bootstrapReturnCode": 0,
+      "workerReturnCode": 0,
+      "serverEvents": [
+        {
+          "event": "checkin",
+          "status": 0
+        },
+        {
+          "event": "authenticated-message",
+          "operation": 1,
+          "authStatus": 0,
+          "accepted": true,
+          "sessionActive": true,
+          "sameAuditToken": false,
+          "auditPID": 67964,
+          "auditVersion": 360627
+        },
+        {
+          "event": "reply",
+          "operation": 1,
+          "status": 0
+        },
+        {
+          "event": "authenticated-message",
+          "operation": 2,
+          "authStatus": -67065,
+          "accepted": false,
+          "sessionActive": false,
+          "sameAuditToken": true,
+          "auditPID": 67964,
+          "auditVersion": 360627
+        },
+        {
+          "event": "reply",
+          "operation": 2,
+          "status": 0
+        },
+        {
+          "event": "authenticated-message",
+          "operation": 3,
+          "authStatus": -67050,
+          "accepted": false,
+          "sessionActive": false,
+          "sameAuditToken": false,
+          "auditPID": 67964,
+          "auditVersion": 360631
+        },
+        {
+          "event": "reply",
+          "operation": 3,
+          "status": 0
+        }
+      ],
+      "workerEvents": [
+        {
+          "event": "client",
+          "mode": "original",
+          "pid": 67964,
+          "foreignFileDenied": true
+        },
+        {
+          "event": "client",
+          "mode": "replacement",
+          "pid": 67964,
+          "foreignFileDenied": true
+        },
+        {
+          "event": "replacement-reply",
+          "accepted": 0
+        }
+      ],
+      "bootstrapStderr": "",
+      "workerStderr": "",
+      "bootoutReturnCode": 0
+    },
+    "measuredPlatform": "macOS 27.0 beta 26A5425a arm64, SDK 27, Apple Development team A6A5HQL6K4",
+    "historicalStrictAdmission": "unchanged, negative; autonomous OS delegation counterexample remains separate"
+  },
+  "unverified": [
+    "No integrated launcher satisfies helper-death cleanup and authenticated session control.",
+    "Fresh normal/host-exit/host-crash lifecycle, metrics, 20-cycle cost/reuse qualification for any replacement launcher.",
+    "Other macOS versions, Intel and another publisher."
+  ]
+}

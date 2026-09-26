@@ -1,0 +1,30 @@
+{
+  "previousStop": {
+    "command": [
+      "/private/tmp/cascade-addon-vm/tart.app/Contents/MacOS/tart",
+      "clone",
+      "ghcr.io/cirruslabs/macos-sonoma-vanilla@sha256:a6dc5a325aae43a90244953af0a85091fbe93e8f58583138c5ac96dd707fd700",
+      "cascade-addon-small",
+      "--concurrency",
+      "4"
+    ],
+    "started": 1790361391.2249138,
+    "minimumFreeBytes": 4831838208,
+    "timeoutSeconds": 7200,
+    "initialFreeBytes": 12179419136,
+    "pid": 21669,
+    "stopReason": "space-floor",
+    "exitCode": -15,
+    "ended": 1790365270.681619,
+    "elapsedSeconds": 3879.459,
+    "freeBytes": 4813242368,
+    "incompleteStateRemoved": true,
+    "freeBytesAfterRemoval": 22428499968
+  },
+  "actualFreeBytes": 22200320000,
+  "downloadFloorGiB": 3,
+  "bootFloorGiB": 3.5,
+  "concurrency": 6,
+  "reason": "One bounded retry after measured 99 percent disk allocation; preserve partial progress on every stop; guest boot separately guarded.",
+  "controllerSHA256": "b6e70db7d8b0adcfe4acd009de147de36e5ee6eb6f2baa2b61f7047222ce4438"
+}

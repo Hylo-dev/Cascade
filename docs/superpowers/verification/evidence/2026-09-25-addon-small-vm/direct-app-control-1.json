@@ -1,0 +1,7 @@
+{
+  "started": 1790417233.4287848,
+  "finished": 1790417233.917574,
+  "exitCode": 0,
+  "stdout": "{\"command\": [\"/Users/admin/CascadeProbe/products/Build/Build/Products/Debug/CascadeAddonProbe.app/Contents/MacOS/ProbeHost\", \"standalone-echo\"], \"exitCode\": 1, \"stdout\": \"{\\\"event\\\":\\\"discovery\\\",\\\"identities\\\":[\\\"hylo.Cascade.AddonProbeContainer.Provider\\\"]}\\n{\\\"reason\\\":\\\"Error Domain=NSCocoaErrorDomain Code=4099 \\\\\\\"The connection from pid 642 on anonymousListener or serviceListener was invalidated: client is gone.\\\\\\\" UserInfo={NSDebugDescription=The connection from pid 642 on anonymousListener or serviceListener was invalidated: client is gone.}\\\",\\\"status\\\":\\\"FAIL\\\"}\\ndealloc <_EXQueryController: 0x600003c18f80>\\n\", \"stderr\": \"\", \"scope\": \"direct app-to-extension compatibility control; no managed-death claim\"}\n",
+  "stderr": ""
+}

@@ -1,0 +1,51 @@
+{
+  "cases": [
+    {
+      "case": "nsdata.lz4",
+      "status": "PASS",
+      "allocatedBefore": 8409088,
+      "allocatedAfter": 1699840,
+      "result": {
+        "bytes": 8388731,
+        "offset": 8315,
+        "punchedBytes": 7741440,
+        "sha256": "sha256:088d69c0fd9d5165959a2c058ca0f76a349332d14f0b2693498f295a02a15d35",
+        "status": "verified"
+      }
+    },
+    {
+      "case": "outputfilter.lz4",
+      "status": "PASS",
+      "allocatedBefore": 8409088,
+      "allocatedAfter": 1699840,
+      "result": {
+        "bytes": 8388731,
+        "offset": 8315,
+        "punchedBytes": 7741440,
+        "sha256": "sha256:088d69c0fd9d5165959a2c058ca0f76a349332d14f0b2693498f295a02a15d35",
+        "status": "verified"
+      }
+    },
+    {
+      "case": "repeat-existing-range",
+      "status": "PASS"
+    },
+    {
+      "case": "wrong-hash-rejected",
+      "status": "PASS"
+    },
+    {
+      "case": "output-limit-no-overwrite",
+      "status": "PASS"
+    },
+    {
+      "case": "truncated-rejected-bounds-preserved",
+      "status": "PASS"
+    },
+    {
+      "case": "out-of-file-range-rejected",
+      "status": "PASS"
+    }
+  ],
+  "allPassed": true
+}

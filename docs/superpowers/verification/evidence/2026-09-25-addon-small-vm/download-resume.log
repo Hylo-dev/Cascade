@@ -1,0 +1,58 @@
+pulling manifest...
+pulling disk (15.8 GB compressed)...
+0%
+[1A[J3%
+[1A[J12%
+[1A[J25%
+[1A[J38%
+[1A[J51%
+[1A[J63%
+[1A[J70%
+[1A[J71%
+[1A[J72%
+[1A[J73%
+[1A[J74%
+[1A[J75%
+[1A[J76%
+Error pulling disk layer 23: "The network connection was lost.", attempting to re-try...
+[1A[J77%
+Error pulling disk layer 26: "The network connection was lost.", attempting to re-try...
+Error pulling disk layer 24: "The network connection was lost.", attempting to re-try...
+Error pulling disk layer 25: "The network connection was lost.", attempting to re-try...
+[1A[J78%
+[1A[J79%
+[1A[J80%
+[1A[J81%
+[1A[J82%
+[1A[J83%
+[1A[J84%
+[1A[J85%
+Error pulling disk layer 27: "The network connection was lost.", attempting to re-try...
+Error pulling disk layer 28: "The network connection was lost.", attempting to re-try...
+Error pulling disk layer 30: "The network connection was lost.", attempting to re-try...
+Error pulling disk layer 29: "The network connection was lost.", attempting to re-try...
+[1A[J86%
+[1A[J87%
+[1A[J88%
+[1A[J89%
+[1A[J90%
+[1A[J91%
+Error pulling disk layer 27: "The network connection was lost.", attempting to re-try...
+Error pulling disk layer 28: "The network connection was lost.", attempting to re-try...
+Error pulling disk layer 29: "The network connection was lost.", attempting to re-try...
+Error pulling disk layer 30: "The network connection was lost.", attempting to re-try...
+[1A[J92%
+[1A[J93%
+[1A[J94%
+Error pulling disk layer 29: "The network connection was lost.", attempting to re-try...
+[1A[J95%
+Error pulling disk layer 27: "The network connection was lost.", attempting to re-try...
+Error pulling disk layer 30: "The network connection was lost.", attempting to re-try...
+Error pulling disk layer 28: "The network connection was lost.", attempting to re-try...
+[1A[J96%
+Error pulling disk layer 31: "The network connection was lost.", attempting to re-try...
+Error pulling disk layer 32: "The network connection was lost.", attempting to re-try...
+[1A[J97%
+[1A[J98%
+Error pulling disk layer 31: "The network connection was lost.", attempting to re-try...
+[1A[J99%

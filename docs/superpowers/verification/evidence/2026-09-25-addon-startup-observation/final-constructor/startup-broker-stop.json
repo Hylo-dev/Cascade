@@ -1,0 +1,245 @@
+{
+  "mode": "broker-stop",
+  "events": [
+    {
+      "event": "client-ready"
+    },
+    {
+      "authenticated": true,
+      "brokerGuard": 433745.221914,
+      "brokerInstance": "76BF5133-5AD7-4AB0-A157-8E5CEE781F4A",
+      "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-h_9kxqgb/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+      "brokerPID": 61458,
+      "event": "broker-info",
+      "nonce": "6F9FA73C-C58C-4482-A3F3-A49B123C635C",
+      "startupPhase": "idle"
+    },
+    {
+      "authenticated": true,
+      "brokerGuard": 433745.221914,
+      "brokerInstance": "76BF5133-5AD7-4AB0-A157-8E5CEE781F4A",
+      "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-h_9kxqgb/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+      "brokerPID": 61458,
+      "event": "broker-info",
+      "nonce": "54BDB3A8-6CA4-42B4-ABA3-69BE4891432A",
+      "startupPhase": "idle"
+    },
+    {
+      "authenticated": true,
+      "brokerGuard": 433745.221914,
+      "brokerInstance": "76BF5133-5AD7-4AB0-A157-8E5CEE781F4A",
+      "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-h_9kxqgb/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+      "brokerPID": 61458,
+      "event": "begin-startup",
+      "nonce": "CAF5AC3C-5C06-414F-A0D1-BA35D9B89256",
+      "startupPhase": "idle"
+    },
+    {
+      "authenticated": true,
+      "brokerGuard": 433745.221914,
+      "brokerInstance": "76BF5133-5AD7-4AB0-A157-8E5CEE781F4A",
+      "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-h_9kxqgb/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+      "brokerPID": 61458,
+      "event": "broker-info",
+      "nonce": "49A7500B-C990-4B50-8D17-5A12832E54B4",
+      "startupPhase": "process-ready"
+    },
+    {
+      "authenticated": true,
+      "brokerGuard": 433745.221914,
+      "brokerInstance": "76BF5133-5AD7-4AB0-A157-8E5CEE781F4A",
+      "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-h_9kxqgb/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+      "brokerPID": 61458,
+      "event": "broker-info",
+      "nonce": "B1845AFE-F6B4-4C29-8176-EBB4202F7233",
+      "startupPhase": "process-ready"
+    },
+    {
+      "event": "stop-broker"
+    },
+    {
+      "error": "Error Domain=NSCocoaErrorDomain Code=4097 \"connection to service named hylo.Cascade.AddonProbe.DiscoveryBroker\" UserInfo={NSDebugDescription=connection to service named hylo.Cascade.AddonProbe.DiscoveryBroker}",
+      "event": "broker-unavailable"
+    },
+    {
+      "event": "ping",
+      "pid": 61456
+    }
+  ],
+  "launcherAdmitted": false,
+  "rootPID": 61456,
+  "registrations": [
+    {
+      "name": "broker",
+      "time": 433710.235719,
+      "events": [
+        {
+          "ident": 61458,
+          "filter": -5,
+          "flags": 16453,
+          "fflags": 2751463424,
+          "data": 0
+        }
+      ]
+    },
+    {
+      "name": "provider",
+      "time": 433710.313953,
+      "events": [
+        {
+          "ident": 61460,
+          "filter": -5,
+          "flags": 16453,
+          "fflags": 2751463424,
+          "data": 0
+        }
+      ]
+    }
+  ],
+  "authenticated": true,
+  "registered": true,
+  "confirmed": true,
+  "providerPhase": "main-image-constructor",
+  "phaseBefore": "process-ready",
+  "phaseAfter": "process-ready",
+  "brokerGuard": 433745.221914,
+  "providerGuard": 433735.308443,
+  "observerGuard": 433750.129084,
+  "trigger": 433710.316234,
+  "kernelEvents": [
+    {
+      "time": 433710.317352,
+      "ident": 61458,
+      "filter": -5,
+      "flags": 32885,
+      "fflags": 2214592512,
+      "data": 0
+    },
+    {
+      "time": 433710.317941,
+      "ident": 61460,
+      "filter": -5,
+      "flags": 32885,
+      "fflags": 2214592512,
+      "data": 15
+    }
+  ],
+  "windowEnd": 433710.317949,
+  "exits": {
+    "broker": {
+      "time": 433710.317357,
+      "status": 0
+    },
+    "provider": {
+      "time": 433710.317946,
+      "status": 15
+    }
+  },
+  "observerAlive": true,
+  "rootAlive": true,
+  "verdict": "PASS",
+  "cleanup": {
+    "rootStatus": 0,
+    "exits": {
+      "broker": {
+        "time": 433710.317357,
+        "status": 0
+      },
+      "provider": {
+        "time": 433710.317946,
+        "status": 15
+      }
+    },
+    "complete": true
+  },
+  "identities": {
+    "broker": {
+      "pid": 61458,
+      "instance": "76BF5133-5AD7-4AB0-A157-8E5CEE781F4A",
+      "guardDeadline": 433745.221914,
+      "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-h_9kxqgb/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc"
+    },
+    "provider": {
+      "pid": 61460,
+      "instance": "9A6195FB-F7E3-4E35-AFB5-7B9F4075F989",
+      "guardDeadline": 433735.308443,
+      "audit": [
+        4294967295,
+        501,
+        20,
+        501,
+        20,
+        61460,
+        101767,
+        307112
+      ],
+      "phase": "main-image-constructor"
+    }
+  },
+  "observer": {
+    "events": [
+      {
+        "event": "observer-ready",
+        "pid": 61454,
+        "guardDeadline": 433750.129084
+      },
+      {
+        "event": "initializer-observed",
+        "phase": "main-image-constructor",
+        "authenticated": true,
+        "pathVerified": true,
+        "pid": 61460,
+        "instance": "9A6195FB-F7E3-4E35-AFB5-7B9F4075F989",
+        "guardDeadline": 433735.308443,
+        "sequence": 0,
+        "time": 433710.313863,
+        "auditVersion": 307112,
+        "audit": [
+          4294967295,
+          501,
+          20,
+          501,
+          20,
+          61460,
+          101767,
+          307112
+        ]
+      },
+      {
+        "event": "initializer-confirmed",
+        "phase": "main-image-constructor",
+        "authenticated": true,
+        "pathVerified": true,
+        "pid": 61460,
+        "instance": "9A6195FB-F7E3-4E35-AFB5-7B9F4075F989",
+        "guardDeadline": 433735.308443,
+        "sequence": 1,
+        "time": 433710.315618,
+        "auditVersion": 307112,
+        "audit": [
+          4294967295,
+          501,
+          20,
+          501,
+          20,
+          61460,
+          101767,
+          307112
+        ]
+      },
+      {
+        "event": "observer-ping",
+        "pid": 61454
+      }
+    ],
+    "cleanupStatus": 0,
+    "teardownLookups": [
+      {
+        "event": "lookup-result",
+        "status": 1102,
+        "absent": true
+      }
+    ],
+    "serviceAbsent": true
+  }
+}

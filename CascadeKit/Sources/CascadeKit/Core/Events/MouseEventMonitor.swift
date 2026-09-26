@@ -18,6 +18,7 @@ import QuartzCore
 final class MouseEventMonitor: EventMonitoring {
 
     var onPointerMoved               : ((CGPoint) -> Void)?
+    var onPointerButtonChanged       : ((Bool) -> Void)?
     var onActiveDisplayMayHaveChanged: (() -> Void)?
     var onSpaceChanged               : (() -> Void)?
     var onScreenLocked               : (() -> Void)?
@@ -32,17 +33,35 @@ final class MouseEventMonitor: EventMonitoring {
 
     func start() {
 
-        let mask: NSEvent.EventTypeMask = [.mouseMoved]
+        guard globalMouse == nil, localMouse == nil else {
+            return
+        }
 
-        globalMouse = NSEvent.addGlobalMonitorForEvents(matching: mask) { [weak self] _ in
-            self?.emitPointer()
+        let mask: NSEvent.EventTypeMask = [
+            .mouseMoved,
+            .leftMouseDown,
+            .leftMouseUp,
+            .leftMouseDragged,
+            .rightMouseDown,
+            .rightMouseUp,
+            .rightMouseDragged,
+            .otherMouseDown,
+            .otherMouseUp,
+            .otherMouseDragged
+        ]
+
+        globalMouse = NSEvent.addGlobalMonitorForEvents(matching: mask) { [weak self] event in
+            self?.handle(event)
         }
 
         localMouse = NSEvent.addLocalMonitorForEvents(matching: mask) { [weak self] event in
-            self?.emitPointer()
+            self?.handle(event)
             return event
         }
 
+        // The single-controller bridge still uses this nudge until task 4
+        // replaces it with inventory and focused-window inputs. It performs no
+        // AX work and does not define focus ownership.
         NSWorkspace.shared.notificationCenter.addObserver(
             self,
             selector: #selector(activeDisplayMayHaveChanged),
@@ -107,16 +126,34 @@ final class MouseEventMonitor: EventMonitoring {
     }
 
     /// Forward the current pointer location, throttled to `throttleInterval`.
-    private func emitPointer() {
+    private func emitPointer(force: Bool = false) {
 
         let now = CACurrentMediaTime()
 
-        guard now - lastEmit >= throttleInterval else {
+        guard force || now - lastEmit >= throttleInterval else {
             return
         }
 
         lastEmit = now
         onPointerMoved?(NSEvent.mouseLocation)
+    }
+
+    /// handle keeps movement coalesced while delivering button boundaries
+    /// immediately. A mouse-up must never be throttled because it releases the
+    /// controller's drag hold and returns the rest of the menu bar to its owner.
+    private func handle(_ event: NSEvent) {
+        switch event.type {
+        case .leftMouseDown, .rightMouseDown, .otherMouseDown:
+            emitPointer(force: true)
+            onPointerButtonChanged?(true)
+        case .leftMouseUp, .rightMouseUp, .otherMouseUp:
+            emitPointer(force: true)
+            onPointerButtonChanged?(false)
+        case .mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged:
+            emitPointer()
+        default:
+            break
+        }
     }
 
     @objc

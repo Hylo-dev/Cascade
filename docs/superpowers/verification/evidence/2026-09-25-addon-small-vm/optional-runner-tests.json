@@ -1,0 +1,11 @@
+{
+  "exitCode": 0,
+  "stdout": "",
+  "stderr": "............\n----------------------------------------------------------------------\nRan 12 tests in 0.001s\n\nOK\n",
+  "sourceSHA256": {
+    "run_vm_suspended.py": "2e5b9c744c58b4e179c151ff149676389957a9ffce15a86bd145d349a2fd3e76",
+    "test_vm_suspended.py": "9c0c79ff097b0b80d8e77a4319a8b70c1d1c71e1ff7f0527fcaf15280c671272",
+    "VM-SUSPENDED.md": "586ddd0fd0a34338c63f7d9d6524994ca7af18738da23d34a68265d271d5ba89"
+  },
+  "nativeGuestTestExecuted": false
+}

@@ -1,0 +1,166 @@
+{
+  "mode": "frozen-control-stop",
+  "events": [
+    {
+      "event": "client-ready"
+    },
+    {
+      "event": "A-hello",
+      "authenticated": true,
+      "workerAuthenticated": true,
+      "broker": {
+        "pid": 31621,
+        "instance": "72719863-b9ad-4caf-9361-0c49f9e3bea0",
+        "guardDeadline": 332137.688478
+      },
+      "worker": {
+        "pid": 31622,
+        "instance": "91a714ca-b521-4296-89af-bee2533833a0",
+        "guardDeadline": 332137.798677
+      },
+      "time": 332125.817198
+    },
+    {
+      "event": "A-control",
+      "authenticated": true,
+      "broker": {
+        "pid": 31621,
+        "instance": "72719863-b9ad-4caf-9361-0c49f9e3bea0",
+        "guardDeadline": 332137.688478
+      }
+    },
+    {
+      "event": "A-hold-all",
+      "authenticated": true,
+      "workerAuthenticated": true,
+      "broker": {
+        "pid": 31621,
+        "instance": "72719863-b9ad-4caf-9361-0c49f9e3bea0",
+        "guardDeadline": 332137.688478
+      },
+      "worker": {
+        "pid": 31622,
+        "instance": "91a714ca-b521-4296-89af-bee2533833a0",
+        "guardDeadline": 332137.798677
+      },
+      "time": 332125.825899
+    },
+    {
+      "event": "B-hello",
+      "authenticated": true,
+      "workerAuthenticated": true,
+      "broker": {
+        "pid": 31623,
+        "instance": "cd2a435f-878d-44c3-a375-5f48f8d1ddfa",
+        "guardDeadline": 332137.925926
+      },
+      "worker": {
+        "pid": 31624,
+        "instance": "9c0bb0c9-2c3d-4a5a-9e14-3be135b9850a",
+        "guardDeadline": 332138.033565
+      },
+      "time": 332126.048578
+    },
+    {
+      "event": "B-ping",
+      "authenticated": true,
+      "workerAuthenticated": true,
+      "broker": {
+        "pid": 31623,
+        "instance": "cd2a435f-878d-44c3-a375-5f48f8d1ddfa",
+        "guardDeadline": 332137.925926
+      },
+      "worker": {
+        "pid": 31624,
+        "instance": "9c0bb0c9-2c3d-4a5a-9e14-3be135b9850a",
+        "guardDeadline": 332138.033565
+      },
+      "time": 332126.051775
+    },
+    {
+      "event": "action-sent",
+      "time": 332126.051882
+    },
+    {
+      "event": "B-ping",
+      "authenticated": true,
+      "workerAuthenticated": true,
+      "broker": {
+        "pid": 31623,
+        "instance": "cd2a435f-878d-44c3-a375-5f48f8d1ddfa",
+        "guardDeadline": 332137.925926
+      },
+      "worker": {
+        "pid": 31624,
+        "instance": "9c0bb0c9-2c3d-4a5a-9e14-3be135b9850a",
+        "guardDeadline": 332138.033565
+      },
+      "time": 332128.064778
+    }
+  ],
+  "nodes": {
+    "A.broker": {
+      "pid": 31621,
+      "instance": "72719863-b9ad-4caf-9361-0c49f9e3bea0",
+      "guardDeadline": 332137.688478
+    },
+    "A.worker": {
+      "pid": 31622,
+      "instance": "91a714ca-b521-4296-89af-bee2533833a0",
+      "guardDeadline": 332137.798677
+    },
+    "B.broker": {
+      "pid": 31623,
+      "instance": "cd2a435f-878d-44c3-a375-5f48f8d1ddfa",
+      "guardDeadline": 332137.925926
+    },
+    "B.worker": {
+      "pid": 31624,
+      "instance": "9c0bb0c9-2c3d-4a5a-9e14-3be135b9850a",
+      "guardDeadline": 332138.033565
+    }
+  },
+  "guards": {
+    "A.broker": 332137.688478,
+    "A.worker": 332137.798677,
+    "B.broker": 332137.925926,
+    "B.worker": 332138.033565
+  },
+  "exits": {},
+  "windowComplete": true,
+  "hostPID": 31620,
+  "controlBound": true,
+  "frozenControlConfirmed": true,
+  "authenticated": true,
+  "registered": true,
+  "sameInstances": true,
+  "trigger": 332126.051864,
+  "actionConfirmed": true,
+  "actionTime": 332126.051882,
+  "hostStatus": null,
+  "survivorConfirmed": true,
+  "verdict": "FAIL",
+  "cleanup": {
+    "hostStatus": 0,
+    "exits": {
+      "B.broker": {
+        "time": 332128.070022,
+        "status": 9
+      },
+      "B.worker": {
+        "time": 332128.070847,
+        "status": 9
+      },
+      "A.broker": {
+        "time": 332133.071852,
+        "status": 9
+      },
+      "A.worker": {
+        "time": 332133.073398,
+        "status": 9
+      }
+    },
+    "allKnownExited": true,
+    "allFourTracked": true
+  }
+}

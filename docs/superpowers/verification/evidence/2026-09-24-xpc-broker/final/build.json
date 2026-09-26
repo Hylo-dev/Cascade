@@ -1,0 +1,282 @@
+{
+  "layout": "nested",
+  "commands": [
+    [
+      "xcrun",
+      "clang",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-O2",
+      "-fblocks",
+      "-mmacosx-version-min=14.0",
+      "-DROLE=2",
+      "-DCHAIN=\"A\"",
+      "-DPROBE_SIGNER_HASH=\"4A857D842A5406C2D3071776FDE7B27B3098FE63\"",
+      "/Users/c4v4h/Library/Mobile Documents/com~apple~CloudDocs/Projects/XcodeProjects/Cascade/Prototypes/AddonPlatform/XPCBroker/Probe.c",
+      "-framework",
+      "Security",
+      "-framework",
+      "CoreFoundation",
+      "-Wl,-sectcreate,__TEXT,__info_plist,/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/XPCServices/BrokerA.xpc/Contents/XPCServices/WorkerA.xpc/Contents/Info.plist",
+      "-o",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/XPCServices/BrokerA.xpc/Contents/XPCServices/WorkerA.xpc/Contents/MacOS/WorkerA"
+    ],
+    [
+      "codesign",
+      "--force",
+      "--timestamp=none",
+      "--options",
+      "runtime",
+      "--sign",
+      "4A857D842A5406C2D3071776FDE7B27B3098FE63",
+      "--entitlements",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/Service.entitlements",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/XPCServices/BrokerA.xpc/Contents/XPCServices/WorkerA.xpc"
+    ],
+    [
+      "codesign",
+      "--verify",
+      "--strict",
+      "--deep",
+      "-R",
+      "=anchor apple generic and identifier \"hylo.Cascade.XPCBrokerProbe.WorkerA\" and certificate leaf = H\"4A857D842A5406C2D3071776FDE7B27B3098FE63\"",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/XPCServices/BrokerA.xpc/Contents/XPCServices/WorkerA.xpc"
+    ],
+    [
+      "codesign",
+      "-d",
+      "--entitlements",
+      "-",
+      "--xml",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/XPCServices/BrokerA.xpc/Contents/XPCServices/WorkerA.xpc"
+    ],
+    [
+      "xcrun",
+      "clang",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-O2",
+      "-fblocks",
+      "-mmacosx-version-min=14.0",
+      "-DROLE=1",
+      "-DCHAIN=\"A\"",
+      "-DPROBE_SIGNER_HASH=\"4A857D842A5406C2D3071776FDE7B27B3098FE63\"",
+      "/Users/c4v4h/Library/Mobile Documents/com~apple~CloudDocs/Projects/XcodeProjects/Cascade/Prototypes/AddonPlatform/XPCBroker/Probe.c",
+      "-framework",
+      "Security",
+      "-framework",
+      "CoreFoundation",
+      "-Wl,-sectcreate,__TEXT,__info_plist,/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/XPCServices/BrokerA.xpc/Contents/Info.plist",
+      "-o",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/XPCServices/BrokerA.xpc/Contents/MacOS/BrokerA"
+    ],
+    [
+      "codesign",
+      "--force",
+      "--timestamp=none",
+      "--options",
+      "runtime",
+      "--sign",
+      "4A857D842A5406C2D3071776FDE7B27B3098FE63",
+      "--entitlements",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/Service.entitlements",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/XPCServices/BrokerA.xpc"
+    ],
+    [
+      "codesign",
+      "--verify",
+      "--strict",
+      "--deep",
+      "-R",
+      "=anchor apple generic and identifier \"hylo.Cascade.XPCBrokerProbe.BrokerA\" and certificate leaf = H\"4A857D842A5406C2D3071776FDE7B27B3098FE63\"",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/XPCServices/BrokerA.xpc"
+    ],
+    [
+      "codesign",
+      "-d",
+      "--entitlements",
+      "-",
+      "--xml",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/XPCServices/BrokerA.xpc"
+    ],
+    [
+      "xcrun",
+      "clang",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-O2",
+      "-fblocks",
+      "-mmacosx-version-min=14.0",
+      "-DROLE=2",
+      "-DCHAIN=\"B\"",
+      "-DPROBE_SIGNER_HASH=\"4A857D842A5406C2D3071776FDE7B27B3098FE63\"",
+      "/Users/c4v4h/Library/Mobile Documents/com~apple~CloudDocs/Projects/XcodeProjects/Cascade/Prototypes/AddonPlatform/XPCBroker/Probe.c",
+      "-framework",
+      "Security",
+      "-framework",
+      "CoreFoundation",
+      "-Wl,-sectcreate,__TEXT,__info_plist,/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/XPCServices/BrokerB.xpc/Contents/XPCServices/WorkerB.xpc/Contents/Info.plist",
+      "-o",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/XPCServices/BrokerB.xpc/Contents/XPCServices/WorkerB.xpc/Contents/MacOS/WorkerB"
+    ],
+    [
+      "codesign",
+      "--force",
+      "--timestamp=none",
+      "--options",
+      "runtime",
+      "--sign",
+      "4A857D842A5406C2D3071776FDE7B27B3098FE63",
+      "--entitlements",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/Service.entitlements",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/XPCServices/BrokerB.xpc/Contents/XPCServices/WorkerB.xpc"
+    ],
+    [
+      "codesign",
+      "--verify",
+      "--strict",
+      "--deep",
+      "-R",
+      "=anchor apple generic and identifier \"hylo.Cascade.XPCBrokerProbe.WorkerB\" and certificate leaf = H\"4A857D842A5406C2D3071776FDE7B27B3098FE63\"",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/XPCServices/BrokerB.xpc/Contents/XPCServices/WorkerB.xpc"
+    ],
+    [
+      "codesign",
+      "-d",
+      "--entitlements",
+      "-",
+      "--xml",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/XPCServices/BrokerB.xpc/Contents/XPCServices/WorkerB.xpc"
+    ],
+    [
+      "xcrun",
+      "clang",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-O2",
+      "-fblocks",
+      "-mmacosx-version-min=14.0",
+      "-DROLE=1",
+      "-DCHAIN=\"B\"",
+      "-DPROBE_SIGNER_HASH=\"4A857D842A5406C2D3071776FDE7B27B3098FE63\"",
+      "/Users/c4v4h/Library/Mobile Documents/com~apple~CloudDocs/Projects/XcodeProjects/Cascade/Prototypes/AddonPlatform/XPCBroker/Probe.c",
+      "-framework",
+      "Security",
+      "-framework",
+      "CoreFoundation",
+      "-Wl,-sectcreate,__TEXT,__info_plist,/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/XPCServices/BrokerB.xpc/Contents/Info.plist",
+      "-o",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/XPCServices/BrokerB.xpc/Contents/MacOS/BrokerB"
+    ],
+    [
+      "codesign",
+      "--force",
+      "--timestamp=none",
+      "--options",
+      "runtime",
+      "--sign",
+      "4A857D842A5406C2D3071776FDE7B27B3098FE63",
+      "--entitlements",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/Service.entitlements",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/XPCServices/BrokerB.xpc"
+    ],
+    [
+      "codesign",
+      "--verify",
+      "--strict",
+      "--deep",
+      "-R",
+      "=anchor apple generic and identifier \"hylo.Cascade.XPCBrokerProbe.BrokerB\" and certificate leaf = H\"4A857D842A5406C2D3071776FDE7B27B3098FE63\"",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/XPCServices/BrokerB.xpc"
+    ],
+    [
+      "codesign",
+      "-d",
+      "--entitlements",
+      "-",
+      "--xml",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/XPCServices/BrokerB.xpc"
+    ],
+    [
+      "xcrun",
+      "clang",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-O2",
+      "-fblocks",
+      "-mmacosx-version-min=14.0",
+      "-DROLE=0",
+      "-DCHAIN=\"A\"",
+      "-DPROBE_SIGNER_HASH=\"4A857D842A5406C2D3071776FDE7B27B3098FE63\"",
+      "/Users/c4v4h/Library/Mobile Documents/com~apple~CloudDocs/Projects/XcodeProjects/Cascade/Prototypes/AddonPlatform/XPCBroker/Probe.c",
+      "-framework",
+      "Security",
+      "-framework",
+      "CoreFoundation",
+      "-Wl,-sectcreate,__TEXT,__info_plist,/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/Info.plist",
+      "-o",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app/Contents/MacOS/XPCBrokerProbe"
+    ],
+    [
+      "codesign",
+      "--force",
+      "--timestamp=none",
+      "--options",
+      "runtime",
+      "--sign",
+      "4A857D842A5406C2D3071776FDE7B27B3098FE63",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app"
+    ],
+    [
+      "codesign",
+      "--verify",
+      "--strict",
+      "--deep",
+      "-R",
+      "=anchor apple generic and identifier \"hylo.Cascade.XPCBrokerProbe\" and certificate leaf = H\"4A857D842A5406C2D3071776FDE7B27B3098FE63\"",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app"
+    ],
+    [
+      "codesign",
+      "-d",
+      "--entitlements",
+      "-",
+      "--xml",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-pu8j8qxj/XPCBrokerProbe.app"
+    ],
+    [
+      "sw_vers"
+    ],
+    [
+      "xcrun",
+      "--show-sdk-version"
+    ],
+    [
+      "xcrun",
+      "clang",
+      "--version"
+    ]
+  ],
+  "signer": "4A857D842A5406C2D3071776FDE7B27B3098FE63",
+  "sourceHashes": {
+    "XPCBroker/run_broker_probe.py": "3dd2a30a3c2b039343d8ba982d57812c72e32c6fc96b6adc82d9747938e4f73d",
+    "XPCBroker/chain_evidence.py": "d1feb450860f2fc8602eb55906ed876437f1b5287ddfc1bc6db6247ab866709a",
+    "XPCBroker/SignalCheck.c": "8dde35d1c6eb42864198823ed31bede19f018a8d8abda4d7afa5c1b9bbf61742",
+    "XPCBroker/test_evidence.py": "d089de430587460fa5bd39450b232f1e1ba41b3c75030acc33717441e5a962a0",
+    "XPCBroker/Probe.c": "2ec9cfb8f4e999635f7f2430a3e191d02fa50e36c2af3896d68e2eb666db20a2",
+    "XPCLifetime/run_probe.py": "736fa42a04415fd0c9fd323d9345343b4a37d453e7057eca807a434859fe44a6",
+    "XPCLifetime/evidence.py": "ae20faa1bfd8cfae4a1202319cf5115060cabc1175702fba25f52f88c7518aa0"
+  },
+  "binaries": {
+    "XPCBrokerProbe.app/Contents/XPCServices/BrokerA.xpc/Contents/XPCServices/WorkerA.xpc/Contents/MacOS/WorkerA": "01bc2e46f929d6f2f39f7853facc6e2641c963aa341ba9588999fa7cd3ba612e",
+    "XPCBrokerProbe.app/Contents/XPCServices/BrokerA.xpc/Contents/MacOS/BrokerA": "8339af12c45eeac742b514bd942cf5ab8e107752d2184532c2017157be56867f",
+    "XPCBrokerProbe.app/Contents/XPCServices/BrokerB.xpc/Contents/XPCServices/WorkerB.xpc/Contents/MacOS/WorkerB": "c8210770d1ba44da0894d88434b9f1258bf43517c9098a4fe475c0f5dbe6eb9e",
+    "XPCBrokerProbe.app/Contents/XPCServices/BrokerB.xpc/Contents/MacOS/BrokerB": "814c76c835d78cda1f55f8e17c1f49dc898f91102302c0fb4cae9104bb1fbcae",
+    "XPCBrokerProbe.app/Contents/MacOS/XPCBrokerProbe": "2bbec9cdf0652e33f99d998a60d9e449e14dd44ca325bf19c218ee301d8c810f"
+  }
+}

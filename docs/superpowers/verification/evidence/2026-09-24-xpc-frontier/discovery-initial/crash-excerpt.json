@@ -1,0 +1,60 @@
+{
+  "pid": 31607,
+  "procName": "DiscoveryBroker",
+  "bundleInfo": {
+    "CFBundleShortVersionString": "1.0",
+    "CFBundleVersion": "1",
+    "CFBundleIdentifier": "hylo.Cascade.AddonProbe.DiscoveryBroker"
+  },
+  "exception": {
+    "codes": "0x0000000000000001, 0x00000000000000f0",
+    "rawCodes": [
+      1,
+      240
+    ],
+    "type": "EXC_BAD_ACCESS",
+    "signal": "SIGSEGV",
+    "subtype": "KERN_INVALID_ADDRESS at 0x00000000000000f0"
+  },
+  "termination": {
+    "flags": 0,
+    "code": 11,
+    "namespace": "SIGNAL",
+    "indicator": "Segmentation fault: 11",
+    "byProc": "exc handler",
+    "byPid": 31607
+  },
+  "faultingThread": 0,
+  "frames": [
+    {
+      "imageOffset": 166540,
+      "symbol": "xpc_connection_set_peer_code_signing_requirement",
+      "symbolLocation": 40,
+      "imageIndex": 1
+    },
+    {
+      "imageOffset": 2912616,
+      "symbol": "-[NSXPCListener setConnectionCodeSigningRequirement:]",
+      "symbolLocation": 64,
+      "imageIndex": 2
+    },
+    {
+      "imageOffset": 21768,
+      "symbol": "specialized static Probe.main()",
+      "symbolLocation": 296,
+      "imageIndex": 0
+    },
+    {
+      "imageOffset": 17468,
+      "symbol": "main",
+      "symbolLocation": 12,
+      "imageIndex": 0
+    },
+    {
+      "imageOffset": 204424,
+      "symbol": "start",
+      "symbolLocation": 6688,
+      "imageIndex": 3
+    }
+  ]
+}

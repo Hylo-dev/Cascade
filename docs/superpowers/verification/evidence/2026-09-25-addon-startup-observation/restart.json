@@ -1,0 +1,36 @@
+{
+  "applicationLink": "/Applications/Cascade.app",
+  "resolvedBundle": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeDevelopment/Build/Products/Debug/Cascade.app",
+  "executable": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeDevelopment/Build/Products/Debug/Cascade.app/Contents/MacOS/Cascade",
+  "bundleIdentifier": "hylo.Cascade",
+  "beforePIDs": [
+    52710
+  ],
+  "commands": [
+    {
+      "args": [
+        "osascript",
+        "-e",
+        "tell application id \"hylo.Cascade\" to quit"
+      ],
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "open",
+        "-n",
+        "/Applications/Cascade.app"
+      ],
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "afterPIDs": [
+    63292
+  ],
+  "verifiedStableSeconds": 3,
+  "restartSucceeded": true
+}

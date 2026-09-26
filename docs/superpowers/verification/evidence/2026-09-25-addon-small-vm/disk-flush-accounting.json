@@ -1,0 +1,7 @@
+{
+  "beforeFreeBytes": 15769600000,
+  "afterFreeBytes": 15769600000,
+  "allocatedImageBytes": 5382340608,
+  "time": 1790372463.194336,
+  "operation": "fsync on this task partial disk only"
+}

@@ -1,0 +1,122 @@
+{
+  "commands": [
+    [
+      "xcrun",
+      "clang",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-O2",
+      "-fblocks",
+      "-mmacosx-version-min=14.0",
+      "-DPROBE_SIGNER_HASH=\"4A857D842A5406C2D3071776FDE7B27B3098FE63\"",
+      "-DPROBE_SERVICE",
+      "/Users/c4v4h/Library/Mobile Documents/com~apple~CloudDocs/Projects/XcodeProjects/Cascade/Prototypes/AddonPlatform/XPCLifetime/Probe.c",
+      "-framework",
+      "Security",
+      "-framework",
+      "CoreFoundation",
+      "-Wl,-sectcreate,__TEXT,__info_plist,/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCLifetimeProbe/probe-czbrf_sw/XPCLifetimeProbe.app/Contents/XPCServices/LifetimeService.xpc/Contents/Info.plist",
+      "-o",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCLifetimeProbe/probe-czbrf_sw/XPCLifetimeProbe.app/Contents/XPCServices/LifetimeService.xpc/Contents/MacOS/LifetimeService"
+    ],
+    [
+      "codesign",
+      "--force",
+      "--timestamp=none",
+      "--options",
+      "runtime",
+      "--sign",
+      "4A857D842A5406C2D3071776FDE7B27B3098FE63",
+      "--entitlements",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCLifetimeProbe/probe-czbrf_sw/Service.entitlements",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCLifetimeProbe/probe-czbrf_sw/XPCLifetimeProbe.app/Contents/XPCServices/LifetimeService.xpc"
+    ],
+    [
+      "codesign",
+      "--verify",
+      "--strict",
+      "--deep",
+      "-R",
+      "=anchor apple generic and identifier \"hylo.Cascade.XPCLifetimeProbe.Service\" and certificate leaf = H\"4A857D842A5406C2D3071776FDE7B27B3098FE63\"",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCLifetimeProbe/probe-czbrf_sw/XPCLifetimeProbe.app/Contents/XPCServices/LifetimeService.xpc"
+    ],
+    [
+      "codesign",
+      "-d",
+      "--entitlements",
+      "-",
+      "--xml",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCLifetimeProbe/probe-czbrf_sw/XPCLifetimeProbe.app/Contents/XPCServices/LifetimeService.xpc"
+    ],
+    [
+      "xcrun",
+      "clang",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-O2",
+      "-fblocks",
+      "-mmacosx-version-min=14.0",
+      "-DPROBE_SIGNER_HASH=\"4A857D842A5406C2D3071776FDE7B27B3098FE63\"",
+      "/Users/c4v4h/Library/Mobile Documents/com~apple~CloudDocs/Projects/XcodeProjects/Cascade/Prototypes/AddonPlatform/XPCLifetime/Probe.c",
+      "-framework",
+      "Security",
+      "-framework",
+      "CoreFoundation",
+      "-Wl,-sectcreate,__TEXT,__info_plist,/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCLifetimeProbe/probe-czbrf_sw/XPCLifetimeProbe.app/Contents/Info.plist",
+      "-o",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCLifetimeProbe/probe-czbrf_sw/XPCLifetimeProbe.app/Contents/MacOS/XPCLifetimeProbe"
+    ],
+    [
+      "codesign",
+      "--force",
+      "--timestamp=none",
+      "--options",
+      "runtime",
+      "--sign",
+      "4A857D842A5406C2D3071776FDE7B27B3098FE63",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCLifetimeProbe/probe-czbrf_sw/XPCLifetimeProbe.app"
+    ],
+    [
+      "codesign",
+      "--verify",
+      "--strict",
+      "--deep",
+      "-R",
+      "=anchor apple generic and identifier \"hylo.Cascade.XPCLifetimeProbe\" and certificate leaf = H\"4A857D842A5406C2D3071776FDE7B27B3098FE63\"",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCLifetimeProbe/probe-czbrf_sw/XPCLifetimeProbe.app"
+    ],
+    [
+      "codesign",
+      "-d",
+      "--entitlements",
+      "-",
+      "--xml",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCLifetimeProbe/probe-czbrf_sw/XPCLifetimeProbe.app"
+    ],
+    [
+      "sw_vers"
+    ],
+    [
+      "xcrun",
+      "--show-sdk-version"
+    ],
+    [
+      "xcrun",
+      "clang",
+      "--version"
+    ]
+  ],
+  "sourceHashes": {
+    "run_probe.py": "736fa42a04415fd0c9fd323d9345343b4a37d453e7057eca807a434859fe44a6",
+    "test_evidence.py": "fdbe5143d9fb36fe143465edeb78dd37db0f44ca322a36bdf0523dc4cdb2b26a",
+    "evidence.py": "ae20faa1bfd8cfae4a1202319cf5115060cabc1175702fba25f52f88c7518aa0",
+    "Probe.c": "50e00e9a2525a354ff08fd4dc96a92d43bbd58a3908485cf1a76db18a147bfe3"
+  },
+  "signer": "4A857D842A5406C2D3071776FDE7B27B3098FE63",
+  "binaries": {
+    "XPCLifetimeProbe.app/Contents/MacOS/XPCLifetimeProbe": "42727f316c4113e08264886f9e80fe467f2a9ffd2a002e23c2862148e2b6e4bd",
+    "XPCLifetimeProbe.app/Contents/XPCServices/LifetimeService.xpc/Contents/MacOS/LifetimeService": "c115b4f6164a8f7fd8fd926c757d740b70babe4c0b4adf1310c6b6e81af0f7de"
+  }
+}

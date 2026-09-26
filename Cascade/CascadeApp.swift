@@ -16,13 +16,12 @@ struct CascadeApp: App {
     private var appDelegate
 
     var body: some Scene {
-
-        // Cascade is an overlay, not a windowed app, so it shows no main window.
-        // The empty Settings scene satisfies SwiftUI's "an App needs a Scene"
-        // requirement without putting anything on screen at launch.
-        Settings {
-            EmptyView()
+        MenuBarExtra("Cascade", systemImage: "rectangle.topthird.inset.filled") {
+            CascadeMenu(services: appDelegate.services)
+                .onAppear { appDelegate.services.refreshNativeReplacement() }
         }
+        .menuBarExtraStyle(.menu)
+
     }
 }
 
@@ -34,7 +33,7 @@ struct CascadeApp: App {
 /// surface, so the shell stays a thin host with no engine internals leaking in.
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
-    private let notch = NotchEngine(configuration: .debug)
+    let services = CascadeServices()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
 
@@ -44,12 +43,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // switches stop capturing it and dragging it into a desktop thumbnail.
         NSApp.setActivationPolicy(.accessory)
 
-        // Register the demo widget, then start. Widgets are added through the
-        // engine's public API; the engine never sees their concrete type.
-        for _ in 0...10 {
-            notch.register(ClockWidget())
+        // Unit tests load the host app too; they must not install system event
+        // monitors or trigger a Bluetooth permission request as a side effect.
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
+        services.start()
+        if CommandLine.arguments.contains("--open-settings") {
+            Task { @MainActor in services.openSettings() }
         }
+        if CommandLine.arguments.contains("--calibrate-notch") {
+            Task { @MainActor in services.beginSizeCalibration(from: .global) }
+        }
+        if CommandLine.arguments.contains("--preview-spotlight-droplet") {
+            services.previewSpotlightDroplet(from: .global)
+        }
+        if CommandLine.arguments.contains("--open-spotlight") {
+            services.openSpotlight()
+        }
+    }
 
-        notch.start()
+    func applicationWillTerminate(_ notification: Notification) {
+        services.stop()
     }
 }

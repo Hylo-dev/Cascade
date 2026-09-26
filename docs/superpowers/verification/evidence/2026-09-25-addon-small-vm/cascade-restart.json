@@ -1,0 +1,15 @@
+{
+  "app": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeDevelopment/Build/Products/Debug/Cascade.app",
+  "before": [
+    74382
+  ],
+  "quit": {
+    "code": 0,
+    "stderr": ""
+  },
+  "after": [
+    14174
+  ],
+  "stableAfterThreeSeconds": true,
+  "executable": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeDevelopment/Build/Products/Debug/Cascade.app/Contents/MacOS/Cascade"
+}

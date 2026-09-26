@@ -1,0 +1,222 @@
+{
+  "schema": "xpc-lifetime-probe-v1",
+  "launcherAdmitted": false,
+  "cases": [
+    {
+      "mode": "cooperate",
+      "events": [
+        {
+          "event": "client-ready"
+        },
+        {
+          "event": "hello",
+          "authenticated": true,
+          "instance": "86a7b1e9-99c2-4e03-8c26-ebbb29622d93",
+          "pid": 26059,
+          "guardDeadline": 324984.735204,
+          "time": 324976.749787
+        },
+        {
+          "event": "hello",
+          "authenticated": true,
+          "instance": "86a7b1e9-99c2-4e03-8c26-ebbb29622d93",
+          "pid": 26059,
+          "guardDeadline": 324984.735204,
+          "time": 324976.750962
+        },
+        {
+          "event": "cooperate-sent",
+          "time": 324976.75104
+        }
+      ],
+      "registered": true,
+      "serviceExit": 324976.751645,
+      "serviceStatus": 0,
+      "windowComplete": true,
+      "hostPID": 26058,
+      "servicePID": 26059,
+      "authenticated": true,
+      "guardDeadline": 324984.735204,
+      "instance": "86a7b1e9-99c2-4e03-8c26-ebbb29622d93",
+      "sameInstance": true,
+      "trigger": 324976.751022,
+      "actionConfirmed": true,
+      "actionTime": 324976.75104,
+      "hostStatus": null,
+      "hostAliveAtWindowEnd": true,
+      "verdict": "PASS",
+      "measurement": {
+        "serviceExit": 324976.751645,
+        "serviceStatus": 0
+      },
+      "cleanup": {
+        "hostStatus": 0,
+        "serviceExitObserved": true,
+        "serviceExit": 324976.751645,
+        "serviceStatus": 0
+      }
+    },
+    {
+      "mode": "cancel",
+      "events": [
+        {
+          "event": "client-ready"
+        },
+        {
+          "event": "hello",
+          "authenticated": true,
+          "instance": "bd85eecb-13b2-4b1d-9b8a-fcf793ba675c",
+          "pid": 26062,
+          "guardDeadline": 324986.798261,
+          "time": 324978.816114
+        },
+        {
+          "event": "hold",
+          "authenticated": true,
+          "instance": "bd85eecb-13b2-4b1d-9b8a-fcf793ba675c",
+          "pid": 26062,
+          "guardDeadline": 324986.798261,
+          "time": 324978.817437
+        },
+        {
+          "event": "cancelled",
+          "time": 324978.8175
+        }
+      ],
+      "registered": true,
+      "serviceExit": null,
+      "serviceStatus": null,
+      "windowComplete": true,
+      "hostPID": 26060,
+      "servicePID": 26062,
+      "authenticated": true,
+      "guardDeadline": 324986.798261,
+      "instance": "bd85eecb-13b2-4b1d-9b8a-fcf793ba675c",
+      "sameInstance": true,
+      "trigger": 324978.8175,
+      "actionConfirmed": true,
+      "actionTime": 324978.8175,
+      "hostStatus": null,
+      "hostAliveAtWindowEnd": true,
+      "verdict": "FAIL",
+      "measurement": {
+        "serviceExit": null,
+        "serviceStatus": null
+      },
+      "cleanup": {
+        "hostStatus": 0,
+        "serviceExitObserved": true,
+        "serviceExit": 324980.824474,
+        "serviceStatus": 9
+      }
+    },
+    {
+      "mode": "normal",
+      "events": [
+        {
+          "event": "client-ready"
+        },
+        {
+          "event": "hello",
+          "authenticated": true,
+          "instance": "f83c069d-630b-490d-bbcc-6b7aa90298d3",
+          "pid": 26065,
+          "guardDeadline": 324988.869746,
+          "time": 324980.888821
+        },
+        {
+          "event": "hold",
+          "authenticated": true,
+          "instance": "f83c069d-630b-490d-bbcc-6b7aa90298d3",
+          "pid": 26065,
+          "guardDeadline": 324988.869746,
+          "time": 324980.890477
+        },
+        {
+          "event": "quitting",
+          "time": 324980.890554
+        }
+      ],
+      "registered": true,
+      "serviceExit": 324980.892102,
+      "serviceStatus": 9,
+      "windowComplete": true,
+      "hostPID": 26064,
+      "servicePID": 26065,
+      "authenticated": true,
+      "guardDeadline": 324988.869746,
+      "instance": "f83c069d-630b-490d-bbcc-6b7aa90298d3",
+      "sameInstance": true,
+      "trigger": 324980.890543,
+      "actionConfirmed": true,
+      "actionTime": 324980.890554,
+      "hostStatus": 0,
+      "hostAliveAtWindowEnd": false,
+      "verdict": "PASS",
+      "measurement": {
+        "serviceExit": 324980.892102,
+        "serviceStatus": 9
+      },
+      "cleanup": {
+        "hostStatus": 0,
+        "serviceExitObserved": true,
+        "serviceExit": 324980.892102,
+        "serviceStatus": 9
+      }
+    },
+    {
+      "mode": "crash",
+      "events": [
+        {
+          "event": "client-ready"
+        },
+        {
+          "event": "hello",
+          "authenticated": true,
+          "instance": "6ddf0796-1bef-42f3-996d-4883146b3da8",
+          "pid": 26075,
+          "guardDeadline": 324990.913457,
+          "time": 324982.928184
+        },
+        {
+          "event": "hold",
+          "authenticated": true,
+          "instance": "6ddf0796-1bef-42f3-996d-4883146b3da8",
+          "pid": 26075,
+          "guardDeadline": 324990.913457,
+          "time": 324982.929283
+        },
+        {
+          "event": "crashing",
+          "time": 324982.929344
+        }
+      ],
+      "registered": true,
+      "serviceExit": 324982.930511,
+      "serviceStatus": 9,
+      "windowComplete": true,
+      "hostPID": 26074,
+      "servicePID": 26075,
+      "authenticated": true,
+      "guardDeadline": 324990.913457,
+      "instance": "6ddf0796-1bef-42f3-996d-4883146b3da8",
+      "sameInstance": true,
+      "trigger": 324982.929334,
+      "actionConfirmed": true,
+      "actionTime": 324982.929344,
+      "hostStatus": -9,
+      "hostAliveAtWindowEnd": false,
+      "verdict": "PASS",
+      "measurement": {
+        "serviceExit": 324982.930511,
+        "serviceStatus": 9
+      },
+      "cleanup": {
+        "hostStatus": -9,
+        "serviceExitObserved": true,
+        "serviceExit": 324982.930511,
+        "serviceStatus": 9
+      }
+    }
+  ]
+}

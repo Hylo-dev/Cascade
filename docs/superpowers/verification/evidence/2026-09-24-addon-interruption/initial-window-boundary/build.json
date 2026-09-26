@@ -1,0 +1,141 @@
+{
+  "commands": [
+    [
+      "xcrun",
+      "xcodebuild",
+      "-project",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-yz99ky5t/Sources/AddonPlatform.xcodeproj",
+      "-scheme",
+      "AddonPlatform",
+      "-configuration",
+      "Debug",
+      "-derivedDataPath",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-yz99ky5t/Build",
+      "SWIFT_ACTIVE_COMPILATION_CONDITIONS=DEBUG RECOVERY_PROBE",
+      "CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO",
+      "build"
+    ],
+    [
+      "codesign",
+      "--force",
+      "--timestamp=none",
+      "--options",
+      "runtime",
+      "--sign",
+      "4A857D842A5406C2D3071776FDE7B27B3098FE63",
+      "--entitlements",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-yz99ky5t/Sources/Provider/Provider.entitlements",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-yz99ky5t/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex"
+    ],
+    [
+      "codesign",
+      "--verify",
+      "--strict",
+      "--deep",
+      "-R",
+      "=anchor apple generic and identifier \"hylo.Cascade.AddonProbeContainer.Provider\" and certificate leaf = H\"4A857D842A5406C2D3071776FDE7B27B3098FE63\"",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-yz99ky5t/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex"
+    ],
+    [
+      "codesign",
+      "-d",
+      "--entitlements",
+      "-",
+      "--xml",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-yz99ky5t/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex"
+    ],
+    [
+      "codesign",
+      "--force",
+      "--timestamp=none",
+      "--options",
+      "runtime",
+      "--sign",
+      "4A857D842A5406C2D3071776FDE7B27B3098FE63",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-yz99ky5t/Build/Build/Products/Debug/CascadeAddonProbeContainer.app"
+    ],
+    [
+      "codesign",
+      "--verify",
+      "--strict",
+      "--deep",
+      "-R",
+      "=anchor apple generic and identifier \"hylo.Cascade.AddonProbeContainer\" and certificate leaf = H\"4A857D842A5406C2D3071776FDE7B27B3098FE63\"",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-yz99ky5t/Build/Build/Products/Debug/CascadeAddonProbeContainer.app"
+    ],
+    [
+      "codesign",
+      "-d",
+      "--entitlements",
+      "-",
+      "--xml",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-yz99ky5t/Build/Build/Products/Debug/CascadeAddonProbeContainer.app"
+    ],
+    [
+      "codesign",
+      "--force",
+      "--timestamp=none",
+      "--options",
+      "runtime",
+      "--sign",
+      "4A857D842A5406C2D3071776FDE7B27B3098FE63",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-yz99ky5t/Build/Build/Products/Debug/CascadeAddonProbe.app"
+    ],
+    [
+      "codesign",
+      "--verify",
+      "--strict",
+      "--deep",
+      "-R",
+      "=anchor apple generic and identifier \"hylo.Cascade.AddonProbe\" and certificate leaf = H\"4A857D842A5406C2D3071776FDE7B27B3098FE63\"",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-yz99ky5t/Build/Build/Products/Debug/CascadeAddonProbe.app"
+    ],
+    [
+      "codesign",
+      "-d",
+      "--entitlements",
+      "-",
+      "--xml",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-yz99ky5t/Build/Build/Products/Debug/CascadeAddonProbe.app"
+    ],
+    [
+      "sw_vers"
+    ],
+    [
+      "xcrun",
+      "--show-sdk-version"
+    ]
+  ],
+  "signer": "4A857D842A5406C2D3071776FDE7B27B3098FE63",
+  "host": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-yz99ky5t/Build/Build/Products/Debug/CascadeAddonProbe.app",
+  "provider": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-yz99ky5t/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+  "container": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-yz99ky5t/Build/Build/Products/Debug/CascadeAddonProbeContainer.app",
+  "sourceHashes": {
+    "Host/ProbeHost.swift": "60820329649e22067b3572acfa615a3082de9b4a3ca19b625c268fad07086c1e",
+    "Host/Probe.appextensionpoint": "357e05da8cd76a1a3841844470d14125428dab8b45aef5d2f4e87ece419e295f",
+    "Host/Info.plist": "1ffd4824b66d30c0bfc37cb7e74b99dfa8e1559112848cb462055244ee9ceb96",
+    "Provider/ProbeProvider.swift": "75bd40b7f9cb71b06849a7f39865e5bc8c0c8183e7726103533d0ea17875426f",
+    "Provider/Provider.entitlements": "b746c74b201e6af4e0864fbd1f4f629f96156a7ec4b7208bc995d0a5089bb592",
+    "Provider/Info.plist": "e6c3a57230960301811eb16c86a8a93f4ecf4c9a273c67e59ffecc9d1f5a92d8",
+    "Shared/ProbeMessage.swift": "51398101029c2a58e4b256ad1827789a6274ddbbd7488f7895b3b97466805bb5",
+    "Container/ProbeContainer.swift": "649130586165bda9e24b2e9a58dd32e1768a3db97c42c55111ac6856a0c9b706",
+    "Container/Info.plist": "1ffd4824b66d30c0bfc37cb7e74b99dfa8e1559112848cb462055244ee9ceb96",
+    "AddonPlatform.xcodeproj/project.pbxproj": "afca77a2bd1a0cb15fb79c054806b28f0259ee9774e46d7d3c9d2a64c4ebf981",
+    "AddonPlatform.xcodeproj/xcshareddata/xcschemes/AddonPlatform.xcscheme": "10f2e15464c6b65f78d1a9204f83475ceed6e0d2284aefc7674aa2b3b0c64d1f"
+  },
+  "runnerHashes": {
+    "Recovery/run_recovery.py": "9003657036f073dc9dc1bc96a68ff917b35bff349f1e3f61b083410e1fea4b6d",
+    "Recovery/recovery_evidence.py": "95f0f36fb4c18760e4ab4f91f8b7aa4418683bf815185d75e7aae6300b21b5b4",
+    "Recovery/test_recovery_evidence.py": "5d72fadac4718027cf3436a62bbda970e661af411953aeaf68a553e48a86efc4",
+    "XPCLifetime/run_probe.py": "736fa42a04415fd0c9fd323d9345343b4a37d453e7057eca807a434859fe44a6",
+    "XPCLifetime/evidence.py": "ae20faa1bfd8cfae4a1202319cf5115060cabc1175702fba25f52f88c7518aa0",
+    "Interruption/interruption_evidence.py": "6b37d8c7e6bf6c83ff6efc6078a1d023c70abf7355004129b7630a628ec60c30",
+    "Interruption/run_interruption.py": "01d8f2d0fd752f5af8a875b419972ba2d22b9710be42111b85ec3d7b869f2e3a",
+    "Interruption/test_interruption_evidence.py": "3a582a75e666b2963ff750b386c51539947027fe8875a6a58ddab5e483498fca"
+  },
+  "binaries": {
+    "Build/Build/Products/Debug/CascadeAddonProbe.app/Contents/MacOS/ProbeHost": "44524a19e32b0b2b6614fbd478ff56dd750def5314366e19aec9cfeb93e698e8",
+    "Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex/Contents/MacOS/ProbeProvider": "363a8f5549fc565db6e913c7e49a07f0710d1d300cf783130dbff76190add163",
+    "Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/MacOS/ProbeContainer": "d6d3361577980e259403150b03ce893f476fc4bfdabadfad1ac31fcefe6ffc2d"
+  }
+}

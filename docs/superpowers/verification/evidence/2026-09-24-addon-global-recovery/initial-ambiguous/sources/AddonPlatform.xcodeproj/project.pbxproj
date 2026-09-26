@@ -1,0 +1,461 @@
+// !$*UTF8*$!
+{
+	"archiveVersion" = 1;
+	"classes" = {
+	};
+	"objectVersion" = 56;
+	"objects" = {
+		"000000000000000000000001" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "Shared/ProbeMessage.swift";
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000002" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "text.plist.xml";
+			"path" = "Host/Probe.appextensionpoint";
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000003" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "Provider/ProbeProvider.swift";
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000004" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000003";
+		};
+		"000000000000000000000005" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000001";
+		};
+		"000000000000000000000006" = {
+			"isa" = "PBXSourcesBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = (
+				"000000000000000000000004",
+				"000000000000000000000005",
+			);
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"000000000000000000000007" = {
+			"isa" = "PBXFrameworksBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = (
+			);
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"000000000000000000000008" = {
+			"isa" = "PBXFileReference";
+			"explicitFileType" = "wrapper.app-extension";
+			"path" = "CascadeProbeProvider.appex";
+			"sourceTree" = "BUILT_PRODUCTS_DIR";
+		};
+		"000000000000000000000009" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Debug";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "CascadeProbeProvider";
+				"EXECUTABLE_NAME" = "ProbeProvider";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "hylo.Cascade.AddonProbeContainer.Provider";
+				"INFOPLIST_FILE" = "Provider/Info.plist";
+				"SWIFT_VERSION" = "5.0";
+				"MACOSX_DEPLOYMENT_TARGET" = "14.0";
+				"SDKROOT" = "macosx";
+				"ALWAYS_SEARCH_USER_PATHS" = "NO";
+				"CODE_SIGN_STYLE" = "Automatic";
+				"CODE_SIGN_IDENTITY" = "Apple Development";
+				"DEVELOPMENT_TEAM" = "A6A5HQL6K4";
+				"ENABLE_HARDENED_RUNTIME" = "YES";
+				"ENABLE_DEBUG_DYLIB" = "NO";
+				"GENERATE_INFOPLIST_FILE" = "NO";
+				"SWIFT_EMIT_LOC_STRINGS" = "NO";
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "DEBUG";
+				"CODE_SIGN_ENTITLEMENTS" = "Provider/Provider.entitlements";
+				"ENABLE_APP_SANDBOX" = "YES";
+				"SKIP_INSTALL" = "YES";
+				"SWIFT_OPTIMIZATION_LEVEL" = "-Onone";
+			};
+		};
+		"00000000000000000000000A" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Release";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "CascadeProbeProvider";
+				"EXECUTABLE_NAME" = "ProbeProvider";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "hylo.Cascade.AddonProbeContainer.Provider";
+				"INFOPLIST_FILE" = "Provider/Info.plist";
+				"SWIFT_VERSION" = "5.0";
+				"MACOSX_DEPLOYMENT_TARGET" = "14.0";
+				"SDKROOT" = "macosx";
+				"ALWAYS_SEARCH_USER_PATHS" = "NO";
+				"CODE_SIGN_STYLE" = "Automatic";
+				"CODE_SIGN_IDENTITY" = "Apple Development";
+				"DEVELOPMENT_TEAM" = "A6A5HQL6K4";
+				"ENABLE_HARDENED_RUNTIME" = "YES";
+				"ENABLE_DEBUG_DYLIB" = "NO";
+				"GENERATE_INFOPLIST_FILE" = "NO";
+				"SWIFT_EMIT_LOC_STRINGS" = "NO";
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "DEBUG";
+				"CODE_SIGN_ENTITLEMENTS" = "Provider/Provider.entitlements";
+				"ENABLE_APP_SANDBOX" = "YES";
+				"SKIP_INSTALL" = "YES";
+				"SWIFT_OPTIMIZATION_LEVEL" = "-O";
+			};
+		};
+		"00000000000000000000000B" = {
+			"isa" = "XCConfigurationList";
+			"buildConfigurations" = (
+				"000000000000000000000009",
+				"00000000000000000000000A",
+			);
+			"defaultConfigurationIsVisible" = 0;
+			"defaultConfigurationName" = "Debug";
+		};
+		"00000000000000000000000C" = {
+			"isa" = "PBXNativeTarget";
+			"name" = "ProbeProvider";
+			"productName" = "ProbeProvider";
+			"productReference" = "000000000000000000000008";
+			"productType" = "com.apple.product-type.extensionkit-extension";
+			"buildConfigurationList" = "00000000000000000000000B";
+			"buildPhases" = (
+				"000000000000000000000006",
+				"000000000000000000000007",
+			);
+			"buildRules" = (
+			);
+			"dependencies" = (
+			);
+		};
+		"00000000000000000000000D" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "Container/ProbeContainer.swift";
+			"sourceTree" = "<group>";
+		};
+		"00000000000000000000000E" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "00000000000000000000000D";
+		};
+		"00000000000000000000000F" = {
+			"isa" = "PBXSourcesBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = (
+				"00000000000000000000000E",
+			);
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"000000000000000000000010" = {
+			"isa" = "PBXFrameworksBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = (
+			);
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"000000000000000000000011" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000008";
+			"settings" = {
+				"ATTRIBUTES" = (
+					"CodeSignOnCopy",
+					"RemoveHeadersOnCopy",
+				);
+			};
+		};
+		"000000000000000000000012" = {
+			"isa" = "PBXCopyFilesBuildPhase";
+			"name" = "Embed provider";
+			"buildActionMask" = 2147483647;
+			"dstPath" = "$(CONTENTS_FOLDER_PATH)/Extensions";
+			"dstSubfolderSpec" = 16;
+			"files" = (
+				"000000000000000000000011",
+			);
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"000000000000000000000013" = {
+			"isa" = "PBXTargetDependency";
+			"target" = "00000000000000000000000C";
+		};
+		"000000000000000000000014" = {
+			"isa" = "PBXFileReference";
+			"explicitFileType" = "wrapper.application";
+			"path" = "CascadeAddonProbeContainer.app";
+			"sourceTree" = "BUILT_PRODUCTS_DIR";
+		};
+		"000000000000000000000015" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Debug";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "CascadeAddonProbeContainer";
+				"EXECUTABLE_NAME" = "ProbeContainer";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "hylo.Cascade.AddonProbeContainer";
+				"INFOPLIST_FILE" = "Container/Info.plist";
+				"SWIFT_VERSION" = "5.0";
+				"MACOSX_DEPLOYMENT_TARGET" = "14.0";
+				"SDKROOT" = "macosx";
+				"ALWAYS_SEARCH_USER_PATHS" = "NO";
+				"CODE_SIGN_STYLE" = "Automatic";
+				"CODE_SIGN_IDENTITY" = "Apple Development";
+				"DEVELOPMENT_TEAM" = "A6A5HQL6K4";
+				"ENABLE_HARDENED_RUNTIME" = "YES";
+				"ENABLE_DEBUG_DYLIB" = "NO";
+				"GENERATE_INFOPLIST_FILE" = "NO";
+				"SWIFT_EMIT_LOC_STRINGS" = "NO";
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "DEBUG";
+				"SWIFT_OPTIMIZATION_LEVEL" = "-Onone";
+			};
+		};
+		"000000000000000000000016" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Release";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "CascadeAddonProbeContainer";
+				"EXECUTABLE_NAME" = "ProbeContainer";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "hylo.Cascade.AddonProbeContainer";
+				"INFOPLIST_FILE" = "Container/Info.plist";
+				"SWIFT_VERSION" = "5.0";
+				"MACOSX_DEPLOYMENT_TARGET" = "14.0";
+				"SDKROOT" = "macosx";
+				"ALWAYS_SEARCH_USER_PATHS" = "NO";
+				"CODE_SIGN_STYLE" = "Automatic";
+				"CODE_SIGN_IDENTITY" = "Apple Development";
+				"DEVELOPMENT_TEAM" = "A6A5HQL6K4";
+				"ENABLE_HARDENED_RUNTIME" = "YES";
+				"ENABLE_DEBUG_DYLIB" = "NO";
+				"GENERATE_INFOPLIST_FILE" = "NO";
+				"SWIFT_EMIT_LOC_STRINGS" = "NO";
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "DEBUG";
+				"SWIFT_OPTIMIZATION_LEVEL" = "-O";
+			};
+		};
+		"000000000000000000000017" = {
+			"isa" = "XCConfigurationList";
+			"buildConfigurations" = (
+				"000000000000000000000015",
+				"000000000000000000000016",
+			);
+			"defaultConfigurationIsVisible" = 0;
+			"defaultConfigurationName" = "Debug";
+		};
+		"000000000000000000000018" = {
+			"isa" = "PBXNativeTarget";
+			"name" = "ProbeContainer";
+			"productName" = "ProbeContainer";
+			"productReference" = "000000000000000000000014";
+			"productType" = "com.apple.product-type.application";
+			"buildConfigurationList" = "000000000000000000000017";
+			"buildPhases" = (
+				"00000000000000000000000F",
+				"000000000000000000000010",
+				"000000000000000000000012",
+			);
+			"buildRules" = (
+			);
+			"dependencies" = (
+				"000000000000000000000013",
+			);
+		};
+		"000000000000000000000019" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "Host/ProbeHost.swift";
+			"sourceTree" = "<group>";
+		};
+		"00000000000000000000001A" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000019";
+		};
+		"00000000000000000000001B" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000001";
+		};
+		"00000000000000000000001C" = {
+			"isa" = "PBXSourcesBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = (
+				"00000000000000000000001A",
+				"00000000000000000000001B",
+			);
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"00000000000000000000001D" = {
+			"isa" = "PBXFrameworksBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = (
+			);
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"00000000000000000000001E" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "000000000000000000000002";
+		};
+		"00000000000000000000001F" = {
+			"isa" = "PBXCopyFilesBuildPhase";
+			"name" = "Extension point";
+			"buildActionMask" = 2147483647;
+			"dstPath" = "$(CONTENTS_FOLDER_PATH)/Extensions";
+			"dstSubfolderSpec" = 16;
+			"files" = (
+				"00000000000000000000001E",
+			);
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"000000000000000000000020" = {
+			"isa" = "PBXFileReference";
+			"explicitFileType" = "wrapper.application";
+			"path" = "CascadeAddonProbe.app";
+			"sourceTree" = "BUILT_PRODUCTS_DIR";
+		};
+		"000000000000000000000021" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Debug";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "CascadeAddonProbe";
+				"EXECUTABLE_NAME" = "ProbeHost";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "hylo.Cascade.AddonProbe";
+				"INFOPLIST_FILE" = "Host/Info.plist";
+				"SWIFT_VERSION" = "5.0";
+				"MACOSX_DEPLOYMENT_TARGET" = "14.0";
+				"SDKROOT" = "macosx";
+				"ALWAYS_SEARCH_USER_PATHS" = "NO";
+				"CODE_SIGN_STYLE" = "Automatic";
+				"CODE_SIGN_IDENTITY" = "Apple Development";
+				"DEVELOPMENT_TEAM" = "A6A5HQL6K4";
+				"ENABLE_HARDENED_RUNTIME" = "YES";
+				"ENABLE_DEBUG_DYLIB" = "NO";
+				"GENERATE_INFOPLIST_FILE" = "NO";
+				"SWIFT_EMIT_LOC_STRINGS" = "NO";
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "DEBUG";
+				"SWIFT_OPTIMIZATION_LEVEL" = "-Onone";
+			};
+		};
+		"000000000000000000000022" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Release";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "CascadeAddonProbe";
+				"EXECUTABLE_NAME" = "ProbeHost";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "hylo.Cascade.AddonProbe";
+				"INFOPLIST_FILE" = "Host/Info.plist";
+				"SWIFT_VERSION" = "5.0";
+				"MACOSX_DEPLOYMENT_TARGET" = "14.0";
+				"SDKROOT" = "macosx";
+				"ALWAYS_SEARCH_USER_PATHS" = "NO";
+				"CODE_SIGN_STYLE" = "Automatic";
+				"CODE_SIGN_IDENTITY" = "Apple Development";
+				"DEVELOPMENT_TEAM" = "A6A5HQL6K4";
+				"ENABLE_HARDENED_RUNTIME" = "YES";
+				"ENABLE_DEBUG_DYLIB" = "NO";
+				"GENERATE_INFOPLIST_FILE" = "NO";
+				"SWIFT_EMIT_LOC_STRINGS" = "NO";
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "DEBUG";
+				"SWIFT_OPTIMIZATION_LEVEL" = "-O";
+			};
+		};
+		"000000000000000000000023" = {
+			"isa" = "XCConfigurationList";
+			"buildConfigurations" = (
+				"000000000000000000000021",
+				"000000000000000000000022",
+			);
+			"defaultConfigurationIsVisible" = 0;
+			"defaultConfigurationName" = "Debug";
+		};
+		"000000000000000000000024" = {
+			"isa" = "PBXNativeTarget";
+			"name" = "ProbeHost";
+			"productName" = "ProbeHost";
+			"productReference" = "000000000000000000000020";
+			"productType" = "com.apple.product-type.application";
+			"buildConfigurationList" = "000000000000000000000023";
+			"buildPhases" = (
+				"00000000000000000000001C",
+				"00000000000000000000001D",
+				"00000000000000000000001F",
+			);
+			"buildRules" = (
+			);
+			"dependencies" = (
+			);
+		};
+		"000000000000000000000025" = {
+			"isa" = "PBXGroup";
+			"name" = "Products";
+			"children" = (
+				"000000000000000000000008",
+				"000000000000000000000014",
+				"000000000000000000000020",
+			);
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000026" = {
+			"isa" = "PBXGroup";
+			"children" = (
+				"000000000000000000000001",
+				"000000000000000000000002",
+				"000000000000000000000003",
+				"00000000000000000000000D",
+				"000000000000000000000019",
+				"000000000000000000000025",
+			);
+			"sourceTree" = "<group>";
+		};
+		"000000000000000000000027" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Debug";
+			"buildSettings" = {
+				"SDKROOT" = "macosx";
+				"ALWAYS_SEARCH_USER_PATHS" = "NO";
+				"MACOSX_DEPLOYMENT_TARGET" = "14.0";
+				"SWIFT_OPTIMIZATION_LEVEL" = "-Onone";
+			};
+		};
+		"000000000000000000000028" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Release";
+			"buildSettings" = {
+				"SDKROOT" = "macosx";
+				"ALWAYS_SEARCH_USER_PATHS" = "NO";
+				"MACOSX_DEPLOYMENT_TARGET" = "14.0";
+				"SWIFT_OPTIMIZATION_LEVEL" = "-O";
+			};
+		};
+		"000000000000000000000029" = {
+			"isa" = "XCConfigurationList";
+			"buildConfigurations" = (
+				"000000000000000000000027",
+				"000000000000000000000028",
+			);
+			"defaultConfigurationIsVisible" = 0;
+			"defaultConfigurationName" = "Debug";
+		};
+		"00000000000000000000002A" = {
+			"isa" = "PBXProject";
+			"attributes" = {
+				"LastUpgradeCheck" = "2700";
+			};
+			"buildConfigurationList" = "000000000000000000000029";
+			"compatibilityVersion" = "Xcode 14.0";
+			"developmentRegion" = "en";
+			"hasScannedForEncodings" = 0;
+			"knownRegions" = (
+				"en",
+				"Base",
+			);
+			"mainGroup" = "000000000000000000000026";
+			"productRefGroup" = "000000000000000000000025";
+			"projectDirPath" = "";
+			"projectRoot" = "";
+			"targets" = (
+				"00000000000000000000000C",
+				"000000000000000000000018",
+				"000000000000000000000024",
+			);
+		};
+	};
+	"rootObject" = "00000000000000000000002A";
+}

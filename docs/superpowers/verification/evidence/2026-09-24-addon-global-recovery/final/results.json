@@ -1,0 +1,323 @@
+{
+  "cases": [
+    {
+      "mode": "normal",
+      "launcherAdmitted": false,
+      "authenticated": true,
+      "registered": true,
+      "sameInstance": true,
+      "guardDeadline": 345576.838021,
+      "invalidationObserved": true,
+      "stillAliveAfterInvalidation": true,
+      "trigger": 345553.856736,
+      "hostStatus": 0,
+      "hostExitObserved": 345553.867189,
+      "serviceExit": 345553.867255,
+      "serviceStatus": 9,
+      "restartStarted": 345553.867314,
+      "freshAuthenticated": true,
+      "freshRegistered": true,
+      "freshConfirmed": true,
+      "freshInstance": true,
+      "freshGuardDeadline": 345579.009057,
+      "freshStopTrigger": 345554.023888,
+      "freshHostStatus": 0,
+      "freshExit": 345554.026304,
+      "freshStatus": 15,
+      "verdict": "PASS",
+      "participants": [
+        {
+          "events": [
+            {
+              "event": "discovery",
+              "identities": [
+                "hylo.Cascade.AddonProbeContainer.Provider"
+              ]
+            },
+            {
+              "event": "client-ready"
+            },
+            {
+              "authenticated": true,
+              "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-qjejljsr/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+              "event": "hello",
+              "guardDeadline": 345576.838021,
+              "instance": "33AC846F-605B-4BE4-965B-49718A9A4772",
+              "pid": 36138,
+              "time": 345551.853646
+            },
+            {
+              "authenticated": true,
+              "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-qjejljsr/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+              "event": "hold",
+              "guardDeadline": 345576.838021,
+              "instance": "33AC846F-605B-4BE4-965B-49718A9A4772",
+              "pid": 36138,
+              "time": 345551.853946
+            },
+            {
+              "event": "invalidated",
+              "time": 345551.854109
+            },
+            {
+              "event": "ping",
+              "time": 345553.856374
+            },
+            {
+              "event": "quit",
+              "time": 345553.8568
+            }
+          ],
+          "label": "normal-first",
+          "hostPID": 36136,
+          "identity": {
+            "pid": 36138,
+            "instance": "33AC846F-605B-4BE4-965B-49718A9A4772",
+            "guardDeadline": 345576.838021,
+            "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-qjejljsr/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex"
+          },
+          "authenticated": true,
+          "registered": true,
+          "sameInstance": true,
+          "trigger": 345553.856736,
+          "hostStatus": 0,
+          "hostExitObserved": 345553.867189,
+          "exit": {
+            "time": 345553.867255,
+            "status": 9
+          },
+          "cleanup": {
+            "exit": {
+              "time": 345553.867255,
+              "status": 9
+            },
+            "hostStatus": 0,
+            "knownProviderExited": true
+          }
+        },
+        {
+          "events": [
+            {
+              "event": "discovery",
+              "identities": [
+                "hylo.Cascade.AddonProbeContainer.Provider"
+              ]
+            },
+            {
+              "event": "client-ready"
+            },
+            {
+              "authenticated": true,
+              "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-qjejljsr/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+              "event": "hello",
+              "guardDeadline": 345579.009057,
+              "instance": "55E5CCB3-DA7D-4546-B88F-AC21511F3789",
+              "pid": 36142,
+              "time": 345554.023519
+            },
+            {
+              "authenticated": true,
+              "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-qjejljsr/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+              "event": "hold",
+              "guardDeadline": 345579.009057,
+              "instance": "55E5CCB3-DA7D-4546-B88F-AC21511F3789",
+              "pid": 36142,
+              "time": 345554.023811
+            },
+            {
+              "event": "quit",
+              "time": 345554.023906
+            }
+          ],
+          "label": "normal-fresh",
+          "hostPID": 36140,
+          "identity": {
+            "pid": 36142,
+            "instance": "55E5CCB3-DA7D-4546-B88F-AC21511F3789",
+            "guardDeadline": 345579.009057,
+            "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-qjejljsr/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex"
+          },
+          "authenticated": true,
+          "registered": true,
+          "sameInstance": true,
+          "trigger": 345554.023888,
+          "hostStatus": 0,
+          "hostExitObserved": 345554.025485,
+          "exit": {
+            "time": 345554.026304,
+            "status": 15
+          },
+          "cleanup": {
+            "exit": {
+              "time": 345554.026304,
+              "status": 15
+            },
+            "hostStatus": 0,
+            "knownProviderExited": true
+          }
+        }
+      ],
+      "cleanupComplete": true
+    },
+    {
+      "mode": "crash",
+      "launcherAdmitted": false,
+      "authenticated": true,
+      "registered": true,
+      "sameInstance": true,
+      "guardDeadline": 345579.140667,
+      "invalidationObserved": true,
+      "stillAliveAfterInvalidation": true,
+      "trigger": 345556.158571,
+      "hostStatus": -9,
+      "hostExitObserved": 345556.168303,
+      "serviceExit": 345556.16835,
+      "serviceStatus": 9,
+      "restartStarted": 345556.168405,
+      "freshAuthenticated": true,
+      "freshRegistered": true,
+      "freshConfirmed": true,
+      "freshInstance": true,
+      "freshGuardDeadline": 345581.306984,
+      "freshStopTrigger": 345556.3217,
+      "freshHostStatus": 0,
+      "freshExit": 345556.323815,
+      "freshStatus": 15,
+      "verdict": "PASS",
+      "participants": [
+        {
+          "events": [
+            {
+              "event": "discovery",
+              "identities": [
+                "hylo.Cascade.AddonProbeContainer.Provider"
+              ]
+            },
+            {
+              "event": "client-ready"
+            },
+            {
+              "authenticated": true,
+              "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-qjejljsr/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+              "event": "hello",
+              "guardDeadline": 345579.140667,
+              "instance": "181D0380-B5F3-4AEF-9AB4-25C421FCA7F0",
+              "pid": 36147,
+              "time": 345554.155493
+            },
+            {
+              "authenticated": true,
+              "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-qjejljsr/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+              "event": "hold",
+              "guardDeadline": 345579.140667,
+              "instance": "181D0380-B5F3-4AEF-9AB4-25C421FCA7F0",
+              "pid": 36147,
+              "time": 345554.155788
+            },
+            {
+              "event": "invalidated",
+              "time": 345554.155954
+            },
+            {
+              "event": "ping",
+              "time": 345556.158244
+            },
+            {
+              "event": "crash",
+              "time": 345556.158617
+            }
+          ],
+          "label": "crash-first",
+          "hostPID": 36143,
+          "identity": {
+            "pid": 36147,
+            "instance": "181D0380-B5F3-4AEF-9AB4-25C421FCA7F0",
+            "guardDeadline": 345579.140667,
+            "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-qjejljsr/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex"
+          },
+          "authenticated": true,
+          "registered": true,
+          "sameInstance": true,
+          "trigger": 345556.158571,
+          "hostStatus": -9,
+          "hostExitObserved": 345556.168303,
+          "exit": {
+            "time": 345556.16835,
+            "status": 9
+          },
+          "cleanup": {
+            "exit": {
+              "time": 345556.16835,
+              "status": 9
+            },
+            "hostStatus": -9,
+            "knownProviderExited": true
+          }
+        },
+        {
+          "events": [
+            {
+              "event": "discovery",
+              "identities": [
+                "hylo.Cascade.AddonProbeContainer.Provider"
+              ]
+            },
+            {
+              "event": "client-ready"
+            },
+            {
+              "authenticated": true,
+              "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-qjejljsr/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+              "event": "hello",
+              "guardDeadline": 345581.306984,
+              "instance": "CE4831EA-A3FF-4838-9118-A7D23FD6281D",
+              "pid": 36152,
+              "time": 345556.321287
+            },
+            {
+              "authenticated": true,
+              "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-qjejljsr/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+              "event": "hold",
+              "guardDeadline": 345581.306984,
+              "instance": "CE4831EA-A3FF-4838-9118-A7D23FD6281D",
+              "pid": 36152,
+              "time": 345556.321605
+            },
+            {
+              "event": "quit",
+              "time": 345556.321722
+            }
+          ],
+          "label": "crash-fresh",
+          "hostPID": 36150,
+          "identity": {
+            "pid": 36152,
+            "instance": "CE4831EA-A3FF-4838-9118-A7D23FD6281D",
+            "guardDeadline": 345581.306984,
+            "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-qjejljsr/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex"
+          },
+          "authenticated": true,
+          "registered": true,
+          "sameInstance": true,
+          "trigger": 345556.3217,
+          "hostStatus": 0,
+          "hostExitObserved": 345556.323314,
+          "exit": {
+            "time": 345556.323815,
+            "status": 15
+          },
+          "cleanup": {
+            "exit": {
+              "time": 345556.323815,
+              "status": 15
+            },
+            "hostStatus": 0,
+            "knownProviderExited": true
+          }
+        }
+      ],
+      "cleanupComplete": true
+    }
+  ],
+  "launcherAdmitted": false
+}

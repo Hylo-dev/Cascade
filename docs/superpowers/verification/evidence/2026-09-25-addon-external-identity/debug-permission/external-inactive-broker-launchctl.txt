@@ -1,0 +1,143 @@
+pid/73116 = {
+	type = pid
+	handle = 73116
+	active count = 3
+	on-demand count = 1
+	service count = 2
+	active service count = 1
+	originator = /Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-veiyjfa3/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc
+	creator = DiscoveryBroker[73116]
+	creator euid = 501
+	uniqueid = 172209
+	security context = {
+		uid = 501
+		asid = 101817
+	}
+
+	bringup time = 0 ms
+	death port = 0x58703
+
+	environment = {
+		LANG => C.UTF-8
+		PATH => /opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/Library/Frameworks/Mono.framework/Versions/Current/Commands:/Users/c4v4h/.codex/tmp/arg0/codex-arg0LlfN3N:/Users/c4v4h/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/override:/Library/TeX/texbin:/Users/c4v4h/.cargo/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/Users/c4v4h/.local/bin:/usr/local/texlive/2025basic/bin/x86_64-darwin:/Users/c4v4h/.lmstudio/bin:/Users/c4v4h/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback:/Applications/ChatGPT.app/Contents/Resources:/Users/c4v4h/Library/Application Support/JetBrains/Toolbox/scripts:/Users/c4v4h/.lmstudio/bin
+		SSH_AUTH_SOCK => /var/run/com.apple.launchd.yxgi2YN5kg/Listeners
+		HOME => /Users/c4v4h
+		__CF_USER_TEXT_ENCODING => 0x1F5:0x0:0x0
+		TMPDIR => /var/folders/m_/9_81hg0x7_11mmlk8zd6vy2h0000gn/T/
+	}
+
+	services = {
+		   73119      - 	com.apple.extensionkitservice
+		       0      0 	hylo.Cascade.AddonProbeContainer.Provider
+	}
+
+	service stubs = {
+		com.apple.filesystems.netfs.PlugInLibraryService
+		com.apple.StreamingUnzipService
+		com.apple.audio.DriverHelper
+		com.apple.AppleDeviceQueryService
+		com.apple.StreamingUnzipService.privileged
+		com.apple.appkit.xpc.TrustedUIService
+		com.apple.appkit.xpc.ThemeWidgetControlViewService
+		com.apple.foundation.UserScriptService
+		com.apple.security.XPCAcmeService
+		com.apple.coremedia.videoencoder.zonto
+		com.apple.internal.DataDetectorsRemoteScanner
+		com.apple.audio.AudioConverterService.HighCapacity
+		com.apple.audio.AUCrashHandlerService
+		com.apple.audio.AUHostingService.arm64e
+		com.apple.CoreDisplay.XPCService
+		com.apple.audio.AudioConverterService.Hardened
+		com.apple.audio.AudioConverterService
+		com.apple.appkit.xpc.sandboxedServiceRunner
+		com.apple.appkit.xpc.documentPopoverViewService
+		com.apple.appkit.xpc.openAndSavePanelService
+		com.apple.coremedia.videoencoder
+		com.apple.desktopservices.ArchiveService
+		com.apple.MediaLibraryBrowser
+		com.apple.xpc.TypographyPanelService
+		com.apple.ImageIOXPCService
+		com.apple.OSLogService
+		com.apple.audio.InfoHelper
+		com.apple.textkit.nsattributedstringagent
+		com.apple.audio.AUHostingService.x86-64
+		com.apple.audio.SandboxHelper
+		com.apple.desktopservices.QuarantineService
+		com.apple.audio.CarbonComponentScanner.x86-64
+		com.apple.appkit.xpc.defaultSyncService
+		com.apple.appkit.xpc.VersionsUIHelper
+		com.apple.audio.ComponentTagHelper
+		com.apple.appkit.xpc.ColorPickerImageLoader
+		com.apple.IPConfiguration.IPConfigurationHelper
+		com.apple.automator.xpc.workflowServiceRunner
+		com.apple.SetStoreUpdateService
+		com.apple.BiomeWriteService
+		com.apple.ColorSyncXPCAgent
+		com.apple.appkit.xpc.LegacyExternalColorPickerService.arm64
+		com.apple.coremedia.videodecoder.zonto
+		com.apple.CMExtensionBroker
+		com.apple.audio.Core-Audio-Driver-Service
+		com.apple.coremedia.videodecoder
+		com.apple.corelocation.GNSSLocationService
+		com.apple.backboard.BKSEndpointProviderService
+		com.apple.MessageSecurity.MSTimestampXPCService
+		com.apple.corelocation.maphelperservice
+		com.apple.appkit.xpc.LegacyExternalColorPickerService.x86_64
+		com.apple.CoreGraphics.CGPDFService
+		com.apple.speech.SpeechSynthesisServerXPC
+		com.apple.MTLCompilerService
+		com.apple.CMValidateMovieDataReferenceService
+		com.apple.audio.Core-Audio-Driver-Service.helper
+	}
+
+	unmanaged processes = {
+	}
+
+	endpoints = {
+		0x13a943    M   D   hylo.Cascade.AddonProbeContainer.Provider.xpc-session
+		 0x24ec3    A   A   com.apple.PerfPowerTelemetryClientRegistrationService
+		 0x29b3b    A   A   com.apple.CodeSigningHelper
+		       0    A   D   com.apple.security.XPCTimeStampingService
+		       0    A   D   com.apple.appkit.xpc.ColorSampler
+		       0    A   D   com.apple.iokit.IOServiceAuthorizeAgent
+		 0xdef03    A   A   com.apple.DictionaryServiceHelper
+		       0    A   D   com.apple.iokit.ioserviceauthorized
+		0x147a83    M   D   hylo.Cascade.AddonProbeContainer.Provider
+		 0x109f3    A   A   com.apple.TrustedPeersHelper
+		 0x240ab    A   A   com.apple.geod
+		       0    A   D   com.apple.internal.aupbregistrarservice
+		 0x20e33    A   A   com.apple.authd
+		 0x55d23    A   A   com.apple.hiservices-xpcservice
+		 0xcd36b    A   A   com.apple.accessibility.mediaaccessibilityd
+		0x13a8bb    M   A   com.apple.extensionkitservice
+		 0xc57e3    A   D   com.apple.security.XPCKeychainSandboxCheck
+		 0x49683    A   A   com.apple.carboncore.csnameddata
+		       0    A   D   com.apple.MobileAsset.ManifestStorageService
+	}
+
+	task-special ports = {
+			 0x3de03 4       bootstrap  (unknown)
+			  0x2e0b 9          access  (unknown)
+	}
+
+	resource coalition = {
+		ID = 1330
+		type = resource
+		state = active
+		active count = 1
+		name = application.com.openai.codex.137415955.137415961
+		bundle ID = com.openai.codex
+	}
+
+	jetsam coalition = {
+		ID = 1331
+		type = jetsam
+		state = active
+		active count = 1
+		name = application.com.openai.codex.137415955.137415961
+		bundle ID = com.openai.codex
+	}
+
+
+	properties = uncorked
+}

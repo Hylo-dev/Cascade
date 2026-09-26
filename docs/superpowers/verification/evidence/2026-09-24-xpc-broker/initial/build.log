@@ -1,0 +1,22 @@
+/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-0bc3kcmz/XPCBrokerProbe.app/Contents/XPCServices/BrokerA.xpc/Contents/XPCServices/WorkerA.xpc: replacing existing signature
+Executable=/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-0bc3kcmz/XPCBrokerProbe.app/Contents/XPCServices/BrokerA.xpc/Contents/XPCServices/WorkerA.xpc/Contents/MacOS/WorkerA
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>com.apple.security.app-sandbox</key><true/></dict></plist>
+/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-0bc3kcmz/XPCBrokerProbe.app/Contents/XPCServices/BrokerA.xpc: replacing existing signature
+Executable=/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-0bc3kcmz/XPCBrokerProbe.app/Contents/XPCServices/BrokerA.xpc/Contents/MacOS/BrokerA
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>com.apple.security.app-sandbox</key><true/></dict></plist>
+/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-0bc3kcmz/XPCBrokerProbe.app/Contents/XPCServices/BrokerB.xpc/Contents/XPCServices/WorkerB.xpc: replacing existing signature
+Executable=/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-0bc3kcmz/XPCBrokerProbe.app/Contents/XPCServices/BrokerB.xpc/Contents/XPCServices/WorkerB.xpc/Contents/MacOS/WorkerB
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>com.apple.security.app-sandbox</key><true/></dict></plist>
+/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-0bc3kcmz/XPCBrokerProbe.app/Contents/XPCServices/BrokerB.xpc: replacing existing signature
+Executable=/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-0bc3kcmz/XPCBrokerProbe.app/Contents/XPCServices/BrokerB.xpc/Contents/MacOS/BrokerB
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>com.apple.security.app-sandbox</key><true/></dict></plist>
+/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-0bc3kcmz/XPCBrokerProbe.app: replacing existing signature
+Executable=/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCBrokerProbe/nested-0bc3kcmz/XPCBrokerProbe.app/Contents/MacOS/XPCBrokerProbe
+ProductName:		macOS
+ProductVersion:		27.0
+BuildVersion:		26A5425a
+27.0
+Apple clang version 21.0.0 (clang-2100.3.33.1)
+Target: arm64-apple-darwin27.0.0
+Thread model: posix
+InstalledDir: /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin

@@ -1,0 +1,291 @@
+//
+//  ProbeHost.swift
+//  Cascade Addon Platform Probe
+//
+
+import AppKit
+import ExtensionFoundation
+import ExtensionKit
+import Foundation
+
+enum ProbeFailure: Error { case invalidResponse, unexpectedIdentity, missingProxy }
+
+/// ProbeHost exercises a system-launched process; stdout is the test evidence.
+@main
+@MainActor
+enum ProbeHost {
+    static var extensionProcess: AppExtensionProcess?
+    static var connection: NSXPCConnection?
+    static var window: NSWindow?
+    static var listener: NSXPCListener?
+    static var listenerDelegate: ProbeListenerDelegate?
+    static var bootstrap: NSXPCConnection?
+    static var watchdog: DispatchWorkItem?
+    static let caseName = CommandLine.arguments.dropFirst().first ?? "standalone-echo"
+
+    static func main() {
+        #if RECOVERY_PROBE
+        if caseName == "recovery-guard-check" {
+            var inherited = sigset_t()
+            guard pthread_sigmask(SIG_BLOCK, nil, &inherited) == 0 else { _exit(96) }
+            emit(["event":"guard-check", "inheritedAlarmBlocked":sigismember(&inherited, SIGALRM) == 1])
+            _ = installRecoveryGuard(seconds: 1)
+            while true { pause() }
+        }
+        _ = installRecoveryGuard(seconds: 35)
+        #endif
+        let application = NSApplication.shared
+        application.setActivationPolicy(.accessory)
+        if CommandLine.arguments.contains("--browse") {
+            let browser = EXAppExtensionBrowserViewController()
+            let browserWindow = NSWindow(contentViewController: browser)
+            browserWindow.title = "Cascade — addon platform probe"
+            browserWindow.setContentSize(NSSize(width: 600, height: 400))
+            browserWindow.center()
+            browserWindow.makeKeyAndOrderFront(nil)
+            window = browserWindow
+            application.activate(ignoringOtherApps: true)
+        } else {
+            let timeout = DispatchWorkItem {
+                emit(["status": "FAIL", "reason": "discovery or connection timed out"])
+                exit(2)
+            }
+            watchdog = timeout
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: timeout)
+            Task {
+                do {
+                    try await run()
+                } catch {
+                    emit(["status": "FAIL", "reason": String(describing: error)])
+                    exit(1)
+                }
+            }
+        }
+        application.run()
+    }
+
+    static func run() async throws {
+        for await identities in try AppExtensionIdentity.matching(appExtensionPointIDs: ProbeIdentity.point) {
+            emit(["event": "discovery", "identities": identities.map(\.bundleIdentifier)])
+            let candidates = identities.filter { $0.bundleIdentifier == ProbeIdentity.provider }
+            guard !candidates.isEmpty else { continue }
+            guard candidates.count == 1, let identity = candidates.first else { throw ProbeFailure.unexpectedIdentity }
+            let process = try await AppExtensionProcess(configuration: .init(appExtensionIdentity: identity))
+            extensionProcess = process
+            let listener = NSXPCListener.anonymous()
+            listener.setConnectionCodeSigningRequirement(ProbeIdentity.requirement(identifier: ProbeIdentity.provider))
+            let delegate = ProbeListenerDelegate()
+            listener.delegate = delegate
+            self.listener = listener
+            listenerDelegate = delegate
+            listener.resume()
+            let bootstrap = try process.makeXPCConnection()
+            bootstrap.remoteObjectInterface = NSXPCInterface(with: ProbeBootstrap.self)
+            self.bootstrap = bootstrap
+            bootstrap.resume()
+            let channel = try await withCheckedThrowingContinuation { continuation in
+                delegate.prepare(accepted: { continuation.resume(returning: $0) }, failed: { continuation.resume(throwing: $0) })
+                guard let proxy = bootstrap.remoteObjectProxyWithErrorHandler({ error in
+                    delegate.fail(error)
+                }) as? ProbeBootstrap else {
+                    delegate.fail(ProbeFailure.missingProxy)
+                    return
+                }
+                proxy.connect(to: listener.endpoint)
+            }
+            connection = channel
+            #if RECOVERY_PROBE
+            if caseName == "recovery" {
+                watchdog?.cancel()
+                emit(["event": "client-ready"])
+                DispatchQueue.global().async {
+                    while let command = readLine() {
+                        Task { @MainActor in await recoveryCommand(command) }
+                    }
+                }
+                return
+            }
+            #endif
+            let operation = caseName.contains("spin") ? "spin" : (["malformed", "sandbox"].contains(caseName) ? caseName : "echo")
+            let payload = caseName == "sandbox" ? (ProcessInfo.processInfo.environment["CASCADE_PROBE_FOREIGN_FILE"] ?? "") : "cascade-native-probe"
+            let request = ProbeRequest(requestID: UUID(), operation: operation, payload: payload)
+            let response = try await send(request, over: channel)
+            guard response.requestID == request.requestID,
+                  response.value == request.payload,
+                  response.providerPID == channel.processIdentifier,
+                  response.providerPID != getpid() else { throw ProbeFailure.unexpectedIdentity }
+            watchdog?.cancel()
+            if caseName.contains("spin") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                    emit(["status": "FAIL", "reason": "external harness did not finish the bounded spin case"])
+                    exit(2)
+                }
+            }
+            emit(["status": caseName == "standalone-echo" ? "PASS" : "OBSERVATION", "case": caseName, "requestID": request.requestID.uuidString,
+                  "hostPID": getpid(), "providerPID": response.providerPID,
+                  "peerRequirement": ProbeIdentity.requirement(identifier: ProbeIdentity.provider)])
+            if let observations = response.observations { emit(["event": "sandbox", "observations": observations]) }
+            if caseName == "application-stop-spin" {
+                guard let application = NSRunningApplication(processIdentifier: response.providerPID) else {
+                    emit(["status": "FAIL", "reason": "authenticated extension has no NSRunningApplication handle",
+                          "applicationHandlePresent": false, "forceTerminateInvoked": false])
+                    return
+                }
+                guard application.bundleIdentifier == ProbeIdentity.provider,
+                      application.executableURL?.lastPathComponent == "ProbeProvider" else {
+                    emit(["status": "FAIL", "reason": "running application handle does not identify the authenticated fixture",
+                          "applicationBundle": application.bundleIdentifier ?? "nil"])
+                    return
+                }
+                let requested = application.forceTerminate()
+                emit(["event": "applicationStopRequested", "requested": requested,
+                      "applicationHandlePresent": true, "forceTerminateInvoked": true,
+                      "providerPID": response.providerPID])
+                // The harness observes real exit; request acceptance is not success.
+                return
+            }
+            if caseName == "normal-host-spin" {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    NSApplication.shared.terminate(nil)
+                }
+                return
+            }
+            if caseName == "crash-host-spin" {
+                // External supervisor kills this host after recording its provider PID.
+                return
+            }
+            channel.invalidate()
+            bootstrap.invalidate()
+            listener.invalidate()
+            process.invalidate()
+            connection = nil
+            extensionProcess = nil
+            self.bootstrap = nil
+            self.listener = nil
+            listenerDelegate = nil
+            if caseName == "invalidate-spin" {
+                emit(["event": "invalidated", "providerPID": response.providerPID])
+                // Keep host alive while the supervisor observes the actual exit.
+                return
+            }
+            exit(0)
+        }
+    }
+
+    static func send(_ request: ProbeRequest, over connection: NSXPCConnection) async throws -> ProbeResponse {
+        let bytes = try JSONEncoder().encode(request)
+        return try await withCheckedThrowingContinuation { continuation in
+            let reply = ProbeReply(continuation)
+            guard let proxy = connection.remoteObjectProxyWithErrorHandler({ error in
+                reply.finish(.failure(error))
+            }) as? ProbeChannel else {
+                reply.finish(.failure(ProbeFailure.missingProxy))
+                return
+            }
+            proxy.request(bytes) { data in
+                do {
+                    guard data.count <= 65_536 else { throw ProbeFailure.invalidResponse }
+                    reply.finish(.success(try JSONDecoder().decode(ProbeResponse.self, from: data)))
+                } catch { reply.finish(.failure(error)) }
+            }
+        }
+    }
+
+    #if RECOVERY_PROBE
+    static func recoveryCommand(_ command: String) async {
+        switch command {
+        case "hello", "hold":
+            do {
+                guard let connection else { throw ProbeFailure.missingProxy }
+                let request = ProbeRequest(requestID: UUID(), operation: command == "hello" ? "echo" : "hold", payload: UUID().uuidString)
+                let response = try await send(request, over: connection)
+                guard response.requestID == request.requestID, response.value == request.payload,
+                      response.providerPID == connection.processIdentifier,
+                      response.providerPID != getpid(), let instance = response.instance,
+                      let deadline = response.guardDeadline,
+                      let bundlePath = response.bundlePath,
+                      bundlePath == ProcessInfo.processInfo.environment["CASCADE_RECOVERY_PROVIDER_BUNDLE"]
+                else { throw ProbeFailure.unexpectedIdentity }
+                emit(["event": command, "authenticated": true, "pid": response.providerPID,
+                      "instance": instance.uuidString, "guardDeadline": deadline,
+                      "bundlePath":bundlePath, "time": recoveryTime()])
+            } catch { emit(["event":"response-error", "error":String(reflecting:error)]) }
+        case "invalidate":
+            connection?.invalidate(); bootstrap?.invalidate(); listener?.invalidate()
+            extensionProcess?.invalidate()
+            connection = nil; bootstrap = nil; listener = nil; listenerDelegate = nil; extensionProcess = nil
+            emit(["event":"invalidated", "time":recoveryTime()])
+        case "ping": emit(["event":"ping", "time":recoveryTime()])
+        case "quit": emit(["event":"quit", "time":recoveryTime()]); exit(0)
+        case "crash":
+            emit(["event":"crash", "time":recoveryTime()])
+            if raise(SIGKILL) != 0 { exit(84) }
+            while true { pause() }
+        default: emit(["event":"command-error"])
+        }
+    }
+    #endif
+
+    static func emit(_ value: [String: Any]) {
+        if let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]) {
+            FileHandle.standardOutput.write(data)
+            FileHandle.standardOutput.write(Data([10]))
+        }
+    }
+}
+
+/// Serializes delivery of the single authenticated channel from the listener.
+final class ProbeListenerDelegate: NSObject, NSXPCListenerDelegate {
+    private let lock = NSLock()
+    private var delivered = false
+    private var accepted: ((NSXPCConnection) -> Void)?
+    private var failed: ((Error) -> Void)?
+
+    func prepare(accepted: @escaping (NSXPCConnection) -> Void, failed: @escaping (Error) -> Void) {
+        lock.lock()
+        self.accepted = accepted
+        self.failed = failed
+        lock.unlock()
+    }
+
+    func listener(_ listener: NSXPCListener, shouldAcceptNewConnection connection: NSXPCConnection) -> Bool {
+        lock.lock()
+        guard !delivered else { lock.unlock(); return false }
+        delivered = true
+        let callback = accepted
+        lock.unlock()
+        connection.remoteObjectInterface = NSXPCInterface(with: ProbeChannel.self)
+        connection.exportedInterface = NSXPCInterface(with: ProbeReady.self)
+        connection.exportedObject = ProbeReadyService()
+        connection.resume()
+        callback?(connection)
+        return true
+    }
+
+    func fail(_ error: Error) {
+        lock.lock()
+        guard !delivered else { lock.unlock(); return }
+        delivered = true
+        let callback = failed
+        lock.unlock()
+        callback?(error)
+    }
+}
+
+final class ProbeReadyService: NSObject, ProbeReady {
+    func ready() {}
+}
+
+/// Error, invalidation and reply can race; deliver a continuation at most once.
+final class ProbeReply {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<ProbeResponse, Error>?
+    init(_ continuation: CheckedContinuation<ProbeResponse, Error>) { self.continuation = continuation }
+    func finish(_ result: Result<ProbeResponse, Error>) {
+        lock.lock()
+        let continuation = self.continuation
+        self.continuation = nil
+        lock.unlock()
+        continuation?.resume(with: result)
+    }
+}

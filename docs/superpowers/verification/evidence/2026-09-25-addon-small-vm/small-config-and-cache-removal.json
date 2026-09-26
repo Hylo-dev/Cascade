@@ -1,0 +1,63 @@
+{
+  "beforeFreeBytes": 3493888000,
+  "commands": [
+    {
+      "args": [
+        "set",
+        "cascade-addon-small",
+        "--cpu",
+        "2",
+        "--memory",
+        "4096",
+        "--display",
+        "1024x768px",
+        "--no-display-refit",
+        "--random-mac"
+      ],
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "delete",
+        "ghcr.io/cirruslabs/macos-sonoma-vanilla@sha256:a6dc5a325aae43a90244953af0a85091fbe93e8f58583138c5ac96dd707fd700"
+      ],
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "list",
+        "--format",
+        "json"
+      ],
+      "status": 0,
+      "stdout": "[\n  {\n    \"Size\" : 17,\n    \"Name\" : \"cascade-addon-small\",\n    \"Disk\" : 50,\n    \"Running\" : false,\n    \"Source\" : \"local\",\n    \"State\" : \"stopped\",\n    \"Accessed\" : \"2026-09-25T22:27:55Z\"\n  }\n]\n",
+      "stderr": ""
+    }
+  ],
+  "config": {
+    "arch": "arm64",
+    "cpuCount": 2,
+    "cpuCountMin": 2,
+    "diskFormat": "raw",
+    "display": {
+      "height": 768,
+      "unit": "px",
+      "width": 1024
+    },
+    "displayRefit": false,
+    "ecid": "YnBsaXN0MDDRAQJURUNJRBQAAAAAAAAAAKCf6XXRWri0CAsQAAAAAAAAAQEAAAAAAAAAAwAAAAAAAAAAAAAAAAAAACE=",
+    "hardwareModel": "YnBsaXN0MDDTAQIDBAUGXxAZRGF0YVJlcHJlc2VudGF0aW9uVmVyc2lvbl8QD1BsYXRmb3JtVmVyc2lvbl8QEk1pbmltdW1TdXBwb3J0ZWRPUxABEAKjBwgIEA0QAAgPKz1SVFZaXAAAAAAAAAEBAAAAAAAAAAkAAAAAAAAAAAAAAAAAAABe",
+    "macAddress": "26:b3:79:a9:b3:23",
+    "memorySize": 4294967296,
+    "memorySizeMin": 4294967296,
+    "os": "darwin",
+    "version": 1
+  },
+  "configSHA256": "310162b606c748ac6e9749cc7d375281c0a1f91c04b83ba4c13e4e4d5efbd0f6",
+  "afterFreeBytes": 3493888000,
+  "oneStandaloneDisk": true
+}
