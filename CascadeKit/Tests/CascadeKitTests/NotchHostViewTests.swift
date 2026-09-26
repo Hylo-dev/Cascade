@@ -10,6 +10,24 @@ import Testing
 @MainActor
 struct NotchHostViewTests {
     @Test
+    func fileDestinationIsUnregisteredUntilTheShelfEnablesIt() throws {
+        let host = makeHost()
+        host.setFileDropEnabled(false)
+        let source = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try Data("file".utf8).write(to: source)
+        defer { try? FileManager.default.removeItem(at: source) }
+        let drag = HostDraggingInfo(
+            pasteboard: makePasteboard(items: [source]),
+            location: CGPoint(x: 100, y: 100),
+            sequenceNumber: 0
+        )
+
+        #expect(host.registeredDraggedTypes.isEmpty)
+        #expect(host.draggingEntered(drag).isEmpty)
+    }
+
+    @Test
     func fileDestinationAcceptsOneBoundedRegularBatchAndDeliversItOnce() throws {
         let host = makeHost()
         let source = FileManager.default.temporaryDirectory
@@ -151,6 +169,54 @@ struct NotchHostViewTests {
         )).isEmpty)
         #expect(unsupportedCount == 3)
     }
+
+    @Test
+    func activeFileIntakeAcceptsARegularFileOverThePhysicalCutout() throws {
+        let host = makeHost()
+        let cutout = CGRect(x: 180, y: 160, width: 40, height: 40)
+        host.setFileDropExclusionFrame(cutout)
+        host.setFileDropIntakeFrame(CGRect(x: 80, y: 20, width: 240, height: 180))
+        let source = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try Data("file".utf8).write(to: source)
+        defer { try? FileManager.default.removeItem(at: source) }
+        let drag = HostDraggingInfo(
+            pasteboard: makePasteboard(items: [source]),
+            location: CGPoint(x: 200, y: 180),
+            sequenceNumber: 5
+        )
+        var dropped: [[URL]] = []
+        host.onFileDrop = { dropped.append($0); return true }
+
+        #expect(host.draggingEntered(drag) == .copy)
+        #expect(host.performDragOperation(drag))
+        #expect(dropped == [[source]])
+    }
+
+    @Test
+    func activeFileIntakeOwnsWideHitTestingAndEndedCancelsItsHover() throws {
+        let host = makeHost()
+        let intake = CGRect(x: 20, y: 20, width: 360, height: 180)
+        host.setFileDropIntakeFrame(intake)
+        let source = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try Data("file".utf8).write(to: source)
+        defer { try? FileManager.default.removeItem(at: source) }
+        let drag = HostDraggingInfo(
+            pasteboard: makePasteboard(items: [source]),
+            location: CGPoint(x: 40, y: 30),
+            sequenceNumber: 6
+        )
+        var hovered: [[URL]?] = []
+        host.onFileDragHoverChanged = { hovered.append($0) }
+
+        #expect(!host.containsInteractivePoint(CGPoint(x: 40, y: 30)))
+        #expect(host.hitTest(CGPoint(x: 40, y: 30)) === host)
+        #expect(host.draggingEntered(drag) == .copy)
+        host.draggingEnded(drag)
+
+        #expect(hovered == [[source], nil])
+    }
     @Test
     func glassHasNoOpaqueBackingBlockingTheDesktop() throws {
         guard #available(macOS 26, *),
@@ -265,6 +331,7 @@ struct NotchHostViewTests {
 
     private func makeHost() -> NotchHostView {
         let host = NotchHostView(frame: CGRect(x: 0, y: 0, width: 400, height: 200))
+        host.setFileDropEnabled(true)
         host.apply(
             geometry: NotchGeometry(
                 leftExtent: 140,

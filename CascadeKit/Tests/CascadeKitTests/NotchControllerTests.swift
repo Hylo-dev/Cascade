@@ -1379,6 +1379,69 @@ struct NotchControllerTests {
     }
 
     @Test
+    func recognizedFileDragUsesAWideIntakeWithoutChangingOrdinaryHitTesting() {
+        let fixture = ControllerFixture(reducesMotion: true)
+        fixture.controller.present(ControllerActivityFixture(
+            id: "tall",
+            expandedContentHeight: 200
+        ))
+        fixture.controller.start()
+        defer { fixture.controller.stop() }
+        let intakePoint = CGPoint(x: 250, y: 650)
+
+        fixture.controller.surface.handlePointer(at: intakePoint)
+        #expect(fixture.controller.state == .closed)
+        #expect(fixture.panel.ignoresMouseEvents)
+
+        fixture.controller.surface.setRecognizedFileDragActive(true, at: intakePoint)
+        #expect(fixture.controller.state == .open)
+        #expect(fixture.controller.expansionRequests.last?.trigger == .drag)
+        #expect(fixture.panel.ignoresMouseEvents == false)
+
+        let expandedBottomPoint = CGPoint(x: 500, y: 580)
+        fixture.controller.surface.handlePointer(at: expandedBottomPoint)
+        #expect(fixture.controller.state == .open)
+        #expect(fixture.panel.ignoresMouseEvents == false)
+
+        fixture.controller.surface.handlePointer(at: intakePoint)
+        fixture.controller.surface.setRecognizedFileDragActive(false, at: intakePoint)
+        #expect(fixture.panel.ignoresMouseEvents)
+    }
+
+    @Test
+    func contextualPresentationRefreshesAnAlreadyArmedIntakeToItsFullHeight() {
+        let fixture = ControllerFixture(reducesMotion: true)
+        fixture.controller.start()
+        defer { fixture.controller.stop() }
+        fixture.controller.surface.setRecognizedFileDragActive(
+            true,
+            at: CGPoint(x: 250, y: 650)
+        )
+        let page = ControllerContextualPage(contentHeight: 400)
+
+        fixture.controller.surface.applyPresentation(DisplayPresentation(
+            primary: nil,
+            secondary: nil,
+            notice: nil,
+            expanded: nil,
+            expandedIsLiveActivity: false,
+            showsWidgets: false,
+            contextualPage: page,
+            contextualPageIsSelected: true,
+            widgetContentRevision: 0,
+            style: .notch
+        ))
+
+        let windowPoint = fixture.panel.convertPoint(
+            fromScreen: CGPoint(x: 500, y: 570)
+        )
+        let hitPoint = fixture.hostView.superview.map {
+            $0.convert(windowPoint, from: nil)
+        } ?? fixture.hostView.convert(windowPoint, from: nil)
+        #expect(fixture.hostView.hitTest(hitPoint) === fixture.hostView)
+    }
+
+    @Test
     func expandedActivityKeepsTheCoveredWidgetSurfaceSuspended() {
         let fixture = ControllerFixture(reducesMotion: true)
         let widget = ControllerWidgetFixture()

@@ -142,6 +142,25 @@ struct NotchDisplayCoordinatorTests {
     }
 
     @Test
+    func fileDropDestinationRequiresBothAContextualPageAndDropHandler() {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10])
+        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        fixture.coordinator.start()
+        #expect(fixture.surfaces[10]?.fileDropEnabledUpdates.last == false)
+
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
+        #expect(fixture.surfaces[10]?.fileDropEnabledUpdates.last == false)
+
+        fixture.coordinator.configureFileDrop(
+            onHover: { _ in }, onDrop: { _ in true }, onUnsupported: {}
+        )
+        #expect(fixture.surfaces[10]?.fileDropEnabledUpdates.last == true)
+
+        fixture.coordinator.setContextualPage(nil, prefersDefault: false)
+        #expect(fixture.surfaces[10]?.fileDropEnabledUpdates.last == false)
+    }
+
+    @Test
     func mouseUpDoesNotRestorePreviewBeforeDestinationDropIsDelivered() async {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10])
         let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
@@ -152,15 +171,41 @@ struct NotchDisplayCoordinatorTests {
         )
         fixture.coordinator.start()
         fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
-        fixture.monitor.sendRecognizedFileDrag(active: true, point: CGPoint(x: 500, y: 790))
+        fixture.monitor.sendRecognizedFileDrag(active: true, point: CGPoint(x: 50, y: 90))
         fixture.surfaces[10]?.sendFileDragHover([url])
 
-        fixture.monitor.sendRecognizedFileDrag(active: false, point: CGPoint(x: 500, y: 790))
+        fixture.monitor.sendRecognizedFileDrag(active: false, point: CGPoint(x: 50, y: 90))
+        #expect(fixture.surfaces[10]?.fileDragGestureEndCount == 1)
+        for _ in 0..<4 { await Task.yield() }
         #expect(fixture.surfaces[10]?.sendFileDrop([url]) == true)
         await Task.yield()
 
         #expect(fixture.surfaces[10]?.presentations.last?.contextualPage === shelf)
         #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == true)
+        #expect(fixture.surfaces[10]?.fileDragRecognitionUpdates == [true, false])
+    }
+
+    @Test
+    func nativeFileDragExitAfterMouseUpRestoresThePreviousPageAndIntake() async {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10])
+        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        let url = URL(fileURLWithPath: "/tmp/report.txt")
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
+        fixture.coordinator.configureFileDrop(
+            onHover: { _ in }, onDrop: { _ in true }, onUnsupported: {}
+        )
+        fixture.coordinator.start()
+        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.monitor.sendRecognizedFileDrag(active: true, point: CGPoint(x: 50, y: 90))
+        fixture.surfaces[10]?.sendFileDragHover([url])
+        fixture.monitor.sendRecognizedFileDrag(active: false, point: CGPoint(x: 50, y: 90))
+        for _ in 0..<4 { await Task.yield() }
+
+        fixture.surfaces[10]?.sendFileDragHover(nil)
+        await Task.yield()
+
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == false)
+        #expect(fixture.surfaces[10]?.fileDragRecognitionUpdates == [true, false])
     }
 
     @Test
@@ -1201,8 +1246,6 @@ private final class RecordingDisplaySurface: NotchDisplayPresenting {
     var onInteractionHoldChanged: ((NotchInteractionKind, Bool) -> Void)?
     var onDragOwnershipChanged: ((Bool) -> Void)?
     var onRetainedActivityRootsChanged: (() -> Void)?
-    var onContextualPageRequested: (() -> Void)?
-    var onOrdinaryPageRequested: (() -> Void)?
     var onFileDragHoverChanged: (([URL]?) -> Void)?
     var onFileDrop: (([URL]) -> Bool)?
     var onUnsupportedFileDrop: (() -> Void)?
@@ -1231,6 +1274,8 @@ private final class RecordingDisplaySurface: NotchDisplayPresenting {
     private(set) var sensitiveContentUpdates: [Bool] = []
     private(set) var externalSurfaceUpdates: [Bool] = []
     private(set) var fileDragRecognitionUpdates: [Bool] = []
+    private(set) var fileDropEnabledUpdates: [Bool] = []
+    private(set) var fileDragGestureEndCount = 0
     private(set) var calibrationStartCount = 0
     var acceptsCalibration = true
     var restingFrame: CGRect? {
@@ -1282,6 +1327,8 @@ private final class RecordingDisplaySurface: NotchDisplayPresenting {
     func setHapticsEnabled(_ isEnabled: Bool) { hapticsUpdates.append(isEnabled) }
     func setBorderAppearance(_ appearance: NotchBorderAppearance) { borderUpdates.append(appearance) }
     func setSensitiveContentVisible(_ isVisible: Bool) { sensitiveContentUpdates.append(isVisible) }
+    func setFileDropEnabled(_ isEnabled: Bool) { fileDropEnabledUpdates.append(isEnabled) }
+    func endRecognizedFileDragGesture() { fileDragGestureEndCount += 1 }
     func setRecognizedFileDragActive(_ isActive: Bool, at point: CGPoint) {
         fileDragRecognitionUpdates.append(isActive)
     }

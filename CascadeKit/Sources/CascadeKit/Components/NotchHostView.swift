@@ -4,8 +4,19 @@
 //
 
 import AppKit
+import OSLog
 import QuartzCore
 import SwiftUI
+
+private let fileDropLog = Logger(subsystem: "hylo.Cascade", category: "FileDrop")
+
+private enum FileDropRejection: String {
+    case sourceDoesNotCopy
+    case oversizedBatch
+    case promisedFile
+    case unsupportedItem
+    case unreadableFile
+}
 
 /// NotchHostView is the layer-backed canvas the notch chrome is drawn in.
 ///
@@ -23,18 +34,10 @@ final class NotchHostView: NSView {
     let auxiliaryInteraction = NotchAuxiliaryInteraction()
 
     var onSettingsRequested: (() -> Void)?
-    var onContextualPageRequested: (() -> Void)?
-    var onOrdinaryPageRequested: (() -> Void)?
     var onFileDragHoverChanged: (([URL]?) -> Void)?
     var onFileDrop: (([URL]) -> Bool)?
     var onUnsupportedFileDrop: (() -> Void)?
     private let settingsButton = NSButton()
-    private let pageChooser = NSSegmentedControl(
-        labels: ["", ""],
-        trackingMode: .selectOne,
-        target: nil,
-        action: nil
-    )
 
     private let shapeLayer       = CAShapeLayer()
     private let contentMaskLayer = CAShapeLayer()
@@ -45,7 +48,9 @@ final class NotchHostView: NSView {
     private var isChromeVisible = false
     private var materialProgress: CGFloat = 0
     private var glassLightSources = NotchGlassLightSources()
+    private var isFileDropEnabled = false
     private var fileDropExclusionFrame: CGRect = .zero
+    private var fileDropIntakeFrame: CGRect?
     private var cachedFileOffer: (sequence: Int, changeCount: Int, urls: [URL])?
     private var hoveredFileOfferKey: (sequence: Int, changeCount: Int)?
     private var rejectedFileOfferKey: (sequence: Int, changeCount: Int)?
@@ -124,22 +129,6 @@ final class NotchHostView: NSView {
         settingsButton.isHidden = true
         contentContainer.addSubview(settingsButton)
 
-        pageChooser.controlSize = .small
-        pageChooser.font = .systemFont(ofSize: 11, weight: .medium)
-        pageChooser.setAccessibilityIdentifier("notch.page-chooser")
-        pageChooser.setAccessibilityLabel("Pagina del notch")
-        pageChooser.setAccessibilityHelp("Scegli tra il ripiano e la pagina ordinaria")
-        pageChooser.target = self
-        pageChooser.action = #selector(selectPage)
-        pageChooser.isHidden = true
-        contentContainer.addSubview(pageChooser)
-
-        registerForDraggedTypes([
-            .fileURL,
-            .init("com.apple.pasteboard.promised-file-url"),
-            .init("com.apple.pasteboard.promised-file-content-type")
-        ])
-
         addSubview(borderRenderer.view)
         setBorderAppearance(.neutral, animated: false)
         accessibilityObserver = NSWorkspace.shared.notificationCenter.addObserver(
@@ -182,30 +171,31 @@ final class NotchHostView: NSView {
 
     @objc private func openSettings() { onSettingsRequested?() }
 
-    func setPageChooser(
-        frame             : CGRect,
-        isVisible         : Bool,
-        contextualLabel   : String,
-        ordinaryLabel     : String,
-        selectsContextual : Bool
-    ) {
-        pageChooser.frame = frame
-        pageChooser.setLabel(contextualLabel, forSegment: 0)
-        pageChooser.setLabel(ordinaryLabel, forSegment: 1)
-        pageChooser.selectedSegment = selectsContextual ? 0 : 1
-        pageChooser.isHidden = !isVisible
+    func setFileDropExclusionFrame(_ frame: CGRect) {
+        fileDropExclusionFrame = frame
     }
 
-    @objc private func selectPage() {
-        if pageChooser.selectedSegment == 0 {
-            onContextualPageRequested?()
+    func setFileDropEnabled(_ isEnabled: Bool) {
+        guard isFileDropEnabled != isEnabled else { return }
+        isFileDropEnabled = isEnabled
+        if isEnabled {
+            registerForDraggedTypes([
+                .fileURL,
+                .init("com.apple.pasteboard.promised-file-url"),
+                .init("com.apple.pasteboard.promised-file-content-type")
+            ])
         } else {
-            onOrdinaryPageRequested?()
+            unregisterDraggedTypes()
+            clearFileDragHover()
+            cachedFileOffer = nil
+            rejectedFileOfferKey = nil
         }
     }
 
-    func setFileDropExclusionFrame(_ frame: CGRect) {
-        fileDropExclusionFrame = frame
+    /// A temporary destination used only while a native file drag is active.
+    /// Ordinary mouse hit testing remains bound to the animated notch outline.
+    func setFileDropIntakeFrame(_ frame: CGRect?) {
+        fileDropIntakeFrame = frame
     }
 
     /// Set the notch fill. Called once by the controller from the configuration;
@@ -471,6 +461,11 @@ final class NotchHostView: NSView {
         // AppKit passes superview coordinates. The canvas now sits above the
         // halo gutter, while the animated path remains in local coordinates.
         let localPoint = superview.map { convert(point, from: $0) } ?? point
+        if fileDropIntakeFrame?.contains(localPoint) == true {
+            // During a native file drag the host itself owns the widened
+            // destination. Child content cannot steal the destination lookup.
+            return self
+        }
         guard containsInteractivePoint(localPoint) else {
             return nil
         }
@@ -514,6 +509,7 @@ final class NotchHostView: NSView {
         let point = convert(sender.draggingLocation, from: nil)
         guard containsFileDropPoint(point), resolveFileOffer(sender) == .copy,
               let offer = cachedFileOffer else {
+            fileDropLog.notice("phase=drop error=invalidDestination")
             clearFileDragHover()
             return false
         }
@@ -524,10 +520,18 @@ final class NotchHostView: NSView {
     }
 
     private func resolveFileOffer(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        guard isFileDropEnabled else { return [] }
         let point = convert(sender.draggingLocation, from: nil)
-        guard containsFileDropPoint(point),
-              sender.draggingSourceOperationMask.contains(.copy) else { return [] }
+        guard containsFileDropPoint(point) else { return [] }
         let changeCount = sender.draggingPasteboard.changeCount
+        guard sender.draggingSourceOperationMask.contains(.copy) else {
+            rejectFileOffer(
+                sequence: sender.draggingSequenceNumber,
+                changeCount: changeCount,
+                reason: .sourceDoesNotCopy
+            )
+            return []
+        }
         if let cachedFileOffer,
            cachedFileOffer.sequence == sender.draggingSequenceNumber,
            cachedFileOffer.changeCount == changeCount {
@@ -538,7 +542,8 @@ final class NotchHostView: NSView {
               !items.isEmpty, items.count <= 32 else {
             rejectFileOffer(
                 sequence: sender.draggingSequenceNumber,
-                changeCount: changeCount
+                changeCount: changeCount,
+                reason: .oversizedBatch
             )
             return []
         }
@@ -549,14 +554,29 @@ final class NotchHostView: NSView {
         var urls: [URL] = []
         urls.reserveCapacity(items.count)
         for item in items {
-            guard promiseTypes.isDisjoint(with: item.types),
-                  item.types.contains(.fileURL),
-                  let value = item.string(forType: .fileURL),
-                  let url = URL(string: value), url.isFileURL,
-                  (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true else {
+            guard promiseTypes.isDisjoint(with: item.types) else {
                 rejectFileOffer(
                     sequence: sender.draggingSequenceNumber,
-                    changeCount: changeCount
+                    changeCount: changeCount,
+                    reason: .promisedFile
+                )
+                return []
+            }
+            guard item.types.contains(.fileURL),
+                  let value = item.string(forType: .fileURL),
+                  let url = URL(string: value), url.isFileURL else {
+                rejectFileOffer(
+                    sequence: sender.draggingSequenceNumber,
+                    changeCount: changeCount,
+                    reason: .unsupportedItem
+                )
+                return []
+            }
+            guard (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true else {
+                rejectFileOffer(
+                    sequence: sender.draggingSequenceNumber,
+                    changeCount: changeCount,
+                    reason: .unreadableFile
                 )
                 return []
             }
@@ -570,7 +590,10 @@ final class NotchHostView: NSView {
     }
 
     private func containsFileDropPoint(_ point: CGPoint) -> Bool {
-        containsInteractivePoint(point) && !fileDropExclusionFrame.contains(point)
+        if let fileDropIntakeFrame {
+            return fileDropIntakeFrame.contains(point)
+        }
+        return containsInteractivePoint(point) && !fileDropExclusionFrame.contains(point)
     }
 
     private func publishFileDragHover(_ offer: (sequence: Int, changeCount: Int, urls: [URL])) {
@@ -586,12 +609,17 @@ final class NotchHostView: NSView {
         onFileDragHoverChanged?(nil)
     }
 
-    private func rejectFileOffer(sequence: Int, changeCount: Int) {
+    private func rejectFileOffer(
+        sequence: Int,
+        changeCount: Int,
+        reason: FileDropRejection
+    ) {
         clearFileDragHover()
         cachedFileOffer = nil
         guard rejectedFileOfferKey?.sequence != sequence
                 || rejectedFileOfferKey?.changeCount != changeCount else { return }
         rejectedFileOfferKey = (sequence, changeCount)
+        fileDropLog.notice("phase=offer error=\(reason.rawValue, privacy: .public)")
         onUnsupportedFileDrop?()
     }
 

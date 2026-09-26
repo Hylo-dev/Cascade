@@ -4,6 +4,9 @@
 //
 
 import AppKit
+import OSLog
+
+private let fileDropLog = Logger(subsystem: "hylo.Cascade", category: "FileDrop")
 
 /// DisplayExpansionTrigger describes why a local surface wants ownership.
 /// Hover requests are cancellable while explicit invocations remain valid until
@@ -150,8 +153,6 @@ protocol NotchDisplayPresenting: AnyObject {
     var onInteractionHoldChanged: ((NotchInteractionKind, Bool) -> Void)? { get set }
     var onDragOwnershipChanged  : ((Bool) -> Void)? { get set }
     var onRetainedActivityRootsChanged: (() -> Void)? { get set }
-    var onContextualPageRequested: (() -> Void)? { get set }
-    var onOrdinaryPageRequested: (() -> Void)? { get set }
     var onFileDragHoverChanged: (([URL]?) -> Void)? { get set }
     var onFileDrop: (([URL]) -> Bool)? { get set }
     var onUnsupportedFileDrop: (() -> Void)? { get set }
@@ -176,6 +177,8 @@ protocol NotchDisplayPresenting: AnyObject {
     func setHapticsEnabled(_ isEnabled: Bool)
     func setBorderAppearance(_ appearance: NotchBorderAppearance)
     func setSensitiveContentVisible(_ isVisible: Bool)
+    func setFileDropEnabled(_ isEnabled: Bool)
+    func endRecognizedFileDragGesture()
     func setRecognizedFileDragActive(_ isActive: Bool, at point: CGPoint)
     func stop()
 }
@@ -254,6 +257,7 @@ final class NotchDisplayCoordinator {
     )?
     private var fileDropPreview: FileDropPreview?
     private var recognizedFileDragDisplayID: CGDirectDisplayID?
+    private var nativeFileDragHoverDisplayID: CGDirectDisplayID?
     private var isRecognizedFileDragGestureActive = false
     private var fileDragGestureGeneration: UInt64 = 0
     private var fileDragReleaseTask: Task<Void, Never>?
@@ -422,6 +426,7 @@ final class NotchDisplayCoordinator {
         pendingExplicitPageSelection = nil
         fileDropPreview = nil
         recognizedFileDragDisplayID = nil
+        nativeFileDragHoverDisplayID = nil
         isRecognizedFileDragGestureActive = false
         fileDragReleaseTask?.cancel()
         fileDragReleaseTask = nil
@@ -492,10 +497,12 @@ final class NotchDisplayCoordinator {
             }
             pendingExplicitPageSelection = nil
             endFileDropPreview(keepContextual: false)
+            clearRecognizedFileDrag()
         } else if wasPreferred && !contextualPagePrefersDefault,
                   case .contextual = expandedPageSelection {
             selectOrdinaryPage()
         }
+        updateFileDropReadiness()
         reconcilePresentations()
     }
 
@@ -538,6 +545,7 @@ final class NotchDisplayCoordinator {
         fileDropOnHover = onHover
         fileDropOnDrop = onDrop
         fileDropOnUnsupported = onUnsupported
+        updateFileDropReadiness()
         if onDrop == nil {
             endFileDropPreview(keepContextual: false)
             clearRecognizedFileDrag()
@@ -1028,12 +1036,7 @@ final class NotchDisplayCoordinator {
         surface.onUnsupportedFileDrop = { [weak self] in
             self?.handleUnsupportedFileDrop(on: displayID)
         }
-        surface.onContextualPageRequested = { [weak self] in
-            self?.showContextualPage(on: displayID)
-        }
-        surface.onOrdinaryPageRequested = { [weak self] in
-            self?.showOrdinaryPage(on: displayID)
-        }
+        surface.setFileDropEnabled(contextualPage != nil && fileDropOnDrop != nil)
     }
 
     private func clearCallbacks(on surface: any NotchDisplayPresenting) {
@@ -1049,14 +1052,28 @@ final class NotchDisplayCoordinator {
         surface.onFileDragHoverChanged = nil
         surface.onFileDrop = nil
         surface.onUnsupportedFileDrop = nil
-        surface.onContextualPageRequested = nil
-        surface.onOrdinaryPageRequested = nil
+        surface.setFileDropEnabled(false)
+    }
+
+    private func updateFileDropReadiness() {
+        let isReady = contextualPage != nil && fileDropOnDrop != nil
+        for record in surfaces.values {
+            record.surface.setFileDropEnabled(isReady)
+        }
     }
 
     private func handleFileDragHover(_ urls: [URL]?, on displayID: CGDirectDisplayID) {
         guard contextualPage != nil, fileDropOnDrop != nil else { return }
+        if urls == nil, let nativeFileDragHoverDisplayID,
+           nativeFileDragHoverDisplayID != displayID {
+            return
+        }
         fileDropOnHover?(urls)
         if let urls, !urls.isEmpty {
+            nativeFileDragHoverDisplayID = displayID
+            fileDragReleaseTask?.cancel()
+            fileDragReleaseTask = nil
+            fileDropLog.info("phase=hover count=\(urls.count)")
             if expandedDisplayID == displayID {
                 beginFileDropPreview(on: displayID, openedForPreview: false)
                 setInteractionHold(.drag, on: displayID, active: true)
@@ -1065,8 +1082,15 @@ final class NotchDisplayCoordinator {
                 requestExpansion(on: displayID, activityID: nil, trigger: .drag)
             }
         } else {
+            let endedNativeHover = nativeFileDragHoverDisplayID == displayID
+            if endedNativeHover {
+                nativeFileDragHoverDisplayID = nil
+            }
             endFileDropPreview(keepContextual: false)
             setInteractionHold(.drag, on: displayID, active: false)
+            if endedNativeHover, !isRecognizedFileDragGestureActive {
+                clearRecognizedFileDrag()
+            }
         }
     }
 
@@ -1075,17 +1099,27 @@ final class NotchDisplayCoordinator {
               contextualPage != nil,
               let fileDropOnDrop else { return false }
         let accepted = fileDropOnDrop(urls)
+        fileDropLog.info("phase=drop accepted=\(accepted) count=\(urls.count)")
         fileDropOnHover?(nil)
+        nativeFileDragHoverDisplayID = nil
         endFileDropPreview(keepContextual: accepted)
         setInteractionHold(.drag, on: displayID, active: false)
+        clearRecognizedFileDrag(keepContextual: accepted)
         return accepted
     }
 
     private func handleUnsupportedFileDrop(on displayID: CGDirectDisplayID) {
         fileDropOnUnsupported?()
+        fileDropLog.notice("phase=offer error=unsupported")
         fileDropOnHover?(nil)
+        if nativeFileDragHoverDisplayID == displayID {
+            nativeFileDragHoverDisplayID = nil
+        }
         endFileDropPreview(keepContextual: false)
         setInteractionHold(.drag, on: displayID, active: false)
+        if !isRecognizedFileDragGestureActive {
+            clearRecognizedFileDrag()
+        }
     }
 
     private func resolveFocusAndReconcile() {
@@ -1238,13 +1272,20 @@ final class NotchDisplayCoordinator {
         guard contextualPage != nil, fileDropOnDrop != nil else { return }
         pointerLocation = point
         if active {
+            if !isRecognizedFileDragGestureActive {
+                fileDropLog.info("phase=begin")
+            }
             fileDragGestureGeneration &+= 1
             fileDragReleaseTask?.cancel()
             fileDragReleaseTask = nil
             isRecognizedFileDragGestureActive = true
             routeRecognizedFileDrag(at: point)
         } else {
+            if let displayID = recognizedFileDragDisplayID {
+                surfaces[displayID]?.surface.endRecognizedFileDragGesture()
+            }
             isRecognizedFileDragGestureActive = false
+            guard nativeFileDragHoverDisplayID == nil else { return }
             let generation = fileDragGestureGeneration
             fileDragReleaseTask?.cancel()
             fileDragReleaseTask = Task { [weak self] in
@@ -1273,18 +1314,20 @@ final class NotchDisplayCoordinator {
         }
     }
 
-    private func clearRecognizedFileDrag() {
+    private func clearRecognizedFileDrag(keepContextual: Bool = false) {
         isRecognizedFileDragGestureActive = false
         fileDragReleaseTask?.cancel()
         fileDragReleaseTask = nil
-        guard let displayID = recognizedFileDragDisplayID else {
-            endFileDropPreview(keepContextual: false)
-            return
-        }
+        let displayID = recognizedFileDragDisplayID
+            ?? nativeFileDragHoverDisplayID
+            ?? fileDropPreview?.displayID
         recognizedFileDragDisplayID = nil
-        surfaces[displayID]?.surface.setRecognizedFileDragActive(false, at: pointerLocation)
-        endFileDropPreview(keepContextual: false)
-        setInteractionHold(.drag, on: displayID, active: false)
+        nativeFileDragHoverDisplayID = nil
+        if let displayID {
+            surfaces[displayID]?.surface.setRecognizedFileDragActive(false, at: pointerLocation)
+            setInteractionHold(.drag, on: displayID, active: false)
+        }
+        endFileDropPreview(keepContextual: keepContextual)
     }
 
     private func handlePointerButton(isPressed: Bool) {
