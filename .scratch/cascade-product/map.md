@@ -43,6 +43,8 @@ Definire il piano applicativo globale di Cascade, basato sul codice esistente: u
 
 ## Decisions so far
 
+- [Instradare il ripiano locale e riconoscere il drag in ingresso](issues/88-file-shelf-local-routing.md): pagina contestuale e preview drag accettate dopo review root e 71 test mirati; composizione e QA nativa restano successive.
+
 - [Preparare l'host locale e le copie verificate del ripiano](issues/87-file-shelf-local-host.md): facade e consegna verificata per voce accettate dopo review root e 73 test indipendenti; pagina e drag nativi seguono nel ticket successivo, senza attivazione addon.
 
 - [Preparare formati e avanzamento della conversione](issues/86-file-workspace-conversion-planning.md): parser e preset interni limitati e revisionati, 64 test passati; esecuzione e recupero dei job restano separati.

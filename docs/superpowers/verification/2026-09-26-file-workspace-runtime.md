@@ -99,7 +99,7 @@ L'[eccezione approvata](../specs/2026-09-26-file-shelf-design.md#9-inserimento-i
 | Verifica | Stato ed evidenza |
 | --- | --- |
 | Host locale, consegna per voce | **Accettato**: commit `a0508ef`, review root con correzioni; 73 test indipendenti passati (53 runtime, 9 presentazione, 11 contratti), log SDD `root-task87-tests.log`. Nessuna consegna app da questo solo commit. |
-| Review root della pagina e del drag in ingresso (ticket 88) | **Pending**. |
+| Review root della pagina e del drag in ingresso (ticket 88) | **Accettato**: commit `ec14e70`, review root e 71/71 test mirati passati (`root-task88-tests.log`). Filtro combinato 139/140 con un test drag intermittente preesistente; nessuna qualifica nativa finale da questa prova. |
 | Review root della composizione e del drag in uscita (ticket 89) | **Pending**. Il solo `drag-ended` non è una ricevuta; il callback di copia riuscita per singola promise può arrivare dopo e rimuove soltanto quella voce. |
 | Suite completa dopo la composizione | **Pending**. |
 | Build firmata e controlli SDK/firma | **Pending**. |
