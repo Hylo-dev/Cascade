@@ -4,6 +4,9 @@
 //
 
 import AppKit
+import OSLog
+
+private let fileDropLog = Logger(subsystem: "hylo.Cascade", category: "FileDrop")
 
 /// NotchPanel is the always-on overlay window.
 ///
@@ -17,7 +20,11 @@ import AppKit
 /// under the cursor. This matters because the panel's frame spans the whole menu
 /// bar and AppKit cannot pass a click to another process using view hit-testing
 /// alone.
-final class NotchPanel: NSPanel {
+final class NotchPanel: NSPanel, NSDraggingDestination {
+
+    private weak var fileDropDestination: NotchHostView?
+    private var loggedFileDragWindowSequence: Int?
+    private(set) var fileDropDestinationTypeCount = 0
 
     init(contentView: NSView) {
 
@@ -45,6 +52,60 @@ final class NotchPanel: NSPanel {
         hidesOnDeactivate           = false
         isMovableByWindowBackground = false
         collectionBehavior          = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
+    }
+
+    func setFileDropDestination(_ destination: NotchHostView?, enabled: Bool) {
+        fileDropDestination = enabled ? destination : nil
+        if enabled, destination != nil {
+            registerForDraggedTypes(NotchHostView.fileDropTypes)
+            fileDropDestinationTypeCount = NotchHostView.fileDropTypes.count
+        } else {
+            unregisterDraggedTypes()
+            fileDropDestinationTypeCount = 0
+            loggedFileDragWindowSequence = nil
+        }
+    }
+
+    func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        if loggedFileDragWindowSequence != sender.draggingSequenceNumber {
+            loggedFileDragWindowSequence = sender.draggingSequenceNumber
+            fileDropLog.notice(
+                "phase=windowEntered enabled=\(self.fileDropDestination != nil) registered=\(self.fileDropDestinationTypeCount)"
+            )
+        }
+        return fileDropDestination?.draggingEntered(sender) ?? []
+    }
+
+    func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        fileDropDestination?.draggingUpdated(sender) ?? []
+    }
+
+    func draggingExited(_ sender: (any NSDraggingInfo)?) {
+        fileDropDestination?.draggingExited(sender)
+    }
+
+    func draggingEnded(_ sender: any NSDraggingInfo) {
+        fileDropDestination?.draggingEnded(sender)
+    }
+
+    func prepareForDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        let prepared = fileDropDestination?.prepareForDragOperation(sender) ?? false
+        fileDropLog.notice(
+            "phase=windowPrepare sequence=\(sender.draggingSequenceNumber) prepared=\(prepared)"
+        )
+        return prepared
+    }
+
+    func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        let accepted = fileDropDestination?.performDragOperation(sender) ?? false
+        fileDropLog.notice(
+            "phase=windowDrop sequence=\(sender.draggingSequenceNumber) accepted=\(accepted)"
+        )
+        return accepted
+    }
+
+    func concludeDragOperation(_ sender: (any NSDraggingInfo)?) {
+        fileDropDestination?.concludeDragOperation(sender)
     }
 
     // A borderless panel refuses key/main by default; we state it explicitly so

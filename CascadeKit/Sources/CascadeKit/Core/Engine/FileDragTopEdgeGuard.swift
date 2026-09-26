@@ -96,18 +96,31 @@ final class FileDragTopEdgeGuard: FileDragTopEdgeGuardOperating {
     private static let logger = Logger(subsystem: "hylo.Cascade", category: "FileDrop")
     private static let leaseDuration: TimeInterval = 30
 
+    private enum StopReason: String {
+        case external
+        case invalidGeometry
+        case leaseExpired
+        case mouseUp
+        case restart
+        case tapStateLost
+        case unavailable
+    }
+
     private var port: CFMachPort?
     private var source: CFRunLoopSource?
     private var leaseTimer: Timer?
     private var filter: FileDragTopEdgeFilter?
     private var loggedActive = false
     private var loggedUnavailable = false
+    private var diagnosticsAreActive = false
+    private var dragEventCount = 0
+    private var clampCount = 0
 
     private(set) var availability: Availability = .inactive
 
     @discardableResult
     func start(region: CGRect, screen: CGRect) -> Bool {
-        teardown()
+        teardown(reason: .restart)
         guard let primaryScreen = NSScreen.screens.first?.frame,
               let geometry = FileDragTopEdgeGeometry(
                 region: region,
@@ -156,6 +169,7 @@ final class FileDragTopEdgeGuard: FileDragTopEdgeGuardOperating {
         }
 
         availability = .active
+        diagnosticsAreActive = true
         renewLease()
         if !loggedActive {
             loggedActive = true
@@ -172,7 +186,7 @@ final class FileDragTopEdgeGuard: FileDragTopEdgeGuardOperating {
                 screen: screen,
                 primaryScreen: primaryScreen
               ) else {
-            stop()
+            stop(reason: .invalidGeometry)
             return
         }
         filter?.update(geometry)
@@ -180,7 +194,11 @@ final class FileDragTopEdgeGuard: FileDragTopEdgeGuardOperating {
     }
 
     func stop() {
-        teardown()
+        stop(reason: .external)
+    }
+
+    private func stop(reason: StopReason) {
+        teardown(reason: reason)
         if availability != .unavailable { availability = .inactive }
     }
 
@@ -190,22 +208,32 @@ final class FileDragTopEdgeGuard: FileDragTopEdgeGuardOperating {
             return Unmanaged.passUnretained(event)
         }
         guard var filter else { return Unmanaged.passUnretained(event) }
+        if type == .leftMouseDragged {
+            dragEventCount += 1
+            if dragEventCount == 1 {
+                Self.logger.notice("phase=edgeGuard state=firstDrag")
+            }
+        }
         let decision = filter.process(type, at: event.location)
         self.filter = filter
         switch decision {
         case .pass:
             break
         case .move(let location):
+            clampCount += 1
+            if clampCount == 1 {
+                Self.logger.notice("phase=edgeGuard state=firstClamp")
+            }
             event.location = location
         case .stop:
-            stop()
+            stop(reason: .mouseUp)
         }
         return Unmanaged.passUnretained(event)
     }
 
     private func reenableIfActive() {
         guard availability == .active, filter != nil, let port else {
-            stop()
+            stop(reason: .tapStateLost)
             return
         }
         CGEvent.tapEnable(tap: port, enable: true)
@@ -215,14 +243,14 @@ final class FileDragTopEdgeGuard: FileDragTopEdgeGuardOperating {
     private func renewLease() {
         leaseTimer?.invalidate()
         let timer = Timer(timeInterval: Self.leaseDuration, repeats: false) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.stop() }
+            Task { @MainActor [weak self] in self?.stop(reason: .leaseExpired) }
         }
         leaseTimer = timer
         RunLoop.main.add(timer, forMode: .common)
     }
 
     private func markUnavailable() {
-        teardown()
+        teardown(reason: .unavailable)
         availability = .unavailable
         if !loggedUnavailable {
             loggedUnavailable = true
@@ -230,7 +258,15 @@ final class FileDragTopEdgeGuard: FileDragTopEdgeGuardOperating {
         }
     }
 
-    private func teardown() {
+    private func teardown(reason: StopReason) {
+        if diagnosticsAreActive {
+            Self.logger.notice(
+                "phase=edgeGuard state=stopped reason=\(reason.rawValue, privacy: .public) dragEvents=\(self.dragEventCount) clamps=\(self.clampCount)"
+            )
+        }
+        diagnosticsAreActive = false
+        dragEventCount = 0
+        clampCount = 0
         leaseTimer?.invalidate()
         leaseTimer = nil
         filter?.disarm()

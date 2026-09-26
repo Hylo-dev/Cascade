@@ -31,6 +31,12 @@ private enum FileDropRejection: String {
 /// the current path, while points outside it pass through the panel.
 final class NotchHostView: NSView {
 
+    static let fileDropTypes: [NSPasteboard.PasteboardType] = [
+        .fileURL,
+        .init("com.apple.pasteboard.promised-file-url"),
+        .init("com.apple.pasteboard.promised-file-content-type")
+    ]
+
     let auxiliaryInteraction = NotchAuxiliaryInteraction()
 
     var onSettingsRequested: (() -> Void)?
@@ -181,19 +187,32 @@ final class NotchHostView: NSView {
         guard isFileDropEnabled != isEnabled else { return }
         isFileDropEnabled = isEnabled
         if isEnabled {
-            registerForDraggedTypes([
-                .fileURL,
-                .init("com.apple.pasteboard.promised-file-url"),
-                .init("com.apple.pasteboard.promised-file-content-type")
-            ])
+            registerForDraggedTypes(Self.fileDropTypes)
         } else {
             unregisterDraggedTypes()
             clearFileDragHover()
             cachedFileOffer = nil
             rejectedFileOfferKey = nil
         }
+        (window as? NotchPanel)?.setFileDropDestination(self, enabled: isEnabled)
+        let panelRegistrationCount = (window as? NotchPanel)?.fileDropDestinationTypeCount ?? 0
         fileDropLog.notice(
-            "phase=readiness enabled=\(isEnabled) registered=\(self.registeredDraggedTypes.count) windowAttached=\(self.window != nil)"
+            "phase=readiness enabled=\(isEnabled) registered=\(self.registeredDraggedTypes.count) panelRegistered=\(panelRegistrationCount) windowAttached=\(self.window != nil)"
+        )
+    }
+
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        if let oldPanel = window as? NotchPanel, oldPanel !== newWindow {
+            oldPanel.setFileDropDestination(nil, enabled: false)
+        }
+        super.viewWillMove(toWindow: newWindow)
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        (window as? NotchPanel)?.setFileDropDestination(
+            self,
+            enabled: isFileDropEnabled
         )
     }
 
@@ -535,6 +554,17 @@ final class NotchHostView: NSView {
         clearFileDragHover()
         cachedFileOffer = nil
         return accepted
+    }
+
+    override func prepareForDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        let point = convert(sender.draggingLocation, from: nil)
+        return containsFileDropPoint(point) && resolveFileOffer(sender) == .copy
+    }
+
+    override func concludeDragOperation(_ sender: (any NSDraggingInfo)?) {
+        clearFileDragHover()
+        cachedFileOffer = nil
+        rejectedFileOfferKey = nil
     }
 
     private func resolveFileOffer(_ sender: any NSDraggingInfo) -> NSDragOperation {

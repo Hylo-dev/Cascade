@@ -53,6 +53,46 @@ struct NotchHostViewTests {
     }
 
     @Test
+    func panelRegistersAndForwardsTheCompleteNativeDropLifecycle() throws {
+        let host = makeHost()
+        let panel = NotchPanel(contentView: host)
+        let source = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try Data("file".utf8).write(to: source)
+        defer { try? FileManager.default.removeItem(at: source) }
+        let drag = HostDraggingInfo(
+            pasteboard: makePasteboard(items: [source]),
+            location: CGPoint(x: 100, y: 100),
+            sequenceNumber: 11
+        )
+        let outside = HostDraggingInfo(
+            pasteboard: drag.draggingPasteboard,
+            location: CGPoint(x: 10, y: 10),
+            sequenceNumber: 12
+        )
+        var dropped: [[URL]] = []
+        host.onFileDrop = { dropped.append($0); return true }
+
+        #expect(panel.fileDropDestinationTypeCount == 3)
+        #expect(panel.responds(to: #selector(NSDraggingDestination.draggingEntered(_:))))
+        #expect(panel.draggingEntered(outside).isEmpty)
+        #expect(panel.prepareForDragOperation(outside) == false)
+        #expect(panel.performDragOperation(outside) == false)
+        #expect(panel.draggingEntered(drag) == .copy)
+        #expect(panel.draggingUpdated(drag) == .copy)
+        #expect(panel.prepareForDragOperation(drag))
+        #expect(panel.performDragOperation(drag))
+        panel.concludeDragOperation(drag)
+        #expect(dropped == [[source]])
+
+        host.setFileDropEnabled(false)
+        #expect(panel.fileDropDestinationTypeCount == 0)
+        #expect(panel.draggingEntered(drag).isEmpty)
+        #expect(panel.prepareForDragOperation(drag) == false)
+        #expect(panel.performDragOperation(drag) == false)
+    }
+
+    @Test
     func fileDestinationCanResolveAfterTheDragEntersOutsideItsLiveShape() throws {
         let host = makeHost()
         let source = FileManager.default.temporaryDirectory
