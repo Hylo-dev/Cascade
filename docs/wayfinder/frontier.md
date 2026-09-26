@@ -2,7 +2,7 @@
 
 Aggiornata al 26 settembre 2026 e derivata dai metadati dei ticket. La [mappa](../../.scratch/cascade-product/map.md) resta canonica; questa vista non conserva le risoluzioni.
 
-85 ticket: 63 risolti, 1 in corso, 6 disponibili, 15 bloccati.
+85 ticket: 64 risolti, 1 in corso, 5 disponibili, 15 bloccati.
 
 Decisione del20settembre: l’utente mantiene il launcher bloccato e il requisito integrale di uscita dei processi gestiti. La [scelta è registrata](../../.scratch/cascade-product/issues/22-managed-process-exit-proof.md); resta aperta la prova tecnica, senza nuova richiesta della stessa eccezione.
 
@@ -11,22 +11,21 @@ Nel checkpoint del 20 settembre sono concluse le decisioni sulle superfici e la 
 
 ## Decisioni e task disponibili
 
-La decisione di conservazione e il routing limitato al ripiano sono fissati dalla specifica approvata; la precedenza generale tra attività e contesti rimane aperta. Il launcher resta bloccato. La persistenza è conclusa, il componente condiviso è in corso e il bundle FFmpeg è disponibile; la qualifica nativa attende le prove di piattaforma.
+La decisione di conservazione e il routing limitato al ripiano sono fissati dalla specifica approvata; la precedenza generale tra attività e contesti rimane aperta. Il launcher resta bloccato. Persistenza e componente condiviso sono conclusi, il bundle FFmpeg è in corso; la qualifica nativa attende le prove di piattaforma.
 
 - [Decidere priorità tra attività, pagine e contesto](../../.scratch/cascade-product/issues/08-context-arbitration.md)
 - [Definire il collegamento tra Spotlight e notch](../../.scratch/cascade-product/issues/12-spotlight-experience.md)
 - [Provare una UI SwiftUI esterna dentro il notch](../../.scratch/cascade-product/issues/19-extension-host-probe.md)
 - [Provare routing per app e output simultanei](../../.scratch/cascade-product/issues/20-audio-routing-probe.md)
 - [Definire una prova sicura di uscita dei processi gestiti](../../.scratch/cascade-product/issues/22-managed-process-exit-proof.md)
-- [Preparare FFmpeg e ffprobe verificati nel bundle](../../.scratch/cascade-product/issues/81-file-workspace-ffmpeg-bundle.md)
 
 «Disponibile» significa che il ticket può essere preso in carico. Le prove dei processi gestiti e della scena SwiftUI restano distinte; nessuna disponibilità apre il gate nativo.
 
 ## Tranche file-shelf mappata
 
-In corso: [Aggiungere il componente condiviso e la lista animata del ripiano](../../.scratch/cascade-product/issues/80-file-workspace-presentation.md), assegnato a codex/file-shelf.
+In corso: [Preparare FFmpeg e ffprobe verificati nel bundle](../../.scratch/cascade-product/issues/81-file-workspace-ffmpeg-bundle.md), assegnato a codex/file-shelf.
 
-[Piano approvato](../superpowers/plans/2026-09-26-file-shelf.md): confine interno del servizio completato; persistenza completata, presentazione in corso e bundle FFmpeg disponibile. Drag reale, conversioni, composizione e verifica integrata seguono il DAG nella tabella. La [verifica runtime](../superpowers/verification/2026-09-26-file-workspace-runtime.md) non qualifica il percorso produttivo.
+[Piano approvato](../superpowers/plans/2026-09-26-file-shelf.md): confine interno del servizio completato; persistenza e presentazione completate, bundle FFmpeg in corso. Drag reale, conversioni, composizione e verifica integrata seguono il DAG nella tabella. La [verifica runtime](../superpowers/verification/2026-09-26-file-workspace-runtime.md) non qualifica il percorso produttivo.
 
 ## Tranche multi-display conclusa
 
@@ -142,8 +141,8 @@ In corso: [Aggiungere il componente condiviso e la lista animata del ripiano](..
 | [Qualificare il percorso nativo del servizio files.workspace](../../.scratch/cascade-product/issues/77-file-workspace-native-path.md) | Bloccato | [Provare una UI SwiftUI esterna dentro il notch](../../.scratch/cascade-product/issues/19-extension-host-probe.md); [Definire una prova sicura di uscita dei processi gestiti](../../.scratch/cascade-product/issues/22-managed-process-exit-proof.md) |
 | [Persistire voci e ricevute del ripiano file](../../.scratch/cascade-product/issues/78-file-workspace-persistence.md) | Risolto | — |
 | [Acquisire e consegnare file con drag nativo per elemento](../../.scratch/cascade-product/issues/79-file-workspace-native-drag.md) | Bloccato | [Qualificare il percorso nativo del servizio files.workspace](../../.scratch/cascade-product/issues/77-file-workspace-native-path.md); [Persistire voci e ricevute del ripiano file](../../.scratch/cascade-product/issues/78-file-workspace-persistence.md) |
-| [Aggiungere il componente condiviso e la lista animata del ripiano](../../.scratch/cascade-product/issues/80-file-workspace-presentation.md) | In corso | — |
-| [Preparare FFmpeg e ffprobe verificati nel bundle](../../.scratch/cascade-product/issues/81-file-workspace-ffmpeg-bundle.md) | Disponibile | — |
+| [Aggiungere il componente condiviso e la lista animata del ripiano](../../.scratch/cascade-product/issues/80-file-workspace-presentation.md) | Risolto | — |
+| [Preparare FFmpeg e ffprobe verificati nel bundle](../../.scratch/cascade-product/issues/81-file-workspace-ffmpeg-bundle.md) | In corso | — |
 | [Eseguire conversioni file in job recuperabili](../../.scratch/cascade-product/issues/82-file-workspace-conversion-jobs.md) | Bloccato | [Qualificare il percorso nativo del servizio files.workspace](../../.scratch/cascade-product/issues/77-file-workspace-native-path.md); [Persistire voci e ricevute del ripiano file](../../.scratch/cascade-product/issues/78-file-workspace-persistence.md); [Preparare FFmpeg e ffprobe verificati nel bundle](../../.scratch/cascade-product/issues/81-file-workspace-ffmpeg-bundle.md) |
 | [Instradare il ripiano come pagina contestuale e battito del notch](../../.scratch/cascade-product/issues/83-file-workspace-routing.md) | Bloccato | [Acquisire e consegnare file con drag nativo per elemento](../../.scratch/cascade-product/issues/79-file-workspace-native-drag.md); [Aggiungere il componente condiviso e la lista animata del ripiano](../../.scratch/cascade-product/issues/80-file-workspace-presentation.md) |
 | [Comporre il provider del ripiano e i comandi di conversione](../../.scratch/cascade-product/issues/84-file-workspace-provider-composition.md) | Bloccato | [Qualificare il percorso nativo del servizio files.workspace](../../.scratch/cascade-product/issues/77-file-workspace-native-path.md); [Aggiungere il componente condiviso e la lista animata del ripiano](../../.scratch/cascade-product/issues/80-file-workspace-presentation.md); [Eseguire conversioni file in job recuperabili](../../.scratch/cascade-product/issues/82-file-workspace-conversion-jobs.md); [Instradare il ripiano come pagina contestuale e battito del notch](../../.scratch/cascade-product/issues/83-file-workspace-routing.md) |

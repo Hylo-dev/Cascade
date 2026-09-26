@@ -41,6 +41,8 @@ Definire il piano applicativo globale di Cascade, basato sul codice esistente: u
 
 ## Decisions so far
 
+- [Aggiungere il componente condiviso e la lista animata del ripiano](issues/80-file-workspace-presentation.md): schema 3 e renderer condiviso revisionati, 86 test mirati e preview native locali; montaggio nel notch distinto.
+
 - [Persistire voci e ricevute del ripiano file](issues/78-file-workspace-persistence.md): conservazione e consegne per elemento implementate e revisionate, con 50 test mirati passati; integrazione nativa separata.
 
 - [Definire raccolta e durata dei file nel ripiano](issues/10-file-shelf.md): specifica approvata per acquisizione al drop, originali conservati, riferimenti persistenti e consegna verificata per elemento; arbitraggio generale dei contesti distinto.
