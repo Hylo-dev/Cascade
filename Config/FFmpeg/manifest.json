@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "version": "9.0.2",
+  "deploymentTarget": "14.0",
+  "deliveredArchitectures": [
+    "arm64"
+  ],
+  "supportedBuildArchitectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "source": {
+    "url": "https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz",
+    "sha256": "8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e",
+    "signatureURL": "https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz.asc",
+    "signatureSHA256": "d617fd94ea354dadd2a8bb16243d37c44e1e9729b06b6ad58fe30bfb0fa943f2",
+    "signingKeyURL": "https://ffmpeg.org/ffmpeg-devel.asc",
+    "signingKeySHA256": "397b3becedcd5a98769967ff1ff8501ddc89f8368b8f766e4701377d7dbaabe5",
+    "signingFingerprint": "FCF986EA15E6E293A5644F10B4322F04D67658D8"
+  },
+  "configureFlags": [
+    "--disable-autodetect",
+    "--disable-debug",
+    "--disable-doc",
+    "--disable-ffplay",
+    "--disable-network",
+    "--disable-gpl",
+    "--disable-nonfree",
+    "--disable-shared",
+    "--enable-static",
+    "--enable-videotoolbox",
+    "--disable-encoders",
+    "--enable-encoder=aac,flac,pcm_s16le,h264_videotoolbox",
+    "--disable-muxers",
+    "--enable-muxer=mov,mp4,ipod,flac,wav",
+    "--disable-outdevs",
+    "--disable-indevs",
+    "--enable-indev=lavfi"
+  ],
+  "requiredEncoders": [
+    "aac",
+    "flac",
+    "pcm_s16le",
+    "h264_videotoolbox"
+  ],
+  "dynamicDependencies": [
+    "/usr/lib/libSystem.B.dylib",
+    "/System/Library/Frameworks/VideoToolbox.framework",
+    "/System/Library/Frameworks/CoreFoundation.framework",
+    "/System/Library/Frameworks/CoreMedia.framework",
+    "/System/Library/Frameworks/CoreVideo.framework",
+    "/System/Library/Frameworks/CoreServices.framework"
+  ],
+  "externalDependencies": []
+}

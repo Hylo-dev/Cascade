@@ -8,7 +8,40 @@
 
 /* Begin PBXBuildFile section */
 		CA5CADE10CA10CA10CA1A003 /* CascadeKit in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE10CA10CA10CA1A002 /* CascadeKit */; };
+		CA5CADE20000000000000001 /* ffmpeg in Embed FFmpeg Helpers */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000011 /* ffmpeg */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		CA5CADE20000000000000002 /* ffprobe in Embed FFmpeg Helpers */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000012 /* ffprobe */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		CA5CADE20000000000000003 /* FFmpeg-LICENSE.md in Copy FFmpeg Notices */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000013 /* FFmpeg-LICENSE.md */; };
+		CA5CADE20000000000000004 /* COPYING.LGPLv2.1 in Copy FFmpeg Notices */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000014 /* COPYING.LGPLv2.1 */; };
+		CA5CADE20000000000000005 /* NOTICE.txt in Copy FFmpeg Notices */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000015 /* NOTICE.txt */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		CA5CADE20000000000000021 /* Copy FFmpeg Notices */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = ThirdParty/FFmpeg;
+			dstSubfolderSpec = 7;
+			files = (
+				CA5CADE20000000000000003 /* FFmpeg-LICENSE.md in Copy FFmpeg Notices */,
+				CA5CADE20000000000000004 /* COPYING.LGPLv2.1 in Copy FFmpeg Notices */,
+				CA5CADE20000000000000005 /* NOTICE.txt in Copy FFmpeg Notices */,
+			);
+			name = "Copy FFmpeg Notices";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CA5CADE20000000000000022 /* Embed FFmpeg Helpers */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Contents/Helpers/FFmpeg;
+			dstSubfolderSpec = 1;
+			files = (
+				CA5CADE20000000000000001 /* ffmpeg in Embed FFmpeg Helpers */,
+				CA5CADE20000000000000002 /* ffprobe in Embed FFmpeg Helpers */,
+			);
+			name = "Embed FFmpeg Helpers";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXContainerItemProxy section */
 		040312752FE4355A00BA9823 /* PBXContainerItemProxy */ = {
@@ -31,6 +64,11 @@
 		040312672FE4355A00BA9823 /* Cascade.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Cascade.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		040312742FE4355A00BA9823 /* CascadeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CascadeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0403127E2FE4355A00BA9823 /* CascadeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CascadeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CA5CADE20000000000000011 /* ffmpeg */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Config/FFmpeg/Artifacts/arm64/ffmpeg; sourceTree = SOURCE_ROOT; };
+		CA5CADE20000000000000012 /* ffprobe */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Config/FFmpeg/Artifacts/arm64/ffprobe; sourceTree = SOURCE_ROOT; };
+		CA5CADE20000000000000013 /* FFmpeg-LICENSE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = Config/FFmpeg/Notices/FFmpeg-LICENSE.md; sourceTree = SOURCE_ROOT; };
+		CA5CADE20000000000000014 /* COPYING.LGPLv2.1 */ = {isa = PBXFileReference; lastKnownFileType = text; path = Config/FFmpeg/Notices/COPYING.LGPLv2.1; sourceTree = SOURCE_ROOT; };
+		CA5CADE20000000000000015 /* NOTICE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Config/FFmpeg/Notices/NOTICE.txt; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -81,10 +119,23 @@
 			isa = PBXGroup;
 			children = (
 				040312692FE4355A00BA9823 /* Cascade */,
+				CA5CADE20000000000000031 /* FFmpeg Bundle Inputs */,
 				040312772FE4355A00BA9823 /* CascadeTests */,
 				040312812FE4355A00BA9823 /* CascadeUITests */,
 				040312682FE4355A00BA9823 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		CA5CADE20000000000000031 /* FFmpeg Bundle Inputs */ = {
+			isa = PBXGroup;
+			children = (
+				CA5CADE20000000000000011 /* ffmpeg */,
+				CA5CADE20000000000000012 /* ffprobe */,
+				CA5CADE20000000000000013 /* FFmpeg-LICENSE.md */,
+				CA5CADE20000000000000014 /* COPYING.LGPLv2.1 */,
+				CA5CADE20000000000000015 /* NOTICE.txt */,
+			);
+			name = "FFmpeg Bundle Inputs";
 			sourceTree = "<group>";
 		};
 		040312682FE4355A00BA9823 /* Products */ = {
@@ -106,7 +157,10 @@
 			buildPhases = (
 				040312632FE4355A00BA9823 /* Sources */,
 				040312642FE4355A00BA9823 /* Frameworks */,
+				CA5CADE20000000000000023 /* Verify FFmpeg Inputs */,
 				040312652FE4355A00BA9823 /* Resources */,
+				CA5CADE20000000000000021 /* Copy FFmpeg Notices */,
+				CA5CADE20000000000000022 /* Embed FFmpeg Helpers */,
 			);
 			buildRules = (
 			);
@@ -239,6 +293,37 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		CA5CADE20000000000000023 /* Verify FFmpeg Inputs */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/scripts/verify-ffmpeg.sh",
+				"$(SRCROOT)/Config/FFmpeg/manifest.json",
+				"$(SRCROOT)/Config/FFmpeg/Artifacts/arm64/ffmpeg",
+				"$(SRCROOT)/Config/FFmpeg/Artifacts/arm64/ffprobe",
+				"$(SRCROOT)/Config/FFmpeg/Notices/FFmpeg-LICENSE.md",
+				"$(SRCROOT)/Config/FFmpeg/Notices/COPYING.LGPLv2.1",
+				"$(SRCROOT)/Config/FFmpeg/Notices/NOTICE.txt",
+			);
+			name = "Verify FFmpeg Inputs";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/FFmpegVerification",
+				"$(DERIVED_FILE_DIR)/ffmpeg-verified.stamp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -eu\nfor architecture in $ARCHS; do\n    CASCADE_FFMPEG_VERIFY_SCRATCH=\"$DERIVED_FILE_DIR/FFmpegVerification\" /bin/zsh \"$SRCROOT/scripts/verify-ffmpeg.sh\" \"$SRCROOT/Config/FFmpeg/Artifacts/arm64\" --arch \"$architecture\" --manifest \"$SRCROOT/Config/FFmpeg/manifest.json\"\ndone\n/usr/bin/touch \"$DERIVED_FILE_DIR/ffmpeg-verified.stamp\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		040312632FE4355A00BA9823 /* Sources */ = {

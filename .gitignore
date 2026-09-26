@@ -5,6 +5,9 @@
 # Build products and per-user state — regenerable or machine-specific.
 build/
 DerivedData/
+Config/FFmpeg/Artifacts/
+Config/FFmpeg/Build/
+Config/FFmpeg/Downloads/
 *.xcuserstate
 *.xcscmblueprint
 *.xccheckout
