@@ -1281,6 +1281,9 @@ final class NotchDisplayCoordinator {
             isRecognizedFileDragGestureActive = true
             routeRecognizedFileDrag(at: point)
         } else {
+            fileDropLog.notice(
+                "phase=mouseUp nativeHoverHeld=\(self.nativeFileDragHoverDisplayID != nil) intakePresent=\(self.recognizedFileDragDisplayID != nil)"
+            )
             if let displayID = recognizedFileDragDisplayID {
                 surfaces[displayID]?.surface.endRecognizedFileDragGesture()
             }

@@ -5,8 +5,11 @@
 
 import AppKit
 import Observation
+import OSLog
 import QuartzCore
 import SwiftUI
+
+private let fileDropLog = Logger(subsystem: "hylo.Cascade", category: "FileDrop")
 
 /// NotchController renders and animates one panel anchored to one display.
 ///
@@ -74,6 +77,7 @@ final class NotchController: NotchDisplayPresenting {
     @ObservationIgnored private var dragHeartbeatSpring: Spring
     @ObservationIgnored private var dragHeartbeatPhase = 0
     @ObservationIgnored private var isRecognizedFileDragActive = false
+    @ObservationIgnored private var loggedFileDragWindowReady = false
     @ObservationIgnored private var isAttachingSecondary = false
     @ObservationIgnored private var presentedActivityID: String?
     @ObservationIgnored private var presentedSecondaryActivityID: String?
@@ -823,7 +827,12 @@ final class NotchController: NotchDisplayPresenting {
                 return
             }
             isRecognizedFileDragActive = true
+            loggedFileDragWindowReady = false
             updateFileDropIntakeFrame(for: activeDisplay)
+            let intake = activeDisplay.map(fileDragIntakeRegion(for:))
+            fileDropLog.notice(
+                "phase=panelReady recognized=true ignored=\(self.panel.ignoresMouseEvents) pointerInsidePanel=\(self.panel.frame.contains(point)) pointerInsideIntake=\(intake?.contains(point) == true) windowVisible=\(self.panel.isVisible)"
+            )
             if state.isClosed, !reducesMotion() {
                 dragHeartbeatPhase = 1
                 dragHeartbeatSpring.snap(to: 0)
@@ -1979,7 +1988,14 @@ final class NotchController: NotchDisplayPresenting {
 
         if isRecognizedFileDragActive, !isMissionControlShowing, let display = activeDisplay,
            fileDragIntakeRegion(for: display).contains(screenPoint) {
+            let ignoredPreviously = panel.ignoresMouseEvents
             panel.ignoresMouseEvents = false
+            if !loggedFileDragWindowReady {
+                loggedFileDragWindowReady = true
+                fileDropLog.notice(
+                    "phase=intakeWindowReady recognized=true ignoredPreviously=\(ignoredPreviously) pointerInsidePanel=\(self.panel.frame.contains(screenPoint)) pointerInsideIntake=true"
+                )
+            }
             return
         }
 

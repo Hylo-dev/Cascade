@@ -54,6 +54,8 @@ final class NotchHostView: NSView {
     private var cachedFileOffer: (sequence: Int, changeCount: Int, urls: [URL])?
     private var hoveredFileOfferKey: (sequence: Int, changeCount: Int)?
     private var rejectedFileOfferKey: (sequence: Int, changeCount: Int)?
+    private var loggedEnteredSequence: Int?
+    private var loggedUpdatedSequence: Int?
 
     var borderAppearance: NotchBorderAppearance { borderRenderer.appearance }
 
@@ -190,6 +192,9 @@ final class NotchHostView: NSView {
             cachedFileOffer = nil
             rejectedFileOfferKey = nil
         }
+        fileDropLog.notice(
+            "phase=readiness enabled=\(isEnabled) registered=\(self.registeredDraggedTypes.count) windowAttached=\(self.window != nil)"
+        )
     }
 
     /// A temporary destination used only while a native file drag is active.
@@ -481,11 +486,24 @@ final class NotchHostView: NSView {
     }
 
     override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
-        resolveFileOffer(sender)
+        let point = convert(sender.draggingLocation, from: nil)
+        if loggedEnteredSequence != sender.draggingSequenceNumber {
+            loggedEnteredSequence = sender.draggingSequenceNumber
+            fileDropLog.notice(
+                "phase=nativeEntered enabled=\(self.isFileDropEnabled) inside=\(self.containsFileDropPoint(point)) registered=\(self.registeredDraggedTypes.count) windowAttached=\(self.window != nil)"
+            )
+        }
+        return resolveFileOffer(sender)
     }
 
     override func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation {
         let point = convert(sender.draggingLocation, from: nil)
+        if loggedUpdatedSequence != sender.draggingSequenceNumber {
+            loggedUpdatedSequence = sender.draggingSequenceNumber
+            fileDropLog.notice(
+                "phase=nativeUpdated inside=\(self.containsFileDropPoint(point)) enabled=\(self.isFileDropEnabled)"
+            )
+        }
         guard containsFileDropPoint(point) else {
             clearFileDragHover()
             return []
