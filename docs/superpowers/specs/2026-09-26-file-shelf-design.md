@@ -2,9 +2,10 @@
 
 Data: 26 settembre 2026.
 
-Stato: specifica da revisionare prima del piano esecutivo. Le decisioni della
-sezione 2 sono confermate nella conversazione; le sezioni successive definiscono
-la proposta concreta per completarle. Nessun codice applicativo è stato modificato.
+Stato: specifica approvata dall'utente con «esatto, continua» dopo la revisione
+del documento. Le decisioni della sezione 2 e il completamento proposto nelle
+sezioni successive costituiscono la base del piano esecutivo. Le altre azioni
+della sezione 8 restano successive. Nessun codice applicativo è stato modificato.
 
 ## 1. Obiettivo
 
