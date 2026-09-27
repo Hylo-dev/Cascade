@@ -1,6 +1,6 @@
 # Frontiera delle decisioni di Cascade
 
-Aggiornata al 26 settembre 2026 e derivata dai metadati dei ticket. La [mappa](../../.scratch/cascade-product/map.md) resta canonica; questa vista non conserva le risoluzioni.
+Aggiornata al 27 settembre 2026 e derivata dai metadati dei ticket. La [mappa](../../.scratch/cascade-product/map.md) resta canonica; questa vista non conserva le risoluzioni.
 
 92 ticket: 69 risolti, 0 in corso, 7 disponibili, 16 bloccati.
 
@@ -27,7 +27,7 @@ La decisione di conservazione e il routing limitato al ripiano sono fissati dall
 
 Concluso anche [Preparare formati e avanzamento della conversione](../../.scratch/cascade-product/issues/86-file-workspace-conversion-planning.md): 64 test indipendenti passati, build firmata e riavvio PID34695 verificati. La conversione completa conserva i suoi requisiti nativi; nessuna attivazione produttiva.
 
-Nel [piano locale autorizzato](../superpowers/plans/2026-09-26-local-file-shelf.md), host, pagina/ingresso e composizione/uscita sono risolti dopo review root e test. L'A/B senza pin SkyLight ha ricevuto callback nativi e l'utente ha visto un file nel ripiano; il manifest contiene una voce, mentre il ricevitore finale è revisionato e testato, con prova manuale pendente. La [verifica finale](../../.scratch/cascade-product/issues/90-file-shelf-local-delivery.md) resta bloccata dal [drag](../../.scratch/cascade-product/issues/91-file-shelf-native-drop-regression.md). La [nuova pagina principale e UI](../../.scratch/cascade-product/issues/92-file-shelf-primary-and-clear.md) sono implementate e testate; anche la loro prova manuale resta necessaria per la consegna. Questa tranche non apre il launcher addon e non abilita Converti.
+Nel [piano locale autorizzato](../superpowers/plans/2026-09-26-local-file-shelf.md), host, pagina/ingresso e composizione/uscita sono risolti dopo review root e test. L'A/B senza pin SkyLight ha ricevuto callback nativi e l'utente ha visto un file nel ripiano; il manifest contiene una voce, mentre il ricevitore finale è revisionato e testato, con prova manuale pendente. La [verifica finale](../../.scratch/cascade-product/issues/90-file-shelf-local-delivery.md) resta bloccata dal [drag](../../.scratch/cascade-product/issues/91-file-shelf-native-drop-regression.md). Il [design del ripiano](../../.scratch/cascade-product/issues/92-file-shelf-primary-and-clear.md) e la correzione del drag rapido sono integrati in `48e682c`: review root, 1.447 test SwiftPM e 9 test app passati, preview esaminate, build firmata e riavvio PID 97319 verificati. La prova nativa nel notch e in Finder resta pendente; riserva settimanale 87%. Questa tranche non apre il launcher addon e non abilita Converti.
 
 Conclusi i tre task indipendenti: persistenza, componente condiviso e [bundle FFmpeg verificato](../../.scratch/cascade-product/issues/81-file-workspace-ffmpeg-bundle.md). Build firmata e riavvio della consegna precedente PID27461 verificati; riserva settimanale 93%. I ticket residui del ripiano attendono la qualifica nativa, senza riaprire il launcher.
 

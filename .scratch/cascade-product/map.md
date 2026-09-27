@@ -3,13 +3,17 @@
 ID: cascade-product
 Labels: wayfinder:map
 Status: open
-Updated: 2026-09-26
+Updated: 2026-09-27
 
 ## Destination
 
 Definire il piano applicativo globale di Cascade, basato sul codice esistente: un notch macOS modulare con widget e Live Activities forniti da app esterne. La destinazione globale è un insieme coerente di decisioni che consenta di scrivere le specifiche dei sottosistemi e ordinare i rilasci senza inventare requisiti. Per le tranche esecutive ammesse nelle Notes, la destinazione comprende implementazione, valutazione indipendente e consegna verificata degli incrementi addon autorizzati.
 
 ## Notes
+
+- Redesign `48e682c` revisionato dal root: ripiano entro la misura standard, richiudibile, drop centrato e fila orizzontale. Suite 1.447/1.447, test app 9/9 e preview native verificati; build firmata riavviata al PID 97319. I [ticket UI](issues/92-file-shelf-primary-and-clear.md) e [drag](issues/91-file-shelf-native-drop-regression.md) restano aperti solo per la QA nativa descritta nel [verbale](../../docs/superpowers/verification/2026-09-26-file-workspace-runtime.md). Riserva settimanale 87%.
+
+- Revisione UI/UX del 27 settembre: il [ticket 92](issues/92-file-shelf-primary-and-clear.md) segue il riferimento Musica e i principi Impeccable/Taste registrati in PRODUCT.md. Ripiano prioritario ma richiudibile, misura standard, top-band laterale e centro libero, drop centrato, ingresso centro→sinistra→ventaglio, elenco orizzontale senza pulsanti di azione e ritorno con freccia. Questa decisione sostituisce l'apertura permanente e Svuota nell'elenco descritti nello storico del 26 settembre. Il [ticket 91](issues/91-file-shelf-native-drop-regression.md) include la verifica del drop rapido prima dell'animazione.
 
 - Nuova richiesta esplicita dell'utente: [rendere il ripiano la pagina principale e semplificarne le carte](issues/92-file-shelf-primary-and-clear.md) finché contiene file, con **Svuota** sotto Converti in mazzo ed elenco, originali intatti, sola icona e nome senza sfondo e animazioni conservate. Integrazione `5d852e7` revisionata, 7 test app firmati e suite 1.443/1.443 passati; resa nel notch reale e Svuota attendono prova utente. La [regressione del drag](issues/91-file-shelf-native-drop-regression.md) resta un ticket distinto.
 

@@ -221,3 +221,11 @@ non cambiano grant, quote o requisiti del launcher.
 - [Apple: PDFPage](https://developer.apple.com/documentation/pdfkit/pdfpage).
 - [Apple: scrittura delle file promises](https://developer.apple.com/documentation/appkit/nsfilepromiseproviderdelegate/filepromiseprovider(_:writepromiseto:completionhandler:)).
 - [Apple: drop parziali](https://developer.apple.com/documentation/appkit/nsdragginginfo/numberofvaliditemsfordrop).
+
+## 12. Revisione UI/UX del 27 settembre 2026
+
+La richiesta esplicita aggiorna il primo incremento locale: priorità del ripiano finché occupato, **senza mantenere il notch sempre aperto**. Il riferimento è Musica per misura standard, luce diffusa, colore e comportamento. La fascia superiore resta utilizzabile ai lati del taglio fisico; il centro deve rimanere libero. Il flusso non può ingrandire il notch oltre la misura standard. Impeccable e Taste sono le guide di lavoro, adattate alla UI nativa e ai [principi Apple](https://developer.apple.com/videos/play/wwdc2023/10194/).
+
+La destinazione di drop usa icona grande e titolo centrati. L'ammissione deve essere pronta prima dell'animazione, anche nei trascinamenti veloci. Solo dopo una consegna accettata, il primo file compare al centro, si sposta a sinistra e apre il ventaglio. Click o scroll a due dita distendono i file in una fila orizzontale: i controlli di azione scompaiono e una freccia riporta alla vista con Converti/Svuota. I file mantengono icona e nome senza contenitore. Movimento ridotto evita traslazioni e ventaglio animato; Riduci trasparenza elimina i bagliori.
+
+Queste decisioni sostituiscono l'apertura permanente e i pulsanti nell'elenco della build del 26 settembre. Persistenza, sicurezza degli originali e disponibilità reale della conversione restano invariate.

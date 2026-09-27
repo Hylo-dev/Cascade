@@ -121,3 +121,13 @@ L'[eccezione approvata](../specs/2026-09-26-file-shelf-design.md#9-inserimento-i
 | VoiceOver/accessibilità e Riduci movimento nel notch reale | **Pending**: test unitari Riduci movimento passati, nessuna prova manuale nel notch aperto. |
 
 I ticket locali 91, 92 e 90 restano aperti: soluzione finale revisionata, testata, compilata e riavviata; la prova utente del nuovo drop e della UI del ripiano non è ancora arrivata. Lo screenshot della finestra ricevente trasparente non qualifica la UI. Le file promise in ingresso e Converti non sono disponibili. I ticket addon esterni 77/79/82/83/84/85 restano aperti. Riserva settimanale residua osservata: 89%.
+
+## Revisione del 27 settembre — build `48e682c`
+
+Implementazione con tre subagenti GPT-5.6 Sol, review e correzioni indipendenti del root. Il limite del ripiano usa `NotchConfiguration.expandedHeight`: configurazione corrente 440×144 pt esterni, contenuto 400×124 pt. Il contesto espone l'ostruzione centrale in coordinate SwiftUI; il ricevitore ammette un drop nativo già validato anche prima dell'espansione. Priorità del ripiano e apertura permanente sono ora separate.
+
+Il renderer usa icone Finder senza fondi, ingresso centro→sinistra→ventaglio, fila orizzontale con ritorno, selezione, paginazione e menu contestuali. Converti/Svuota sono solo nella vista del mazzo. Glow sul percorso nativo `notchGlassLights`, icona centrale di drop con Magic Replace e fallback; movimento e trasparenza ridotti rispettati. Root ha corretto geometria centrale, verso del ventaglio, cancellazione/completamento della sequenza, token monotoni e rimosso la vecchia lista verticale.
+
+Verifiche indipendenti: suite SwiftPM finale exit 0, 1.447/1.447 (885 runtime, 124 presentazione, 319 CascadeKit, 102 contratti, 17 CLI), `root-final-tests.log`; test app firmati exit 0, 9/9, `root-final-app-tests.log`; build firmata exit 0 con `BUILD SUCCEEDED`, confini SDK/codesign/link Applications verificati, `root-build.log`. Log in `.superpowers/sdd/2026-09-27-shelf-design/`. Preview PNG native di 1/4/5 file e fila orizzontale esaminate dal root a 400×124 pt; sono verifiche del renderer, non una cattura del notch fisico.
+
+Dopo Quit, nessun processo Cascade rimasto (`pgrep` exit 1). Rilancio verificato al PID 97319, 27 settembre 2026 15:26:52, dal bundle `CascadeFileShelf/Build/Products/Debug/Cascade.app`; `/Applications/Cascade.app` punta alla stessa build. Ricevitore pronto con tre tipi, Space attivo e finestra visibile. CUA continua a selezionare la finestra ricevente trasparente: la prova reale di drag veloce, gesto e resa nel notch resta richiesta all'utente. Nessuna nuova qualifica di Mission Control. Quota osservata 13% usata, 87% residua.
