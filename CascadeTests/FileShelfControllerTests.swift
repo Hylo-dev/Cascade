@@ -28,7 +28,9 @@ struct FileShelfControllerTests {
         await controller.acceptRegularFiles(files)
 
         #expect(controller.isOccupied)
-        #expect(controller.keepsExpandedPresentation)
+        #expect(controller.admissionSequence == 1)
+        #expect(!controller.keepsExpandedPresentation)
+        #expect(controller.contentHeight == 144)
         #expect(controller.presentation.snapshot.entries.count == 12)
         #expect(controller.presentation.snapshot.totalCount == 25)
         #expect(controller.presentation.actions.count <= 64)
@@ -79,6 +81,32 @@ struct FileShelfControllerTests {
         #expect(controller.presentation.snapshot.entries.isEmpty)
         controller.showHover(nil)
         #expect(controller.contentRevision == clearedRevision)
+    }
+
+    @MainActor
+    @Test
+    func admissionAcknowledgementIsMonotonicAndRejectsAStaleCallback() async throws {
+        let fixture = try FileShelfFixture()
+        let controller = FileShelfController(host: fixture.host, preferenceChanged: { _ in })
+        await controller.start()
+
+        await controller.acceptRegularFiles([
+            try fixture.file(name: "first.txt", contents: "first")
+        ])
+        #expect(controller.admissionSequence == 1)
+        #expect(controller.pendingAdmissionSequence == 1)
+        controller.consumeAdmissionAnimation(1)
+        #expect(controller.pendingAdmissionSequence == 0)
+
+        await controller.acceptRegularFiles([
+            try fixture.file(name: "second.txt", contents: "second")
+        ])
+        #expect(controller.admissionSequence == 2)
+        #expect(controller.pendingAdmissionSequence == 2)
+        controller.consumeAdmissionAnimation(1)
+        #expect(controller.pendingAdmissionSequence == 2)
+        controller.consumeAdmissionAnimation(2)
+        #expect(controller.pendingAdmissionSequence == 0)
     }
 
     @MainActor
@@ -191,6 +219,13 @@ struct FileShelfControllerTests {
 
         #expect(view.hitTest(CGPoint(x: 100, y: 80)) === view)
         #expect(view.hitTest(CGPoint(x: 20, y: 20)) == nil)
+    }
+
+    @Test
+    func deckScrollExpansionAcceptsEitherTrackpadAxisAfterIntentThreshold() {
+        #expect(!FileShelfDragView.shouldExpand(for: CGSize(width: 2, height: 2)))
+        #expect(FileShelfDragView.shouldExpand(for: CGSize(width: 4, height: 0)))
+        #expect(FileShelfDragView.shouldExpand(for: CGSize(width: 0, height: -4)))
     }
 
     private func write(_ provider: NSFilePromiseProvider, to url: URL) async -> (any Error)? {

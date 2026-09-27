@@ -9,6 +9,7 @@ import AppKit
 import Foundation
 import SwiftUI
 import Testing
+import UniformTypeIdentifiers
 
 @Suite
 struct FileWorkspacePresentationTests {
@@ -22,6 +23,7 @@ struct FileWorkspacePresentationTests {
         #expect(transforms.map(\.index) == [0, 1, 2, 3])
         #expect(transforms[0].rotationDegrees > 0)
         #expect(transforms.dropFirst().allSatisfy { $0.rotationDegrees < 0 })
+        #expect(transforms.map(\.xOffset) == [42, 8, -26, -60])
         #expect(FileWorkspaceLayout.overflowCount(totalCount: 40) == 36)
         #expect(FileWorkspaceLayout.overflowCount(totalCount: 4) == 0)
     }
@@ -114,16 +116,66 @@ struct FileWorkspacePresentationTests {
 
     @Test
     @MainActor
+    func reducedMotionConsumesAdmissionTokenOnce() throws {
+        let presentation = try workspace(totalCount: 4, mode: .deck)
+        var consumed: [UInt64] = []
+        let view = try CascadeFileWorkspace(
+            presentation,
+            assets  : PreviewAssets(),
+            dispatch: { _ in },
+            reduceMotion: true,
+            admissionSequence: 7,
+            onAdmissionAnimationConsumed: { consumed.append($0) },
+            centerObstructionFrame: CGRect(x: 108, y: 0, width: 184, height: 28)
+        )
+
+        _ = try render(
+            view.frame(width: 400, height: 124),
+            size: CGSize(width: 400, height: 124)
+        )
+        #expect(consumed == [7])
+    }
+
+    @Test
+    @MainActor
+    func animatedAdmissionCompletesOnceBeforeTheViewIsRemoved() async throws {
+        let presentation = try workspace(totalCount: 4, mode: .deck)
+        var consumed: [UInt64] = []
+        let content = try CascadeFileWorkspace(
+            presentation,
+            assets: PreviewAssets(),
+            dispatch: { _ in },
+            reduceMotion: false,
+            admissionSequence: 9,
+            onAdmissionAnimationConsumed: { consumed.append($0) }
+        )
+        let hostingView = NSHostingView(rootView: AnyView(content.frame(width: 400, height: 124)))
+        let window = NSWindow(
+            contentRect: CGRect(x: -10_000, y: -10_000, width: 400, height: 124),
+            styleMask: [.borderless], backing: .buffered, defer: false
+        )
+        window.contentView = hostingView
+        window.orderFront(nil)
+        defer { window.orderOut(nil) }
+        try await Task.sleep(for: .milliseconds(600))
+        #expect(consumed == [9])
+        hostingView.rootView = AnyView(EmptyView())
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(consumed == [9])
+    }
+
+    @Test
+    @MainActor
     func rendersRepresentativeWorkspacePreviews() throws {
         let fixtures: [(String, FileWorkspaceMode, Int, CGSize, Bool, Bool)] = [
-            ("deck-1", .deck, 1, CGSize(width: 360, height: 180), false, false),
-            ("deck-4", .deck, 4, CGSize(width: 420, height: 190), false, false),
-            ("deck-5", .deck, 5, CGSize(width: 420, height: 190), false, false),
-            ("list-40", .list, 40, CGSize(width: 560, height: 280), false, false),
+            ("deck-1", .deck, 1, CGSize(width: 400, height: 124), false, false),
+            ("deck-4", .deck, 4, CGSize(width: 400, height: 124), false, false),
+            ("deck-5", .deck, 5, CGSize(width: 400, height: 124), false, false),
+            ("list-40", .list, 40, CGSize(width: 400, height: 124), false, false),
             ("conversion-compact", .conversion, 4, CGSize(width: 440, height: 190), false, false),
             ("conversion-running-compact", .conversion, 5, CGSize(width: 440, height: 190), false, true),
             ("conversion-long-labels", .conversion, 4, CGSize(width: 680, height: 260), true, false),
-            ("deck-reduced-motion", .deck, 4, CGSize(width: 420, height: 190), false, false),
+            ("deck-reduced-motion", .deck, 4, CGSize(width: 400, height: 124), false, false),
         ]
         for fixture in fixtures {
             let presentation = try workspace(
@@ -136,7 +188,17 @@ struct FileWorkspacePresentationTests {
                 presentation,
                 assets  : PreviewAssets(),
                 dispatch: { _ in Issue.record("Preview must not dispatch") },
-                reduceMotion: fixture.0 == "deck-reduced-motion"
+                reduceMotion: fixture.0 == "deck-reduced-motion",
+                thumbnail: { entry in
+                    Image(nsImage: NSWorkspace.shared.icon(
+                        for: UTType(entry.typeIdentifier) ?? .data
+                    ))
+                },
+                conversionUnavailableExplanation: "La conversione sarà disponibile prossimamente",
+                clearAll: {},
+                centerObstructionFrame: fixture.3 == CGSize(width: 400, height: 124)
+                    ? CGRect(x: 108, y: 0, width: 184, height: 28)
+                    : nil
             )
             let image = try render(
                 view
@@ -162,7 +224,8 @@ struct FileWorkspacePresentationTests {
     @MainActor
     private func render<Content: View>(
         _ content: Content,
-        size     : CGSize
+        size     : CGSize,
+        waitDuration: TimeInterval = 0.25
     ) throws -> NSImage {
         let hostingView = NSHostingView(rootView: content)
         hostingView.frame = CGRect(origin: .zero, size: size)
@@ -175,7 +238,7 @@ struct FileWorkspacePresentationTests {
         window.contentView = hostingView
         window.setFrameOrigin(NSPoint(x: -10_000, y: -10_000))
         window.orderFront(nil)
-        RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        RunLoop.current.run(until: Date().addingTimeInterval(waitDuration))
         hostingView.layoutSubtreeIfNeeded()
         let bitmap = try #require(hostingView.bitmapImageRepForCachingDisplay(in: hostingView.bounds))
         hostingView.cacheDisplay(in: hostingView.bounds, to: bitmap)
@@ -238,10 +301,6 @@ struct FileWorkspacePresentationTests {
                     role      : .openList,
                     descriptor: ActionDescriptor(id: "open-list", label: "Open file list")
                 ))
-                built.append(try FileWorkspaceActionBinding(
-                    role      : .convert,
-                    descriptor: ActionDescriptor(id: "convert", label: "Convert files")
-                ))
             }
             if resolvedMode == .list {
                 built.append(try FileWorkspaceActionBinding(
@@ -254,10 +313,6 @@ struct FileWorkspacePresentationTests {
                         descriptor: ActionDescriptor(id: "next-page", label: "Load more files")
                     ))
                 }
-                built.append(try FileWorkspaceActionBinding(
-                    role      : .convert,
-                    descriptor: ActionDescriptor(id: "convert", label: "Convert files")
-                ))
                 for (index, entry) in entries.enumerated() {
                     built.append(try FileWorkspaceActionBinding(
                         role      : .select,

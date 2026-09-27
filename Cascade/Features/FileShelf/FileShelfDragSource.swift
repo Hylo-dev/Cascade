@@ -83,6 +83,7 @@ struct FileShelfDragSource: NSViewRepresentable {
     let content: AnyView
     let files: [PreparedFile]
     let accessibilityName: String
+    let expandsOnScroll: Bool
     let activate: @MainActor () -> Void
     let copy: @Sendable (PreparedFile, URL) async throws -> Void
 
@@ -91,6 +92,7 @@ struct FileShelfDragSource: NSViewRepresentable {
             content          : content,
             files            : files,
             accessibilityName: accessibilityName,
+            expandsOnScroll  : expandsOnScroll,
             activate         : activate,
             copy             : copy
         )
@@ -101,6 +103,7 @@ struct FileShelfDragSource: NSViewRepresentable {
             content          : content,
             files            : files,
             accessibilityName: accessibilityName,
+            expandsOnScroll  : expandsOnScroll,
             activate         : activate,
             copy             : copy
         )
@@ -125,20 +128,25 @@ final class FileShelfDragView: NSView, NSDraggingSource {
 
     private let hosting: NSHostingView<AnyView>
     private var files: [PreparedFile]
+    private var expandsOnScroll: Bool
     private var activate: @MainActor () -> Void
     private var copy: @Sendable (PreparedFile, URL) async throws -> Void
     private var downLocation: NSPoint?
     private var beganDrag = false
+    private var scrollDistance = CGSize.zero
+    private var activatedByScroll = false
 
     init(
         content          : AnyView,
         files            : [PreparedFile],
         accessibilityName: String,
+        expandsOnScroll  : Bool = false,
         activate         : @escaping @MainActor () -> Void,
         copy             : @escaping @Sendable (PreparedFile, URL) async throws -> Void
     ) {
         hosting = NSHostingView(rootView: content)
         self.files = files
+        self.expandsOnScroll = expandsOnScroll
         self.activate = activate
         self.copy = copy
         super.init(frame: .zero)
@@ -169,11 +177,17 @@ final class FileShelfDragView: NSView, NSDraggingSource {
         content          : AnyView,
         files            : [PreparedFile],
         accessibilityName: String,
+        expandsOnScroll  : Bool,
         activate         : @escaping @MainActor () -> Void,
         copy             : @escaping @Sendable (PreparedFile, URL) async throws -> Void
     ) {
         hosting.rootView = content
         self.files = files
+        if self.expandsOnScroll != expandsOnScroll {
+            scrollDistance = .zero
+            activatedByScroll = false
+        }
+        self.expandsOnScroll = expandsOnScroll
         self.activate = activate
         self.copy = copy
         setAccessibilityLabel(accessibilityName)
@@ -217,6 +231,32 @@ final class FileShelfDragView: NSView, NSDraggingSource {
         downLocation = nil
         beganDrag = false
         if shouldActivate { activate() }
+    }
+
+    override func scrollWheel(with event: NSEvent) {
+        guard expandsOnScroll else {
+            super.scrollWheel(with: event)
+            return
+        }
+        guard event.hasPreciseScrollingDeltas, event.momentumPhase.isEmpty else { return }
+        if event.phase == .began {
+            scrollDistance = .zero
+            activatedByScroll = false
+        }
+        scrollDistance.width += event.scrollingDeltaX
+        scrollDistance.height += event.scrollingDeltaY
+        if !activatedByScroll, Self.shouldExpand(for: scrollDistance) {
+            activatedByScroll = true
+            activate()
+        }
+        if event.phase == .ended || event.phase == .cancelled {
+            scrollDistance = .zero
+            activatedByScroll = false
+        }
+    }
+
+    nonisolated static func shouldExpand(for distance: CGSize) -> Bool {
+        hypot(distance.width, distance.height) >= 4
     }
 
     override func keyDown(with event: NSEvent) {

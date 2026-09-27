@@ -1296,7 +1296,7 @@ struct NotchControllerTests {
     }
 
     @Test
-    func contextualPageUsesItsDeclaredHeightAndExistingMaximum() throws {
+    func contextualPageNeverExceedsTheStandardExpandedHeight() throws {
         let fixture = ControllerFixture(reducesMotion: true)
         let page = ControllerContextualPage(contentHeight: 400)
         fixture.controller.start()
@@ -1317,9 +1317,36 @@ struct NotchControllerTests {
 
         let shape = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
         let bounds = try #require(shape.path?.boundingBoxOfPath)
-        #expect(bounds.height == NotchConfiguration.default.maximumActivityExpandedHeight)
+        #expect(bounds.height == NotchConfiguration.default.expandedHeight)
         #expect(page.contexts.count == 1)
-        #expect(page.contexts[0].availableSize.height < 240)
+        #expect(page.contexts[0].availableSize.height < NotchConfiguration.default.expandedHeight)
+    }
+
+    @Test
+    func contextualPageReceivesTheHardwareNotchAsALocalCenterObstruction() throws {
+        let fixture = ControllerFixture(reducesMotion: true)
+        let page = ControllerContextualPage(contentHeight: 400)
+        fixture.controller.start()
+        defer { fixture.controller.stop() }
+
+        fixture.controller.surface.applyPresentation(DisplayPresentation(
+            primary: nil,
+            secondary: nil,
+            notice: nil,
+            expanded: nil,
+            expandedIsLiveActivity: false,
+            showsWidgets: false,
+            contextualPage: page,
+            contextualPageIsSelected: true,
+            widgetContentRevision: 0,
+            style: .notch
+        ))
+
+        let context = try #require(page.contexts.last)
+        #expect(context.centerObstructionFrame.width > 0)
+        #expect(context.centerObstructionFrame.midX == context.availableSize.width / 2)
+        #expect(context.centerObstructionFrame.minY == 0)
+        #expect(context.centerObstructionFrame.maxY < context.availableSize.height)
     }
 
     @Test
@@ -1558,7 +1585,7 @@ struct NotchControllerTests {
     }
 
     @Test
-    func contextualPresentationRefreshesAnAlreadyArmedIntakeToItsFullHeight() {
+    func contextualPresentationRefreshesAnAlreadyArmedIntakeToItsStandardHeight() {
         let fixture = ControllerFixture(reducesMotion: true)
         fixture.controller.start()
         defer { fixture.controller.stop() }
@@ -1582,7 +1609,7 @@ struct NotchControllerTests {
         ))
 
         let windowPoint = fixture.panel.convertPoint(
-            fromScreen: CGPoint(x: 500, y: 570)
+            fromScreen: CGPoint(x: 500, y: 670)
         )
         let hitPoint = fixture.hostView.superview.map {
             $0.convert(windowPoint, from: nil)

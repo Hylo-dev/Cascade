@@ -11,11 +11,14 @@ import UniformTypeIdentifiers
 @MainActor
 final class FileShelfController: NotchContextualPage {
     let id = "cascade.file-shelf"
-    let contentHeight: CGFloat = 187
+    /// Match the ordinary Music Live Activity instead of growing the notch for the shelf.
+    let contentHeight: CGFloat = 144
     let accessibilityLabel = "Ripiano"
-    var keepsExpandedPresentation: Bool { isOccupied }
+    var keepsExpandedPresentation: Bool { false }
 
     private(set) var contentRevision: UInt64 = 0
+    private(set) var admissionSequence: UInt64 = 0
+    private var consumedAdmissionSequence: UInt64 = 0
     private(set) var isOccupied = false
     private(set) var isClearing = false
     private(set) var statusMessage: String?
@@ -39,6 +42,10 @@ final class FileShelfController: NotchContextualPage {
     private var loadGeneration: UInt64 = 0
     private var admissionTask: Task<Void, Never>?
     private var deliveryRefreshTask: Task<Void, Never>?
+
+    var pendingAdmissionSequence: UInt64 {
+        admissionSequence == consumedAdmissionSequence ? 0 : admissionSequence
+    }
 
     private enum LocalAction {
         case openList
@@ -105,6 +112,7 @@ final class FileShelfController: NotchContextualPage {
         started = false
         admissionTask?.cancel()
         admissionTask = nil
+        consumedAdmissionSequence = admissionSequence
         admissionInFlight = false
         isClearing = false
         hoverURLs = nil
@@ -179,6 +187,7 @@ final class FileShelfController: NotchContextualPage {
         do {
             _ = try await host.addOriginals(urls)
             guard started else { return }
+            admissionSequence &+= 1
             hoverURLs = nil
             hoverIDs.removeAll()
             admissionInFlight = false
@@ -288,6 +297,7 @@ final class FileShelfController: NotchContextualPage {
                     content          : content,
                     files            : self.filesForDrag(from: entry.id),
                     accessibilityName: entry.name,
+                    expandsOnScroll  : self.presentation.mode == .deck,
                     activate         : { [weak self] in
                         guard let self, let action else { return }
                         Task { await self.perform(action) }
@@ -306,20 +316,34 @@ final class FileShelfController: NotchContextualPage {
             },
             conversionUnavailableExplanation: "Conversione non ancora disponibile",
             clearAll: clearAllAction,
-            clearAllDisabled: isClearing || admissionInFlight
+            clearAllDisabled: isClearing || admissionInFlight,
+            admissionSequence: pendingAdmissionSequence,
+            onAdmissionAnimationConsumed: { [weak self] sequence in
+                self?.consumeAdmissionAnimation(sequence)
+            },
+            centerObstructionFrame: context.centerObstructionFrame
         )
         return AnyView(
             VStack(spacing: 3) {
-                if presentation.snapshot.entries.isEmpty {
-                    Label("Trascina qui i file", systemImage: "tray.and.arrow.down")
-                        .font(.headline)
+                if hoverURLs != nil || presentation.snapshot.entries.isEmpty {
+                    VStack(spacing: 0) {
+                        Color.clear.frame(height: context.centerObstructionFrame.height)
+                        FileShelfDropTarget(
+                            symbol: admissionInFlight
+                                ? "arrow.down.doc.fill"
+                                : hoverURLs == nil ? "tray.and.arrow.down" : "tray.and.arrow.down.fill",
+                            title: admissionInFlight
+                                ? "Aggiunta in corso…"
+                                : hoverURLs == nil ? "Trascina qui i file" : "Rilascia per aggiungere"
+                        )
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .accessibilityHint("Rilascia file locali regolari per aggiungerli al ripiano")
+                    }
                 } else if let workspace {
                     workspace
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                if let statusMessage {
+                if hoverURLs == nil, let statusMessage {
                     Text(statusMessage)
                         .font(.caption2)
                         .foregroundStyle(statusMessage == "Rilascia per aggiungere" ? Color.secondary : Color.orange)
@@ -330,8 +354,15 @@ final class FileShelfController: NotchContextualPage {
             }
             .frame(
                 width : context.availableSize.width,
-                height: min(contentHeight, context.availableSize.height)
+                height: context.availableSize.height
             )
+            .background {
+                FileShelfGlassLightEmitter(
+                    isOccupied: isOccupied,
+                    isHovering: hoverURLs != nil,
+                    isAdmitting: admissionInFlight
+                )
+            }
         )
     }
 
@@ -474,6 +505,14 @@ final class FileShelfController: NotchContextualPage {
         }
     }
 
+    func consumeAdmissionAnimation(_ sequence: UInt64) {
+        guard sequence != 0,
+              admissionSequence == sequence,
+              consumedAdmissionSequence != sequence else { return }
+        consumedAdmissionSequence = sequence
+        rebuildPresentation()
+    }
+
     private func remove(_ id: UUID) async {
         guard let host else { return }
         guard let entry = snapshot.entries.first(where: { $0.id == id }),
@@ -598,6 +637,61 @@ final class FileShelfController: NotchContextualPage {
 @MainActor
 private struct EmptyShelfAssets: ContentAssetResolving {
     func image(for assetID: String) -> Image? { nil }
+}
+
+private struct FileShelfDropTarget: View {
+    let symbol: String
+    let title: String
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        VStack(spacing: 9) {
+            MusicControlSymbol(
+                symbol      : symbol,
+                size        : 40,
+                reduceMotion: reduceMotion
+            )
+            .frame(width: 48, height: 44)
+
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .lineLimit(1)
+        }
+        .foregroundStyle(.white)
+        .multilineTextAlignment(.center)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct FileShelfGlassLightEmitter: View {
+    let isOccupied: Bool
+    let isHovering: Bool
+    let isAdmitting: Bool
+
+    var body: some View {
+        Color.clear
+            .notchGlassLights(lights)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
+    private var lights: [GlassLight] {
+        guard isOccupied || isHovering else { return [] }
+        let intensity = isAdmitting ? 0.52 : isHovering ? 0.38 : 0.22
+        return [
+            try? GlassLight(
+                x: 0.18, y: 0.28, radius: 0.34,
+                red: 0.24, green: 0.56, blue: 1,
+                intensity: intensity
+            ),
+            try? GlassLight(
+                x: 0.82, y: 0.36, radius: 0.28,
+                red: 0.27, green: 0.82, blue: 0.95,
+                intensity: intensity * 0.7
+            ),
+        ].compactMap(\.self)
+    }
 }
 
 @MainActor

@@ -1167,14 +1167,22 @@ final class NotchDisplayCoordinator {
     }
 
     private func handleFileDrop(_ urls: [URL], on displayID: CGDirectDisplayID) -> Bool {
-        guard displayID == expandedDisplayID,
-              contextualPage != nil,
+        guard surfaces[displayID] != nil,
+              let contextualPage,
               let fileDropOnDrop else { return false }
         let accepted = fileDropOnDrop(urls)
         fileDropLog.info("phase=drop accepted=\(accepted) count=\(urls.count)")
         fileDropOnHover?(nil)
         nativeFileDragHoverDisplayID = nil
-        endFileDropPreview(keepContextual: accepted)
+        if accepted, expandedDisplayID != displayID {
+            pendingExplicitPageSelection = (
+                displayID,
+                .contextual(contextualPage.id, .manual)
+            )
+            requestExpansion(on: displayID, activityID: nil, trigger: .click)
+        } else {
+            endFileDropPreview(keepContextual: accepted)
+        }
         setInteractionHold(.drag, on: displayID, active: false)
         clearRecognizedFileDrag(keepContextual: accepted)
         return accepted

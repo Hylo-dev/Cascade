@@ -238,6 +238,28 @@ struct NotchDisplayCoordinatorTests {
     }
 
     @Test
+    func validatedDropBeforePreviewExpansionStillReachesTheShelf() {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10])
+        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        let url = URL(fileURLWithPath: "/tmp/report.txt")
+        var dropped: [[URL]] = []
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
+        fixture.coordinator.configureFileDrop(
+            onHover: { _ in },
+            onDrop: { dropped.append($0); return true },
+            onUnsupported: {}
+        )
+        fixture.coordinator.start()
+
+        #expect(fixture.coordinator.expandedDisplayID == nil)
+        #expect(fixture.surfaces[10]?.sendFileDrop([url]) == true)
+        #expect(dropped == [[url]])
+        #expect(fixture.coordinator.expandedDisplayID == 10)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPage === shelf)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == true)
+    }
+
+    @Test
     func recognizedFileDragRoutesToPointedDisplayAndLockClearsIt() {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
         fixture.coordinator.setContextualPage(

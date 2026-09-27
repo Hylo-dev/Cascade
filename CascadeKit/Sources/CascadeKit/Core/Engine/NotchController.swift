@@ -1661,7 +1661,7 @@ final class NotchController: NotchDisplayPresenting {
             let hardwareNotchHeight = display.hasHardwareNotch ? resting.height : 0
             let requested = hardwareNotchHeight
                 + expandedTopInset + expandedBottomInset + contentHeight
-            return max(resting.height, min(normalizedActivityMaximumHeight(), requested))
+            return max(resting.height, min(normalizedMaximumExpandedHeight(), requested))
         }
         guard let activity = displayedPrimaryActivity else {
             return max(resting.height, normalizedMaximumExpandedHeight())
@@ -1856,14 +1856,24 @@ final class NotchController: NotchDisplayPresenting {
                 x: centerX - halfWidth + expandedHorizontalInset,
                 y: contentTopY - height + expandedBottomInset,
                 width: max(0, halfWidth * 2 - expandedHorizontalInset * 2),
-                height: max(
-                    0,
-                    height - hardwareNotchHeight - expandedTopInset - expandedBottomInset
-                )
+                height: max(0, height - expandedTopInset - expandedBottomInset)
             )
+            let obstructionFrame: CGRect
+            if display.hasHardwareNotch {
+                let obstructionHeight = max(0, hardwareNotchHeight - expandedTopInset)
+                obstructionFrame = CGRect(
+                    x: (pageFrame.width - hardwareNotchWidth) / 2,
+                    y: 0,
+                    width: hardwareNotchWidth,
+                    height: obstructionHeight
+                )
+            } else {
+                obstructionFrame = .zero
+            }
             hostView.setContent(
                 page.makeContentView(in: NotchContextualPageContext(
-                    availableSize: pageFrame.size
+                    availableSize: pageFrame.size,
+                    centerObstructionFrame: obstructionFrame
                 )),
                 frame: pageFrame,
                 isVisible: true
