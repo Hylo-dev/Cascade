@@ -83,6 +83,13 @@ struct NotchGlassLightHostTests {
 
         func setColor(_ color: Color) {}
         func setLights(_ lights: [GlassLight]) { self.lights = lights }
-        func apply(path: CGPath, canvasBounds: CGRect, progress: CGFloat, isVisible: Bool) {}
+        func apply(
+            path        : CGPath,
+            body        : NotchGlassBody,
+            target      : NotchGlassBody,
+            canvasBounds: CGRect,
+            progress    : CGFloat,
+            isVisible   : Bool
+        ) {}
     }
 }

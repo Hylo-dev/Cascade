@@ -301,18 +301,35 @@ struct NotchHostViewTests {
     }
 
     @Test
-    func glassCoordinatesPreserveTheNotchAndDetachedActivityGap() {
-        let outline = CGMutablePath()
-        outline.addRect(CGRect(x: 100, y: 120, width: 200, height: 80))
-        outline.addRect(CGRect(x: 330, y: 140, width: 20, height: 20))
-        let shape = NotchGlassShape(outline: outline)
-        let path = shape.path(in: CGRect(x: 0, y: 0, width: 250, height: 80))
+    func glassBodyCoversTheNotchBodyAndRoundsOnlyItsBottomCorners() {
+        let body = NotchGlassBody(
+            geometry: NotchGeometry(leftExtent: 100, rightExtent: 60, height: 80, bottomCornerRadius: 30, topCornerRadius: 12),
+            centerX : 200,
+            topY    : 200
+        )
+        // Asymmetric sides, and one radius above the top edge.
+        #expect(body.rect == CGRect(x: 100, y: 120, width: 160, height: 110))
+        #expect(body.cornerRadius == 30)
+    }
 
-        #expect(path.contains(CGPoint(x: 100, y: 10)))
-        #expect(path.contains(CGPoint(x: 240, y: 50)))
-        #expect(!path.contains(CGPoint(x: 220, y: 50)))
-        #expect(!path.contains(CGPoint(x: 240, y: 25)))
-        #expect(!path.contains(CGPoint(x: 240, y: 65)))
+    @Test
+    func glassTransformMapsTheLaidOutBodyOntoTheCurrentOne() {
+        let reference = NotchGlassBody(rect: CGRect(x: 60, y: 40, width: 280, height: 180), cornerRadius: 44)
+        let current   = NotchGlassBody(rect: CGRect(x: 110, y: 150, width: 180, height: 60), cornerRadius: 18)
+        for anchor in [CGPoint.zero, CGPoint(x: 0.5, y: 0.5), CGPoint(x: 1, y: 1)] {
+            let transform = current.transform(from: reference, anchor: anchor)
+            // A layer renders local p at origin + A + T(p − A).
+            func rendered(_ p: CGPoint) -> CGPoint {
+                let a = CGPoint(x: anchor.x * reference.rect.width, y: anchor.y * reference.rect.height)
+                let moved = CGPoint(x: p.x - a.x, y: p.y - a.y).applying(transform)
+                return CGPoint(x: reference.rect.minX + a.x + moved.x, y: reference.rect.minY + a.y + moved.y)
+            }
+            let bottomLeft = rendered(.zero)
+            let topRight = rendered(CGPoint(x: reference.rect.width, y: reference.rect.height))
+            #expect(abs(bottomLeft.x - current.rect.minX) < 0.001 && abs(bottomLeft.y - current.rect.minY) < 0.001)
+            #expect(abs(topRight.x - current.rect.maxX) < 0.001 && abs(topRight.y - current.rect.maxY) < 0.001)
+        }
+        #expect(reference.transform(from: reference, anchor: .zero).isIdentity)
     }
 
     @Test

@@ -1536,24 +1536,45 @@ final class NotchController: NotchDisplayPresenting {
             min(configuration.restingTopCornerRadius, resting.height / 2, resting.width / 2)
         )
         let compactWidth = Double(compactExtension(for: display))
-        let compactProgress = compactWidth > 0
-            ? min(1, max(0, max(compactSpring.value, compactTrailingSpring.value) / compactWidth))
-            : 0
+        let expandedHalfWidth = effectiveExpandedHalfWidth(for: display)
+        let compactCenterHalfWidth = display.hasHardwareNotch
+            ? resting.width / 2 - restingAttachment
+            : compactCenterGap(for: display) / 2
 
-        let resolved = NotchGeometry.resolve(
-            configuration           : configuration,
-            restingHalfWidth        : resting.width / 2 - restingAttachment,
-            restingHeight           : resting.height,
-            compactLeadingExtension : max(0, CGFloat(compactSpring.value)),
-            compactTrailingExtension: max(0, CGFloat(compactTrailingSpring.value)),
-            compactCenterHalfWidth  : display.hasHardwareNotch
-                ? resting.width / 2 - restingAttachment
-                : compactCenterGap(for: display) / 2,
-            compactProgress         : CGFloat(compactProgress),
-            expandedHalfWidth       : effectiveExpandedHalfWidth(for: display),
-            resolvedHeight          : renderedHeight,
-            leadingProgress         : max(0, CGFloat(leadingSpring.value)),
-            trailingProgress        : max(0, CGFloat(trailingSpring.value))
+        // One resolution for the springs' current values and one for their
+        // targets: the glass lays out at the destination and only transforms
+        // toward it per frame (see NotchGlassRenderer).
+        func resolveGeometry(
+            compact        : Double,
+            compactTrailing: Double,
+            height         : CGFloat,
+            leading        : Double,
+            trailing       : Double
+        ) -> NotchGeometry {
+            let compactProgress = compactWidth > 0
+                ? min(1, max(0, max(compact, compactTrailing) / compactWidth))
+                : 0
+            return NotchGeometry.resolve(
+                configuration           : configuration,
+                restingHalfWidth        : resting.width / 2 - restingAttachment,
+                restingHeight           : resting.height,
+                compactLeadingExtension : max(0, CGFloat(compact)),
+                compactTrailingExtension: max(0, CGFloat(compactTrailing)),
+                compactCenterHalfWidth  : compactCenterHalfWidth,
+                compactProgress         : CGFloat(compactProgress),
+                expandedHalfWidth       : expandedHalfWidth,
+                resolvedHeight          : height,
+                leadingProgress         : max(0, CGFloat(leading)),
+                trailingProgress        : max(0, CGFloat(trailing))
+            )
+        }
+
+        let resolved = resolveGeometry(
+            compact        : compactSpring.value,
+            compactTrailing: compactTrailingSpring.value,
+            height         : renderedHeight,
+            leading        : leadingSpring.value,
+            trailing       : trailingSpring.value
         )
 
         let safeExtent = max(0, display.frame.width / 2 - resolved.topCornerRadius)
@@ -1564,6 +1585,22 @@ final class NotchController: NotchDisplayPresenting {
             height            : resolved.height + heartbeat * 3,
             bottomCornerRadius: resolved.bottomCornerRadius,
             topCornerRadius   : resolved.topCornerRadius
+        )
+        let targets = morphTargets(for: display)
+        let resolvedTarget = resolveGeometry(
+            compact        : targets.compact,
+            compactTrailing: targets.compactTrailing,
+            height         : min(maximumHeight * 1.18, max(resting.height, targets.height)),
+            leading        : targets.leading,
+            trailing       : targets.trailing
+        )
+        let targetSafeExtent = max(0, display.frame.width / 2 - resolvedTarget.topCornerRadius)
+        let targetGeometry = NotchGeometry(
+            leftExtent        : min(targetSafeExtent, resolvedTarget.leftExtent),
+            rightExtent       : min(targetSafeExtent, resolvedTarget.rightExtent),
+            height            : resolvedTarget.height,
+            bottomCornerRadius: resolvedTarget.bottomCornerRadius,
+            topCornerRadius   : resolvedTarget.topCornerRadius
         )
         sizeCalibration.update(geometry: geometry)
 
@@ -1578,6 +1615,7 @@ final class NotchController: NotchDisplayPresenting {
         // (non-flipped) coordinates that is `bounds.maxY`, centered.
         hostView.apply(
             geometry       : geometry,
+            targetGeometry : targetGeometry,
             centerX        : hostView.bounds.midX,
             topY           : hostView.bounds.maxY,
             isChromeVisible: shouldDrawChrome(for: display),

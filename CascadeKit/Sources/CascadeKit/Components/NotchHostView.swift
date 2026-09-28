@@ -53,6 +53,8 @@ final class NotchHostView: NSView {
     private var accessibilityObserver: NSObjectProtocol?
     private var isChromeVisible = false
     private var materialProgress: CGFloat = 0
+    private var glassBody   = NotchGlassBody.zero
+    private var glassTarget = NotchGlassBody.zero
     private var glassLightSources = NotchGlassLightSources()
     private var isFileDropEnabled = false
     private var fileDropExclusionFrame: CGRect = .zero
@@ -353,6 +355,7 @@ final class NotchHostView: NSView {
     /// correct even when the chrome itself is hidden.
     func apply(
         geometry       : NotchGeometry,
+        targetGeometry : NotchGeometry? = nil,
         centerX        : CGFloat,
         topY           : CGFloat,
         isChromeVisible: Bool,
@@ -435,6 +438,8 @@ final class NotchHostView: NSView {
         detachedActivityHost.alphaValue = min(1, progress)
 
         shapeLayer.path       = path
+        glassBody   = NotchGlassBody(geometry: geometry, centerX: centerX, topY: topY)
+        glassTarget = NotchGlassBody(geometry: targetGeometry ?? geometry, centerX: centerX, topY: topY)
         self.isChromeVisible  = isChromeVisible
         self.materialProgress = materialProgress.isFinite ? min(1, max(0, materialProgress)) : 0
         updateChromeMaterial()
@@ -461,6 +466,8 @@ final class NotchHostView: NSView {
         shapeLayer.isHidden = !isChromeVisible || usesGlass
         glassRenderer.apply(
             path        : path,
+            body        : glassBody,
+            target      : glassTarget,
             canvasBounds: bounds,
             progress    : materialProgress,
             isVisible   : isChromeVisible && usesGlass

@@ -18,7 +18,14 @@ import SwiftUI
 /// https://developer.apple.com/documentation/swiftui/roundedcornerstyle/continuous
 enum ContinuousNotchCorner {
 
-    private static let segments = makeSegments()
+    private static let profile  = makeProfile()
+    private static let segments = profile.segments
+
+    /// spanPerRadius is how far a native continuous corner of nominal radius 1
+    /// reaches along each edge. A native view drawing its own continuous
+    /// corners, such as NSGlassEffectView, matches this profile at span `s`
+    /// when given the nominal radius `s / spanPerRadius`.
+    static let spanPerRadius = profile.span
 
     /// append adds the cached corner to the current contour. Only CGPoint
     /// transforms and Core Graphics emission run on each morph frame; SwiftUI
@@ -39,7 +46,7 @@ enum ContinuousNotchCorner {
     /// makeSegments extracts the lower-left quarter by coordinates instead of
     /// relying on a private element count or the contour's starting element.
     /// Path.forEach copies its values, so no borrowed CGPath pointers escape.
-    private static func makeSegments() -> ContiguousArray<CubicSegment> {
+    private static func makeProfile() -> (segments: ContiguousArray<CubicSegment>, span: CGFloat) {
         let nativePath = RoundedRectangle(
             cornerRadius: 1,
             style       : .continuous
@@ -127,24 +134,24 @@ enum ContinuousNotchCorner {
         // Normalize direction as well: the outline can begin on any edge and
         // a future native renderer may reverse its winding direction.
         if first.start.x > first.start.y {
-            return ContiguousArray(nativeSegments.reversed().map { segment in
+            return (ContiguousArray(nativeSegments.reversed().map { segment in
                 CubicSegment(
                     start   : segment.end.applying(scale),
                     control1: segment.control2.applying(scale),
                     control2: segment.control1.applying(scale),
                     end     : segment.start.applying(scale)
                 )
-            })
+            }), span)
         }
 
-        return ContiguousArray(nativeSegments.map { segment in
+        return (ContiguousArray(nativeSegments.map { segment in
             CubicSegment(
                 start   : segment.start.applying(scale),
                 control1: segment.control1.applying(scale),
                 control2: segment.control2.applying(scale),
                 end     : segment.end.applying(scale)
             )
-        })
+        }), span)
     }
 
     /// interpolate elevates line/quadratic segments to cubics during cache
