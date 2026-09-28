@@ -1,4 +1,4 @@
-# Caricare widget SwiftUI esterni: meccanismi e limiti
+# Load external SwiftUI widgets: mechanisms and limits
 
 ID: 01
 Parent: cascade-product
@@ -11,15 +11,15 @@ Blocked by: none
 
 ## Question
 
-Quali meccanismi permettono a Cascade, distribuito fuori dal Mac App Store, di scoprire e ospitare widget SwiftUI forniti da altre app o installati come moduli in una cartella, senza ricompilare l'host? Confrontare Swift Package/import, bundle o framework dinamici, IPC/XPC e UI ospitata in un processo separato. Distinguere possibilità documentate, limiti di ABI e type identity, firma e hardened runtime, isolamento reale, compatibilità e ciò che richiede una prova. Chiarire perché conformare un protocollo dentro un'altra app non produce da solo discovery o trasporto della UI. Indicare le alternative tecnicamente percorribili, senza scegliere al posto dell'utente il formato definitivo.
+Which mechanisms let Cascade, distributed outside the Mac App Store, discover and host SwiftUI widgets provided by other apps or installed as modules in a folder, without recompiling the host? Compare Swift Package/import, dynamic bundles or frameworks, IPC/XPC and UI hosted in a separate process. Distinguish documented possibilities, ABI and type identity limits, signing and hardened runtime, real isolation, compatibility and what requires a test. Clarify why conforming to a protocol inside another app does not by itself produce discovery or transport of the UI. Indicate the technically viable alternatives, without choosing the final format on the user's behalf.
 
 ## Answer
 
-Ricerca risolta il 4 settembre 2026 da codex-research-01. [Report con fonti e matrice delle alternative](../../../docs/wayfinder/research/swiftui-extensions.md).
+Research resolved on 4 September 2026 by codex-research-01. [Report with sources and matrix of the alternatives](../../../docs/wayfinder/research/swiftui-extensions.md).
 
-- Import e SwiftPM servono alla build; non forniscono discovery automatico in un altro processo.
-- Un bundle binario può fornire UI SwiftUI caricata nell'host, con vincoli di firma/ABI e senza isolamento da crash o blocchi del main thread.
-- ExtensionKit offre UI remota pubblica. Le classi base sono disponibili dal 13; le nuove API di extension point e discovery richiedono macOS 26. La distribuzione separata avviene tramite app contenitore e richiede abilitazione utente.
-- Compatibilità del percorso legacy su 14/15, firme di sviluppatori diversi e comportamento dentro il pannello del notch richiedono una prova; la scelta del formato rimane aperta.
+- Import and SwiftPM serve the build; they do not provide automatic discovery in another process.
+- A binary bundle can provide SwiftUI UI loaded into the host, with signing/ABI constraints and without isolation from crashes or main-thread blocks.
+- ExtensionKit offers public remote UI. The base classes are available since 13; the new extension point and discovery APIs require macOS 26. Separate distribution happens through a container app and requires user enablement.
+- Compatibility of the legacy path on 14/15, signatures from different developers and behavior inside the notch panel require a test; the choice of format remains open.
 
-Contesto riproducibile: branch `codex/research/cascade-sdk-20260904`, commit `7a89398`, report conservato anche nel worktree `/private/tmp/cascade-wayfinder-sdk`. Nessun prototipo eseguito e nessuna garanzia di compatibilità dedotta dalla sola disponibilità delle API.
+Reproducible context: branch `codex/research/cascade-sdk-20260904`, commit `7a89398`, report also kept in the worktree `/private/tmp/cascade-wayfinder-sdk`. No prototype was run and no compatibility guarantee was inferred from API availability alone.

@@ -1,4 +1,4 @@
-# Definire e implementare i messaggi dedicati alle invocazioni dei servizi
+# Define and implement the dedicated service invocation messages
 
 ID: 30
 Parent: cascade-product
@@ -11,16 +11,16 @@ Blocked by: 28
 
 ## Question
 
-Implementare DTO e codec limitati per richiesta, risposta correlata e invocazione al provider, conservando i limiti esistenti e senza abilitare un nuovo protocollo nel runtime.
+Implement bounded DTOs and codecs for the request, the correlated response and the invocation to the provider, keeping the existing limits and without enabling a new protocol in the runtime.
 
 ## Context
 
-[Piano esecutivo e limiti](../../../docs/superpowers/plans/2026-09-18-addon-service-invocation-frames.md). Tranche tecnica C3 autorizzata dalla prosecuzione dell’utente; distinta dal ciclo SDK in revisione. La prima implementazione usa una copia isolata; integrazione nel package e consegna seguono la chiusura della tranche precedente.
+[Execution plan and limits](../../../docs/superpowers/plans/2026-09-18-addon-service-invocation-frames.md). C3 technical tranche authorized by the user's continuation; separate from the SDK cycle under review. The first implementation uses an isolated copy; integration into the package and delivery follow the closing of the previous tranche.
 
 ## Progress
 
-Presa in carico con Codex. Nessun handler, adapter, bootstrap o nuova negoziazione attivata.
+Taken on with Codex. No handler, adapter, bootstrap or new negotiation activated.
 
 ## Answer
 
-Cinque file importati dall’harness isolata e revisionati PASS. 990 test / 90 suite, build firmata e riavvio verificato. [Evidenze e confini di correlazione](../../../docs/superpowers/verification/2026-09-18-addon-service-invocation-frames.md). Profilo di sola sintassi, negoziazione invariata; handler e client completi restano separati.
+Five files imported from the isolated harness and reviewed PASS. 990 tests / 90 suites, signed build and restart verified. [Evidence and correlation boundaries](../../../docs/superpowers/verification/2026-09-18-addon-service-invocation-frames.md). Syntax-only profile, negotiation unchanged; complete handlers and clients remain separate.

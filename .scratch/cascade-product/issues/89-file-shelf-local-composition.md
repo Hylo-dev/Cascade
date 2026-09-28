@@ -1,4 +1,4 @@
-# Comporre la pagina locale e il drag in uscita per elemento
+# Compose the local page and the per-item outgoing drag
 
 ID: 89
 Parent: cascade-product
@@ -11,8 +11,8 @@ Blocked by: 87, 88
 
 ## Question
 
-Eseguire la fase C del [piano locale approvato](../../../docs/superpowers/plans/2026-09-26-local-file-shelf.md): collegare facade app, host, motore e renderer condiviso per mazzo quattro carte +N ed elenco animato persistenti. Accettare URL regolari in ingresso e rifiutare chiaramente promise in ingresso nella prima tranche. Provider nativi in uscita copiano per elemento; rimuovere solo dopo successo individuale, conservando originali e voci non consegnate. Converti resta disabilitato con spiegazione, senza capacità simulata. Test mirati e drag reali, review root e commit selettivo.
+Run phase C of the [approved local plan](../../../docs/superpowers/plans/2026-09-26-local-file-shelf.md): connect the app facade, host, engine and shared renderer for a persistent four-card +N deck and animated list. Accept regular URLs as input and clearly refuse incoming promises in the first tranche. Outgoing native providers copy per item; remove only after individual success, preserving the originals and the undelivered entries. Convert stays disabled with an explanation, with no simulated capability. Targeted tests and real drags, root review and selective commit.
 
 ## Answer
 
-Implementato in `e25e75c` e accettato dopo review e correzioni root: facade app, renderer condiviso, ingresso URL regolari, rifiuto visibile per ingressi non supportati, stato persistente degli errori parziali e uscita per elemento. Il completamento del drag da solo non prova una copia: solo il callback di scrittura riuscita della singola promise, anche tardivo, rimuove quella voce; originali e voci fallite restano. Converti è disabilitato con spiegazione. Test app firmati indipendenti root: 6/6 passati con override da riga di comando del team Apple Development (`root-local-app-tests-signed.log`); suite SwiftPM precedente 1.416/1.416 passata, renderer non modificato dopo. Build finale, riavvio e QA Finder restano nel ticket di consegna; launcher addon e conversione completa non sono qualificati.
+Implemented in `e25e75c` and accepted after the root's review and fixes: app facade, shared renderer, regular URL input, visible refusal for unsupported inputs, persistent state of partial errors and per-item output. The drag completing on its own does not prove a copy: only the successful-write callback of the single promise, even a late one, removes that entry; originals and failed entries remain. Convert is disabled with an explanation. Independent root signed app tests: 6/6 passed with a command-line override of the Apple Development team (`root-local-app-tests-signed.log`); earlier SwiftPM suite 1,416/1,416 passed, renderer not modified afterwards. Final build, restart and Finder QA remain in the delivery ticket; the addon launcher and full conversion are not qualified.

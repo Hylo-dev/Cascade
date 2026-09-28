@@ -1,4 +1,4 @@
-# Mostrare il consumo di un servizio tramite SDK pubblico
+# Show consuming a service through the public SDK
 
 ID: 27
 Parent: cascade-product
@@ -11,16 +11,16 @@ Blocked by: 24
 
 ## Question
 
-Creare un esempio sorgente indipendente di provider e consumer di un servizio sintetico, con selezione dei grant forniti dall’host, richieste e completamenti correlati, payload limitati e test pubblici. Distinguere il comportamento del consumer dalla vera risoluzione REQUIRES e dalla revoca nativa.
+Create an independent source example of a provider and a consumer of a synthetic service, with selection of the grants provided by the host, correlated requests and completions, bounded payloads and public tests. Distinguish the consumer's behavior from the real REQUIRES resolution and from native revocation.
 
 ## Context
 
-Incremento C12 della prosecuzione autorizzata il18settembre. [Piano](../../../docs/superpowers/plans/2026-09-18-service-consumer-source.md). Il servizio è dimostrativo e non viene attribuito al provider StandaloneFocus.
+C12 increment of the continuation authorized on 18 September. [Plan](../../../docs/superpowers/plans/2026-09-18-service-consumer-source.md). The service is a demonstration and is not attributed to the StandaloneFocus provider.
 
 ## Progress
 
-Disegno esaminato; implementazione da completare.
+Design examined; implementation to be completed.
 
 ## Answer
 
-Esempio sorgente con contratto condiviso, provider sintetico e consumer implementato. Build indipendente, manifest validati e 16 test passati; revisione indipendente PASS, inclusi i miglioramenti del rendezvous e delle asserzioni degli errori. [Verifica e limiti](../../../docs/superpowers/verification/2026-09-18-service-consumer-source.md). Grant e messaggi sono esercitati con API pubbliche; risoluzione REQUIRES, revoca canonica e parità native restano da qualificare.
+Source example with shared contract, synthetic provider and consumer implemented. Independent build, validated manifests and 16 tests passed; independent review PASS, including the improvements to the rendezvous and to the error assertions. [Verification and limits](../../../docs/superpowers/verification/2026-09-18-service-consumer-source.md). Grants and messages are exercised with public APIs; REQUIRES resolution, canonical revocation and native parity remain to be qualified.

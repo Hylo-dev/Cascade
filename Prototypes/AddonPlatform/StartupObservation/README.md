@@ -1,35 +1,35 @@
-# Osservare un provider durante lo startup
+# Observing a provider during startup
 
-Fixture isolata: processo root → broker XPC sandboxed → estensione esterna.
-Un osservatore separato autentica il provider prima che il canale applicativo sia
-pronto, poi il runner registra l'uscita con kqueue e chiede una nuova challenge.
-Soltanto dopo la conferma viene iniettato lo stop/crash. Nessun launcher produttivo.
+Isolated fixture: root process → sandboxed XPC broker → external extension.
+A separate observer authenticates the provider before the application channel is
+ready, then the runner registers the exit with kqueue and requests a new challenge.
+Only after the confirmation is the stop/crash injected. No production launcher.
 
-Due varianti della stessa prova:
+Two variants of the same test:
 
-- `--build-only`: blocco dentro `AppExtension.init`.
-- `--build-premain`: blocco in un costruttore C dell'immagine principale, prima
-  dell'entry point dell'estensione. La guardia e l'UUID sono riusati dal codice Swift.
-  Non copre l'intervallo fra creazione del processo e quel costruttore.
-- `--build-premain-resistant`: stessa fase, con SIGTERM ignorato; il classifier
-  richiede l'uscita SIGKILL, distinta dalla guardia SIGALRM.
+- `--build-only`: block inside `AppExtension.init`.
+- `--build-premain`: block in a C constructor of the main image, before
+  the extension's entry point. The guard and the UUID are reused by the Swift code.
+  It does not cover the interval between process creation and that constructor.
+- `--build-premain-resistant`: same phase, with SIGTERM ignored; the classifier
+  requires the SIGKILL exit, distinct from the SIGALRM guard.
 
-Il runner produce un bundle firmato e un osservatore in una directory DerivedData
-univoca; poi `python3 run_startup.py --run PRODUCTS` esegue il controllo negativo,
-lo sblocco verso il normale canale e quattro guasti: stop/crash broker, quit/crash root.
-Arresto al primo risultato non PASS o cleanup incompleto. Deadline di misura 8 secondi;
-le guardie indipendenti scadono più tardi e non possono produrre un PASS.
+The runner produces a signed bundle and an observer in a unique DerivedData
+directory; then `python3 run_startup.py --run PRODUCTS` runs the negative control,
+the unblock to the normal channel and four faults: broker stop/crash, root quit/crash.
+Stop at the first non-PASS result or incomplete cleanup. Measurement deadline 8 seconds;
+the independent guards expire later and cannot produce a PASS.
 
-Il trasporto diagnostico usa messaggi Mach con audit trailer del kernel, requisito
-firma leaf + identifier + CDHash della build esatta, percorso del bundle e nonce
-nuovo dopo EV_RECEIPT. L'osservatore registra un nome univoco tramite la API pubblica
-ma deprecata `bootstrap_register`; il solo provider di prova aggiunge il lookup
-esatto a quel nome. App Sandbox resta attiva. Non è il profilo del prodotto e non
-è una decisione sul futuro trasporto SDK. Il teardown verifica che il nome non
-sia più risolvibile, senza cancellare servizi altrui.
+The diagnostic transport uses Mach messages with the kernel's audit trailer, a signing
+requirement of leaf + identifier + CDHash of the exact build, the bundle path and a fresh
+nonce after EV_RECEIPT. The observer registers a unique name through the public
+but deprecated `bootstrap_register` API; only the test provider adds the exact
+lookup for that name. App Sandbox stays active. It is not the product profile and it is not
+a decision on the future SDK transport. Teardown verifies that the name is no longer
+resolvable, without deleting other parties' services.
 
-L'iniziale tentativo AF_UNIX nel container non ha superato il bind: EPERM prima
-di avviare il provider. Nessun grant TCC è stato modificato per aggirarlo.
+The initial AF_UNIX attempt in the container did not get past the bind: EPERM before
+the provider was launched. No TCC grant was modified to work around it.
 
-Risultati, build, entitlements, hash, tentativi falliti e limiti sono conservati
+Results, builds, entitlements, hashes, failed attempts and limits are retained
 in `docs/superpowers/verification/2026-09-25-addon-startup-observation.md`.

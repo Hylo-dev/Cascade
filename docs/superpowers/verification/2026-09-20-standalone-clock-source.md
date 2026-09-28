@@ -1,29 +1,29 @@
-# StandaloneClock — incremento sorgente
+# StandaloneClock: source increment
 
-20 settembre 2026. [Ticket e ambito](../../../.scratch/cascade-product/issues/44-standalone-clock-source.md).
+20 September 2026. [Ticket and scope](../../../.scratch/cascade-product/issues/44-standalone-clock-source.md).
 
-## Consegna
+## Delivery
 
-[StandaloneClock](../../../Examples/StandaloneClock/README.md) è una libreria SwiftPM indipendente, con manifest validato e provider che usa soltanto CascadeAddonSDK/CascadeContracts. Pubblica ora e minuti in forma dichiarativa, con identità assegnata dall'host e revisione monotona. Non crea tick o lavoro residente: il disegno dell'orologio appartiene all'host. La scadenza di ogni pubblicazione è 24 ore; il provider non pianifica un rinnovo.
+[StandaloneClock](../../../Examples/StandaloneClock/README.md) is an independent SwiftPM library, with a validated manifest and a provider that uses only CascadeAddonSDK/CascadeContracts. It publishes hours and minutes in declarative form, with host-assigned identity and a monotonic revision. It creates no tick or resident work: drawing the clock belongs to the host. The expiry of each publication is 24 hours; the provider does not schedule a renewal.
 
-Implementazione Sol medium, revisione e integrazione root con Ponytail. Il controllo SDK include esplicitamente il nuovo package; la build ufficiale eredita automaticamente questo controllo prima della compilazione.
+Sol medium implementation, root review and integration with Ponytail. The SDK check explicitly includes the new package; the official build automatically inherits this check before compilation.
 
-## Evidenze
+## Evidence
 
-Le prove complete e il diff circoscritto sono in [20260920-clock-source](../../../.scratch/codex-addon/20260920-clock-source/).
+The full evidence and the scoped diff are in [20260920-clock-source](../../../.scratch/codex-addon/20260920-clock-source/).
 
-- Build della copia indipendente e **3 test Swift**: PASS, ripetuti dal root. Manifest, pubblicazioni e ricreazione con revisione precedente, azioni sconosciute, assegnazioni errate, eventi finiti e stop, tempo non finito ed esaurimento revisioni. Tutti i client di capacità falliscono se invocati.
-- Confronto SDK: **78 sorgenti pubblici identici** agli input dell'audit corrente; nessun target privato nella fixture SDK.
-- Build protetta: **5 fixture PASS**, incluso un import privato aggiunto a Clock che ferma lo script prima della build/firma/aggiornamento Applications. La fixture positiva raggiunge intenzionalmente un progetto Xcode assente, senza compilare l'app.
-- Audit sul checkout: **4 package / 11 target / 90 sorgenti Swift / 140 import, PASS**. Input ricontrollati dopo la consegna: invariati.
-- Suite completa del checker: **21 test PASS, nessuno saltato**, in 317 secondi. Il record del riavvio resta distinto dalle prove sorgente.
+- Build of the independent copy and **3 Swift tests**: PASS, repeated by root. Manifest, publications and recreation with a previous revision, unknown actions, wrong assignments, finished events and stop, non-finite time and revision exhaustion. All capability clients fail if invoked.
+- SDK comparison: **78 public sources identical** to the current audit's inputs; no private target in the SDK fixture.
+- Guarded build: **5 fixtures PASS**, including a private import added to Clock that stops the script before the build/signing/Applications update. The positive fixture intentionally reaches a missing Xcode project, without compiling the app.
+- Audit on the checkout: **4 packages / 11 targets / 90 Swift sources / 140 imports, PASS**. Inputs rechecked after the delivery: unchanged.
+- Full checker suite: **21 tests PASS, none skipped**, in 317 seconds. The relaunch record remains distinct from the source evidence.
 
-La prima invocazione delle fixture build mancava del DEVELOPER_DIR richiesto e ha fallito nel setup; il log è conservato separatamente. L'empty-target iniziale del worker non è una regressione comportamentale. Il nuovo controllo del manifest Clock è invece verificato RED→GREEN: prima raggiungeva la valutazione del toolchain senza controllare Clock, ora rifiuta subito un suo manifest mancante.
+The first invocation of the build fixtures lacked the required DEVELOPER_DIR and failed in setup; the log is preserved separately. The worker's initial empty-target is not a behavioral regression. The new Clock manifest check is instead verified RED→GREEN: before, it reached the toolchain evaluation without checking Clock; now it immediately rejects a missing Clock manifest.
 
-## Limiti
+## Limits
 
-Il macOS minimo dichiarato resta 14; le prove sono locali con Xcode-beta su macOS27 arm64. Nessuna qualifica di altri OS, processo addon nativo, firma di un contenitore, uscita fisica, trasporto OS o parità bundled/external. Il ClockWidget produttivo e la composizione dell'app restano quelli precedenti. Il launcher e C0d rimangono bloccati. C6 non è concluso.
+The declared minimum macOS remains 14; the tests are local with Xcode-beta on macOS27 arm64. No qualification of other OSes, native addon process, container signing, physical exit, OS transport or bundled/external parity. The production ClockWidget and the app's composition remain the previous ones. The launcher and C0d remain blocked. C6 is not concluded.
 
-Non essendoci cambiamenti al codice dell'app, questa consegna non produce un nuovo binario Cascade. Il riavvio usa la build di sviluppo firmata già collegata in /Applications. Le cache temporanee del build/test Clock sono eliminate dopo la verifica, conservando copia sorgente, hash, comandi e risultati.
+Since there are no changes to the app's code, this delivery produces no new Cascade binary. The relaunch uses the signed development build already linked in /Applications. The temporary caches of the Clock build/test are deleted after the verification, preserving the source copy, hashes, commands and results.
 
-Riavvio concluso: firma deep/strict verificata, chiusura normale PID90193, nuovo PID34140 dal percorso Applications atteso, stabile per5 secondi. [Record](../../../.scratch/codex-addon/20260920-clock-source/restart-evidence.json). Ultimo budget osservato3% settimanale, sotto20%. Nessun agente lasciato attivo.
+Relaunch completed: deep/strict signature verified, normal quit of PID90193, new PID34140 from the expected Applications path, stable for5 seconds. [Record](../../../.scratch/codex-addon/20260920-clock-source/restart-evidence.json). Last observed budget3% weekly, under20%. No agent left running.

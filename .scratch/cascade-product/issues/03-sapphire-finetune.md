@@ -1,4 +1,4 @@
-# Valutare glass e audio dai sorgenti di Sapphire e FineTune
+# Evaluate glass and audio from the Sapphire and FineTune sources
 
 ID: 03
 Parent: cascade-product
@@ -11,15 +11,15 @@ Blocked by: none
 
 ## Question
 
-Come realizzano Sapphire il trattamento glass e FineTune la gestione audio per app? Leggere i sorgenti, oltre ai README. Individuare renderer, API, permessi, minimi di sistema, eventuale driver/helper, routing, EQ, limiti del percorso audio e costi quando inattivo o attivo. Identificare anche le integrazioni pertinenti di Sapphire senza importare tutta la sua lista di funzioni nel prodotto. Riportare fatti verificati e riferimenti a commit/file; distinguere ispirazione funzionale da possibile riuso, annotando le licenze dichiarate senza dare per autorizzata una copia.
+How does Sapphire implement its glass treatment, and FineTune its per-app audio management? Read the sources, beyond the READMEs. Identify renderer, APIs, permissions, system minimums, any driver/helper, routing, EQ, limits of the audio path and costs when idle or active. Also identify Sapphire's relevant integrations without importing its whole feature list into the product. Report verified facts and references to commits/files; distinguish functional inspiration from possible reuse, noting the declared licenses without taking a copy as authorized.
 
 ## Answer
 
-Ricerca risolta il 4 settembre 2026 da codex-research-03. [Report sui sorgenti con riferimenti ai commit](../../../docs/wayfinder/research/sapphire-finetune.md).
+Research resolved on 4 September 2026 by codex-research-03. [Source report with commit references](../../../docs/wayfinder/research/sapphire-finetune.md).
 
-- Sapphire usa NSGlassEffectView su macOS 26, con manipolazioni interne aggiuntive; sui sistemi precedenti adotta un fallback NSVisualEffectView. La somiglianza esatta alla Siri dell'allegato resta da valutare visivamente.
-- FineTune usa process taps e aggregate HAL per volume per app, routing e output multipli, senza un driver aggiuntivo nel percorso studiato. Il motore audio deve rimanere indipendente dalla visibilità del widget.
-- La primitiva Core Audio taps richiede macOS 14.2; il progetto FineTune esaminato imposta 15.4, mentre il README indica 15.0. Nessuna compatibilità completa di quel codice con Cascade su macOS 14 è stata dimostrata.
-- Il codice studiato comprende API private, percorsi di recupero e gestione della concorrenza che non costituiscono garanzie trasferibili. La documentazione Apple corregge inoltre un commento del sorgente sul dispatch del callback audio.
+- Sapphire uses NSGlassEffectView on macOS 26, with additional internal manipulations; on earlier systems it adopts an NSVisualEffectView fallback. The exact resemblance to the Siri in the attachment is still to be evaluated visually.
+- FineTune uses process taps and HAL aggregates for per-app volume, routing and multiple outputs, without an additional driver in the path studied. The audio engine must remain independent of the widget's visibility.
+- The Core Audio taps primitive requires macOS 14.2; the FineTune project examined sets 15.4, while the README states 15.0. No full compatibility of that code with Cascade on macOS 14 has been demonstrated.
+- The code studied includes private APIs, recovery paths and concurrency handling that do not constitute transferable guarantees. Apple's documentation also corrects a source comment about the dispatch of the audio callback.
 
-Contesto riproducibile: branch `codex/research/cascade-references-20260904`, commit `6de9c6635dfa54db5eea4a073ad85a950d1612e1`, worktree `/private/tmp/cascade-wayfinder-references`. Nessuna app di riferimento è stata eseguita; nessun test audio o di compatibilità effettuato. Le prove necessarie restano decisioni/prototipi successivi.
+Reproducible context: branch `codex/research/cascade-references-20260904`, commit `6de9c6635dfa54db5eea4a073ad85a950d1612e1`, worktree `/private/tmp/cascade-wayfinder-references`. No reference app was run; no audio or compatibility test was performed. The necessary tests remain later decisions/prototypes.

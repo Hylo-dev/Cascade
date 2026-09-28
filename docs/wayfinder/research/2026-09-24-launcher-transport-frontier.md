@@ -1,67 +1,67 @@
-# Launcher e trasporto autenticato — prosecuzione del 24 settembre 2026
+# Launcher and authenticated transport: continuation of 24 September 2026
 
-**Esito: punto 1 ancora bloccato, nessun launcher produttivo abilitato.** La richiesta di procedere riprende il lavoro tecnico; conserva la decisione di non accettare processi gestiti orfani. Questo rapporto registra nuove verifiche delle API e del raccordo al runtime. Non è una specifica approvata di un nuovo launcher né una prova nativa.
+**Verdict: item 1 still blocked, no production launcher enabled.** The request to proceed resumes the technical work; it keeps the decision not to accept orphaned managed processes. This report records new checks of the APIs and of the wiring into the runtime. It is neither an approved specification of a new launcher nor a native probe.
 
-**Aggiornamento successivo:** l'utente ha poi autorizzato una [prova nativa XPC separata](../../superpowers/verification/2026-09-24-addon-xpc-lifetime.md), ora conclusa. L'uscita del client termina il servizio bloccato nelle esecuzioni osservate; la cancellazione della connessione con client vivo non lo termina nei due secondi misurati. Il testo sotto conserva il contesto della ricerca precedente. Il launcher resta non qualificato.
+**Later update:** the user then authorized a [separate native XPC probe](../../superpowers/verification/2026-09-24-addon-xpc-lifetime.md), now concluded. Client exit terminates the blocked service in the observed runs; cancelling the connection while the client is alive does not terminate it within the two seconds measured. The text below keeps the context of the earlier research. The launcher remains not qualified.
 
-## Due problemi distinti
+## Two distinct problems
 
-1. Possedere la durata del processo dalla creazione, anche se il supervisore muore prima di `main` o dell'aggancio del tracing; fermare il lavoro non cooperativo e osservare l'uscita del processo esatto.
-2. Autenticare il mittente dei messaggi e legare i messaggi all'incarnazione, alla versione e ai grant ammessi dal runtime, con limiti e revoca effettivi.
+1. Owning the process lifetime from creation, even if the supervisor dies before `main` or before the tracing attach; stopping noncooperative work and observing the exit of the exact process.
+2. Authenticating the sender of messages and binding messages to the incarnation, the version and the grants admitted by the runtime, with effective limits and revocation.
 
-Un risultato positivo sul secondo problema non conclude il primo. La [decisione vigente](../../../.scratch/cascade-product/issues/22-managed-process-exit-proof.md) non va riaperta per ripetere una richiesta di eccezione già rifiutata.
+A positive result on the second problem does not settle the first. The [decision in force](../../../.scratch/cascade-product/issues/22-managed-process-exit-proof.md) must not be reopened to repeat an exception request already refused.
 
-## Risultati nuovi e loro limiti
+## New results and their limits
 
-### Spawn sospeso
+### Suspended spawn
 
-L'[esame distinto di spawn, exec e fork](2026-09-24-spawn-managed-lifetime.md) confronta SDK pubblico e sorgenti XNU fissati a una revisione. `POSIX_SPAWN_START_SUSPENDED` non costituisce un vincolo di uscita alla morte del genitore. `SETEXEC` non aggiunge quel vincolo e un modello basato sull'eredità del tracing attraverso fork non è qualificato. Non si introduce una prova che lasci intenzionalmente un processo sospeso contando sul solo genitore per ripulirlo.
+The [separate examination of spawn, exec and fork](2026-09-24-spawn-managed-lifetime.md) compares the public SDK and XNU sources pinned to a revision. `POSIX_SPAWN_START_SUSPENDED` does not constitute an exit constraint on parent death. `SETEXEC` does not add that constraint, and a model based on inheritance of tracing through fork is not qualified. No probe is introduced that intentionally leaves a process suspended, relying on the parent alone to clean it up.
 
-### Servizio XPC legato al client: pista distinta da SMAppService
+### Client-bound XPC service: a lead distinct from SMAppService
 
-La [panoramica Apple di XPC](https://developer.apple.com/documentation/xpc) descrive il servizio XPC di applicazione come legato alla durata del client, con uscita del servizio alla morte del client. Questo è un indizio positivo distinto dalla persistenza di LaunchAgent/LaunchDaemon registrati tramite ServiceManagement. Il precedente esito negativo su `launchd`/SMAppService non prova che ogni servizio XPC abbia lo stesso limite.
+Apple's [XPC overview](https://developer.apple.com/documentation/xpc) describes the application XPC service as tied to the client's lifetime, with the service exiting on client death. This is a positive indication distinct from the persistence of LaunchAgent/LaunchDaemon registered through ServiceManagement. The earlier negative result on `launchd`/SMAppService does not prove that every XPC service has the same limit.
 
-Restano da stabilire la copertura dell'avvio prima del primo messaggio, l'arresto esplicito mentre Cascade resta aperta e l'osservazione autorevole dell'uscita. La cancellazione della connessione è asincrona e non interrompe un handler già in corso: non è un'API di terminazione del processo. Fonte locale: `xpc/connection.h`, righe 585–612, nell'SDK macOS di Xcode-beta; [API Apple](https://developer.apple.com/documentation/xpc/xpc_connection_cancel(_:)).
+What remains to be established is coverage of launch before the first message, explicit stop while Cascade stays open, and authoritative observation of exit. Connection cancellation is asynchronous and does not interrupt a handler already running: it is not a process termination API. Local source: `xpc/connection.h`, lines 585–612, in the Xcode-beta macOS SDK; [Apple API](https://developer.apple.com/documentation/xpc/xpc_connection_cancel(_:)).
 
-Il manuale pubblico `xpcservice.plist(5)` dell'SDK descrive la discovery dei servizi inclusi nell'app e nei framework da essa usati. Non è una specifica per registrare un `.xpc` arbitrario installato dopo la firma di Cascade. Non è stato identificato in questa ricognizione un percorso documentato che combini pacchetti di editori esterni, assenza di codice addon nel processo grafico, isolamento per owner e durata gestita. Un servizio fisso incluso in Cascade non dimostrerebbe da solo la parità con addon esterni. Fonte: SDK `usr/share/man/man5/xpcservice.plist.5`, righe 16–39; [struttura dei bundle Apple](https://developer.apple.com/documentation/bundleresources/placing-content-in-a-bundle).
+The SDK's public `xpcservice.plist(5)` manual describes discovery of services embedded in the app and in the frameworks it uses. It is not a specification for registering an arbitrary `.xpc` installed after Cascade was signed. This survey did not identify a documented path that combines packages from external publishers, no addon code in the graphical process, per-owner isolation and managed lifetime. A fixed service embedded in Cascade would not by itself demonstrate parity with external addons. Source: SDK `usr/share/man/man5/xpcservice.plist.5`, lines 16–39; [Apple bundle structure](https://developer.apple.com/documentation/bundleresources/placing-content-in-a-bundle).
 
-La pista XPC rimane **non qualificata**, non dimostrata impossibile. Non viene trasformata in un adapter di produzione sulla base della sola descrizione generale della durata.
+The XPC lead remains **not qualified**, not demonstrated impossible. It is not turned into a production adapter on the basis of the general description of lifetime alone.
 
-### ExtensionFoundation non offre una correzione già dimostrata
+### ExtensionFoundation does not offer an already demonstrated fix
 
-L'interfaccia pubblica `AppExtensionProcess` nell'SDK esaminato espone `invalidate`, creazione di connessioni/sessioni e callback di interruzione, senza una distinta operazione pubblica di arresto forzato. La [documentazione di invalidate](https://developer.apple.com/documentation/extensionfoundation/appextensionprocess/invalidate()) descrive la terminazione all'ultima connessione. La [fixture locale precedente](../../superpowers/verification/2026-09-09-addon-runtime-P0.md) conserva però il fallimento reale con worker non cooperativo anche dopo invalidazione di entrambi i canali e rilascio dei riferimenti. Non si riclassifica quel risultato come PASS e non si ripete la stessa prova senza una nuova ipotesi verificabile.
+The public `AppExtensionProcess` interface in the SDK examined exposes `invalidate`, creation of connections/sessions and interruption callbacks, without a distinct public forced-stop operation. The [invalidate documentation](https://developer.apple.com/documentation/extensionfoundation/appextensionprocess/invalidate()) describes termination at the last connection. The [earlier local fixture](../../superpowers/verification/2026-09-09-addon-runtime-P0.md), however, keeps the real failure with a noncooperative worker even after invalidation of both channels and release of the references. That result is not reclassified as PASS, and the same probe is not repeated without a new verifiable hypothesis.
 
-### Autenticazione XPC: controllo dei messaggi ricevuti
+### XPC authentication: checking received messages
 
-L'SDK espone `xpc_connection_set_peer_code_signing_requirement` da macOS 12, quindi senza innalzare il minimo compilato di Cascade. Il requisito viene verificato sui messaggi **ricevuti**. Non garantisce che un messaggio in uscita non sia consegnato a un peer non autorizzato. L'[interpretazione DTS di Apple](https://developer.apple.com/forums/thread/837286) conferma questa distinzione; `xpc/connection.h`, righe 772–803, ne documenta il comportamento. La [guida DTS all'autenticazione](https://developer.apple.com/forums/thread/681053) raccomanda le API pubbliche di code-signing requirement e, per i messaggi C XPC, `SecCodeCreateWithXPCMessage`.
+The SDK exposes `xpc_connection_set_peer_code_signing_requirement` since macOS 12, so without raising Cascade's compiled minimum. The requirement is checked on **received** messages. It does not guarantee that an outgoing message is not delivered to an unauthorized peer. [Apple's DTS interpretation](https://developer.apple.com/forums/thread/837286) confirms this distinction; `xpc/connection.h`, lines 772–803, documents its behavior. The [DTS authentication guide](https://developer.apple.com/forums/thread/681053) recommends the public code-signing requirement APIs and, for C XPC messages, `SecCodeCreateWithXPCMessage`.
 
-Conseguenza per C1: non inviare grant, dati privati o comandi con effetti come primo messaggio assumendo che il controllo del peer protegga anche l'invio. Il bootstrap deve avere contenuto non sensibile; prima dell'ammissione serve una strategia completa che vincoli la destinazione autorizzata anche rispetto a sostituzione, exec e trasferimento degli endpoint. Un semplice saluto iniziale autenticato non prova che gli invii successivi mantengano la stessa destinazione. Questo rapporto non sceglie né inventa un nuovo protocollo crittografico per colmare il problema.
+Consequence for C1: do not send grants, private data or commands with side effects as the first message on the assumption that the peer check also protects sending. The bootstrap must have non-sensitive content; before admission, a complete strategy is needed that binds the authorized destination also against replacement, exec and endpoint transfer. A simple authenticated initial greeting does not prove that later sends keep the same destination. This report neither chooses nor invents a new cryptographic protocol to fill the gap.
 
-## Raccordo effettivo al codice
+## Actual wiring into the code
 
-Il grafo MCP non contiene il progetto Cascade; è stato usato il fallback sul filesystem.
+The MCP graph does not contain the Cascade project; the filesystem fallback was used.
 
-- [`AddonRuntimeTransport.swift`](../../../CascadeKit/Sources/CascadeRuntime/AddonRuntimeTransport.swift) dichiara ancora esplicitamente l'assenza di un conformer produttivo di `AddonRuntimeAdapter`.
-- L'adapter attuale ha handoff sincrono e limitato, ingresso con proprietà esclusiva, receipt e rilascio fisico. Storage, asset, invocazioni e sottoscrizioni condividono la capacità. La vecchia bozza `send(event) async -> output` non basta a rappresentare il contratto corrente.
-- [`Package.swift`](../../../CascadeKit/Package.swift) non contiene un target di trasporto nativo. [`CascadeServices.start`](../../../Cascade/CascadeServices.swift) registra ancora `ClockWidget` direttamente.
-- Il [piano C1](../../superpowers/plans/2026-09-10-addon-runtime-completion.md) richiede C0 ammesso per l'adapter reale. Aggiungere un conformer simulato o un altro launcher privo di controllo della durata non soddisfa questo prerequisito.
+- [`AddonRuntimeTransport.swift`](../../../CascadeKit/Sources/CascadeRuntime/AddonRuntimeTransport.swift) still explicitly declares the absence of a production conformer of `AddonRuntimeAdapter`.
+- The current adapter has a synchronous, bounded handoff, ingress with exclusive ownership, receipt and physical release. Storage, assets, invocations and subscriptions share the capacity. The old `send(event) async -> output` draft is not enough to represent the current contract.
+- [`Package.swift`](../../../CascadeKit/Package.swift) contains no native transport target. [`CascadeServices.start`](../../../Cascade/CascadeServices.swift) still registers `ClockWidget` directly.
+- The [C1 plan](../../superpowers/plans/2026-09-10-addon-runtime-completion.md) requires C0 to be admitted for the real adapter. Adding a simulated conformer or another launcher lacking lifetime control does not satisfy this prerequisite.
 
-## Condizione concreta per riprendere l'implementazione
+## Concrete condition for resuming implementation
 
-Serve un meccanismo pubblico documentato o una nuova architettura dimostrabile che unisca:
+What is needed is a documented public mechanism or a new demonstrable architecture that combines:
 
-1. proprietà della durata dalla creazione del processo, senza aggancio tardivo;
-2. stop del processo esatto mentre l'host vive, con prova della sua uscita;
-3. conservazione di sandbox, firma e identità per owner;
-4. supporto ai pacchetti esterni senza caricarne codice nel processo grafico;
-5. ammissione autenticata e capacità limitata compatibili con l'adapter corrente.
+1. lifetime ownership from process creation, without a late attach;
+2. stop of the exact process while the host lives, with proof of its exit;
+3. preservation of sandbox, signing and per-owner identity;
+4. support for external packages without loading their code into the graphical process;
+5. authenticated admission and bounded capacity compatible with the current adapter.
 
-La prima proposta che soddisfa questi punti va trasformata in un esperimento firmato finito e revisionabile, poi misurata. Ripetere parser, simulatori, prove di EOF o l'invalidazione già fallita non risolverebbe il prerequisito.
+The first proposal that satisfies these points must be turned into a finite, reviewable signed experiment, then measured. Repeating parsers, simulators, EOF probes or the invalidation that already failed would not resolve the prerequisite.
 
-### Domanda tecnica pronta per Apple DTS — non inviata
+### Technical question ready for Apple DTS: not sent
 
 > We are building a macOS 14+ host for separately signed native addon packages. Addon code must remain outside the GUI process, with App Sandbox and Hardened Runtime preserved. We require managed-process cleanup after host or supervisor death, including startup before main, plus explicit termination of an unresponsive addon while the host remains alive. We distinguish IPC invalidation and a signal request from observed process exit. Direct-child spawn leaves a pre-attachment lifetime gap; the current local ExtensionFoundation fixture does not stop a noncooperative worker after all connections are invalidated, although host death does stop it. Does Apple provide a supported lifecycle owner and identity-bound termination mechanism for this combination? If Application-type embedded XPC services are the intended solution, what supported packaging/discovery path admits separately installed third-party addon code without changing the signed host bundle or loading that code into the GUI process? Please distinguish the documented client-lifetime contract from startup coverage, on-demand stop, exit observation, and publisher isolation. We seek a supported mechanism or a precise compatibility boundary, not a private SPI or a debugging entitlement workaround.
 
-## Verifica di questa consegna
+## Verification of this delivery
 
-Lavoro documentale e lettura di sorgenti/API; nessuna build o prova nativa addon eseguita, nessun nuovo risultato di test rivendicato. L'ultima suite prodotto registrata rimane quella del 23 settembre, non rieseguita qui. Nessuna modifica a codice prodotto, entitlement, dipendenze o record di ammissione. Il driver C0d conserva l'uscita incondizionata 78 e SHA-256 `687fb3086d41e821af684d49109c9c95f8d555cf88450bdcf809b2a708b1ddaa`. Il riavvio ordinario di Cascade è una verifica separata dell'app esistente e non qualifica il launcher.
+Documentation work and reading of sources/APIs; no build or native addon probe was run, and no new test result is claimed. The last recorded product suite remains that of 23 September, not rerun here. No change to product code, entitlements, dependencies or admission records. The C0d driver keeps the unconditional exit 78 and SHA-256 `687fb3086d41e821af684d49109c9c95f8d555cf88450bdcf809b2a708b1ddaa`. The ordinary relaunch of Cascade is a separate check of the existing app and does not qualify the launcher.

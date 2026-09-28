@@ -1,4 +1,4 @@
-# Definire budget, isolamento e recupero dai guasti
+# Define budgets, isolation and failure recovery
 
 ID: 16
 Parent: cascade-product
@@ -11,18 +11,18 @@ Blocked by: 05, 06, 13
 
 ## Question
 
-Quali soglie misurabili di memoria, CPU, energia, wakeup, latenza di apertura e fluidità deve rispettare Cascade, in idle e con attività reali? Decidere diagnosi, policy per estensioni lente, crash e revoca permessi, e verifica del percorso audio. Separare promesse del protocollo da limiti realmente imponibili dal sistema: codice nello stesso processo non diventa isolato perché espone suspend(). Includere Reduce Motion, Reduce Transparency e tastiera/VoiceOver nei criteri di validazione pertinenti.
+Which measurable thresholds for memory, CPU, energy, wakeups, opening latency and smoothness must Cascade respect, idle and with real activities? Decide diagnostics, policies for slow extensions, crashes and permission revocation, and verification of the audio path. Separate protocol promises from limits the system can really enforce: code in the same process does not become isolated because it exposes suspend(). Include Reduce Motion, Reduce Transparency and keyboard/VoiceOver in the relevant validation criteria.
 
-## Avanzamento del 9 settembre 2026
+## Progress of 9 September 2026
 
-Approvati ammissione preventiva delle operazioni gestite, servizi condivisi con concessioni revocabili, processi su domanda e supervisione con recupero/quarantena. Distinte quote applicative rigide e soglie CPU/RAM osservate; congelamento escluso dal default. Identici controlli e budget per addon del team ed esterni.
+Approved: preventive admission of managed operations, shared services with revocable grants, on-demand processes and supervision with recovery/quarantine. Rigid application quotas and observed CPU/RAM thresholds are kept distinct; freezing is excluded from the default. Identical controls and budgets for team and external addons.
 
-La [specifica](../../../docs/superpowers/specs/2026-09-09-addon-runtime-design.md) propone valori iniziali; [P2](../../../docs/superpowers/plans/2026-09-09-addon-runtime-02-execution.md) li applica e [P4](../../../docs/superpowers/plans/2026-09-09-addon-runtime-04-release.md) li misura. Rimangono aperti valori qualificati, profili continui di UI/audio, costo totale dei servizi e prove su hardware/OS: nessun benchmark è già concluso da questa decisione.
+The [spec](../../../docs/superpowers/specs/2026-09-09-addon-runtime-design.md) proposes initial values; [P2](../../../docs/superpowers/plans/2026-09-09-addon-runtime-02-execution.md) applies them and [P4](../../../docs/superpowers/plans/2026-09-09-addon-runtime-04-release.md) measures them. Still open: qualified values, continuous UI/audio profiles, the total cost of services and tests on hardware/OS; no benchmark is already concluded by this decision.
 
-## Riallineamento del 14 settembre 2026
+## Realignment of 14 September 2026
 
-Sono implementate e revisionate le prenotazioni del governor comune, la contabilità protetta dei raster/decoder e le risorse delle operazioni storage. L'utente ha scelto SwiftData per l'archivio durevole; salvataggio, ripristino, inventario completo, scrittura su modifiche significative e checkpoint limitato alla chiusura hanno verifiche dedicate nel [piano corrente](../../../docs/superpowers/plans/2026-09-10-addon-runtime-completion.md).
+The reservations of the shared governor, the protected accounting of rasters/decoders and the resources of storage operations are implemented and reviewed. The user chose SwiftData for the durable archive; saving, restoring, the complete inventory, writing on significant changes and the checkpoint limited to shutdown have dedicated verifications in the [current plan](../../../docs/superpowers/plans/2026-09-10-addon-runtime-completion.md).
 
-La [politica disco approvata](../../../docs/superpowers/plans/2026-09-13-addon-swiftdata-disk-policy-decision.md) conserva nel conteggio gli eventuali superamenti prodotti dai file interni del framework e blocca le scritture successive. Le allocazioni controllate dall'app restano soggette ad ammissione preventiva. Si riusano SwiftData, Foundation e ImageIO/CoreGraphics; non è stato aggiunto un database o un codec alternativo.
+The [approved disk policy](../../../docs/superpowers/plans/2026-09-13-addon-swiftdata-disk-policy-decision.md) keeps in the count any overruns produced by the framework's internal files and blocks subsequent writes. Allocations controlled by the app remain subject to preventive admission. SwiftData, Foundation and ImageIO/CoreGraphics are reused; no alternative database or codec was added.
 
-Restano aperte le misure native di CPU/footprint, l'uscita effettiva dei processi, i profili continui audio/UI, il costo complessivo dei servizi e la matrice hardware/OS. I test funzionali non sono benchmark energetici né prova di un limite rigido sul consumo interno dei framework. Le dipendenze globali del ticket restano valide.
+Still open: native CPU/footprint measurements, the actual exit of processes, continuous audio/UI profiles, the overall cost of services and the hardware/OS matrix. The functional tests are not energy benchmarks nor proof of a rigid limit on the frameworks' internal consumption. The ticket's global dependencies remain valid.

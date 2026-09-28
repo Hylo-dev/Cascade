@@ -1,4 +1,4 @@
-# Qualificare il percorso nativo del servizio files.workspace
+# Qualify the native path of the files.workspace service
 
 ID: 77
 Parent: cascade-product
@@ -11,4 +11,4 @@ Blocked by: 19, 22
 
 ## Question
 
-Completare la parte nativa ancora aperta del task 1 del [piano del ripiano file](../../../docs/superpowers/plans/2026-09-26-file-shelf.md). Collegare un provider firmato che usa `CascadeAddonSDK` al runtime e al servizio `files.workspace` attraverso bootstrap/trasporto autenticati di produzione; dimostrare autorizzazione, revoca e uscita fisica sullo stesso percorso. Registrare adapter, composizione e prove nella [verifica runtime](../../../docs/superpowers/verification/2026-09-26-file-workspace-runtime.md). La fixture a messaggi/in-process non basta. Nessun montaggio produttivo né modifica al gate launcher prima delle qualifiche richieste.
+Complete the still-open native part of task 1 of the [file shelf plan](../../../docs/superpowers/plans/2026-09-26-file-shelf.md). Connect a signed provider that uses `CascadeAddonSDK` to the runtime and to the `files.workspace` service through authenticated production bootstrap/transport; demonstrate authorization, revocation and physical exit on the same path. Record adapters, composition and evidence in the [runtime verification](../../../docs/superpowers/verification/2026-09-26-file-workspace-runtime.md). The message-based/in-process fixture is not enough. No production mounting and no change to the launcher gate before the required qualifications.

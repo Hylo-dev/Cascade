@@ -1,9 +1,9 @@
-# Broker XPC con provider esterno
+# XPC broker with an external provider
 
-Fixture app → broker XPC sandboxed incluso nell'app → provider sandboxed in un
-contenitore esterno. Riusa protocollo, guardia e build del provider della prova
-[Recovery](../Recovery/README.md). La discovery usa l'API disponibile da macOS 14;
-la prova nativa consegnata è stata eseguita esclusivamente su macOS 27 beta.
+Fixture app → sandboxed XPC broker embedded in the app → sandboxed provider in an
+external container. It reuses the protocol, guard and provider build of the
+[Recovery](../Recovery/README.md) test. Discovery uses the API available since macOS 14;
+the delivered native test was run exclusively on macOS 27 beta.
 
 ```sh
 python3 -m unittest discover -s Prototypes/AddonPlatform/BrokerRecovery -p 'test_*.py'
@@ -11,46 +11,46 @@ python3 Prototypes/AddonPlatform/BrokerRecovery/run_broker_recovery.py --build-o
 python3 Prototypes/AddonPlatform/BrokerRecovery/run_broker_recovery.py --run /absolute/path/from/build
 ```
 
-Tre scenari: uscita ordinaria del broker lasciando l'app responsiva; uscita normale
-dell'app; crash dell'app. Il callback del provider rimane bloccato dopo una seconda
-risposta autenticata. Prima dello stop, invalidare i riferimenti del provider non
-lo termina nei due secondi osservati. Firma esatta, nonce, UUID per incarnazione,
-percorso del bundle e kqueue consentono di attribuire le osservazioni. Le uscite per
-guardia temporale non valgono come PASS e il cleanup non modifica il verdetto.
+Three scenarios: ordinary broker exit leaving the app responsive; normal app exit;
+app crash. The provider's callback stays blocked after a second authenticated
+response. Before the stop, invalidating the provider's references does not terminate
+it within the two observed seconds. Exact signature, nonce, per-incarnation UUID,
+bundle path and kqueue make it possible to attribute the observations. Exits caused by
+a timing guard do not count as PASS, and cleanup does not change the verdict.
 
-Il runner si ferma a UNKNOWN o cleanup incompleto. L'errore LaunchServices -10814
-durante la rimozione di vecchie copie viene conservato: la successiva discovery
-deve comunque trovare una sola identità e il percorso atteso deve autenticarsi.
-Nessun cambio automatico dei permessi di sistema.
+The runner stops at UNKNOWN or incomplete cleanup. The LaunchServices error -10814
+during removal of old copies is retained: the subsequent discovery must still find a
+single identity, and the expected path must authenticate.
+No automatic change of system permissions.
 
-Non copre la fase prima dell'autenticazione, un broker completamente bloccato,
-due addon diversi contemporanei o un editore diverso.
-La nuova partenza senza chiudere l'app è verificata dal runner aggiuntivo sotto.
-Il gate di prodotto resta disabilitato.
+It does not cover the phase before authentication, a completely blocked broker,
+two different concurrent addons, or a different publisher.
+A fresh start without quitting the app is verified by the additional runner below.
+The product gate stays disabled.
 
-[Rapporto e prove immutabili](../../../docs/superpowers/verification/2026-09-24-addon-global-recovery.md).
+[Report and immutable evidence](../../../docs/superpowers/verification/2026-09-24-addon-global-recovery.md).
 
-## Ricambio ordinario, riavvio del broker e due host
+## Ordinary replacement, broker restart and two hosts
 
 ```sh
 python3 Prototypes/AddonPlatform/BrokerRecovery/run_sessions.py --build-only
 python3 Prototypes/AddonPlatform/BrokerRecovery/run_sessions.py --run /absolute/path/from/build
 ```
 
-Tre casi aggiuntivi, tutti PASS il 25 settembre:
+Three additional cases, all PASS on 25 September:
 
-- `restart`: provider bloccato, uscita broker e provider, ricreazione della connessione
-  e nuove incarnazioni con la stessa app viva; osservazione dell'uscita anche delle nuove.
-- `two-hosts`: due app contemporanee dello stesso addon ottengono processi distinti;
-  fermare la prima catena lascia la seconda autenticata e responsiva.
-- `provider-cycle`: uscita cooperativa del provider, rilascio dei riferimenti e nuovo
-  provider con lo stesso broker ancora vivo; seconda uscita osservata prima del cleanup.
+- `restart`: blocked provider, broker and provider exit, re-creation of the connection
+  and new incarnations with the same app alive; the exit of the new ones is observed too.
+- `two-hosts`: two concurrent apps of the same addon get distinct processes;
+  stopping the first chain leaves the second authenticated and responsive.
+- `provider-cycle`: cooperative provider exit, release of the references and a new
+  provider with the same broker still alive; second exit observed before cleanup.
 
-Il primo handshake dopo ricreazione ha una finestra diagnostica di 15 secondi:
-il riavvio del broker ha impiegato circa 10 secondi, il solo nuovo provider circa
-66 ms nella prova finale. Non sono garanzie o benchmark. Una sola richiesta pendente,
-nessun ciclo di retry; finestre di stop e guardie invariate. I comandi `restart` e
-`release` sono autorizzati dal runner soltanto dopo le rispettive uscite kernel;
-il comando di uscita cooperativa attesta solo l'invio, non l'uscita.
+The first handshake after re-creation has a 15-second diagnostic window:
+the broker restart took about 10 seconds, the new provider alone about
+66 ms in the final run. These are not guarantees or benchmarks. A single pending
+request, no retry loop; stop windows and guards unchanged. The runner authorizes the
+`restart` and `release` commands only after the respective kernel exits;
+the cooperative-exit command attests only that it was sent, not the exit.
 
-[Rapporto, tentativi incompleti e risultati finali](../../../docs/superpowers/verification/2026-09-25-addon-broker-sessions.md).
+[Report, incomplete attempts and final results](../../../docs/superpowers/verification/2026-09-25-addon-broker-sessions.md).

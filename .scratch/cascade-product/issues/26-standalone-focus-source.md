@@ -1,4 +1,4 @@
-# Creare l’esempio Focus con il solo SDK pubblico
+# Create the Focus example with the public SDK only
 
 ID: 26
 Parent: cascade-product
@@ -11,18 +11,18 @@ Blocked by: 24
 
 ## Question
 
-Creare una libreria sorgente indipendente Focus con countdown dichiarativo, azioni correlate, revisioni e stato persistente usando esclusivamente i prodotti SDK pubblici. Verificare ricreazione del provider senza dichiarare già qualificato il contenitore nativo.
+Create an independent Focus source library with a declarative countdown, correlated actions, revisions and persistent state, using exclusively the public SDK products. Verify provider re-creation without declaring the native container already qualified.
 
 ## Context
 
-Incremento C7/C12 autorizzato dalla prosecuzione del18settembre. [Piano](../../../docs/superpowers/plans/2026-09-18-standalone-focus-source.md). Nessun builtin Focus verificato da migrare; comportamento d’esempio dichiarato. Parità e controllo dei processi reali restano aperti.
+C7/C12 increment authorized by the continuation of 18 September. [Plan](../../../docs/superpowers/plans/2026-09-18-standalone-focus-source.md). No verified Focus builtin to migrate; example behavior declared. Parity and control of real processes remain open.
 
 ## Progress
 
-Disegno esaminato; implementazione e verifiche in corso.
+Design examined; implementation and verifications in progress.
 
-Revisione indipendente sul primo handoff: [tre correzioni P2 richieste](../../codex-addon/20260918-continuation/focus-independent-review.md), relative a esiti delle ricevute con storage indisponibile o snapshot incerto e chiusura dello schema degli errori persistiti.31test precedenti passati non chiudono questi casi; implementer riattivato per regressioni e correzioni. Consegna non ancora approvata.
+Independent review of the first handoff: [three P2 fixes requested](../../codex-addon/20260918-continuation/focus-independent-review.md), concerning receipt outcomes with storage unavailable or an uncertain snapshot, and closing the schema of persisted errors. The 31 tests previously passed do not cover these cases; implementer reactivated for regressions and fixes. Delivery not yet approved.
 
 ## Answer
 
-Libreria sorgente indipendente implementata e revisionata PASS dopo la risoluzione di tutti i rilievi.37test passati e build esterna riuscita, dipendenze soltanto SDK pubbliche. Persistenza, revisioni e ricevute verificate anche con cronologia non utilizzabile e commit incerti. [Verifica finale e limiti](../../../docs/superpowers/verification/2026-09-18-standalone-focus-source.md). La qualifica del contenitore nativo e la parità C7/C12 restano aperte.
+Independent source library implemented and reviewed PASS after all findings were resolved. 37 tests passed and external build succeeded, dependencies only on the public SDK. Persistence, revisions and receipts verified also with unusable history and uncertain commits. [Final verification and limits](../../../docs/superpowers/verification/2026-09-18-standalone-focus-source.md). The qualification of the native container and C7/C12 parity remain open.

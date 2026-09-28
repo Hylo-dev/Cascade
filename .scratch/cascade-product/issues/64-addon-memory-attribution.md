@@ -1,4 +1,4 @@
-# Definire a chi attribuire la memoria osservata dei servizi
+# Define whom the observed memory of services is attributed to
 
 ID: 64
 Parent: cascade-product
@@ -11,28 +11,28 @@ Blocked by: 63
 
 ## Question
 
-Il footprint RAM di un processo che offre un servizio condiviso deve influire soltanto sulla salute dell’addon proprietario, oppure anche su quella dei suoi consumatori diretti e indiretti?
+Should the RAM footprint of a process that offers a shared service affect only the health of the owner addon, or also that of its direct and indirect consumers?
 
-## Contesto
+## Context
 
-Le decisioni [CPU conservativa](55-addon-delegated-cpu-attribution.md) e [catene attive](57-addon-transitive-cpu-attribution.md) riguardano lavoro consumato durante un intervallo. La RAM osservata è invece una quantità residente corrente: include runtime, librerie e cache condivise, senza misura della memoria causata da una singola richiesta. Il lettore espone il footprint ma il coordinatore non lo classifica ancora. [Ricognizione delle fonti](../../codex-addon/20260922-transitive-cpu/post63-memory-audit.md).
+The [conservative CPU](55-addon-delegated-cpu-attribution.md) and [active chains](57-addon-transitive-cpu-attribution.md) decisions concern work consumed during an interval. Observed RAM is instead a current resident quantity: it includes runtime, libraries and shared caches, with no measure of the memory caused by a single request. The reader exposes the footprint but the coordinator does not classify it yet. [Survey of the sources](../../codex-addon/20260922-transitive-cpu/post63-memory-audit.md).
 
-## Alternative
+## Alternatives
 
-1. **Solo addon proprietario del processo (consigliata).** La RAM di B influisce su B anche se A ne usa un servizio. Ogni processo è osservato una sola volta; non si copia il suo footprint nei consumatori. Corrisponde alla misura fisica disponibile ed evita di sanzionare A per librerie e cache di B usate anche da altri. Non impedisce da sola di trasferire al servizio una richiesta che aumenta la memoria: restano necessarie quote delle risorse controllate dal broker.
-2. **Anche consumatori attivi, come per la CPU.** La RAM di B viene considerata anche per A e per gli antenati attivi, deduplicando identità/processo. Contrasta lo spostamento dei costi verso i servizi, ma può limitare o sanzionare un addon per memoria residente che non ha causato. Il totale fisico globale resta contato una volta.
+1. **Only the addon that owns the process (recommended).** B's RAM affects B even if A uses one of its services. Each process is observed only once; its footprint is not copied into the consumers. It matches the available physical measure and avoids penalizing A for B's libraries and caches that others also use. On its own it does not prevent shifting a request that increases memory onto the service: quotas on the resources controlled by the broker are still needed.
+2. **Active consumers too, as for the CPU.** B's RAM is also counted for A and for the active ancestors, deduplicating identity/process. It counters the shifting of costs onto services, but it can limit or penalize an addon for resident memory it did not cause. The global physical total is still counted once.
 
-Questa scelta riguarda esclusivamente l’attribuzione. I64/96MiB del provider e128/192MiB della UI restano candidati: soglie effettive, somma provider/scena e conteggio degli episodi richiedono un contratto successivo prima dell’enforcement. Nessuna opzione riapre il launcher o trasforma il runtime puro in una garanzia nativa. Nessuna implementazione RAM è autorizzata dalla sola ricognizione.
+This choice concerns attribution only. The provider's 64/96 MiB and the UI's 128/192 MiB remain candidates: effective thresholds, the provider/scene sum and episode counting require a later contract before enforcement. No option reopens the launcher or turns the pure runtime into a native guarantee. No RAM implementation is authorized by the survey alone.
 
 ## Answer
 
-Scelta utente: **1 — solo addon proprietario del processo.** Un footprint osservato
-appartiene esclusivamente all'identità verificata del processo fisico misurato. Non è
-copiato a consumer diretti o transitivi di servizi, anche se l'interesse broker è
-canonico e attivo. La misura fisica e il totale globale restano contati una volta.
+User choice: **1: only the addon that owns the process.** An observed footprint
+belongs exclusively to the verified identity of the measured physical process. It is not
+copied to direct or transitive consumers of services, even if the broker interest is
+canonical and active. The physical measure and the global total are still counted once.
 
-Questa risoluzione non approva soglie, aggregazione provider+UI, conteggio degli
-episodi, quarantena o azione di arresto; 64/96 MiB provider e 128/192 MiB UI restano
-candidati. Il gate di identità, lettura e arresto nativo rimane chiuso.
+This resolution does not approve thresholds, provider+UI aggregation, episode
+counting, quarantine or a stop action; the provider's 64/96 MiB and the UI's 128/192 MiB remain
+candidates. The native identity, read and stop gate stays closed.
 
-Documentazione aggiornata da Terra medium e revisionata da root; nessun sorgente modificato. [Verifica della decisione e riavvio](../../codex-addon/20260922-memory-owner/verification.md).
+Documentation updated by Terra medium and reviewed by the root; no source modified. [Verification of the decision and restart](../../codex-addon/20260922-memory-owner/verification.md).

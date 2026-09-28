@@ -1,4 +1,4 @@
-# Integrare Spotlight, notifiche e attività di macOS: fattibilità
+# Integrate macOS Spotlight, notifications and activities: feasibility
 
 ID: 02
 Parent: cascade-product
@@ -11,16 +11,16 @@ Blocked by: none
 
 ## Question
 
-Quali API e tecniche consentono a Cascade di mostrare notifiche di app non integrate, eventi di connessione Bluetooth, media correnti anche dal browser e feedback aptico? Quali operazioni sono possibili sul vero Spotlight di macOS: invocazione, posizione, stile e integrazione nel notch? Distinguere esplicitamente API pubbliche, tecniche private, Accessibility, permessi, copertura incompleta e versioni del sistema. Non confondere UserNotifications della propria app con un lettore universale. Non scegliere ancora tra Spotlight di sistema e ricerca propria: produrre la matrice di fattibilità per entrambe.
+Which APIs and techniques let Cascade show notifications from non-integrated apps, Bluetooth connection events, current media (including from the browser) and haptic feedback? Which operations are possible on the real macOS Spotlight: invocation, position, style and integration into the notch? Explicitly distinguish public APIs, private techniques, Accessibility, permissions, incomplete coverage and system versions. Do not confuse the app's own UserNotifications with a universal reader. Do not yet choose between the system Spotlight and a search of our own: produce the feasibility matrix for both.
 
 ## Answer
 
-Ricerca risolta il 4 settembre 2026 da codex-research-02. [Matrice di fattibilità, fonti e verifiche residue](../../../docs/wayfinder/research/macos-integrations.md).
+Research resolved on 4 September 2026 by codex-research-02. [Feasibility matrix, sources and remaining checks](../../../docs/wayfinder/research/macos-integrations.md).
 
-- Il vero Spotlight è richiamabile; un eventuale spostamento tramite Accessibility va provato. Non è stato trovato un contratto pubblico per cambiarne materiali e gerarchia o ospitarlo in Cascade. Una UI di ricerca propria non ha automaticamente parità di funzioni.
-- UserNotifications riguarda la propria app. Sapphire legge con polling un archivio SQLite privato di Notification Center: non dimostra né copertura universale né consegna immediata. Accessibility è un'altra tecnica da verificare; i relativi permessi non equivalgono all'accesso all'archivio.
-- Bluetooth e richiesta di feedback aptico hanno API pubbliche; disponibilità dei dati degli accessori e percezione dell'impulso dipendono dall'hardware e dal sistema.
-- Le informazioni globali Now Playing nei progetti esaminati passano da MediaRemote privato. Rilevare o instradare audio con Core Audio non fornisce da solo titolo, copertina o identità della scheda browser.
-- ActivityKit e le attività iPhone mostrate dal sistema non costituiscono un protocollo di acquisizione automatica delle attività altrui per Cascade.
+- The real Spotlight can be invoked; any repositioning through Accessibility must be tested. No public contract was found to change its materials and hierarchy or to host it in Cascade. A search UI of our own does not automatically have feature parity.
+- UserNotifications concerns one's own app. Sapphire polls a private Notification Center SQLite store: this demonstrates neither universal coverage nor immediate delivery. Accessibility is another technique to verify; its permissions are not equivalent to access to the store.
+- Bluetooth and requesting haptic feedback have public APIs; the availability of accessory data and the perception of the impulse depend on the hardware and the system.
+- In the projects examined, global Now Playing information goes through private MediaRemote. Detecting or routing audio with Core Audio does not by itself provide the title, the artwork or the identity of the browser tab.
+- ActivityKit and the iPhone activities shown by the system do not constitute a protocol for Cascade to automatically capture other apps' activities.
 
-Contesto riproducibile: branch `codex/research/cascade-system-20260904`, commit `38dc5b7081d6badebaa419f7223a39d06b1e6a46`, worktree `/private/tmp/cascade-wayfinder-system`. Nessun accesso a notifiche o database personali, nessuna modifica di permessi, nessuna prova UI effettuata. Le scelte di fallback e il perimetro delle versioni supportate rimangono aperti.
+Reproducible context: branch `codex/research/cascade-system-20260904`, commit `38dc5b7081d6badebaa419f7223a39d06b1e6a46`, worktree `/private/tmp/cascade-wayfinder-system`. No access to notifications or personal databases, no permission changes, no UI test performed. The fallback choices and the scope of supported versions remain open.

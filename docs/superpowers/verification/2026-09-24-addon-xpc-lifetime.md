@@ -1,88 +1,88 @@
-# Prova mirata XPC — 24 settembre 2026
+# Targeted XPC test: 24 September 2026
 
-**Esito: tre casi positivi, cancellazione con client vivo negativa. Launcher ancora bloccato.**
+**Outcome: three positive cases, cancellation with a live client negative. Launcher still blocked.**
 
-Aggiornamento successivo: la [prova con intermediario XPC dedicato](2026-09-24-addon-xpc-broker.md)
-ha verificato lo stop di una catena lasciando attiva l'app e una seconda catena.
-Non modifica i risultati della cancellazione registrati qui né ammette il launcher.
-Autorizzazione esplicita: «ok, procedi con la prova mirata XPC». Esperimento separato
-dal driver C0d e dal codice prodotto; non cambia la decisione sui processi gestiti orfani.
+Later update: the [test with a dedicated XPC intermediary](2026-09-24-addon-xpc-broker.md)
+verified the stop of one chain while leaving the app and a second chain active.
+It does not change the cancellation results recorded here, nor does it admit the launcher.
+Explicit authorization: "ok, proceed with the targeted XPC test". Experiment separate
+from the C0d driver and from the product code; it does not change the decision on orphaned managed processes.
 
-## Risultato nativo
+## Native result
 
-Una esecuzione completa della fixture firmata su macOS 27.0 (26A5425a), arm64,
-SDK 27.0, Apple clang 21.0.0. Ogni scenario usa una nuova incarnazione.
+One complete run of the signed fixture on macOS 27.0 (26A5425a), arm64,
+SDK 27.0, Apple clang 21.0.0. Each scenario uses a new incarnation.
 
-| Scenario | Osservazione | Esito |
+| Scenario | Observation | Outcome |
 | --- | --- | --- |
-| Servizio cooperativo, client vivo | Uscita con stato 0 osservata circa 0,6 ms dopo il trigger | PASS |
-| Connessione cancellata, client vivo, callback trattenuto | Nessuna uscita osservata nei due secondi; client ancora vivo | FAIL |
-| Uscita ordinaria del client, callback trattenuto | Uscita del servizio con SIGKILL osservata circa 1,6 ms dopo il trigger | PASS |
-| Client termina con SIGKILL, callback trattenuto | Uscita del servizio con SIGKILL osservata circa 1,2 ms dopo il trigger | PASS |
+| Cooperative service, live client | Exit with status 0 observed about 0.6 ms after the trigger | PASS |
+| Connection cancelled, live client, callback held | No exit observed within the two seconds; client still alive | FAIL |
+| Ordinary client exit, callback held | Service exit with SIGKILL observed about 1.6 ms after the trigger | PASS |
+| Client terminates with SIGKILL, callback held | Service exit with SIGKILL observed about 1.2 ms after the trigger | PASS |
 
-I tempi sono differenze fra trigger e ricezione dell'evento kernel nell'osservatore,
-non misure precise della latenza interna di macOS. Il FAIL riguarda la finestra di due
-secondi, non una sopravvivenza indefinita. Durante la pulizia del caso cancel, l'uscita
-del client ha prodotto l'uscita del servizio con SIGKILL; questo evento successivo è
-registrato separatamente e non converte il caso in PASS. Per tutti e quattro i casi
-sono confermate le uscite di client e servizio. Nessuna uscita dipende da SIGALRM.
+The times are differences between the trigger and the observer's receipt of the kernel event,
+not precise measurements of macOS's internal latency. The FAIL concerns the two-second
+window, not indefinite survival. During the cleanup of the cancel case, the client's exit
+produced the service's exit with SIGKILL; this later event is
+recorded separately and does not turn the case into a PASS. For all four cases
+the client and service exits are confirmed. No exit depends on SIGALRM.
 
-## Attendibilità e limiti
+## Reliability and limits
 
-Host e servizio sono fixture C fisse, firmate con l'identità Apple Development
-`4A857D842A5406C2D3071776FDE7B27B3098FE63`, Hardened Runtime; il servizio ha soltanto
-l'entitlement App Sandbox. Le verifiche delle firme sono riuscite. Le risposte
-sono autenticate con requisito di firma e `SecCodeCreateWithXPCMessage`.
+Host and service are fixed C fixtures, signed with the Apple Development identity
+`4A857D842A5406C2D3071776FDE7B27B3098FE63`, Hardened Runtime; the service has only
+the App Sandbox entitlement. The signature checks succeeded. The responses
+are authenticated with a signing requirement and `SecCodeCreateWithXPCMessage`.
 
-Il runner registra `EVFILT_PROC` con ricevuta, `NOTE_EXIT` e `NOTE_EXITSTATUS`;
-un secondo messaggio autenticato conferma PID, UUID di incarnazione e deadline
-dopo la registrazione. Conferma anche l'azione del client prima di classificare.
-Non invia segnali al PID del servizio né a gruppi di processi. Conserva il proprio
-figlio diretto per la pulizia del client. Il servizio ha un allarme di otto secondi
-da main; un'uscita dovuta a quell'allarme, a un errore o a un crash della fixture
-non viene accettata come successo della terminazione.
+The runner registers `EVFILT_PROC` with a receipt, `NOTE_EXIT` and `NOTE_EXITSTATUS`;
+a second authenticated message confirms PID, incarnation UUID and deadline
+after the registration. It also confirms the client's action before classifying.
+It sends no signals to the service's PID or to process groups. It keeps its own
+direct child for the client's cleanup. The service has an eight-second alarm
+from main; an exit caused by that alarm, by an error or by a crash of the fixture
+is not accepted as a successful termination.
 
-La prova copre esclusivamente un servizio Application incluso nel bundle, dopo main
-e dopo l'autenticazione. Non prova la copertura prima di main, l'esecuzione di addon
-esterni, l'isolamento fra editori, la protezione dei messaggi in uscita o un adapter
-produttivo. Un singolo ciclo su questa versione di macOS non qualifica tutte le
-versioni supportate. Il callback non cooperativo appartiene alla fixture controllata.
+The test covers exclusively an Application service included in the bundle, after main
+and after authentication. It does not prove coverage before main, the execution of external
+addons, isolation between publishers, protection of outgoing messages or a production
+adapter. A single cycle on this version of macOS does not qualify all supported
+versions. The non-cooperative callback belongs to the controlled fixture.
 
-## Cosa cambia per la soluzione
+## What changes for the solution
 
-XPC è una pista concreta per legare il servizio alla vita del suo client dopo l'avvio:
-anche la morte forzata del client ha fatto terminare il servizio osservato. La sola
-`xpc_connection_cancel` non soddisfa invece lo stop richiesto mentre quel client vive.
+XPC is a concrete lead for tying the service to the lifetime of its client after launch:
+even the forced death of the client made the observed service terminate.
+`xpc_connection_cancel` alone, however, does not satisfy the required stop while that client is alive.
 
-Una possibile architettura da valutare è un client intermedio dedicato a ciascun addon:
-terminare quel client potrebbe fermare il relativo servizio lasciando Cascade aperta.
-Non è una soluzione già dimostrata: occorrerebbe garantire anche la vita dell'intermediario
-fin dalla creazione, evitando di spostare su di lui lo stesso problema, e qualificare
-discovery, firma e installazione degli addon esterni. Il presente esperimento si conclude
-qui; non introduce questo ulteriore livello né ammette il launcher.
+One possible architecture to evaluate is an intermediate client dedicated to each addon:
+terminating that client could stop its service while leaving Cascade open.
+It is not an already proven solution: it would also be necessary to guarantee the intermediary's lifetime
+from its creation, avoiding moving the same problem onto it, and to qualify
+discovery, signing and installation of external addons. The present experiment ends
+here; it does not introduce this further layer, nor does it admit the launcher.
 
-## Evidenze e verifiche
+## Evidence and checks
 
-- [Risultati grezzi](evidence/2026-09-24-xpc-lifetime/results.json), compresa la pulizia separata.
-- [Manifest della build](evidence/2026-09-24-xpc-lifetime/build.json), comandi e hash di sorgenti/binari.
-- [Log della build](evidence/2026-09-24-xpc-lifetime/build.log), firma, entitlement, sistema e compilatore.
-- [Fixture e riproduzione](../../../Prototypes/AddonPlatform/XPCLifetime/README.md).
+- [Raw results](evidence/2026-09-24-xpc-lifetime/results.json), including the separate cleanup.
+- [Build manifest](evidence/2026-09-24-xpc-lifetime/build.json), commands and source/binary hashes.
+- [Build log](evidence/2026-09-24-xpc-lifetime/build.log), signature, entitlements, system and compiler.
+- [Fixture and reproduction](../../../Prototypes/AddonPlatform/XPCLifetime/README.md).
 
-Sette test del verificatore passano. Revisione indipendente completata prima della
-prova: corretti il falso positivo su crash/errore del servizio, la mancata conferma
-dell'azione e la gestione dell'invalidazione attesa. La prima esecuzione nativa
-(`probe-kf1be9u0`) si è interrotta nel runner per l'assenza di `KQ_EV_RECEIPT` nel modulo
-Python; non produce un verdetto. Corretto usando `EV_RECEIPT = 0x0040` dall'header pubblico
-`sys/event.h`, senza cambiare il criterio. La nuova build `probe-czbrf_sw` ha eseguito
-tutti i casi e il runner ha restituito 1 per il risultato negativo valido di cancel.
+Seven verifier tests pass. Independent review completed before the
+test: fixed the false positive on service crash/error, the missing confirmation
+of the action and the handling of the expected invalidation. The first native run
+(`probe-kf1be9u0`) stopped in the runner because `KQ_EV_RECEIPT` is absent from the
+Python module; it produces no verdict. Fixed by using `EV_RECEIPT = 0x0040` from the public header
+`sys/event.h`, without changing the criterion. The new build `probe-czbrf_sw` ran
+all the cases and the runner returned 1 for the valid negative result of cancel.
 
-I tentativi iniziali di build avevano rilevato due errori della fixture, corretti prima
-della prova: callback di `xpc_main` e sintassi del requisito `codesign -R`.
-Nessuna suite prodotto rieseguita: questa consegna aggiunge soltanto il prototipo e
-le evidenze. Il gate `scripts/test-addon-managed-death.sh` rimane invariato,
+The initial build attempts had revealed two fixture errors, fixed before
+the test: the `xpc_main` callback and the syntax of the `codesign -R` requirement.
+No product suite rerun: this delivery adds only the prototype and
+the evidence. The gate `scripts/test-addon-managed-death.sh` remains unchanged,
 SHA-256 `687fb3086d41e821af684d49109c9c95f8d555cf88450bdcf809b2a708b1ddaa`.
 
-Riavvio ordinario di Cascade completato e verificato: PID precedente 24641, nuovo
-PID 26301, eseguibile della build esistente CascadeDevelopment raggiunta da
-`/Applications/Cascade.app`. Nessuna ricompilazione dell'app necessaria per il
-prototipo separato. [Evidenza del riavvio](evidence/2026-09-24-xpc-lifetime/cascade-restart.json).
+Ordinary relaunch of Cascade completed and verified: previous PID 24641, new
+PID 26301, executable of the existing CascadeDevelopment build reached through
+`/Applications/Cascade.app`. No app recompilation needed for the
+separate prototype. [Relaunch evidence](evidence/2026-09-24-xpc-lifetime/cascade-restart.json).

@@ -2,9 +2,9 @@
 
 Decision: **blocked**. No production launcher, manifest capability, publisher or OS is enabled.
 
-## Decisione successiva dell'utente
+## Later decision by the user
 
-L'utente ha accettato il rischio del lavoro autonomamente delegato a macOS: [confine approvato](../specs/2026-09-10-addon-control-policy.md). Non serve un'altra decisione su quel punto. Il verdetto negativo qui conservato riguarda il profilo rigoroso originario. Il nuovo profilo richiede ancora qualificazione: sopravvivenza al crash del supervisore e identità dopo exec rimangono problemi da risolvere. Nessun launcher è stato abilitato da questa modifica documentale.
+The user accepted the risk of work autonomously delegated to macOS: [approved boundary](../specs/2026-09-10-addon-control-policy.md). No further decision is needed on that point. The negative verdict preserved here concerns the original strict profile. The new profile still requires qualification: survival past a supervisor crash and identity after exec remain problems to solve. No launcher was enabled by this documentation change.
 
 ## Public API review before variants (10 September 2026)
 

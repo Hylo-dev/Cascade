@@ -1,10 +1,10 @@
-# Recupero globale di un'estensione esterna
+# Global recovery of an external extension
 
-Fixture separata da Cascade: app firmata → provider ExtensionFoundation sandboxed
-in un contenitore `.app` esterno. Il provider risponde, poi trattiene il callback.
-L'invalidazione viene osservata con host vivo; soltanto dopo si provoca l'uscita
-normale o il crash dell'host. Una nuova catena parte **solo dopo** le uscite della
-vecchia, con una nuova identità di processo confermata.
+Fixture separate from Cascade: signed app → sandboxed ExtensionFoundation provider
+in an external `.app` container. The provider responds, then holds the callback.
+Invalidation is observed with the host alive; only afterwards is the host's normal
+exit or crash triggered. A new chain starts **only after** the old one's exits,
+with a new confirmed process identity.
 
 ```sh
 python3 -m unittest discover -s Prototypes/AddonPlatform/Recovery -p 'test_*.py'
@@ -12,21 +12,21 @@ python3 Prototypes/AddonPlatform/Recovery/run_recovery.py --build-only
 python3 Prototypes/AddonPlatform/Recovery/run_recovery.py --run /absolute/path/from/build
 ```
 
-Richiede macOS, Xcode e la specifica identità di sviluppo della fixture.
-Build e firme sono in una nuova directory DerivedData. Il runner verifica gli hash,
-registra l'uscita via kqueue tra due risposte autenticate e distingue misurazione e
-cleanup. Le guardie SIGALRM iniziano nel codice della fixture: non sono una soluzione
-pre-main. Il controllo dedicato verifica anche SIGALRM ereditato bloccato.
+Requires macOS, Xcode and the fixture's specific development identity.
+Builds and signatures are in a new DerivedData directory. The runner verifies the hashes,
+registers the exit via kqueue between two authenticated responses, and distinguishes
+measurement from cleanup. The SIGALRM guards start in the fixture's code: they are not a
+pre-main solution. The dedicated check also verifies an inherited, blocked SIGALRM.
 
-La registrazione riguarda soltanto le copie del contenitore di prova con firma e
-identità fissate. Il runner non abilita permessi di sistema. L'errore LaunchServices
--10814 su copie già rimosse viene conservato come nella prova broker; la discovery
-deve comunque essere univoca e il percorso deve autenticarsi. Le esecuzioni
-consegnate conservano i propri sorgenti e manifest precedenti a questa correzione.
+Registration concerns only the copies of the test container with fixed signature and
+identity. The runner does not enable system permissions. The LaunchServices error
+-10814 on already removed copies is retained as in the broker test; discovery
+must still be unique and the path must authenticate. The delivered runs
+retain their own sources and manifests from before this correction.
 
-Il profilo opzionale `build(broker_provider=True)` è riservato alla composizione
-[BrokerRecovery](../BrokerRecovery/README.md): il provider accetta il broker esatto
-al posto dell'host diretto. Non amplia il requisito di firma.
+The optional `build(broker_provider=True)` profile is reserved for the
+[BrokerRecovery](../BrokerRecovery/README.md) composition: the provider accepts the exact broker
+in place of the direct host. It does not widen the signing requirement.
 
-[Risultati e limiti](../../../docs/superpowers/verification/2026-09-24-addon-global-recovery.md).
-Nessun adapter di prodotto o ammissione del launcher.
+[Results and limits](../../../docs/superpowers/verification/2026-09-24-addon-global-recovery.md).
+No product adapter or launcher admission.

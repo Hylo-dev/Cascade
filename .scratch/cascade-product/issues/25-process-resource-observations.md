@@ -1,4 +1,4 @@
-# Osservare le risorse di un processo senza abilitare il launcher
+# Observe a process's resources without enabling the launcher
 
 ID: 25
 Parent: cascade-product
@@ -11,16 +11,16 @@ Blocked by: none
 
 ## Question
 
-Implementare lettura pubblica libproc e riduzione pura degli intervalli CPU con identità osservata nello stesso record, aritmetica controllata e metriche assenti distinte da zero. Nessuna autorità di arresto, autenticazione o enforcement dedotta dalle metriche.
+Implement public libproc reading and pure reduction of CPU intervals with the observed identity in the same record, checked arithmetic and absent metrics kept distinct from zero. No stop authority, authentication or enforcement inferred from the metrics.
 
 ## Context
 
-Incremento indipendente C4 autorizzato dalla prosecuzione del 18 settembre. [Piano](../../../docs/superpowers/plans/2026-09-18-addon-process-metrics.md). Qualificazione launcher, C0d e controllo nativo completo restano aperti.
+Independent C4 increment authorized by the continuation of 18 September. [Plan](../../../docs/superpowers/plans/2026-09-18-addon-process-metrics.md). Launcher qualification, C0d and complete native control remain open.
 
 ## Progress
 
-Disegno esaminato; implementazione e verifiche da completare.
+Design examined; implementation and verifications to be completed.
 
 ## Answer
 
-Lettore libproc v0 e riduttore CPU interni implementati, 33 test mirati passati e revisione indipendente PASS. Suite completa 929 test / 85 suite, build firmata e riavvio verificati. [Consegna e qualifiche residue](../../../docs/superpowers/verification/2026-09-18-addon-process-metrics.md). Nessun enforcement o launcher abilitato; misura CPU indipendente, associazione autenticata e controllo nativo completo restano aperti.
+Internal libproc v0 reader and CPU reducer implemented, 33 targeted tests passed and independent review PASS. Full suite 929 tests / 85 suites, signed build and restart verified. [Delivery and remaining qualifications](../../../docs/superpowers/verification/2026-09-18-addon-process-metrics.md). No enforcement or launcher enabled; independent CPU measurement, authenticated association and complete native control remain open.

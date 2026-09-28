@@ -1,54 +1,54 @@
-# C5b — storage per chiave, 12 settembre 2026
+# C5b: keyed storage, 12 September 2026
 
-Il backend host è implementato e approvato; C5 nel suo insieme resta aperto.
-`AddonKeyedStorage` conserva valori distinti per chiave e identità verificata, separati
-dal checkpoint e dalla cache. Le prenotazioni ridimensionabili del governor comune
-mantengono le quote anche su staging, errori, chiusura e riconciliazione. Il contratto
-pubblico del percorso host e i limiti sono descritti in [storage](../../addons/storage.md).
+The host backend is implemented and approved; C5 as a whole remains open.
+`AddonKeyedStorage` keeps distinct values per key and verified identity, separate
+from the checkpoint and from the cache. The resizable reservations of the shared governor
+maintain the quotas across staging, errors, close and reconciliation too. The public
+contract of the host path and the limits are described in [storage](../../addons/storage.md).
 
-## Correzione e verifiche
+## Fix and checks
 
-La revisione iniziale ha richiesto F01: l'esistenza di una cartella creata non prova
-che il suo parent sia stato sincronizzato. Il primo errore conservava correttamente
-la quota ma un retry/reopen poteva saltare il sync. La correzione separa i due stati
-con metadati limitati, ripara il parent prima del successo e non aggiunge sync degli
-antenati alle normali scritture già confermate. Riesame F01: approvato, nessun rilievo
-richiesto aperto. I file iniziali e la prima revisione sono conservati separatamente.
+The initial review required F01: the existence of a created folder does not prove
+that its parent was synced. The first error correctly preserved the quota, but a
+retry/reopen could skip the sync. The fix separates the two states with bounded
+metadata, repairs the parent before success and does not add ancestor syncs to
+normal, already confirmed writes. F01 re-review: approved, no required finding open.
+The initial files and the first review are preserved separately.
 
-- RED comportamentale:3 test,42 problemi su9 scenari (root/data/cache, retry diretto,
-  riapertura dello stesso backend e riapertura con governor nuovo).
-- GREEN finale mirato:38 test,34 keyed e4 resize. I sync riusciti sono chiamate reali
-  al filesystem; le prove registrano identità delle cartelle, ordine e quote esatte.
-- Package finale:474 test passati, exit0, `--no-parallel`: Runtime243,
-  Presentation20, Engine169, Contracts38, tool4. Xcode-beta e scratch già predisposto.
+- Behavioral RED:3 tests,42 issues across9 scenarios (root/data/cache, direct retry,
+  reopening the same backend and reopening with a new governor).
+- Targeted final GREEN:38 tests,34 keyed and4 resize. The successful syncs are real
+  filesystem calls; the tests record folder identity, order and exact quotas.
+- Final package:474 tests passed, exit0, `--no-parallel`: Runtime243,
+  Presentation20, Engine169, Contracts38, tool4. Xcode-beta and scratch already prepared.
   Log `/private/tmp/cascade-c5b-fix1-full-package.log`, SHA-256
   `b8607b28637c9092dea4cef66b4b00a73391741d6e91818efeda667b0ee2204c`.
-- I15 hash del perimetro sono invariati prima/dopo la verifica completa. Nove file
-  sorgente/test sono cambiati rispetto alla baseline di questo incremento.
-- La verifica iniziale di471 test non viene riattribuita alla correzione. La limitazione
-  storica del test UI in esecuzione concorrente resta distinta dal risultato seriale.
+- The15 scope hashes are unchanged before/after the full verification. Nine
+  source/test files changed relative to this increment's baseline.
+- The initial verification of471 tests is not reattributed to the fix. The historical
+  limitation of the UI test under concurrent execution remains distinct from the serial result.
 
-Sono coperti limiti, isolamento, Unicode byte-esatto, record corrotti/futuri, revoca e
-cancellazione durante ammissioni reali, cleanup fallita, commit con durabilità incerta,
-quote condivise col checkpoint, inventario limitato e chiusura/riapertura. Sono prove
-filesystem/host; non qualificano perdita di alimentazione, sandbox o launcher nativo.
+Covered: limits, isolation, byte-exact Unicode, corrupt/future records, revocation and
+cancellation during real admissions, failed cleanup, commit with uncertain durability,
+quotas shared with the checkpoint, bounded inventory and close/reopen. These are
+filesystem/host tests; they do not qualify power loss, sandbox or the native launcher.
 
-## Consegna
+## Delivery
 
-Integrati 13 file (9 sorgenti/test e 4 documenti), preservando le modifiche preesistenti.
-Confrontati 337 input di build identici fra checkout originale e copia locale. Build
-firmata riuscita, exit 0, tramite `scripts/build-development.sh` dalla copia locale
-verificata. Il collegamento `/Applications/Cascade.app` punta alla build appena creata
-in `CascadeAddonDevelopment`. Riavvio osservato: PID 47210 chiuso senza forzatura,
-nuova istanza PID 51942 stabile nel percorso atteso. Log
-`/private/tmp/cascade-c5b-20260912-app-build.log` e
-`/private/tmp/cascade-c5b-20260912-restart.json`. Nessun commit o staging.
-Questa consegna completa C5b, non la feature complessiva.
+Integrated 13 files (9 sources/tests and 4 documents), preserving the pre-existing changes.
+Compared 337 build inputs, identical between the original checkout and the local copy.
+Signed build succeeded, exit 0, through `scripts/build-development.sh` from the verified
+local copy. The `/Applications/Cascade.app` link points to the build just created
+in `CascadeAddonDevelopment`. Relaunch observed: PID 47210 quit without forcing,
+new instance PID 51942 stable at the expected path. Logs
+`/private/tmp/cascade-c5b-20260912-app-build.log` and
+`/private/tmp/cascade-c5b-20260912-restart.json`. No commit or staging.
+This delivery completes C5b, not the overall feature.
 
-## Lavoro residuo
+## Remaining work
 
-Trasporto SDK autenticato con sessioni/permessi e frame dedicato per il valore massimo,
-barriera globale prima dell'ammissione allo startup, asset e decoder, ripristino delle
-pubblicazioni e avvisi senza replay. Restano inoltre controllo dei processi reali,
-collegamento all'app, widget nostri sullo stesso SDK e qualificazione finale. Nessun
-adapter produttivo viene abilitato da C5b.
+Authenticated SDK transport with sessions/permissions and a dedicated frame for the maximum
+value, a global barrier before admission at startup, assets and decoders, restoration of
+publications and notices without replay. Also remaining: control of the real processes,
+connection to the app, our own widgets on the same SDK and final qualification. No
+production adapter is enabled by C5b.

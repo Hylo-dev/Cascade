@@ -1,26 +1,26 @@
-# Verifica dell'adattamento alle HIG Live Activities
+# Live Activities HIG adaptation verification
 
-Data: 8 settembre 2026. Toolchain: Xcode beta, SDK macOS 27.
-Contratto di riferimento: [attività e avvisi del notch](../../architecture/live-activity-contracts.md).
+Date: 8 September 2026. Toolchain: Xcode beta, SDK macOS 27.
+Reference contract: [notch activities and alerts](../../architecture/live-activity-contracts.md).
 
-## Risultati
+## Results
 
-- CascadeKit: **62 test superati in 11 suite**, inclusi host, controller,
-  geometria, hit testing, aptica e snapshot musicali.
-- Regressione verificata prima e dopo la correzione: spostare `startedAt`
-  attraverso `present` o `invalidate` non prolunga il limite della sessione;
-  un inizio futuro non consente più di otto ore di permanenza.
-- Build Debug completa dell'app: riuscita; firma ad hoc verificata con
+- CascadeKit: **62 tests passed in 11 suites**, including host, controller,
+  geometry, hit testing, haptics and music snapshots.
+- Regression verified before and after the fix: moving `startedAt`
+  through `present` or `invalidate` does not extend the session limit;
+  a future start does not allow more than eight hours of presence.
+- Full Debug build of the app: succeeded; ad hoc signature verified with
   `codesign --verify --deep --strict`.
-- `git diff --check`: nessun errore.
-- Revisione indipendente di lifecycle, scheduler, privacy, selezione della
-  seconda attività, dimensionamento e provider: nessun blocco residuo.
-- App avviata dal percorso esatto della build e riavviata dopo la correzione
-  finale del tema scuro. Osservati il notch, il menu applicativo e la gerarchia
-  accessibile dell'anteprima musicale estesa con titolo, artista, play/pausa e
-  progresso. Nessuna integrazione musicale reale viene dichiarata verificata.
+- `git diff --check`: no errors.
+- Independent review of lifecycle, scheduler, privacy, selection of the
+  second activity, sizing and provider: no remaining blocker.
+- App launched from the exact build path and relaunched after the final
+  dark theme fix. Observed the notch, the application menu and the accessibility
+  hierarchy of the expanded music preview with title, artist, play/pause and
+  progress. No real music integration is declared verified.
 
-## Comandi riproducibili
+## Reproducible commands
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer \
@@ -38,17 +38,17 @@ codesign --verify --deep --strict /private/tmp/cascade-hig-derived/Build/Product
 git diff --check
 ```
 
-Log della sessione: `/private/tmp/cascade-hig-tests.log` e
-`/private/tmp/cascade-hig-app-build.log`. I warning riguardano cache SwiftPM
-non scrivibili nel sandbox e assenza della dipendenza AppIntents; nessun errore
-di compilazione.
+Session logs: `/private/tmp/cascade-hig-tests.log` and
+`/private/tmp/cascade-hig-app-build.log`. The warnings concern SwiftPM caches
+not writable in the sandbox and the absence of the AppIntents dependency; no
+compilation errors.
 
-## Limiti delle verifiche
+## Limits of the checks
 
-Le prove automatiche verificano decisioni di rendering, redazione prima delle
-factory, revoca dei contesti, scadenze, dimensioni e arresto dell'animazione.
-Non misurano la percezione dell'aptica, non sostituiscono una prova VoiceOver
-completa e non dimostrano il funzionamento dei link di un futuro provider.
-L'override del banner Bluetooth nativo richiede ancora una prova con evento
-reale e autorizzazione Accessibilità. Questo lavoro non modifica il monitor
-Bluetooth o il soppressore nativo.
+The automated tests verify rendering decisions, redaction before the
+factories, context revocation, expirations, sizes and stopping the animation.
+They do not measure the perception of haptics, do not replace a full VoiceOver
+test and do not prove that a future provider's links work.
+The override of the native Bluetooth banner still requires a test with a real
+event and Accessibility authorization. This work does not modify the Bluetooth
+monitor or the native suppressor.

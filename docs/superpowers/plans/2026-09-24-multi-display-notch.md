@@ -2,59 +2,59 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans, or superpowers:subagent-driven-development if the user selects delegation. Steps use checkbox (`- [ ]`) syntax for tracking. Implementation authorized by the user on 25 September 2026; execute the linked Wayfinder tickets with subagents.
 
-**Goal:** mantenere il notch su ogni display, permettere una sola apertura e distribuire le Live Activities secondo la preferenza dell'utente.
+**Goal:** keep the notch on every display, allow only one opening and distribute the Live Activities according to the user's preference.
 
-**Architecture:** un coordinatore globale possiede display, focus, routing e ciclo di vita dei contenuti; ogni display ha un controller di presentazione stabile. Rendering e animazioni esistenti vengono riutilizzati. Le copie delle attività condividono identità e sorgente ma hanno viste locali.
+**Architecture:** a global coordinator owns displays, focus, routing and the content lifecycle; each display has a stable presentation controller. The existing rendering and animations are reused. The activity copies share identity and source but have local views.
 
-**Tech Stack:** Swift 6, macOS 14+, AppKit, Core Animation, SwiftUI, Swift Testing, Accessibility già usata dal progetto.
+**Tech Stack:** Swift 6, macOS 14+, AppKit, Core Animation, SwiftUI, Swift Testing, Accessibility already used by the project.
 
-**Spec:** [2026-09-24-multi-display-notch-design.md](../specs/2026-09-24-multi-display-notch-design.md). Contiene i requisiti confermati e, separatamente, le scelte proposte per completare i casi non specificati.
+**Spec:** [2026-09-24-multi-display-notch-design.md](../specs/2026-09-24-multi-display-notch-design.md). It contains the confirmed requirements and, separately, the choices proposed to complete the unspecified cases.
 
-**Stato:** piano preparato sul working tree del 24 settembre 2026; esecuzione autorizzata il 25 settembre e tracciata nella mappa Wayfinder. Focus confermato: finestra attiva, puntatore come fallback. Esecuzione consigliata in sequenza nello stesso contesto, poiché i task modificano lo stesso contratto fra host e controller.
+**Status:** plan prepared on the working tree of 24 September 2026; execution authorized on 25 September and tracked in the Wayfinder map. Confirmed focus: active window, pointer as a fallback. Recommended execution in sequence in the same context, since the tasks change the same contract between host and controller.
 
 ## Global Constraints
 
-- macOS 14 minimo; Swift 6; AppKit/Core Animation per pannelli e morph, SwiftUI per contenuti.
-- Nessuna nuova dipendenza o API privata per questa funzionalità.
-- Un solo monitor globale del mouse; niente polling del focus o dei display.
-- I display link si fermano a geometria stabile. Gli aggiornamenti di focus non ricreano pannelli.
-- Privacy e accessibilità applicate a ogni copia prima delle factory sensibili.
-- Calibrazioni hardware esistenti preservate; vecchie calibrazioni software non devono impedire la nuova piccola sporgenza.
-- Fine implementazione: test pertinenti, build con `scripts/build-development.sh`, aggiornamento del collegamento `/Applications/Cascade.app`, riavvio e verifica del processo.
-- Il working tree contiene numerose modifiche preesistenti, anche nei file interessati. Prima dell'esecuzione acquisirne il diff; non ripristinarle, non includerle indiscriminatamente in commit e non partire da HEAD perdendo lo stato corrente.
+- macOS 14 minimum; Swift 6; AppKit/Core Animation for panels and morph, SwiftUI for content.
+- No new dependency or private API for this feature.
+- A single global mouse monitor; no polling of focus or displays.
+- The display links stop at stable geometry. Focus updates do not recreate panels.
+- Privacy and accessibility applied to every copy before the sensitive factories.
+- Existing hardware calibrations preserved; old software calibrations must not prevent the new small bump.
+- End of implementation: relevant tests, build with `scripts/build-development.sh`, update of the `/Applications/Cascade.app` link, relaunch and verification of the process.
+- The working tree contains many pre-existing changes, including in the affected files. Before execution capture their diff; do not revert them, do not include them indiscriminately in commits and do not start from HEAD, losing the current state.
 
 ## Review Focus
 
-1. La finestra attiva cambia display senza cambiare app, mentre il puntatore resta fermo: il contenuto segue la finestra. Test del task 2.
-2. Display fisso scollegato/ricollegato con ID numerico diverso: nessun trasferimento a un altro monitor; ripristino tramite UUID. Test del task 1 e task 7.
-3. Apertura su A e copia compatta su B della stessa attività: nessuna doppia attivazione o sospensione prematura. Test del task 3.
-4. Due richieste di apertura durante chiusura, trascinamento o callback tardiva: mai due pannelli aperti, ultima destinazione valida. Test del task 4.
-5. Sporgenza di 8 pt e vecchia calibrazione di 220 × 32 pt su display senza hardware: contenuti leggibili, separazione di 24 pt, geometria visiva e hit test coincidenti. Test del task 5.
+1. The active window changes display without changing app, while the pointer stays still: the content follows the window. Test in task 2.
+2. Fixed display disconnected/reconnected with a different numeric ID: no transfer to another monitor; restore through the UUID. Tests in task 1 and task 7.
+3. Opening on A and a compact copy on B of the same activity: no double activation or premature suspension. Test in task 3.
+4. Two opening requests during closing, a drag or a late callback: never two open panels, last valid destination. Test in task 4.
+5. An 8 pt bump and an old 220 × 32 pt calibration on a display without hardware: readable content, 24 pt separation, visual geometry and hit test coinciding. Test in task 5.
 
-## Stato attuale verificato
+## Verified current state
 
-Tutti i percorsi seguenti sono relativi alla radice del repository.
+All the following paths are relative to the repository root.
 
-| Codice esistente | Conseguenza per la modifica |
+| Existing code | Consequence for the change |
 | --- | --- |
-| `CascadeKit/Sources/CascadeKit/Core/Engine/NotchEngine.swift` | Crea un solo pannello, controller, resolver e monitor. Diventa facciata del coordinatore. |
-| `Core/Engine/NotchController.swift` sotto lo stesso modulo | Possiede `LiveActivityHost`, `WidgetHost`, resolver e monitor; `refreshActiveDisplay()` sposta il pannello. Separare orchestrazione globale e rendering locale. |
-| `Core/Display/SafeAreaNotchDetector.swift` | Oggi segue il puntatore. Non rappresenta il focus richiesto. |
-| `Core/Activities/LiveActivityHost.swift` | `isExpanded` sostituisce la selezione compatta e azzera la secondaria; `isVisible` è globale. Non basta condividere questa istanza fra controller senza modificare il contratto. |
-| `Models/Configuration/NotchConfiguration.swift` | Fallback di 220 × 32 pt; un'unica misura usata per riposo e separazione. |
-| `Core/Interaction/NotchSizePreferences.swift` | Già risolve identità UUID; riutilizzare questa logica. |
-| `Extensions/CGPath+NotchDroplet.swift` | Unisce il satellite laterale alla sagoma; non implementa la nuova goccia verticale. Conservare il percorso esistente. |
-| `Cascade/Features/Spotlight/SpotlightDropletLayout.swift` | Layout per campo nativo Spotlight; non usarlo come engine generico della nuova Dynamic Island. |
-| `Cascade/Integrations/Spotlight/SpotlightAccessibilityMonitor.swift` | Modello locale di worker AX, generazioni e notifiche da seguire. |
-| `Cascade/Features/MediaLiveActivity.swift` e `Core/AddonPresentation/SnapshotActivity.swift` | Conservano un solo contesto/permesso per attività; servono attivazioni condivise, non una per copia. |
+| `CascadeKit/Sources/CascadeKit/Core/Engine/NotchEngine.swift` | Creates a single panel, controller, resolver and monitor. Becomes the coordinator's facade. |
+| `Core/Engine/NotchController.swift` under the same module | Owns `LiveActivityHost`, `WidgetHost`, resolver and monitor; `refreshActiveDisplay()` moves the panel. Separate global orchestration from local rendering. |
+| `Core/Display/SafeAreaNotchDetector.swift` | Today it follows the pointer. It does not represent the required focus. |
+| `Core/Activities/LiveActivityHost.swift` | `isExpanded` replaces the compact selection and clears the secondary; `isVisible` is global. Sharing this instance between controllers is not enough without changing the contract. |
+| `Models/Configuration/NotchConfiguration.swift` | 220 × 32 pt fallback; a single measurement used for rest and separation. |
+| `Core/Interaction/NotchSizePreferences.swift` | Already resolves the UUID identity; reuse this logic. |
+| `Extensions/CGPath+NotchDroplet.swift` | Joins the side satellite to the silhouette; does not implement the new vertical droplet. Keep the existing path. |
+| `Cascade/Features/Spotlight/SpotlightDropletLayout.swift` | Layout for the native Spotlight field; do not use it as the generic engine of the new Dynamic Island. |
+| `Cascade/Integrations/Spotlight/SpotlightAccessibilityMonitor.swift` | Local model of AX worker, generations and notifications to follow. |
+| `Cascade/Features/MediaLiveActivity.swift` and `Core/AddonPresentation/SnapshotActivity.swift` | They keep a single context/permission per activity; shared activations are needed, not one per copy. |
 
-Il grafo MCP non contiene un indice di Cascade; questa ricognizione usa il codice del working tree. I percorsi e le interfacce proposte sotto vanno ricontrollati prima di applicare il piano se il codice è cambiato nel frattempo.
+The MCP graph does not contain an index of Cascade; this survey uses the code of the working tree. The paths and interfaces proposed below must be checked again before applying the plan if the code has changed in the meantime.
 
-## Task 1 — Identità, inventario e preferenze di routing
+## Task 1: Identity, inventory and routing preferences
 
-**Files:** creare `CascadeKit/Sources/CascadeKit/Models/Display/DisplayPresentationPreferences.swift`, `Core/Display/DisplayInventory.swift`, `Core/Display/ActivityDisplayRouting.swift` e `Tests/CascadeKitTests/ActivityDisplayRoutingTests.swift` sotto CascadeKit. Modificare `Core/Interaction/NotchSizePreferences.swift` solo per condividere la risoluzione UUID con l'inventario, senza cambiare le chiavi delle calibrazioni esistenti.
+**Files:** create `CascadeKit/Sources/CascadeKit/Models/Display/DisplayPresentationPreferences.swift`, `Core/Display/DisplayInventory.swift`, `Core/Display/ActivityDisplayRouting.swift` and `Tests/CascadeKitTests/ActivityDisplayRoutingTests.swift` under CascadeKit. Change `Core/Interaction/NotchSizePreferences.swift` only to share the UUID resolution with the inventory, without changing the keys of the existing calibrations.
 
-**Interfaces:** `DisplayIdentity` pubblico, `RawRepresentable`, `Hashable`, `Codable`, `Sendable`, con `rawValue: String` e `init(rawValue:)`. `DisplayPresentationPreferences` pubblico con `activityMode: LiveActivityDisplayMode` e `styles: [DisplayIdentity: ExternalNotchStyle]`. I modelli hanno inizializzatori pubblici espliciti.
+**Interfaces:** public `DisplayIdentity`, `RawRepresentable`, `Hashable`, `Codable`, `Sendable`, with `rawValue: String` and `init(rawValue:)`. Public `DisplayPresentationPreferences` with `activityMode: LiveActivityDisplayMode` and `styles: [DisplayIdentity: ExternalNotchStyle]`. The models have explicit public initializers.
 
 ```swift
 public nonisolated enum ExternalNotchStyle: String, Codable, Sendable {
@@ -73,7 +73,7 @@ static func destinations(
 ) -> Set<DisplayIdentity>
 ```
 
-- [x] Scrivere il test sotto, che inizialmente fallisce perché i tipi e il resolver non esistono.
+- [x] Write the test below, which initially fails because the types and the resolver do not exist.
 
 ```swift
 @Test func fixedDisplayDoesNotFallBackWhenDisconnected() {
@@ -88,18 +88,18 @@ static func destinations(
 }
 ```
 
-- [x] Eseguire `DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer swift test --package-path CascadeKit --filter ActivityDisplayRoutingTests`; osservare il fallimento iniziale.
-- [x] Implementare `ActivityDisplayRouting.destinations`: tutti → `connected`; focus → singleton se presente in `connected`, altrimenti insieme vuoto; fisso → singleton dell'identità richiesta solo se collegata. La scelta del fallback del focus appartiene al task 2.
-- [x] Implementare inventario iniettato dietro `DisplayInventoryProviding`: proprietà `displays: [DisplayInventoryEntry]`, callback `onChange`, metodi `start()` e `stop()`. `DisplayInventoryEntry` contiene `snapshot: ActiveDisplay`, `identity: DisplayIdentity?`, `name: String`. Pubblicare solo cambiamenti di topologia/geometria/scala; una superficie per display logico.
-- [x] Usare un unico payload Codable `displayPresentationPreferencesV1` in UserDefaults; impostazione sconosciuta/corrotta → `.focusedDisplay`, stile mancante → `.notch`. Un record valido con UUID offline resta salvato. Trattare gli schermi senza UUID con ID di sessione nel coordinatore per modalità tutti/focus, senza renderli selezionabili come destinazione persistente.
-- [x] Aggiungere prove di round-trip Codable, tutti/focus, nessun display, selezione sconosciuta e UUID stabile con nuovo ID numerico; rieseguire il filtro. I test devono controllare i risultati pubblici, non duplicare lo switch interno.
-- [x] Registrare il diff della sola tranche; un eventuale commit deve includere soltanto gli hunk della funzionalità.
+- [x] Run `DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer swift test --package-path CascadeKit --filter ActivityDisplayRoutingTests`; observe the initial failure.
+- [x] Implement `ActivityDisplayRouting.destinations`: all → `connected`; focus → singleton if present in `connected`, otherwise the empty set; fixed → singleton of the requested identity only if connected. The choice of the focus fallback belongs to task 2.
+- [x] Implement an injected inventory behind `DisplayInventoryProviding`: property `displays: [DisplayInventoryEntry]`, callback `onChange`, methods `start()` and `stop()`. `DisplayInventoryEntry` contains `snapshot: ActiveDisplay`, `identity: DisplayIdentity?`, `name: String`. Publish only topology/geometry/scale changes; one surface per logical display.
+- [x] Use a single Codable payload `displayPresentationPreferencesV1` in UserDefaults; unknown/corrupted setting → `.focusedDisplay`, missing style → `.notch`. A valid record with an offline UUID stays saved. Treat screens without a UUID with a session ID in the coordinator for the all/focus modes, without making them selectable as a persistent destination.
+- [x] Add proofs for Codable round-trip, all/focus, no display, unknown selection and a stable UUID with a new numeric ID; rerun the filter. The tests must check the public results, not duplicate the internal switch.
+- [x] Record the diff of this tranche only; any commit must include only the feature's hunks.
 
-## Task 2 — Focus della finestra attiva e fallback
+## Task 2: Focus of the active window and fallback
 
-**Files:** creare `CascadeKit/Sources/CascadeKit/Core/Display/FocusedDisplayResolver.swift`, `FocusedWindowMonitor.swift`, `Tests/CascadeKitTests/FocusedDisplayResolverTests.swift`. Modificare `Core/Display/SafeAreaNotchDetector.swift`, `Core/Display/ActiveDisplayResolving.swift` e `Core/Events/MouseEventMonitor.swift` eliminando la sovrapposizione fra focus, inventario e puntatore.
+**Files:** create `CascadeKit/Sources/CascadeKit/Core/Display/FocusedDisplayResolver.swift`, `FocusedWindowMonitor.swift`, `Tests/CascadeKitTests/FocusedDisplayResolverTests.swift`. Change `Core/Display/SafeAreaNotchDetector.swift`, `Core/Display/ActiveDisplayResolving.swift` and `Core/Events/MouseEventMonitor.swift`, removing the overlap between focus, inventory and pointer.
 
-**Interfaces:** `FocusedWindowMonitoring` espone `onChange: ((CGRect?) -> Void)?`, `start()` e `stop()`. Il frame pubblicato è già in coordinate globali AppKit. Il monitor concreto osserva l'app esterna in primo piano e la sua finestra; il resolver puro riceve solo valori.
+**Interfaces:** `FocusedWindowMonitoring` exposes `onChange: ((CGRect?) -> Void)?`, `start()` and `stop()`. The published frame is already in global AppKit coordinates. The concrete monitor observes the frontmost external app and its window; the pure resolver receives only values.
 
 ```swift
 nonisolated enum FocusedDisplayResolver {
@@ -111,7 +111,7 @@ nonisolated enum FocusedDisplayResolver {
 }
 ```
 
-- [x] Aggiungere il test del conflitto finestra/puntatore.
+- [x] Add the window/pointer conflict test.
 
 ```swift
 @Test func focusedWindowWinsOverPointer() {
@@ -131,24 +131,24 @@ nonisolated enum FocusedDisplayResolver {
 }
 ```
 
-- [x] Eseguire il filtro `FocusedDisplayResolverTests` e verificare il fallimento iniziale.
-- [x] Implementare intersezione massima, parità stabile, fallback puntatore → principale → primo ID ordinato. Scartare frame nulli, infiniti, vuoti o senza intersezione positiva.
-- [x] Osservare cambio app, cambio finestra focalizzata, spostamento/ridimensionamento, minimizzazione e distruzione della finestra; rimuovere le sottoscrizioni precedenti. Accorpare gli eventi, eseguire letture AX sul worker e scartare risposte di generazioni superate. Alla revoca/assenza di Accessibility pubblicare `nil` e usare il fallback senza aprire dialoghi ripetuti.
-- [x] Riutilizzare il percorso esistente di variazione permessi per riattivare il monitor quando il consenso cambia. Il puntatore viene sempre osservato per l'hover, ma aggiorna il display attivo soltanto se manca un frame focalizzato valido.
-- [x] Testare separatamente conversione coordinate con monitor sopra/sotto/sinistra, area in parità, cambio finestra nella stessa app, spostamento senza mouse, callback tardivo e permesso revocato. Iniettare il trasporto AX nel monitor per queste prove, senza interrogare altre app nei test unitari.
-- [x] Eseguire nuovamente i test; verificare su una finestra reale che trascinarla tra monitor cambi il risultato con puntatore poi fermo. Nessun timer periodico.
+- [x] Run the `FocusedDisplayResolverTests` filter and verify the initial failure.
+- [x] Implement maximum intersection, stable tie-break, fallback pointer → main → first sorted ID. Discard null, infinite or empty frames and frames without a positive intersection.
+- [x] Observe app change, focused window change, move/resize, minimization and destruction of the window; remove the previous subscriptions. Coalesce the events, perform AX reads on the worker and discard responses from superseded generations. When Accessibility is revoked/absent, publish `nil` and use the fallback without opening repeated dialogs.
+- [x] Reuse the existing permission-change path to reactivate the monitor when consent changes. The pointer is always observed for hover, but it updates the active display only if a valid focused frame is missing.
+- [x] Test separately coordinate conversion with a monitor above/below/to the left, tied area, window change within the same app, move without the mouse, late callback and revoked permission. Inject the AX transport into the monitor for these proofs, without querying other apps in unit tests.
+- [x] Run the tests again; verify on a real window that dragging it between monitors changes the result with the pointer then still. No periodic timer.
 
-## Aggiornamento contratti dopo audit del 25 settembre
+## Contract update after the 25 September audit
 
-La visibilità nel task 3 usa `setVisibleActivities(_ activities: [any NotchActivity])`, con identità di istanza, al posto del solo insieme di ID riportato nella bozza sotto. La scelta espansa distingue esplicitamente nessuna attività, fallback e attività selezionata. Nel task 4 le richieste portano un token cancellabile e la chiusura una generazione: conta il termine reale del morph. Il satellite deve restare sulle copie compatte degli altri display; il layout del display già espanso resta quello esistente. Questi emendamenti prevalgono sui frammenti iniziali.
+Visibility in task 3 uses `setVisibleActivities(_ activities: [any NotchActivity])`, with instance identity, instead of the plain set of IDs reported in the draft below. The expanded choice explicitly distinguishes no activity, fallback and selected activity. In task 4 the requests carry a cancellable token and the closing a generation: the real end of the morph is what counts. The satellite must stay on the compact copies of the other displays; the layout of the already expanded display stays the existing one. These amendments prevail over the initial fragments.
 
-## Task 3 — Selezione condivisa e ciclo di vita delle attività
+## Task 3: Shared selection and activity lifecycle
 
-**Files:** modificare `CascadeKit/Sources/CascadeKit/Core/Activities/LiveActivityHost.swift`, `Tests/CascadeKitTests/LiveActivityHostTests.swift` e `Tests/CascadeKitTests/AddonPresentationTests.swift`. Aggiornare temporaneamente il controller singolo alla nuova interfaccia per mantenere la tranche compilabile.
+**Files:** change `CascadeKit/Sources/CascadeKit/Core/Activities/LiveActivityHost.swift`, `Tests/CascadeKitTests/LiveActivityHostTests.swift` and `Tests/CascadeKitTests/AddonPresentationTests.swift`. Temporarily update the single controller to the new interface to keep the tranche compilable.
 
-**Interfaces:** il nuovo `ActivitySelection` interno contiene `primary`, `secondary`, `expanded` di tipo `(any NotchLiveActivity)?` e `notice: (any NotchTransientNotice)?`. `LiveActivityHost.selection` lo espone in sola lettura; `setExpanded(_:activityID:)` continua a scegliere l'attività aperta. Nuovo `setVisibleActivityIDs(_ ids: Set<String>)` governa l'attivazione effettiva all'interno della sessione visibile; `setVisible(false)` rimane riservato alla sospensione globale/blocco e non alla rimozione di una copia. `setVisible(true)` abilita la sessione ma attiva soltanto le identità dell'unione consegnata dal coordinatore.
+**Interfaces:** the new internal `ActivitySelection` contains `primary`, `secondary`, `expanded` of type `(any NotchLiveActivity)?` and `notice: (any NotchTransientNotice)?`. `LiveActivityHost.selection` exposes it read-only; `setExpanded(_:activityID:)` keeps choosing the open activity. The new `setVisibleActivityIDs(_ ids: Set<String>)` governs the actual activation within the visible session; `setVisible(false)` stays reserved for global suspension/lock and not for removing a copy. `setVisible(true)` enables the session but activates only the identities of the union handed over by the coordinator.
 
-- [x] Nello stesso file dei fixture `LiveFixture` esistenti, aggiungere il test seguente.
+- [x] In the same file as the existing `LiveFixture` fixtures, add the following test.
 
 ```swift
 @Test @MainActor func copiesShareActivationUntilLastPresentationLeaves() {
@@ -170,48 +170,48 @@ La visibilità nel task 3 usa `setVisibleActivities(_ activities: [any NotchActi
 }
 ```
 
-- [x] Eseguire `swift test --package-path CascadeKit --filter LiveActivityHostTests` con il `DEVELOPER_DIR` del task 1 e registrare il fallimento iniziale.
-- [x] Separare il calcolo di `ActivitySelection` dalla riconciliazione delle attivazioni. La selezione compatta non dipende da `isExpanded`; gli avvisi non cancellano la selezione live sottostante. L'espansione continua a eliminare e sopprimere gli avvisi secondo il contratto esistente.
-- [x] Confrontare l'unione delle identità effettivamente visibili con le attivazioni correnti; a parità di ID confrontare anche l'istanza per sospendere quella sostituita. `setVisibleActivityIDs` non deve emettere ricorsivamente `onChange` a ogni applicazione della stessa proiezione.
-- [x] Mantenere un solo scheduler delle scadenze. Conservare priorità, due sorgenti distinte, fallback espanso, invalidazione per revisione e revoca dei vecchi contesti. Un'attività esclusa da tutte le presentazioni conserva metadati/scadenza ma non risorse di vista.
-- [x] Aggiungere prove per primaria/secondaria compatte mentre una è espansa, aggiornamento unico osservato da due copie, scadenza mentre espansa, rimozione di una copia senza sospensione, sostituzione d'istanza con stesso ID e sospensione al blocco. Con `SnapshotActivity`, l'azione rimane valida finché c'è una presentazione e viene revocata dopo l'ultima; non creare un provider per display.
-- [x] Rieseguire `LiveActivityHostTests` e `AddonPresentationTests`; adeguare le vecchie aspettative solo dove il nuovo contratto richiede la selezione compatta persistente.
+- [x] Run `swift test --package-path CascadeKit --filter LiveActivityHostTests` with the `DEVELOPER_DIR` from task 1 and record the initial failure.
+- [x] Separate the computation of `ActivitySelection` from the reconciliation of activations. The compact selection does not depend on `isExpanded`; notices do not clear the underlying live selection. Expansion keeps removing and suppressing notices according to the existing contract.
+- [x] Compare the union of the actually visible identities with the current activations; for equal IDs also compare the instance to suspend the replaced one. `setVisibleActivityIDs` must not recursively emit `onChange` on every application of the same projection.
+- [x] Keep a single expiry scheduler. Keep priority, two distinct sources, expanded fallback, invalidation by revision and revocation of the old contexts. An activity excluded from all presentations keeps metadata/expiry but no view resources.
+- [x] Add proofs for compact primary/secondary while one is expanded, a single update observed by two copies, expiry while expanded, removal of one copy without suspension, instance replacement with the same ID and suspension on lock. With `SnapshotActivity`, the action stays valid while there is a presentation and is revoked after the last one; do not create a provider per display.
+- [x] Rerun `LiveActivityHostTests` and `AddonPresentationTests`; adjust the old expectations only where the new contract requires the persistent compact selection.
 
-## Task 4 — Pannelli permanenti e apertura esclusiva
+## Task 4: Permanent panels and exclusive opening
 
-**Files:** creare `CascadeKit/Sources/CascadeKit/Core/Engine/NotchDisplayCoordinator.swift` e `Tests/CascadeKitTests/NotchDisplayCoordinatorTests.swift`. Modificare `Core/Engine/NotchEngine.swift`, `Core/Engine/NotchController.swift`, `Core/Events/EventMonitoring.swift` e `Tests/CascadeKitTests/NotchControllerTests.swift`.
+**Files:** create `CascadeKit/Sources/CascadeKit/Core/Engine/NotchDisplayCoordinator.swift` and `Tests/CascadeKitTests/NotchDisplayCoordinatorTests.swift`. Change `Core/Engine/NotchEngine.swift`, `Core/Engine/NotchController.swift`, `Core/Events/EventMonitoring.swift` and `Tests/CascadeKitTests/NotchControllerTests.swift`.
 
-**Interfaces:** `NotchDisplayCoordinator` ha `start()`, `stop()`, `updatePreferences(_:)`, `requestExpansion(on: CGDirectDisplayID, activityID: String?)`, `requestCollapse(on:)`, `didFinishCollapse(on:)` e `expandedDisplayID: CGDirectDisplayID?`. Il controller locale riceve `updateDisplay(_ display: ActiveDisplay)` e `applyPresentation(_:)`; emette richieste di apertura/chiusura e fine animazione. `DisplayPresentation` contiene i riferimenti ai contenuti locali `primary`, `secondary`, `notice`, `expanded`, `showsWidgets: Bool` e lo stile risolto. Le attività usano i tipi del task 3.
+**Interfaces:** `NotchDisplayCoordinator` has `start()`, `stop()`, `updatePreferences(_:)`, `requestExpansion(on: CGDirectDisplayID, activityID: String?)`, `requestCollapse(on:)`, `didFinishCollapse(on:)` and `expandedDisplayID: CGDirectDisplayID?`. The local controller receives `updateDisplay(_ display: ActiveDisplay)` and `applyPresentation(_:)`; it emits opening/closing requests and animation end. `DisplayPresentation` contains the references to the local content `primary`, `secondary`, `notice`, `expanded`, `showsWidgets: Bool` and the resolved style. The activities use the types from task 3.
 
-- [x] Costruire fixture del coordinatore con inventario finto, focus finto e superfici registranti conformi a `NotchDisplayPresenting`. Questo protocollo espone i metodi locali sopra, `close(animated:)`, `stop()` e callback di fine chiusura. Registrare pannelli creati, frame, contenuti visibili e sequenza delle transizioni.
-- [x] Scrivere la prova sequenziale: collegare A/B → due superfici; aprire A → proprietario A; richiedere B → A in chiusura e B ancora compatto; notificare `didFinishCollapse(on: A)` → proprietario B; entrambe le superfici esistono ancora. La prova deve controllare ogni transizione, non solo il risultato finale.
-- [x] Eseguire il filtro `NotchDisplayCoordinatorTests`, verificando il fallimento prima dell'implementazione.
-- [x] Spostare inventario, focus, monitor, host attività e host widget al coordinatore. Ogni controller rimane ancorato al proprio display; il focus non chiama più `layoutPanel` sui pannelli esistenti. L'aggiornamento della geometria del display può chiamarlo. La configurazione prodotto mantiene sempre visibile il chrome software: il vecchio flag `drawsChromeWithoutHardwareNotch` non può spegnere le sagome previste dalla nuova modalità.
-- [x] Implementare passaggio di proprietà secondo questa sequenza; il completamento dell'animazione è un evento del controller, non un ritardo numerico.
+- [x] Build coordinator fixtures with a fake inventory, fake focus and recording surfaces conforming to `NotchDisplayPresenting`. This protocol exposes the local methods above, `close(animated:)`, `stop()` and a closing-finished callback. Record created panels, frames, visible content and the sequence of transitions.
+- [x] Write the sequential proof: connect A/B → two surfaces; open A → owner A; request B → A closing and B still compact; notify `didFinishCollapse(on: A)` → owner B; both surfaces still exist. The proof must check every transition, not only the final result.
+- [x] Run the `NotchDisplayCoordinatorTests` filter, verifying the failure before the implementation.
+- [x] Move inventory, focus, monitor, activity host and widget host to the coordinator. Each controller stays anchored to its own display; focus no longer calls `layoutPanel` on the existing panels. The display geometry update can call it. The product configuration always keeps the software chrome visible: the old `drawsChromeWithoutHardwareNotch` flag cannot turn off the silhouettes required by the new mode.
+- [x] Implement the ownership handover according to this sequence; the animation's completion is a controller event, not a numeric delay.
 
 ```text
 requestExpansion(B):
-  if un'interazione trattiene A: conserva B finché il trigger resta valido
-  else if A esiste ed è diverso da B:
-    pending = B; invalida i controlli aperti di A; chiedi chiusura di A
-  else: assegna B e presenta il contenuto consentito dal routing
+  if an interaction holds A: keep B while the trigger stays valid
+  else if A exists and differs from B:
+    pending = B; invalidate A's open controls; ask A to collapse
+  else: assign B and present the content the routing allows
 didFinishCollapse(A):
-  libera A e le sue viste espanse
-  se pending è ancora collegato e il trigger è valido: apri pending
-  altrimenti: tutti compatti
+  release A and its expanded views
+  if pending is still connected and the trigger is valid: open pending
+  otherwise: all compact
 ```
 
-- [x] Calcolare una `DisplayPresentation` per superficie: attività solo sui destinatari; avviso solo sul display attivo; contenuto espanso solo sul proprietario. Rimuovere le viste/interazioni uscenti, comunicare all'host l'unione degli ID della nuova presentazione e delle viste ancora in animazione, quindi costruire le nuove viste. `activate` deve precedere le factory: `SnapshotActivity` cattura il permesso d'azione durante la costruzione della vista. A fine animazione ridurre nuovamente l'unione. Il cambio di focus tra due copie della stessa attività non deve produrre un insieme vuoto intermedio.
-- [x] I controller in chiusura possono rimuovere le loro viste, ma non chiamano `activityHost.stop()`, `setVisible(false)` o `setPresentationSuppressed` globali. La soppressione durante un morph è locale. `WidgetHost` ha un solo proprietario espanso; svuotare/revocare la vecchia vista prima di montarla sul nuovo display.
-- [x] Instradare il movimento del puntatore al display sotto il puntatore e al precedente/attuale proprietario per generare l'uscita; non fare hit test su ogni schermo a ogni evento. Il pulsante rilasciato raggiunge sempre il controller che possiede il trascinamento.
-- [x] Testare tutti/focus/fisso senza ricreazione di finestre, A→B→C rapido, uscita del puntatore da B prima della chiusura di A, rimozione di A/B durante la transizione, popover/drag/impostazioni, blocco/sblocco, stop e Riduci movimento. `stop()` rimuove tutte le finestre e ferma una sola volta servizi condivisi.
-- [x] Rieseguire i test del coordinatore e del controller. Non modificare gli algoritmi delle molle o le priorità dei provider in questo task.
+- [x] Compute one `DisplayPresentation` per surface: activity only on the destinations; notice only on the active display; expanded content only on the owner. Remove the outgoing views/interactions, tell the host the union of the IDs of the new presentation and of the views still animating, then build the new views. `activate` must precede the factories: `SnapshotActivity` captures the action permission while building the view. At the end of the animation reduce the union again. A focus change between two copies of the same activity must not produce an intermediate empty set.
+- [x] Closing controllers can remove their views, but they do not call the global `activityHost.stop()`, `setVisible(false)` or `setPresentationSuppressed`. Suppression during a morph is local. `WidgetHost` has a single expanded owner; empty/revoke the old view before mounting it on the new display.
+- [x] Route pointer movement to the display under the pointer and to the previous/current owner to generate the exit; do not hit test every screen on every event. The released button always reaches the controller that owns the drag.
+- [x] Test all/focus/fixed without recreating windows, fast A→B→C, the pointer leaving B before A closes, removal of A/B during the transition, popover/drag/settings, lock/unlock, stop and Reduce Motion. `stop()` removes all windows and stops the shared services only once.
+- [x] Rerun the coordinator and controller tests. Do not change the spring algorithms or the provider priorities in this task.
 
-## Task 5 — Notch software e Dynamic Island a goccia
+## Task 5: Software notch and droplet Dynamic Island
 
-**Files:** creare `CascadeKit/Sources/CascadeKit/Models/Geometry/SoftwareNotchMetrics.swift`, `Extensions/CGPath+SoftwareNotchDroplet.swift`, `Tests/CascadeKitTests/SoftwareNotchGeometryTests.swift`. Modificare `Models/Geometry/NotchGeometry.swift`, `Models/Configuration/NotchConfiguration.swift`, `Core/Engine/NotchController.swift`, `Components/NotchHostView.swift`, `Models/Configuration/NotchActivityViewContext.swift` e `Cascade/Features/MediaLiveActivity.swift`.
+**Files:** create `CascadeKit/Sources/CascadeKit/Models/Geometry/SoftwareNotchMetrics.swift`, `Extensions/CGPath+SoftwareNotchDroplet.swift`, `Tests/CascadeKitTests/SoftwareNotchGeometryTests.swift`. Change `Models/Geometry/NotchGeometry.swift`, `Models/Configuration/NotchConfiguration.swift`, `Core/Engine/NotchController.swift`, `Components/NotchHostView.swift`, `Models/Configuration/NotchActivityViewContext.swift` and `Cascade/Features/MediaLiveActivity.swift`.
 
-**Interfaces:** `SoftwareNotchMetrics` espone `restingSize`, `compactHeight`, `compactCenterGap`, `neckWidth`, `bodyOffset`. Nuova geometria a goccia verticale separata da `CGPath.notchDroplet`, che resta il satellite delle attività.
+**Interfaces:** `SoftwareNotchMetrics` exposes `restingSize`, `compactHeight`, `compactCenterGap`, `neckWidth`, `bodyOffset`. New vertical droplet geometry separate from `CGPath.notchDroplet`, which stays the activities' satellite.
 
 ```swift
 nonisolated struct SoftwareNotchMetrics {
@@ -223,60 +223,60 @@ nonisolated struct SoftwareNotchMetrics {
 }
 ```
 
-- [x] Scrivere prove sulle tre misure indipendenti e sulla larghezza centrale. Per hardware finto di 200 pt la riserva rimane 200; per software è 24 con identiche dimensioni dei contenuti laterali. Verificare entrambi gli stili a riposo con bounding box 96 × 8 comprensiva dei raccordi, senza sommare accidentalmente i raggi esterni.
-- [x] Eseguire `SoftwareNotchGeometryTests` prima della nuova implementazione e osservare il fallimento.
-- [x] Sostituire gli usi indistinti di `restingSize` nel controller: trigger di riposo usa la sporgenza; layout compatto usa altezza e separazione per attività; contenuto espanso usa riserva hardware reale o zero. Aggiornare anche satellite, pulsante impostazioni, inset e calcolo del canvas.
-- [x] Passare `hardwareNotchWidth: 0` sul software, preservando il valore calibrato hardware dove esiste. Correggere il fallback `?? 200` in `MediaLiveActivity` se necessario affinché un'esplicita assenza di hardware non generi il vecchio vuoto centrale. Non ridurre icone/font per ottenere uno spazio centrale più piccolo.
-- [x] Per Dynamic Island senza attività interpolare la sporgenza verso corpo e collo verticali; Notch usa la forma collegata al bordo. Durante Live Activity usare lo stesso layout e percorso delle attività per entrambi gli stili. Un `expandedFallback` privo di sessione live usa la goccia.
-- [x] Far consumare lo stesso path a fill, glass, bordi, maschera, accessibilità e hit testing. Conservare il renderer del satellite e il percorso Spotlight. La sporgenza superiore resta presente anche quando il corpo della goccia scende.
-- [x] Applicare le vecchie calibrazioni solo all'hardware per questa nuova modalità software; conservare i dati salvati. Non fare migrazioni distruttive. Il controllo dimensioni non deve imporre alla nuova sporgenza il vecchio minimo di 16 pt.
-- [x] Testare path finito e contenuto nel canvas a progressi 0/0.5/1, frame iniziale/finale, interruzione del morph, cambio stile da aperto, arrivo/fine attività durante la goccia, scale 1×/2× e display stretto. Nessun frame con contenuto fuori maschera, path/hit test divergenti o sporgenza assente.
-- [x] Eseguire `SoftwareNotchGeometryTests`, `NotchGeometryTests`, `ContinuousNotchPathTests`, `NotchHostViewTests`, `NotchSizeCalibrationTests` e `NotchControllerTests`. Confrontare visivamente i valori iniziali della specifica; eventuali ritocchi aggiornano anche la specifica.
+- [x] Write proofs on the three independent measurements and on the central width. For fake 200 pt hardware the reserve stays 200; for software it is 24 with identical side content dimensions. Verify both styles at rest with a 96 × 8 bounding box that includes the fillets, without accidentally adding the outer radii.
+- [x] Run `SoftwareNotchGeometryTests` before the new implementation and observe the failure.
+- [x] Replace the undifferentiated uses of `restingSize` in the controller: the resting trigger uses the bump; the compact layout uses the height and separation for activities; the expanded content uses the real hardware reserve or zero. Also update satellite, settings button, insets and the canvas computation.
+- [x] Pass `hardwareNotchWidth: 0` on software, preserving the calibrated hardware value where it exists. Fix the `?? 200` fallback in `MediaLiveActivity` if necessary so that an explicit absence of hardware does not produce the old central gap. Do not shrink icons/fonts to obtain a smaller central space.
+- [x] For Dynamic Island without an activity, interpolate the bump toward the vertical body and neck; Notch uses the shape connected to the edge. During a Live Activity use the same layout and path as the activities for both styles. An `expandedFallback` without a live session uses the droplet.
+- [x] Make fill, glass, borders, mask, accessibility and hit testing consume the same path. Keep the satellite renderer and the Spotlight path. The top bump stays present even when the droplet body descends.
+- [x] Apply the old calibrations only to hardware for this new software mode; keep the saved data. No destructive migrations. The size control must not impose the old 16 pt minimum on the new bump.
+- [x] Test a finite path and content within the canvas at progress 0/0.5/1, initial/final frame, morph interruption, style change while open, activity arrival/end during the droplet, 1×/2× scales and a narrow display. No frame with content outside the mask, diverging path/hit test or a missing bump.
+- [x] Run `SoftwareNotchGeometryTests`, `NotchGeometryTests`, `ContinuousNotchPathTests`, `NotchHostViewTests`, `NotchSizeCalibrationTests` and `NotchControllerTests`. Visually compare the initial values of the specification; any adjustments also update the specification.
 
-## Task 6 — Impostazioni e superfici ausiliarie
+## Task 6: Settings and auxiliary surfaces
 
-**Files:** modificare `Cascade/CascadeServices.swift`, `Cascade/Features/Settings/CascadeSettingsView.swift`, `Cascade/Features/Settings/CascadeSettingsWindowController.swift`, `Cascade/Integrations/Spotlight/SpotlightCoordinator.swift`, `CascadeKit/Sources/CascadeKit/Core/Engine/NotchEngine.swift`, `CascadeTests/SettingsTests.swift`.
+**Files:** change `Cascade/CascadeServices.swift`, `Cascade/Features/Settings/CascadeSettingsView.swift`, `Cascade/Features/Settings/CascadeSettingsWindowController.swift`, `Cascade/Integrations/Spotlight/SpotlightCoordinator.swift`, `CascadeKit/Sources/CascadeKit/Core/Engine/NotchEngine.swift`, `CascadeTests/SettingsTests.swift`.
 
-**Interfaces:** l'engine espone `setDisplayPreferences(_ preferences: DisplayPresentationPreferences)`, elenco descrittivo dei display e callback dei suoi cambiamenti. `CascadeServices` persiste le preferenze del task 1 e fornisce binding alla UI; nessuna doppia cache autorevole. `expandedFrame` e `onExpandedFrameChanged` descrivono il proprietario dell'apertura, non il display che ha appena ricevuto focus.
+**Interfaces:** the engine exposes `setDisplayPreferences(_ preferences: DisplayPresentationPreferences)`, a descriptive list of the displays and a callback for its changes. `CascadeServices` persists the preferences from task 1 and provides bindings to the UI; no second authoritative cache. `expandedFrame` and `onExpandedFrameChanged` describe the opening owner, not the display that has just received focus.
 
-- [x] Aggiungere casi di ricerca `.displayStyle` e `.activityDisplays` e relativi test prima della UI: termini «schermo», «display», «notch», «Dynamic Island» e «attività» trovano i controlli reali.
-- [x] Implementare nella pagina Appearance una sezione Schermi: righe con nome del display e scelta Notch/Dynamic Island solo quando manca il taglio hardware. Per hardware mostrare il comportamento fisico senza un selettore inapplicabile.
-- [x] Aggiungere «Mostra Live Activities» con tre opzioni: «Tutti gli schermi», «Segui il focus», «Schermo specifico». Il selettore del monitor appare solo per la terza; il monitor offline rimane elencato come scollegato. Testo di aiuto spiega focus e fallback e che la sagoma rimane su tutti gli schermi.
-- [x] Applicare le preferenze immediatamente, senza riavvio, con normalizzazione al caricamento. Il cambio stile richiude la superficie interessata prima di cambiare geometria; non interrompe le attività sulle altre superfici.
-- [x] Ancorare impostazioni, calibrazione e Spotlight al display di invocazione/apertura. Sostituire la selezione autonoma del puntatore in `SpotlightCoordinator` con un'ancora fornita dai servizi: display aperto se presente, altrimenti display attivo risolto dal task 2. Il suo eventuale focus non deve trasferire l'ancora.
-- [x] Conservare l'arbitraggio unico anche per Spotlight: le altre sagome rimangono, una seconda espansione aspetta la chiusura della superficie esterna. Se il display scompare, annullare il raccordo e usare il ripristino nativo già previsto, senza spostare finestre indiscriminatamente.
-- [x] Verificare persistenza e ricerca con `SettingsTests`; aggiungere prova per impostazioni aperte su B mentre il focus esterno passa su A, scelta fissa offline e display omonimi con UUID diversi. Usare etichette accessibili che distinguano le righe omonime.
+- [x] Add the `.displayStyle` and `.activityDisplays` search cases and their tests before the UI: the terms "screen", "display", "notch", "Dynamic Island" and "activity" find the real controls.
+- [x] Implement a Screens section in the Appearance page: rows with the display name and the Notch/Dynamic Island choice only when the hardware cut-out is missing. For hardware show the physical behavior without an inapplicable selector.
+- [x] Add "Show Live Activities" with three options: "All screens", "Follow focus", "Specific screen". The monitor selector appears only for the third; an offline monitor stays listed as disconnected. Help text explains focus and fallback and that the silhouette stays on all screens.
+- [x] Apply the preferences immediately, without relaunch, with normalization on load. The style change closes the affected surface before changing geometry; it does not interrupt the activities on the other surfaces.
+- [x] Anchor settings, calibration and Spotlight to the invoking/opening display. Replace the pointer's autonomous selection in `SpotlightCoordinator` with an anchor provided by the services: the open display if present, otherwise the active display resolved by task 2. Its own focus, if any, must not transfer the anchor.
+- [x] Keep the single arbitration for Spotlight too: the other silhouettes stay, a second expansion waits for the outer surface to close. If the display disappears, cancel the join and use the native restore already provided, without moving windows indiscriminately.
+- [x] Verify persistence and search with `SettingsTests`; add a proof for settings open on B while the external focus moves to A, an offline fixed choice and same-name displays with different UUIDs. Use accessible labels that distinguish same-name rows.
 
-## Task 7 — Verifica integrata, documentazione e build
+## Task 7: Integrated verification, documentation and build
 
-**Files:** aggiornare `docs/architecture/live-activity-contracts.md`; creare `docs/superpowers/verification/2026-09-24-multi-display-notch.md` al momento dell'esecuzione, registrando ambiente effettivo e prove. Non dichiarare già eseguite le verifiche elencate qui.
+**Files:** update `docs/architecture/live-activity-contracts.md`; create `docs/superpowers/verification/2026-09-24-multi-display-notch.md` at execution time, recording the actual environment and proofs. Do not declare the verifications listed here as already performed.
 
-- [x] Eseguire tutti i test CascadeKit una volta conclusi i task: `DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer swift test --package-path CascadeKit`.
-- [x] Eseguire test app con `DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer xcodebuild -project Cascade.xcodeproj -scheme Cascade -configuration Debug -destination 'platform=macOS' -derivedDataPath "$HOME/Library/Developer/Xcode/DerivedData/CascadeDevelopment" test -only-testing:CascadeTests/SettingsTests`.
-- [x] Verificare la seguente matrice su monitor reali quando disponibili, registrando come non verificata ogni combinazione non disponibile. I fake dimostrano routing/stato, non stacking nativo dei pannelli.
+- [x] Run all the CascadeKit tests once the tasks are finished: `DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer swift test --package-path CascadeKit`.
+- [x] Run the app tests with `DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer xcodebuild -project Cascade.xcodeproj -scheme Cascade -configuration Debug -destination 'platform=macOS' -derivedDataPath "$HOME/Library/Developer/Xcode/DerivedData/CascadeDevelopment" test -only-testing:CascadeTests/SettingsTests`.
+- [x] Verify the following matrix on real monitors when available, recording every unavailable combination as not verified. The fakes demonstrate routing/state, not native panel stacking.
 
-| Prova | Risultato richiesto |
+| Proof | Required result |
 | --- | --- |
-| Hardware + esterno, nessuna attività | Due sagome permanenti; esterno selezionabile nei due stili |
-| Due schermi senza hardware | Stili indipendenti, stessa semantica delle attività |
-| Tutti, due attività, apertura su A | Copie compatte su B; una sola superficie aperta |
-| Focus della finestra su A, mouse su B | Attività compatta su A; hover su B può aprire i widget |
-| Spostamento finestra/cambio finestra nella stessa app | Attività segue il nuovo display; pannelli non si spostano |
-| Specifico B; scollegamento/riconnessione B | Nessuna copia su A; ritorno su B con stessa revisione valida |
-| A aperto, richiesta B, poi C | Chiusura A prima di nuova apertura; ultima richiesta valida |
-| Arrivo/scadenza Live Activity durante morph | Sagoma sempre presente, contenuti coerenti, nessuna attività risuscitata |
-| Lock/unlock, stop/start, coperchio chiuso | Nessuna finestra orfana, servizi rilasciati, inventario aggiornato |
-| Fullscreen, Spaces, Mission Control, mirroring | Presenza compatta sul desktop pertinente; nessuna duplicazione di pannelli logici |
-| Riduci movimento/trasparenza, VoiceOver | Geometria finale corretta, stessa esclusività, contenuti sensibili protetti |
-| Impostazioni, popover, Spotlight | Ancora stabile e unica interazione aperta |
+| Hardware + external, no activity | Two permanent silhouettes; external selectable in both styles |
+| Two screens without hardware | Independent styles, same activity semantics |
+| All, two activities, opening on A | Compact copies on B; a single open surface |
+| Window focus on A, mouse on B | Compact activity on A; hover on B can open the widgets |
+| Window move/window change within the same app | Activity follows the new display; panels do not move |
+| Specific B; disconnection/reconnection of B | No copy on A; return to B with the same valid revision |
+| A open, request B, then C | A closes before the new opening; last valid request |
+| Live Activity arrival/expiry during a morph | Silhouette always present, consistent content, no resurrected activity |
+| Lock/unlock, stop/start, lid closed | No orphaned window, services released, inventory updated |
+| Fullscreen, Spaces, Mission Control, mirroring | Compact presence on the relevant desktop; no duplication of logical panels |
+| Reduce Motion/Transparency, VoiceOver | Correct final geometry, same exclusivity, sensitive content protected |
+| Settings, popover, Spotlight | Stable anchor and a single open interaction |
 
-- [ ] Qualificazione nativa delle risorse a riposo: conteggio di display link e TimelineView tramite profiling non eseguito. **Parte automatica completata:** tre copie condividono una sola attivazione/scadenza, il focus non rialloca pannelli e i test di morph/lock/Riduci movimento passano. Il limite di profiling è dichiarato nel verbale e accettato come confine della consegna locale, senza affermare una misura nativa inesistente.
-- [x] Aggiornare i contratti architetturali: sagome permanenti, selezione compatta indipendente dall'espansione, ciclo di vita condiviso, significato degli avvisi e misure software.
-- [x] Eseguire `scripts/build-development.sh`. Solo dopo successo verificare il target di `/Applications/Cascade.app`, terminare l'istanza precedente, riaprire quel percorso e verificare processo/eseguibile della nuova istanza.
-- [x] Nel rapporto finale distinguere test automatici, prove reali, combinazioni non disponibili e risultati del riavvio. Non considerare la sola build una verifica multi-monitor.
+- [ ] Native qualification of the resources at rest: count of display links and TimelineView through profiling not performed. **Automatic part completed:** three copies share a single activation/expiry, focus does not reallocate panels and the morph/lock/Reduce Motion tests pass. The profiling limit is declared in the report and accepted as the boundary of the local delivery, without claiming a native measurement that does not exist.
+- [x] Update the architecture contracts: permanent silhouettes, compact selection independent of expansion, shared lifecycle, meaning of notices and software measurements.
+- [x] Run `scripts/build-development.sh`. Only after success verify the target of `/Applications/Cascade.app`, terminate the previous instance, reopen that path and verify the process/executable of the new instance.
+- [x] In the final report distinguish automated tests, real proofs, unavailable combinations and relaunch results. Do not consider the build alone a multi-monitor verification.
 
-**Esito di consegna, 26 settembre 2026:** implementazione e revisioni concluse; build firmata e riavvio verificati. Suite Settings 17/17; full package finale eseguito, exit 1 con i timeout confrontati con baseline nel [verbale](../verification/2026-09-24-multi-display-notch.md). Le prove fisiche non disponibili e il profiling non eseguito restano esplicitamente non qualificati.
+**Delivery outcome, 26 September 2026:** implementation and reviews completed; signed build and relaunch verified. Settings suite 17/17; final full package run, exit 1 with the timeouts compared with the baseline in the [report](../verification/2026-09-24-multi-display-notch.md). The unavailable physical proofs and the profiling not performed stay explicitly unqualified.
 
-## Criterio di completamento
+## Completion criterion
 
-Tutti i requisiti della specifica hanno un task: presenza e apertura → task 4; stile/goccia/geometria → task 5; modalità e persistenza → task 1 e 6; focus confermato → task 2; copia senza duplicazione dei provider → task 3; qualificazione e riavvio → task 7. Il lavoro è completato solo dopo verifica delle transizioni e della replica, non dopo la sola aggiunta dei selettori.
+Every requirement of the specification has a task: presence and opening → task 4; style/droplet/geometry → task 5; modes and persistence → tasks 1 and 6; confirmed focus → task 2; copy without provider duplication → task 3; qualification and relaunch → task 7. The work is complete only after verification of the transitions and of the replication, not after merely adding the selectors.

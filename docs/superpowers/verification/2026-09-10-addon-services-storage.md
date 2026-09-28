@@ -1,30 +1,30 @@
-# Addon runtime — servizi e checkpoint
+# Addon runtime: services and checkpoints
 
-Questo rapporto segue la [continuazione direct-v1](2026-09-10-addon-runtime-progress.md). L'utente ha autorizzato il proseguimento sulle parti già progettate. Non è stata modificata la decisione sul lavoro delegato; il launcher nativo rimane non ammesso.
+This report follows the [direct-v1 continuation](2026-09-10-addon-runtime-progress.md). The user authorized continuing on the parts already designed. The decision on the delegated work was not changed; the native launcher remains not admitted.
 
-## Parti implementate
+## Implemented parts
 
-### Broker dei servizi C3
+### C3 service broker
 
-Il broker riceve identità verificate e binding scelti dal resolver attraverso API dell'host. Le sessioni sono opache e generano nuove concessioni alla riconnessione. Convalida proprietario, feature, operazione, partizione privata, fornitore/versione e scadenza prima di ammettere le chiamate. Gli interessi sopravvivono all'uscita normale del consumatore; revoca, disattivazione e scadenza li eliminano insieme alle relative concessioni.
+The broker receives verified identities and bindings chosen by the resolver through host APIs. Sessions are opaque and generate new grants on reconnection. It validates owner, feature, operation, private partition, provider/version and expiry before admitting calls. Interests survive the normal exit of the consumer; revocation, disabling and expiry remove them together with their grants.
 
-Sorgenti compatibili condividono una registrazione e il relativo costo di metadati. Le decisioni di avvio e invocazione vengono consumate una volta sola; una richiesta di arresto resta distinta dall'arresto osservato. Il ResourceGovernor conserva le ammissioni dei processi fino alla conferma dell'uscita. Nessun timer individuale o caricamento di codice addon nel processo grafico. [Contratto dei servizi](../../addons/services.md).
+Compatible sources share one registration and its metadata cost. Launch and invocation decisions are consumed only once; a stop request stays distinct from the observed stop. The ResourceGovernor keeps the process admissions until the exit is confirmed. No individual timer or loading of addon code in the graphics process. [Services contract](../../addons/services.md).
 
-La revisione ha corretto l'ammissione ripetuta di uno stesso requestID di servizio. La cronologia conserva richiesta ed esito per identità verificata durante dieci minuti monotoni, anche dopo la riconnessione; richiede autorizzazione corrente per consultarli e non ritenta i comandi incerti. Riserva spazio per la risposta massima prima dell'invio. I 25 test mirati passano e la revisione delle correzioni non ha rilievi P1/P2 aperti.
+The review fixed the repeated admission of the same service requestID. The history keeps request and outcome per verified identity for ten monotonic minutes, even after reconnection; it requires current authorization to consult them and does not retry uncertain commands. It reserves space for the maximum response before sending. The 25 targeted tests pass and the review of the fixes has no open P1/P2 findings.
 
-Questa è una protezione limitata alla cronologia conservata, non una promessa di esecuzione unica dopo riavvio o rimozione della storia. Il ResourceGovernor non dispone ancora di una riduzione atomica della prenotazione: anche gli esiti piccoli conservano prudentemente la riserva massima fino alla scadenza. Il budget comune di8MiB può quindi rifiutare nuovi comandi prima del limite numerico della cronologia.
+This is a protection limited to the retained history, not a promise of single execution after a restart or a removal of the history. The ResourceGovernor does not yet have an atomic reduction of the reservation: even small outcomes prudently keep the maximum reservation until expiry. The common 8 MiB budget can therefore reject new commands before the numerical limit of the history.
 
-### Stato e migrazioni C5
+### C5 state and migrations
 
-È implementato un salvataggio di checkpoint opachi entro64KiB, con namespace legati a identità/editore, inventario limitato dei file presenti, scrittura preparata e sostituzione atomica. Le migrazioni ricevono un candidato validato e non eseguono codice dell'addon nell'host. I 19 test mirati passano e la revisione delle correzioni è conclusa senza rilievi P1/P2.
+A save of opaque checkpoints within 64 KiB is implemented, with namespaces bound to identity/publisher, a bounded inventory of the files present, a prepared write and atomic replacement. Migrations receive a validated candidate and do not run addon code in the host. The 19 targeted tests pass and the review of the fixes concluded without P1/P2 findings.
 
-Lo spazio già occupato e i file temporanei partecipano alle quote. La revoca di un handle conserva dati e costo su disco; la cancellazione dei dati è un'operazione esplicita. Un checkpoint regolare e limitato ma corrotto o futuro fallisce nel proprio namespace; file sconosciuti, non sicuri o oltre i limiti fanno fallire esplicitamente la riconciliazione.
+Space already occupied and temporary files count toward the quotas. Revoking a handle keeps data and cost on disk; deleting the data is an explicit operation. A regular and bounded but corrupt or future checkpoint fails in its own namespace; unknown, unsafe or over-limit files make the reconciliation fail explicitly.
 
-La revisione ha corretto due difetti: il limite dello schema ora appartiene a ciascuna identità verificata, e i buffer dei checkpoint vengono prenotati soltanto quando occorrono. Il registro ammette fino a256 identità, con un limite riducibile dall'host. Cento identità inattive lasciano spazio a una prenotazione reale di7MiB nello stesso ResourceGovernor. I test coprono anche migrazioni massime aggregate, rifiuto a quota piena e liberazione delle sole proprie risorse, persino quando non resta memoria disponibile per un'altra prenotazione. [Contratto dello stato](../../addons/storage.md).
+The review fixed two defects: the schema limit now belongs to each verified identity, and the checkpoint buffers are reserved only when needed. The registry admits up to 256 identities, with a limit the host can lower. One hundred inactive identities leave room for a real reservation of 7 MiB in the same ResourceGovernor. The tests also cover aggregate maximum migrations, rejection at full quota and release of only one's own resources, even when no memory remains available for another reservation. [State contract](../../addons/storage.md).
 
-## Verifica e integrazione
+## Verification and integration
 
-Suite completa **337 test Swift passati**, exit0: Runtime133, Presentation15, motore161, Contracts24, tool4. Sono44 nuovi casi per questo incremento; i5 ulteriori casi del motore provengono dalle modifiche preesistenti preservate. Ambiente: macOS27.0 (26A5425a), arm64, Xcode27.0 (27A5252f). Questi risultati non qualificano l'esecuzione su macOS14.
+Full suite **337 Swift tests passed**, exit 0: Runtime 133, Presentation 15, engine 161, Contracts 24, tool 4. There are 44 new cases for this increment; the 5 further engine cases come from the preserved pre-existing changes. Environment: macOS 27.0 (26A5425a), arm64, Xcode 27.0 (27A5252f). These results do not qualify execution on macOS 14.
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer \
@@ -34,18 +34,18 @@ swift test --package-path CascadeKit \
   --no-parallel --disable-sandbox
 ```
 
-Log completo: `/private/tmp/cascade-services-final-swift.log`. Rimane soltanto l'avviso preesistente sulla variabile weak nei vecchi test di PublicationStore. I RED comportamentali e i GREEN mirati sono conservati nei rapporti di esecuzione. Non sono state ripetute le fixture native C0 o le suite Python invariate; i loro risultati precedenti restano storici.
+Full log: `/private/tmp/cascade-services-final-swift.log`. Only the pre-existing warning about the weak variable in the old PublicationStore tests remains. The behavioral RED runs and the targeted GREEN runs are kept in the execution reports. The native C0 fixtures and the unchanged Python suites were not rerun; their previous results remain historical.
 
-Le revisioni dei due task, delle correzioni e dell'incremento complessivo sono concluse senza rilievi P1/P2 aperti. Integrati18 file esatti con confronto delle versioni precedenti e degli hash revisionati; verificati299 input di build identici fra copia locale e checkout originale. Nessun commit o staging.
+The reviews of the two tasks, of the fixes and of the overall increment concluded without open P1/P2 findings. Integrated 18 exact files, comparing the previous versions and the reviewed hashes; verified 299 identical build inputs between the local copy and the original checkout. No commit or staging.
 
-Build app **riuscita**, exit0, dalla copia locale verificata tramite `scripts/build-development.sh`, con `CASCADE_DERIVED_DATA=/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonDevelopment`. Firma deep/strict verificata e `/Applications/Cascade.app` aggiornato. Log `/private/tmp/cascade-services-app-build.log`; unico warning della build app: estrazione automatica dei metadati AppIntents saltata in assenza di dipendenza dal framework.
+App build **succeeded**, exit 0, from the verified local copy via `scripts/build-development.sh`, with `CASCADE_DERIVED_DATA=/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonDevelopment`. Deep/strict signature verified and `/Applications/Cascade.app` updated. Log `/private/tmp/cascade-services-app-build.log`; the only warning of the app build: automatic extraction of the AppIntents metadata skipped in the absence of a dependency on the framework.
 
-All'avvio finale nessuna istanza precedente della build era aperta, quindi non è stata necessaria una terminazione. Cascade è stata aperta dal collegamento Applications; osservato un unico nuovo processo stabile, **PID83405**, nell'eseguibile atteso di `CascadeAddonDevelopment`. Verifica: `/private/tmp/cascade-services-restart.json`. Gli aggiornamenti operativi successivi alla revisione riguardano soltanto questa documentazione e il riepilogo nel piano. Questo conclude l'incremento servizi/checkpoint, non l'intera feature.
+At the final launch no previous instance of the build was open, so no termination was necessary. Cascade was opened from the Applications link; observed a single new stable process, **PID 83405**, in the expected executable of `CascadeAddonDevelopment`. Verification: `/private/tmp/cascade-services-restart.json`. The operational updates after the review concern only this documentation and the summary in the plan. This concludes the services/checkpoint increment, not the whole feature.
 
-Il controllo iniziale ristretto ha fatto fallire soltanto il vecchio test del popover per NSScreen.main assente. Lo stesso test è passato con accesso alla sessione desktop,9/9. Sono stati preservati nella copia di build anche gli aggiornamenti al motore grafico presenti nel checkout originale, compreso NotchGlassRenderer, senza modificarli.
+The initial restricted check failed only the old popover test, because NSScreen.main was absent. The same test passed with access to the desktop session, 9/9. The updates to the graphics engine present in the original checkout, including NotchGlassRenderer, were also preserved in the build copy, without modifying them.
 
-## Confine del risultato
+## Boundary of the result
 
-Queste componenti non costituiscono un runtime nativo ammesso. C3 richiede ancora trasporto autenticato, cache/consegna degli eventi, sorgenti reali e coordinatore. C5 non comprende storage SDK per chiave, asset/decoder isolato o ripristino automatico delle pubblicazioni. Non vengono riprodotti comandi né simulate migrazioni dei widget attraverso codice in-process.
+These components do not constitute an admitted native runtime. C3 still requires authenticated transport, event cache/delivery, real sources and a coordinator. C5 does not include per-key SDK storage, an isolated asset/decoder or automatic restoration of the publications. No commands are replayed, nor are widget migrations simulated through in-process code.
 
-La morte del supervisore può ancora lasciare vivo un processo gestito nelle prove C0. Tale difetto resta fuori dal rischio sul lavoro autonomamente delegato già accettato. Clock, timer e migrazioni successive attendono il percorso reale e le prove richieste dal [piano](../plans/2026-09-10-addon-runtime-completion.md).
+The death of the supervisor can still leave a managed process alive in the C0 tests. This defect remains outside the already accepted risk on the autonomously delegated work. Clock, timer and later migrations wait for the real path and the tests required by the [plan](../plans/2026-09-10-addon-runtime-completion.md).

@@ -1,4 +1,4 @@
-# Definire il gestore audio contestuale
+# Define the contextual audio manager
 
 ID: 13
 Parent: cascade-product
@@ -11,4 +11,4 @@ Blocked by: 03, 04, 08, 20
 
 ## Question
 
-Il perimetro iniziale confermato comprende volume e mute per app, routing per app e output multipli: quando il gestore si presenta, all'apertura dell'app, con app in primo piano o alla riproduzione effettiva? Distinguere questi controlli dall'integrazione Now Playing; l'EQ non è requisito del primo rilascio. Definire mantenimento dell'elaborazione a notch chiuso, ripristino del dispositivo, crash, latenza e permessi negati. Concordare come il gestore conviva con la Live Activity musicale e con le impostazioni persistenti per app.
+The confirmed initial scope includes per-app volume and mute, per-app routing and multiple outputs; when does the manager appear: when the app opens, with the app in the foreground, or on actual playback? Distinguish these controls from the Now Playing integration; EQ is not a requirement of the first release. Define keeping the processing running with the notch closed, device restore, crash, latency and denied permissions. Agree on how the manager coexists with the music Live Activity and with the persistent per-app settings.

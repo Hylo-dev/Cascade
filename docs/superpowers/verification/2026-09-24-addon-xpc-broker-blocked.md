@@ -1,82 +1,82 @@
-# Intermediario con callback bloccato — 24 settembre 2026
+# Intermediary with a blocked callback: 24 September 2026
 
-**Lo stop sul canale bloccato fallisce; un secondo canale verso lo stesso broker
-riesce a fermare broker e worker, lasciando app e catena B attive.**
+**The stop on the blocked channel fails; a second channel to the same broker
+succeeds in stopping broker and worker, leaving the app and chain B active.**
 
-Questa prosecuzione della [prova degli intermediari](2026-09-24-addon-xpc-broker.md)
-approfondisce l'ultimo limite presentato all'utente, su richiesta «prova anche quello».
-L'ambito misurato è il callback seriale di controllo bloccato, non l'intero processo
-sospeso. Non aggiunge prove prima di main o sui pacchetti addon esterni.
+This continuation of the [intermediary test](2026-09-24-addon-xpc-broker.md)
+examines the last limit presented to the user, at the request "test that one too".
+The measured scope is the blocked serial control callback, not the whole suspended
+process. It adds no evidence before main or on external addon packages.
 
-## Disegno e risultati
+## Design and results
 
-La fixture conserva le due catene app → broker → worker, servizi annidati, firma,
-Hardened Runtime e sandbox. `hold-both` inoltra `hold` al worker e trattiene il callback
-di controllo del broker in `pause()`. Un'altra coda inoltra la risposta autenticata
-del worker. Il runner conferma le identità dopo la registrazione degli eventi kernel.
-Il loop bloccante non ha uscita cooperativa; altri thread restano disponibili.
+The fixture keeps the two app → broker → worker chains, nested services, signing,
+Hardened Runtime and sandbox. `hold-both` forwards `hold` to the worker and holds the broker's
+control callback in `pause()`. Another queue forwards the worker's authenticated
+response. The runner confirms the identities after registering the kernel events.
+The blocking loop has no cooperative exit; other threads remain available.
 
-| Prova | Risultato nei due secondi | Esito |
+| Test | Result within the two seconds | Outcome |
 | --- | --- | --- |
-| Stop A sul canale bloccato | Nessuna uscita A; app viva e stessa catena B risponde | FAIL |
-| Cancellazione del canale A | Nessuna uscita A; app viva e stessa catena B risponde | FAIL |
-| SIGKILL dell'app con A bloccato | Entrambi i broker e worker escono con SIGKILL | PASS |
-| Stop A tramite secondo canale | Broker A esce 0; worker A esce SIGKILL; app viva e stessa catena B risponde | PASS |
+| Stop A on the blocked channel | No A exit; app alive and the same chain B responds | FAIL |
+| Cancellation of channel A | No A exit; app alive and the same chain B responds | FAIL |
+| SIGKILL of the app with A blocked | Both brokers and workers exit with SIGKILL | PASS |
+| Stop A through a second channel | Broker A exits 0; worker A exits SIGKILL; app alive and the same chain B responds | PASS |
 
-Primi tre casi: build `nested-5mlrp477`; quarto: build `nested-dixw0aig`. Ogni caso
-usa processi nuovi. Ambiente macOS 27.0 (26A5425a), arm64, SDK 27.0, clang 21.0.0.
-Un'esecuzione per caso, senza qualificare tutte le versioni macOS supportate.
+First three cases: build `nested-5mlrp477`; fourth: build `nested-dixw0aig`. Each case
+uses new processes. Environment macOS 27.0 (26A5425a), arm64, SDK 27.0, clang 21.0.0.
+One run per case, without qualifying all supported macOS versions.
 
-Nel quarto caso il runner apre una nuova connessione con lo stesso identificatore
-di servizio, autentica la risposta del broker e confronta PID, UUID e deadline con
-l'incarnazione già osservata. Solo dopo invia `exit` sul nuovo canale. La risposta
-di identità non passa dal worker bloccato. Il broker esce circa 0,69 ms dopo il trigger,
-il worker circa 1,41 ms dopo il trigger: tempi di ricezione degli eventi nell'osservatore,
-non limiti temporali garantiti della piattaforma.
+In the fourth case the runner opens a new connection with the same service
+identifier, authenticates the broker's response and compares PID, UUID and deadline with
+the incarnation already observed. Only then does it send `exit` on the new channel. The identity
+response does not pass through the blocked worker. The broker exits about 0.69 ms after the trigger,
+the worker about 1.41 ms after the trigger: times at which the observer received the events,
+not guaranteed time bounds of the platform.
 
-## Attendibilità e limiti
+## Reliability and limits
 
-La misura usa kqueue con ricevuta, `NOTE_EXIT` e `NOTE_EXITSTATUS`; richiede seconda
-conferma delle incarnazioni, azione del client e risposta della stessa catena B.
-I messaggi del broker sono autenticati; il broker fidato autentica quelli del worker.
-Non vengono segnalati PID di servizi né gruppi. Le guardie SIGALRM scattano dodici
-secondi dopo main; la loro eventuale uscita non conta come PASS.
+The measurement uses kqueue with a receipt, `NOTE_EXIT` and `NOTE_EXITSTATUS`; it requires a second
+confirmation of the incarnations, the client's action and a response from the same chain B.
+The broker's messages are authenticated; the trusted broker authenticates the worker's.
+No service PIDs or groups are signaled. The SIGALRM guards fire twelve
+seconds after main; any exit they cause does not count as PASS.
 
-Tutti i quattro servizi sono stati registrati e la loro uscita finale è confermata
-in ciascun caso. Nei due FAIL la chiusura dell'app durante la pulizia fa uscire anche A;
-le uscite successive restano separate e non modificano il verdetto negativo.
-Nessuna uscita ha richiesto SIGALRM.
+All four services were registered and their final exit is confirmed
+in each case. In the two FAILs, closing the app during cleanup also makes A exit;
+the later exits remain separate and do not change the negative verdict.
+No exit required SIGALRM.
 
-Separare il controllo dal canale che può bloccarsi è una soluzione dimostrata per
-questa specifica classe di stallo. Richiede ancora una coda disponibile a eseguire
-lo stop nel broker fidato. Non dimostra recupero selettivo da sospensione dell'intero
-processo, esaurimento di tutti i thread o blocco condiviso anche dal controllo.
-La prova usa processi fissi fidati, non addon arbitrari.
+Separating control from the channel that can block is a proven solution for
+this specific class of stall. It still requires a queue available to execute
+the stop in the trusted broker. It does not prove selective recovery from suspension of the whole
+process, exhaustion of all threads or a block shared by the control path as well.
+The test uses fixed trusted processes, not arbitrary addons.
 
-Il launcher rimane non ammesso: avvio prima di main, percorso pubblico per pacchetti
-esterni e garanzia completa di arresto del broker restano aperti. Policy, adapter,
-entitlements di Cascade e gate C0d sono invariati.
+The launcher remains not admitted: launch before main, a public path for external
+packages and a full guarantee of stopping the broker remain open. Policy, adapter,
+Cascade's entitlements and the C0d gate are unchanged.
 
-## Evidenze e verifica
+## Evidence and verification
 
-- [Tre scenari con callback bloccato](evidence/2026-09-24-xpc-broker-blocked/blocked/results.json).
-- [Recupero con secondo canale](evidence/2026-09-24-xpc-broker-blocked/control/results.json).
-- [Manifest primo ciclo](evidence/2026-09-24-xpc-broker-blocked/blocked/build.json) e [secondo ciclo](evidence/2026-09-24-xpc-broker-blocked/control/build.json).
-- [Build primo ciclo](evidence/2026-09-24-xpc-broker-blocked/blocked/build.log) e [secondo ciclo](evidence/2026-09-24-xpc-broker-blocked/control/build.log).
-- [Fixture e comandi](../../../Prototypes/AddonPlatform/XPCBroker/README.md).
+- [Three scenarios with a blocked callback](evidence/2026-09-24-xpc-broker-blocked/blocked/results.json).
+- [Recovery with a second channel](evidence/2026-09-24-xpc-broker-blocked/control/results.json).
+- [First cycle manifest](evidence/2026-09-24-xpc-broker-blocked/blocked/build.json) and [second cycle](evidence/2026-09-24-xpc-broker-blocked/control/build.json).
+- [First cycle build](evidence/2026-09-24-xpc-broker-blocked/blocked/build.log) and [second cycle](evidence/2026-09-24-xpc-broker-blocked/control/build.log).
+- [Fixture and commands](../../../Prototypes/AddonPlatform/XPCBroker/README.md).
 
-Entrambe le cartelle conservano anche i sorgenti corrispondenti ai manifest.
-Nove test del classificatore e sette del verificatore precedente riusato passano.
-I nuovi test sono stati osservati fallire prima dell'implementazione. La revisione
-indipendente ha individuato un falso negativo del criterio di cancellazione, corretto:
-un'eventuale uscita SIGKILL/SIGTERM del broker in quel caso viene ora accettata.
-Anche il controllo della stessa incarnazione sul secondo canale è stato revisionato
-prima della run.
+Both folders also preserve the sources corresponding to the manifests.
+Nine classifier tests and seven tests of the reused earlier verifier pass.
+The new tests were observed failing before the implementation. The independent
+review found a false negative in the cancellation criterion, now corrected:
+a possible SIGKILL/SIGTERM exit of the broker in that case is now accepted.
+The same-incarnation check on the second channel was also reviewed
+before the run.
 
-Nessun test o build dell'app prodotto eseguito: modifiche limitate al prototipo separato.
-SHA-256 del gate C0d invariato:
+No test or build of the product app run: changes limited to the separate prototype.
+SHA-256 of the C0d gate unchanged:
 `687fb3086d41e821af684d49109c9c95f8d555cf88450bdcf809b2a708b1ddaa`.
 
-Cascade riavviata ordinariamente e verificata: PID precedente 28002, nuovo PID 29180,
-eseguibile della build esistente CascadeDevelopment raggiunta da `/Applications/Cascade.app`.
-[Evidenza](evidence/2026-09-24-xpc-broker-blocked/cascade-restart.json).
+Cascade relaunched ordinarily and verified: previous PID 28002, new PID 29180,
+executable of the existing CascadeDevelopment build reached through `/Applications/Cascade.app`.
+[Evidence](evidence/2026-09-24-xpc-broker-blocked/cascade-restart.json).

@@ -1,4 +1,4 @@
-# Seguire la finestra attiva con fallback al puntatore
+# Follow the active window with a pointer fallback
 
 ID: 70
 Parent: cascade-product
@@ -11,8 +11,8 @@ Blocked by: 69
 
 ## Question
 
-Implementare e verificare il task 2 del [piano multi-display](../../../docs/superpowers/plans/2026-09-24-multi-display-notch.md) rispettando la [specifica](../../../docs/superpowers/specs/2026-09-24-multi-display-notch-design.md). La tranche esecutiva è autorizzata dalla richiesta del 25 settembre; chiudere solo con prove e revisione.
+Implement and verify task 2 of the [multi-display plan](../../../docs/superpowers/plans/2026-09-24-multi-display-notch.md) following the [spec](../../../docs/superpowers/specs/2026-09-24-multi-display-notch-design.md). The execution tranche is authorized by the request of 25 September; close only with evidence and review.
 
 ## Answer
 
-Resolver puro e monitor Accessibility a eventi consegnati, con worker, timeout, generazioni e callback rimosse in sicurezza. 11 test mirati superati; revisione indipendente PASS/PASS. Integrazione al coordinatore e prova fisica multi-monitor nei ticket successivi.
+Pure resolver and event-driven Accessibility monitor delivered, with worker, timeouts, generations and callbacks removed safely. 11 targeted tests passed; independent review PASS/PASS. Integration into the coordinator and the physical multi-monitor test in the following tickets.

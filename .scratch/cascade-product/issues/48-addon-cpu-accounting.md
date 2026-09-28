@@ -1,4 +1,4 @@
-# Collegare il credito CPU alle osservazioni comuni
+# Connect the CPU credit to the shared observations
 
 ID: 48
 Parent: cascade-product
@@ -11,10 +11,10 @@ Blocked by: 47
 
 ## Question
 
-Associare esplicitamente i binding osservati all’addon event-driven e conservare il conto nel coordinatore esistente, condiviso fra processi e riavvii provider. Addebitare ogni intervallo prodotto internamente una sola volta; distinguere osservazioni incomplete e fallimenti contabili. [Brief](../../codex-addon/20260920-cpu-credit/task-48-brief.md), [revisione del disegno](../../codex-addon/20260920-cpu-credit/ownership-design-review.md). Sol medium implementa; root revisiona. Nessun timer, sanzione o percorso nativo aggiuntivo.
+Explicitly associate the observed bindings with the event-driven addon and keep the account in the existing coordinator, shared across processes and provider restarts. Charge every internally produced interval only once; distinguish incomplete observations from accounting failures. [Brief](../../codex-addon/20260920-cpu-credit/task-48-brief.md), [design review](../../codex-addon/20260920-cpu-credit/ownership-design-review.md). Sol medium implements; the root reviews. No additional timer, sanction or native path.
 
 ## Answer
 
-Collegamento interno implementato da Sol medium, rivisto da root e da un secondo Sol medium: PASS. Conti limitati per identità verificata, condivisi fra processi, conservati dopo unregister/uscita/riavvio provider/wake. Gli intervalli appena ridotti sono addebitati nello stesso actor; risultato finale per owner distinto fra completo, incompleto e errore persistente, senza saldo nei due ultimi casi.
+Internal wiring implemented by Sol medium, reviewed by the root and by a second Sol medium: PASS. Bounded accounts per verified identity, shared across processes, retained after unregister/exit/provider restart/wake. The intervals just reduced are charged in the same actor; the final result per owner distinguishes complete, incomplete and persistent error, with no balance in the last two cases.
 
-71 test mirati in quattro suite PASS, inclusi 12 nuovi test del collegamento; replay root completo: 1.122 test in 99 suite PASS. [Rapporto worker](../../codex-addon/20260920-cpu-credit/task-48-report.md), [revisione indipendente](../../codex-addon/20260920-cpu-credit/task-48-independent-review.md), [consegna e limiti](../../../docs/superpowers/verification/2026-09-20-addon-cpu-credit.md). Nessun collegamento a sanzioni o launcher.
+71 targeted tests in four suites PASS, including 12 new wiring tests; full root replay: 1,122 tests in 99 suites PASS. [Worker report](../../codex-addon/20260920-cpu-credit/task-48-report.md), [independent review](../../codex-addon/20260920-cpu-credit/task-48-independent-review.md), [delivery and limits](../../../docs/superpowers/verification/2026-09-20-addon-cpu-credit.md). No wiring to sanctions or the launcher.

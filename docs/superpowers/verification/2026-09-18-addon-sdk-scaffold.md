@@ -1,19 +1,19 @@
-# Verifica del generatore sorgente SDK — 18 settembre 2026
+# SDK source generator verification: 18 September 2026
 
-**PASS nel perimetro del progetto sorgente.** `cascade-addon init` genera un package SwiftPM compilabile con provider pubblico, manifest, test e istruzioni. Identificatore e percorso SDK sono espliciti. Il comando non esegue automaticamente build, test o shell e rifiuta ogni destinazione esistente, incluse directory vuote e symlink. [Guida iniziale](../../addons/quickstart.md).
+**PASS within the scope of the source project.** `cascade-addon init` generates a compilable SwiftPM package with a public provider, manifest, tests and instructions. The identifier and the SDK path are explicit. The command does not automatically run build, tests or shell, and rejects every existing destination, including empty directories and symlinks. [Getting started guide](../../addons/quickstart.md).
 
-Revisione indipendente Codex Sol high PASS; unico rilievo P3 sul commento di cleanup corretto e riesaminato. Pubblicazione RENAME_EXCL senza sostituire la destinazione; cleanup non ricorsivo con controllo delle identità osservate. Nessuna garanzia di isolamento da modifiche arbitrarie concorrenti con la stessa autorità filesystem dell’utente, né di persistenza dopo crash.
+Independent review Codex Sol high PASS; the only P3 finding, on the cleanup comment, corrected and re-reviewed. RENAME_EXCL publication without replacing the destination; non-recursive cleanup with a check of the observed identities. No guarantee of isolation from arbitrary concurrent modifications with the same filesystem authority as the user, nor of persistence after a crash.
 
-## Evidenze
+## Evidence
 
-- Test mirati tool: 17 test / 2 suite PASS. Progetto esterno generato dal template finale: build e 5 test / 1 suite PASS; import e dipendenze solo SDK/contratti pubblici e loro dipendenze pubbliche. Caso nome keyword e identità coincidente con la precedente fixture estranea verificato.
-- Suite completa finale: **896 test / 84 suite PASS** — Runtime 578/48, Presentation 66/7, Kit 170/19, Contracts 65/8, Tool 17/2. Nessun errore di test nella verifica finale.
-- Primo tentativo completo fermato dal module cache non scrivibile; secondo con due problemi nel test UI preesistente per NSScreen.main assente nella sandbox. Impostato il cache esplicito ed eseguita la suite con accesso alla sessione grafica; nessuna modifica o esclusione del test UI. Errori precedenti conservati.
-- Build Debug Apple Development riuscita da snapshot locale esatto di 412 file, firma deep/strict verificata; collegamento /Applications/Cascade.app aggiornato dallo script previsto.
-- Chiusura normale e riavvio verificati: PID 50978 → 17941, unico eseguibile atteso, stabilità per 5 secondi. Nessuna terminazione forzata.
+- Targeted tool tests: 17 tests / 2 suites PASS. External project generated from the final template: build and 5 tests / 1 suite PASS; imports and dependencies only the public SDK/contracts and their public dependencies. The case of a keyword name and of an identity coinciding with the earlier unrelated fixture verified.
+- Final full suite: **896 tests / 84 suites PASS**: Runtime 578/48, Presentation 66/7, Kit 170/19, Contracts 65/8, Tool 17/2. No test errors in the final verification.
+- First full attempt stopped by the non-writable module cache; the second with two issues in the pre-existing UI test because NSScreen.main is absent in the sandbox. Set the explicit cache and ran the suite with access to the graphical session; no modification or exclusion of the UI test. Earlier errors preserved.
+- Debug Apple Development build succeeded from an exact local snapshot of 412 files, deep/strict signature verified; /Applications/Cascade.app link updated by the intended script.
+- Normal quit and relaunch verified: PID 50978 → 17941, single expected executable, stable for 5 seconds. No forced termination.
 
-[Rapporto implementer](../../../.scratch/codex-addon/20260918-continuation/scaffold-report.md), [revisione indipendente e correzione](../../../.scratch/codex-addon/20260918-continuation/scaffold-independent-review.md), [audit suite](../../../.scratch/codex-addon/20260918-continuation/scaffold-test-audit.json), [manifest esatto build](../../../.scratch/codex-addon/20260918-continuation/scaffold-final-build-manifest.json), [build](../../../.scratch/codex-addon/20260918-continuation/scaffold-signed-build.log), [riavvio](../../../.scratch/codex-addon/20260918-continuation/scaffold-restart-evidence.json). Log/comandi/status e fallimenti intermedi sono conservati nella medesima directory; snapshot finale /private/tmp/cascade-addon-scaffold-final-20260918.
+[Implementer report](../../../.scratch/codex-addon/20260918-continuation/scaffold-report.md), [independent review and fix](../../../.scratch/codex-addon/20260918-continuation/scaffold-independent-review.md), [suite audit](../../../.scratch/codex-addon/20260918-continuation/scaffold-test-audit.json), [exact build manifest](../../../.scratch/codex-addon/20260918-continuation/scaffold-final-build-manifest.json), [build](../../../.scratch/codex-addon/20260918-continuation/scaffold-signed-build.log), [relaunch](../../../.scratch/codex-addon/20260918-continuation/scaffold-restart-evidence.json). Logs/commands/status and intermediate failures are preserved in the same directory; final snapshot /private/tmp/cascade-addon-scaffold-final-20260918.
 
-## Limiti ancora aperti
+## Limits still open
 
-Il risultato è una libreria sorgente, non un pacchetto addon installabile. Firma dell’addon, bootstrap, trasporto nativo, ripristino delle revisioni e parità bundled/external reale restano distinti. Nessun processo addon lanciato e nessuna qualifica macOS 14 a runtime dichiarata; C0d mantiene exit 78. Questa consegna non completa C12 o l’intero sistema addon. Nessun commit/staging/reset effettuato.
+The result is a source library, not an installable addon package. Addon signing, bootstrap, native transport, revision restoration and real bundled/external parity remain distinct. No addon process launched and no macOS 14 runtime qualification claimed; C0d keeps exit 78. This delivery does not complete C12 or the whole addon system. No commit/staging/reset performed.

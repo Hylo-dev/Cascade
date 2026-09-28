@@ -1,4 +1,4 @@
-# Campionare insieme i processi addon attivi
+# Sample the active addon processes together
 
 ID: 45
 Parent: cascade-product
@@ -11,14 +11,14 @@ Blocked by: 25, 32
 
 ## Question
 
-Completare la componente C4 di campionamento comune sui binding osservativi espliciti, riusando lettore e riduttore: un solo ritmo periodico massimo 1 Hz, insieme limitato, disarmo a insieme vuoto e campioni su eventi. Nessun processo, timer autonomo, nuova policy di arresto o integrazione produttiva implicita.
+Complete the C4 shared sampling component on the explicit observational bindings, reusing the reader and the reducer: a single periodic rhythm of at most 1 Hz, a bounded set, disarming when the set is empty and event-driven samples. No process, autonomous timer, new stop policy or implicit production integration.
 
 ## Scope
 
-[Brief esecutivo](../../codex-addon/20260920-wayfinder-continuation/task-45-brief.md). Sol medium implementa; il root ricontrolla specifica, codice e prove prima di chiudere. Il risultato è una componente interna invocabile dal futuro proprietario del wakeup comune; non qualifica identità nativa, arresto o costo del supervisore.
+[Execution brief](../../codex-addon/20260920-wayfinder-continuation/task-45-brief.md). Sol medium implements; the root rechecks spec, code and evidence before closing. The result is an internal component that the future owner of the shared wakeup can invoke; it does not qualify native identity, stop or the supervisor's cost.
 
-## Answer — 20 settembre 2026
+## Answer: 20 September 2026
 
-Componente interna consegnata da Sol medium dopo ricognizione Terra, revisione root e revisione indipendente con un giro di correzioni. Registrazioni esatte e limitate, riduttori riusati, deadline comune massimo1Hz, campioni su eventi, disarmo a insieme vuoto e Duration a precisione conservata. Nessuna attivazione produttiva o nuova policy.
+Internal component delivered by Sol medium after a Terra survey, root review and independent review with one round of fixes. Exact and bounded registrations, reused reducers, shared deadline of at most 1 Hz, event-driven samples, disarming when the set is empty and Duration with preserved precision. No production activation or new policy.
 
-47 test metriche e1.098 test completi/97 suite PASS; build ufficiale firmata da479 input locali identici, link Applications aggiornato e riavvio verificato. [Rapporto e limiti](../../../docs/superpowers/verification/2026-09-20-addon-process-metrics-coordinator.md). Il successivo [ticket CPU](46-addon-cpu-burst-policy.md) richiede una scelta dell’utente; launcher invariato.
+47 metrics tests and 1,098 full tests/97 suites PASS; official signed build from 479 identical local inputs, Applications link updated and restart verified. [Report and limits](../../../docs/superpowers/verification/2026-09-20-addon-process-metrics-coordinator.md). The subsequent [CPU ticket](46-addon-cpu-burst-policy.md) requires a choice from the user; launcher unchanged.

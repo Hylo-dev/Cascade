@@ -1,4 +1,4 @@
-# Generare un progetto addon SDK compilabile
+# Generate a buildable SDK addon project
 
 ID: 24
 Parent: cascade-product
@@ -11,16 +11,16 @@ Blocked by: 23
 
 ## Question
 
-Completare il comando `cascade-addon init` con un progetto sorgente compilabile basato esclusivamente sui prodotti pubblici SDK, manifest validato, identità fornita dallo sviluppatore e protezione dei file esistenti. Verificare la compilazione indipendente senza dichiarare il pacchetto già installabile o il launcher qualificato.
+Complete the `cascade-addon init` command with a buildable source project based exclusively on the public SDK products, a validated manifest, a developer-provided identity and protection of existing files. Verify the independent build without declaring the package already installable or the launcher qualified.
 
 ## Context
 
-La richiesta del 18 settembre di continuare il lavoro addon fino al limite Codex estende la prosecuzione alle tranche residue del piano approvato. Questo incremento C12 può procedere prima di C0/C1: [piano implementativo](../../../docs/superpowers/plans/2026-09-18-addon-sdk-scaffold.md). [Avanzamento Codex](../../codex-addon/20260918-continuation/plan.md).
+The 18 September request to continue the addon work up to the Codex limit extends the continuation to the remaining tranches of the approved plan. This C12 increment can proceed before C0/C1: [implementation plan](../../../docs/superpowers/plans/2026-09-18-addon-sdk-scaffold.md). [Codex progress](../../codex-addon/20260918-continuation/plan.md).
 
 ## Progress
 
-18 settembre: preso in carico, implementer Codex Sol high. Destinazione nuova, identificatore e SDK espliciti; pubblicazione atomica senza sovrascrittura; esempio provider e test da compilare esternamente. Revisione e consegna ancora da eseguire.
+18 September: taken on, implementer Codex Sol high. New destination, explicit identifier and SDK; atomic publication without overwriting; provider example and tests to be built externally. Review and delivery still to be done.
 
 ## Answer
 
-Generatore sorgente implementato e revisionato PASS: manifest, provider e test basati sui prodotti SDK pubblici; percorsi espliciti, destinazione nuova e pubblicazione senza sostituzione.17 test mirati,5 test del progetto indipendente e896 test / 84 suite completi passati. Build firmata e riavvio verificati. [Consegna e limiti](../../../docs/superpowers/verification/2026-09-18-addon-sdk-scaffold.md). Il formato distribuibile, il bootstrap e la parità nativa restano aperti.
+Source generator implemented and reviewed PASS: manifest, provider and tests based on the public SDK products; explicit paths, new destination and publication without replacement. 17 targeted tests, 5 tests of the independent project and 896 tests / 84 full suites passed. Signed build and restart verified. [Delivery and limits](../../../docs/superpowers/verification/2026-09-18-addon-sdk-scaffold.md). The distributable format, the bootstrap and native parity remain open.

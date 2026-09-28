@@ -1,4 +1,4 @@
-# Definire il collegamento tra Spotlight e notch
+# Define the link between Spotlight and the notch
 
 ID: 12
 Parent: cascade-product
@@ -11,4 +11,4 @@ Blocked by: 02, 04, 07
 
 ## Question
 
-Cosa significa concretamente la preferenza dell'utente per modificare il vero Spotlight, se fattibile? Dopo la ricerca, scegliere l'esperienza realizzabile: scorciatoia, posizione, continuità visiva, focus, tastiera, chiusura e risultati. Se serve una ricerca propria, concordare l'inventario verificabile delle funzioni richieste invece di promettere genericamente parità o dedurre un assistente AI dall'immagine. Confrontare la proposta con il [riferimento visivo fornito dall'utente](../../../docs/wayfinder/assets/spotlight-reference.png).
+What does the user's preference for modifying the real Spotlight, if feasible, concretely mean? After the research, choose the achievable experience: shortcut, position, visual continuity, focus, keyboard, closing and results. If a search of our own is needed, agree on the verifiable inventory of the required features instead of generically promising parity or inferring an AI assistant from the image. Compare the proposal with the [visual reference provided by the user](../../../docs/wayfinder/assets/spotlight-reference.png).

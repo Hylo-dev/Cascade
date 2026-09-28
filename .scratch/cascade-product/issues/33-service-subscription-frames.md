@@ -1,4 +1,4 @@
-# Definire i messaggi di controllo e aggiornamento dei servizi
+# Define the service control and update messages
 
 ID: 33
 Parent: cascade-product
@@ -11,18 +11,18 @@ Blocked by: 30
 
 ## Question
 
-Implementare contratti a messaggi chiusi e limitati per acquisizione, sottoscrizione, avvio sorgente e aggiornamenti, distinguendo accettazione dell'intento da disponibilità del servizio e senza attivare funzionalità incomplete nel runtime.
+Implement closed, bounded message contracts for acquisition, subscription, source start and updates, distinguishing acceptance of the intent from availability of the service and without activating incomplete features in the runtime.
 
 ## Context
 
-[Piano esecutivo](../../../docs/superpowers/plans/2026-09-18-addon-service-subscription-frames.md). Sintassi pura realizzabile in un harness Contracts isolato mentre si completa la consegna del percorso di invocazione; integrazione e client completo restano successivi. Deroga del 35% e prosecuzione solo Codex restano attive.
+[Execution plan](../../../docs/superpowers/plans/2026-09-18-addon-service-subscription-frames.md). Pure syntax that can be built in an isolated Contracts harness while the delivery of the invocation path is completed; integration and the complete client come later. The 35% waiver and the Codex-only continuation remain active.
 
 ## Progress
 
-Presa in carico; sei file nuovi, senza modifica dei contratti esistenti o del protocollo negoziato. Importazione nel progetto dopo la consegna verificata del percorso di invocazione.
+Taken on; six new files, without changing the existing contracts or the negotiated protocol. Import into the project after the verified delivery of the invocation path.
 
-Implementazione isolata congelata e revisione indipendente PASS senza rilievi: 14 test mirati / 91 test Contracts in 10 suite. [Prove e limiti](../../../docs/superpowers/verification/2026-09-18-addon-service-subscription-frames.md). Sei file ancora fuori dal package reale; ticket non risolto fino all'integrazione e alla consegna.
+Isolated implementation frozen and independent review PASS with no findings: 14 targeted tests / 91 Contracts tests in 10 suites. [Evidence and limits](../../../docs/superpowers/verification/2026-09-18-addon-service-subscription-frames.md). Six files still outside the real package; ticket not resolved until integration and delivery.
 
-## Resolution comment — 18 settembre 2026
+## Resolution comment: 18 September 2026
 
-Sei contratti/test importati dopo la consegna delle invocazioni; revisione indipendente PASS. Suite completa 1048 test / 94 suite, build firmata su 439 input e riavvio PID 18542 → 20946 verificato per 5 s. [Prove e limiti](../../../docs/superpowers/verification/2026-09-18-addon-service-subscription-frames.md). Il profilo 1.4 resta sintassi non attivata: host, client completo e consegna degli eventi sono il prossimo incremento.
+Six contracts/tests imported after the delivery of the invocations; independent review PASS. Full suite 1,048 tests / 94 suites, signed build on 439 inputs and restart PID 18542 → 20946 verified for 5 s. [Evidence and limits](../../../docs/superpowers/verification/2026-09-18-addon-service-subscription-frames.md). The 1.4 profile remains non-activated syntax: host, complete client and event delivery are the next increment.

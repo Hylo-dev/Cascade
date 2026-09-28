@@ -1,40 +1,40 @@
-# Notch continuo, avvisi e volume
+# Continuous notch, notices and volume
 
-Richiesta approvata direttamente dall'utente l'8 settembre: forma continua Apple,
-avvisi soltanto da chiuso, chiusura delle Live Activities in due fasi, sostituzione
-dell'HUD volume con icona/testo e barra percentuale ai lati del notch.
+Request approved directly by the user on 8 September: Apple continuous shape,
+notices only while closed, two-phase closing of Live Activities, replacement
+of the volume HUD with icon/text and a percentage bar beside the notch.
 
-## Decisioni
+## Decisions
 
-- La sagoma mantiene l'attacco al bordo superiore e adotta la curvatura continua
-  nativa. Il path condiviso governa disegno, maschera e hit testing.
-- Gli avvisi occupano entrambi i lati compatti. Entrare in hover li rimuove e
-  apre una Live Activity disponibile oppure i widget. Gli avvisi arrivati durante
-  l'espansione vengono scartati, senza riproposizione successiva.
-- La chiusura di una Live Activity nasconde subito le sue viste, raggiunge la
-  geometria base e solo al frame successivo apre le ali. Nessuna attesa a tempo
-  fisso: la seconda fase dipende dall'assestamento delle molle. Movimento ridotto
-  passa direttamente allo stato finale.
-- Il volume usa listener CoreAudio e intercettazione selettiva dei tasti volume.
-  Non vengono disabilitati globalmente daemon o HUD di sistema; senza supporto o
-  permessi, i tasti mantengono il comportamento nativo.
-- Nessuna concessione automatica di Accessibilità, nessuna modifica dell'audio
-  reale attraverso script di verifica, nessun commit delle modifiche preesistenti.
+- The outline keeps its attachment to the top edge and adopts the native
+  continuous curvature. The shared path drives drawing, mask and hit testing.
+- Notices occupy both compact sides. Entering hover removes them and
+  opens an available Live Activity or the widgets. Notices that arrive during
+  expansion are discarded, and are not shown again later.
+- Closing a Live Activity hides its views immediately, reaches the
+  base geometry and opens the wings only on the next frame. No fixed-time
+  wait: the second phase depends on the springs settling. Reduced motion
+  goes straight to the final state.
+- Volume uses CoreAudio listeners and selective interception of the volume keys.
+  System daemons or HUDs are not disabled globally; without support or
+  permissions, the keys keep their native behavior.
+- No automatic grant of Accessibility, no change to the real audio
+  through verification scripts, no commit of pre-existing changes.
 
-## Esecuzione
+## Execution
 
-- [x] Path continuo: `Extensions/CGPath+Notch.swift` e test geometrici dedicati;
-  derivare/cachare segmenti Apple, verificare simmetria, bounds e angoli piccoli.
-- [x] Host e controller: limitare la presentazione estesa alle Live Activities,
-  scartare gli avvisi in apertura, sospendere le viste durante il ritorno alla
-  base, animare la larghezza compatta in punti. Regressioni host/controller prima
-  dell'implementazione.
-- [x] Volume: nuovi tipi `Cascade/Integrations/Volume`, `VolumeChangeNotice`,
-  collegamento in servizi/menu e harness Swift 6 per eventi, capability e cleanup.
-- [x] Verificare suite completa, build firmata, revisione indipendente e avvio
-  della build esatta. Aggiornare il contratto con queste nuove regole.
+- [x] Continuous path: `Extensions/CGPath+Notch.swift` and dedicated geometry tests;
+  derive/cache Apple segments, verify symmetry, bounds and small angles.
+- [x] Host and controller: restrict the expanded presentation to Live Activities,
+  discard notices while opening, suspend the views during the return to the
+  base, animate the compact width in points. Host/controller regressions before
+  the implementation.
+- [x] Volume: new types `Cascade/Integrations/Volume`, `VolumeChangeNotice`,
+  wiring into services/menu and a Swift 6 harness for events, capability and cleanup.
+- [x] Verify the full suite, signed build, independent review and launch
+  of the exact build. Update the contract with these new rules.
 
-Il contratto condiviso aggiunge `compactPreferredSideWidth: CGFloat?` (larghezza
-esterna di ciascuna ala, default configurato quando nil). Volume richiede 116pt;
-il renderer limita i valori al display. `makeExpandedView` appartiene soltanto a
-`NotchLiveActivity`; gli avvisi non possono ottenere una superficie estesa.
+The shared contract adds `compactPreferredSideWidth: CGFloat?` (outer width
+of each wing, configured default when nil). Volume requests 116pt;
+the renderer clamps the values to the display. `makeExpandedView` belongs only to
+`NotchLiveActivity`; notices cannot obtain an expanded surface.

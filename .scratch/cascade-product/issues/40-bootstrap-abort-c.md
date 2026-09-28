@@ -1,4 +1,4 @@
-# Implementare il bootstrap C con interruzione prima del tracing
+# Implement the C bootstrap with a pre-tracing abort
 
 ID: 40
 Parent: cascade-product
@@ -11,23 +11,23 @@ Blocked by: 39
 
 ## Question
 
-Tradurre il protocollo finito già verificato nel modello offline in un piccolo bootstrap C fidato, senza tracing o exec. Compilare il candidato e verificare la logica con un solo test C; lasciare separata e non eseguita la futura prova nativa con supervisore/child.
+Translate the finite protocol already verified in the offline model into a small trusted C bootstrap, without tracing or exec. Compile the candidate and verify the logic with a single C test; leave the future native test with supervisor/child separate and unrun.
 
 ## Scope
 
-Ripresa autorizzata il19settembre con Ponytail: due file nuovi, libc, nessuna dipendenza o nuovo modello astratto. Contratto del [modello offline](39-bootstrap-abort-offline.md): framing esatto advance/complete, input limitato, deadline assoluta2s e codici0/70/71/72/73. Il binario candidato legge soltanto il proprio stdin; nessun endpoint dinamico, caricamento addon, fork/spawn/exec, tracing, segnale, osservazione di processi o firma/entitlement.
+Resumption authorized on 19 September with Ponytail: two new files, libc, no dependency or new abstract model. Contract of the [offline model](39-bootstrap-abort-offline.md): exact advance/complete framing, bounded input, absolute 2 s deadline and codes 0/70/71/72/73. The candidate binary reads only its own stdin; no dynamic endpoint, addon loading, fork/spawn/exec, tracing, signal, process observation or signing/entitlement.
 
-Il test locale compila separatamente con il ramo main/IO escluso e prova la logica deterministica reale. Il main POSIX viene compilato ma non eseguito: nessuna uscita fisica o qualifica launcher è dedotta. Il gate C0d e tutti i driver preesistenti rimangono identici.
+The local test compiles separately with the main/IO branch excluded and tests the real deterministic logic. The POSIX main is compiled but not run: no physical exit or launcher qualification is inferred. The C0d gate and all pre-existing drivers remain identical.
 
-Sol medium implementa i due file; il root revisiona prima di accettare, esegue verifiche e cura documentazione/riavvio. Tetto richiesto20% settimanale Codex, con stop di dispatch al15% e arresto prudenziale del lavoro al18% per conservare margine. Baseline misurata0% nella finestra corrente; reset e campioni sono negli artefatti del19settembre. La scadenza della precedente esecuzione alle00:00 è storica e non si applica alla nuova ripresa.
+Sol medium implements the two files; the root reviews before accepting, runs the verifications and takes care of documentation/restart. Requested cap: 20% of the weekly Codex budget, with a dispatch stop at 15% and a precautionary work stop at 18% to keep a margin. Baseline measured at 0% in the current window; resets and samples are in the artifacts of 19 September. The deadline of the previous run at 00:00 is historical and does not apply to the new resumption.
 
 ## Answer
 
-Candidato sorgente completato da Sol medium e corretto/revisionato dal root: [BootstrapAbort.c](../../../Prototypes/AddonPlatform/Tracing/BootstrapAbort.c) e [unico check C](../../../Prototypes/AddonPlatform/Tracing/BootstrapAbortTests.c). Compilazione C11 rigorosa e check in memoria con AddressSanitizer/UndefinedBehaviorSanitizer PASS. Nessuna nuova dipendenza;14 input preesistenti della diagnostica e484 input dell’app invariati.
+Source candidate completed by Sol medium and fixed/reviewed by the root: [BootstrapAbort.c](../../../Prototypes/AddonPlatform/Tracing/BootstrapAbort.c) and [single C check](../../../Prototypes/AddonPlatform/Tracing/BootstrapAbortTests.c). Strict C11 compilation and in-memory check with AddressSanitizer/UndefinedBehaviorSanitizer PASS. No new dependency; 14 pre-existing inputs of the diagnostics and 484 inputs of the app unchanged.
 
-Correzioni root: validazione nonce limitata, salvataggio immediato di errno, POLLERR terminale, conservazione dello stato iniziale invalido e deadline ricontrollata dopo il setup. [Revisione ed evidenze](../../codex-addon/20260919-ponytail/root-review.md), comandi/log/hash nella stessa directory. Il main POSIX è compilato ma non eseguito: non sono provati arresto fisico, identità, supervisore morto, attach o launcher. Il controllo C0d resta identico.
+Root fixes: bounded nonce validation, immediate saving of errno, terminal POLLERR, preservation of the invalid initial state and the deadline rechecked after setup. [Review and evidence](../../codex-addon/20260919-ponytail/root-review.md), commands/logs/hashes in the same directory. The POSIX main is compiled but not run: physical stop, identity, dead supervisor, attach or launcher are not proven. The C0d check remains identical.
 
-Per riprodurre il solo check in memoria dal checkout:
+To reproduce only the in-memory check from the checkout:
 
 ```sh
 check_dir=$(mktemp -d /private/tmp/cascade-bootstrap-check.XXXXXX)
@@ -35,4 +35,4 @@ DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer xcrun clang -std=c
 "$check_dir/check"
 ```
 
-Il modello Python può ricevere byte+EOF nello stesso batch; POSIX read li restituisce separatamente. Il main accetta quindi il comando complete come normale uscita0 nella lettura corrente. Nessun risultato locale certifica morte del supervisore; la futura prova nativa rimane separata.
+The Python model can receive bytes+EOF in the same batch; POSIX read returns them separately. The main therefore accepts the complete command as a normal exit 0 in the current read. No local result certifies the supervisor's death; the future native test remains separate.

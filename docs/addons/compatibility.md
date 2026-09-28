@@ -1,28 +1,28 @@
-# Compatibilità degli addon
+# Addon compatibility
 
-## Package e ambiente verificato
+## Package and verified environment
 
-Il package SDK e il progetto generato dichiarano `swift-tools-version: 6.2` e macOS 14; i target pubblici `CascadeContracts`, `CascadePresentation` e `CascadeAddonSDK` usano il modo linguaggio Swift 6. Queste dichiarazioni non sono una matrice di piattaforme collaudate. Le verifiche documentate del 18 settembre usano Apple Swift 6.4 su macOS 27 arm64: non qualificano l’esecuzione su macOS 14 o Intel. Vedere le [prove dei contratti consegnati](../superpowers/verification/2026-09-18-addon-service-subscription-frames.md) e la [calibrazione CPU](../superpowers/verification/2026-09-18-addon-process-cpu-calibration.md).
+The SDK package and the generated project declare `swift-tools-version: 6.2` and macOS 14; the public targets `CascadeContracts`, `CascadePresentation` and `CascadeAddonSDK` use the Swift 6 language mode. These declarations are not a matrix of tested platforms. The documented verification runs of 18 September use Apple Swift 6.4 on macOS 27 arm64: they do not qualify execution on macOS 14 or Intel. See the [evidence for the delivered contracts](../superpowers/verification/2026-09-18-addon-service-subscription-frames.md) and the [CPU calibration](../superpowers/verification/2026-09-18-addon-process-cpu-calibration.md).
 
-Per un provider indipendente usare i prodotti `CascadeAddonSDK` e `CascadeContracts`; `CascadePresentation` è una dipendenza pubblica dell’SDK e offre i componenti dichiarativi. `CascadeRuntime`, `CascadeKit` e i sorgenti dell’app appartengono all’host: la loro presenza fra i prodotti SwiftPM non li rende dipendenze del percorso addon pubblico. La [guida ai test](testing.md) precisa questo confine. Una build sorgente riuscita non dimostra stabilità ABI, compatibilità fra binari compilati con toolchain differenti o parità nativa bundled/external.
+For a standalone provider, use the `CascadeAddonSDK` and `CascadeContracts` products; `CascadePresentation` is a public dependency of the SDK and offers the declarative components. `CascadeRuntime`, `CascadeKit` and the app sources belong to the host: their presence among the SwiftPM products does not make them dependencies of the public addon path. The [testing guide](testing.md) spells out this boundary. A successful source build does not prove ABI stability, compatibility between binaries compiled with different toolchains, or native bundled/external parity.
 
-## Manifest, protocollo e contenuti
+## Manifest, protocol and content
 
-Validare il manifest contro lo [schema pubblico](manifest.schema.json) e il [contratto](protocol.md). Versione del package, versione di un servizio, versione del manifest, minor del protocollo e schema del contenuto hanno ruoli distinti; non vanno dedotti l’uno dall’altro. `REQUIRES` esprime compatibilità e dipendenze, senza autenticare il provider o concedere permessi.
+Validate the manifest against the [public schema](manifest.schema.json) and the [contract](protocol.md). Package version, service version, manifest version, protocol minor and content schema have distinct roles; do not infer one from another. `REQUIRES` expresses compatibility and dependencies, without authenticating the provider or granting permissions.
 
-La negoziazione host parte da protocollo 1.0 e sceglie l’intersezione fra offerta del provider, requisito del manifest e capacità realmente collegate:
+Host negotiation starts from protocol 1.0 and selects the intersection of the provider's offer, the manifest's requirement and the capabilities that are actually connected:
 
-| Minor cumulativo | Capacità host necessaria |
+| Cumulative minor | Required host capability |
 | --- | --- |
-| 1.1 | Dispatch storage per chiave |
-| 1.2 | Storage più adapter capace di trasferire asset |
-| 1.3 | Capacità precedenti più assembly interno completo delle invocazioni di servizio, handler, ambiente compatibile e capacità prenotate |
-| 1.4 | Capacità precedenti più handler completo di controlli/sorgenti/eventi, adapter di sottoscrizione, ambiente compatibile e capacità massime prepagate |
+| 1.1 | Keyed storage dispatch |
+| 1.2 | Storage plus an asset-capable adapter |
+| 1.3 | Earlier capabilities plus the complete internal service invocation assembly, handler, compatible environment and reserved capacities |
+| 1.4 | Earlier capabilities plus the complete control/source/event handler, subscription adapter, compatible environment and prepaid maximum capacities |
 
-Un’offerta o un profilo sintattico non abilita queste capacità. Il default resta 1.0 e i percorsi legacy fino a 1.3 sono preservati; assembly incompleti mantengono il livello precedente. Le connessioni complete 1.3/1.4 compongono sessione di pubblicazione e broker con una generazione canonica comune, senza riscrivere Grant. Il client pubblico `TransportServiceClient` implementa invoke/subscribe/unsubscribe insieme tramite un canale iniettato; l’host mantiene l’autorità e il refresh non rinnova la scadenza dell’interesse. Vedere [sessioni](sessions.md), [servizi](services.md), la [prova storica della sintassi 1.4](../superpowers/verification/2026-09-18-addon-service-subscription-frames.md) e il [riferimento alla consegna host e SDK completo](../superpowers/verification/2026-09-18-addon-service-subscriptions-host-sdk.md), con i relativi limiti di verifica. Questa composizione non qualifica adapter/bootstrap nativo, C0d, macOS 14 o Intel.
+An offer or a syntax profile does not enable these capabilities. The default remains 1.0 and the legacy paths up to 1.3 are preserved; incomplete assemblies keep the earlier level. Complete 1.3/1.4 connections compose the publication session and the broker with one common canonical generation, without rewriting Grants. The public client `TransportServiceClient` implements invoke/subscribe/unsubscribe together through an injected channel; the host keeps authority and a refresh does not renew the interest's expiry. See [sessions](sessions.md), [services](services.md), the [historical evidence for the 1.4 syntax](../superpowers/verification/2026-09-18-addon-service-subscription-frames.md) and the [reference for the complete host and SDK delivery](../superpowers/verification/2026-09-18-addon-service-subscriptions-host-sdk.md), with their verification limits. This composition does not qualify a native adapter/bootstrap, C0d, macOS 14 or Intel.
 
-Gli schemi contenuto 1 e 2 vengono concordati separatamente. Schema 2 richiede supporto anche senza luci; non si può eliminare il campo delle luci per reinterpretare il documento come schema 1. Il controllo comprende tutte le rappresentazioni e le voci future della timeline. I [contenuti](content.md) descrivono componenti, limiti e comportamento del renderer.
+Content schemas 1 and 2 are negotiated separately. Schema 2 requires support even without lights; the lights field cannot be dropped to reinterpret the document as schema 1. The check covers every representation and the future timeline entries. [Content](content.md) describes the components, limits and renderer behavior.
 
-## Cosa prova un esempio sorgente
+## What a source example proves
 
-Generazione, validazione e test del provider verificano contratti e uso delle API pubbliche. Non provano installazione, identità firmata, trasporto autenticato, arresto reale o ammissione nativa. Il percorso SDK locale è esplicito e richiede una nuova verifica quando si cambia baseline; seguire [quickstart](quickstart.md), [test](testing.md) e [distribuzione](distribution.md).
+Generation, validation and provider tests verify contracts and use of the public APIs. They do not prove installation, signed identity, authenticated transport, actual termination or native admission. The local SDK path is explicit and needs a new verification when the baseline changes; follow the [quickstart](quickstart.md), [testing](testing.md) and [distribution](distribution.md) guides.

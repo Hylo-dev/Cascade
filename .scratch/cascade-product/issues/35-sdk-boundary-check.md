@@ -1,4 +1,4 @@
-# Verificare i confini pubblici dell'SDK e degli esempi
+# Verify the public boundaries of the SDK and the examples
 
 ID: 35
 Parent: cascade-product
@@ -11,20 +11,20 @@ Blocked by: 24, 26, 27
 
 ## Question
 
-Implementare il boundary check previsto dal piano addon: verificare il grafo dei target pubblici SDK e gli import Swift degli esempi, rifiutando dipendenze dai moduli privati dell'host senza alterare il runtime.
+Implement the boundary check foreseen by the addon plan: verify the graph of the public SDK targets and the Swift imports of the examples, rejecting dependencies on the host's private modules without altering the runtime.
 
 ## Context
 
-Controllo previsto in C6/C12 del [piano di completamento](../../../docs/superpowers/plans/2026-09-10-addon-runtime-completion.md). I target pubblici esistenti sono CascadeAddonSDK, CascadeContracts e CascadePresentation; Runtime, CascadeKit e il tool host restano fuori da questa superficie. Gli esempi mantengono la dipendenza pubblica locale esplicita già approvata.
+Check foreseen in C6/C12 of the [completion plan](../../../docs/superpowers/plans/2026-09-10-addon-runtime-completion.md). The existing public targets are CascadeAddonSDK, CascadeContracts and CascadePresentation; Runtime, CascadeKit and the host tool stay outside this surface. The examples keep the explicit local public dependency already approved.
 
 ## Progress
 
-Presa in carico dal task principale, in una directory temporanea isolata e con cache dedicate. Nessuna modifica dei sorgenti o delle cache posseduti dal worker delle sottoscrizioni. Il controllo userà i manifest valutati da SwiftPM e l'albero sintattico Swift; non sostituisce compilazione, sandbox o prove di parità nativa.
+Taken on by the main task, in an isolated temporary directory and with dedicated caches. No change to the sources or caches owned by the subscriptions worker. The check will use the manifests evaluated by SwiftPM and the Swift syntax tree; it does not replace compilation, sandboxing or native parity tests.
 
-### Verifica isolata e revisione
+### Isolated verification and review
 
-Implementazione corretta congelata:20 test Python/parser/SwiftPM/CLI PASS; baseline immutabile3 package/9 target/85 sorgenti/126 import PASS. La revisione indipendente finale è PASS dopo quattro correzioni, documentate nella [verifica](../../../docs/superpowers/verification/2026-09-18-addon-sdk-boundary-check.md). I quattro script sono stati importati esattamente e il controllo del checkout con il client completo passa:3 package/9 target/88 sorgenti/132 import. Le verifiche del perimetro sorgente sono completate; la consegna app delle sottoscrizioni resta distinta. Il controllo è eseguibile esplicitamente; l’integrazione obbligatoria nello script di build è ancora un incremento distinto. Nessuna qualifica nativa dedotta.
+Corrected implementation frozen: 20 Python/parser/SwiftPM/CLI tests PASS; immutable baseline 3 packages/9 targets/85 sources/126 imports PASS. The final independent review is PASS after four fixes, documented in the [verification](../../../docs/superpowers/verification/2026-09-18-addon-sdk-boundary-check.md). The four scripts were imported exactly and the check of the checkout with the complete client passes: 3 packages/9 targets/88 sources/132 imports. The verifications of the source perimeter are completed; the app delivery of the subscriptions remains separate. The check can be run explicitly; the mandatory integration into the build script is still a separate increment. No native qualification inferred.
 
 ## Answer
 
-Controllo sorgente consegnato: quattro script importati esattamente,20 test con parser/SwiftPM reali e revisione indipendente PASS. L’ultimo audit del checkout corretto passa su3 package/9 target/88 sorgenti/132 import, senza variazioni dei483 input congelati. [Prove e limiti](../../../docs/superpowers/verification/2026-09-18-addon-sdk-boundary-check.md). Il perimetro di questo ticket non modifica codice app e non richiede un nuovo launcher: la consegna app delle sottoscrizioni prosegue separatamente. Il [collegamento obbligatorio alla build](37-required-sdk-build-check.md) resta un incremento distinto; C6/C12 e parità nativa non sono completati.
+Source check delivered: four scripts imported exactly, 20 tests with the real parser/SwiftPM and independent review PASS. The latest audit of the corrected checkout passes on 3 packages/9 targets/88 sources/132 imports, with no changes to the 483 frozen inputs. [Evidence and limits](../../../docs/superpowers/verification/2026-09-18-addon-sdk-boundary-check.md). The perimeter of this ticket does not change app code and does not require a new launcher: the app delivery of the subscriptions continues separately. The [mandatory wiring into the build](37-required-sdk-build-check.md) remains a separate increment; C6/C12 and native parity are not completed.

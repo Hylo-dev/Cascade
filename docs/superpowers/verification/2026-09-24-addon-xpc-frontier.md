@@ -1,115 +1,115 @@
-# XPC: comandi bloccati e addon esterni
+# XPC: blocked commands and external addons
 
-**Aggiornamento successivo:** l’utente ha accettato il riavvio globale come ultima risorsa.
-La [decisione registrata](../specs/2026-09-10-addon-control-policy.md#recupero-globale-di-emergenza--decisione-del-24-settembre-2026)
-supera i riferimenti a scelta pendente nel rapporto storico qui sotto; le prove
-e i loro limiti restano invariati.
+**Later update:** the user accepted the global relaunch as a last resort.
+The [recorded decision](../specs/2026-09-10-addon-control-policy.md#emergency-global-recovery-decision-of-24-september-2026)
+supersedes the references to a pending choice in the historical report below; the evidence
+and its limits remain unchanged.
 
-24 settembre 2026. **Launcher ancora disabilitato.** Prosecuzione autorizzata con
-fixture isolate; nessuna modifica al prodotto o alla policy. La scelta sul riavvio
-globale come ultima risorsa è pendente e non riapre l'eccezione sugli orfani già rifiutata.
+24 September 2026. **Launcher still disabled.** Continuation authorized with
+isolated fixtures; no change to the product or the policy. The choice on the global
+relaunch as a last resort is pending and does not reopen the already rejected exception for orphans.
 
-## Blocco dei comandi
+## Command blocking
 
-`hold-all` nella fixture XPCBroker imposta atomicamente il blocco di ogni successivo
-callback di comando A, anche sul secondo canale, e trattiene il callback iniziale.
-Il worker conferma il proprio blocco; la risposta autenticata passa da una coda
-indipendente. Per lo stop, il secondo canale è autenticato sulla stessa incarnazione
-prima del blocco. Listener, risposte e segnali restano operativi: **non è una
-sospensione dell'intero processo**, non viene inviato SIGSTOP, le guardie sono attive.
+`hold-all` in the XPCBroker fixture atomically sets the block of every subsequent
+A command callback, also on the second channel, and holds the initial callback.
+The worker confirms its own block; the authenticated response goes through an
+independent queue. For the stop, the second channel is authenticated on the same incarnation
+before the block. Listeners, responses and signals remain operational: **it is not a
+suspension of the whole process**, no SIGSTOP is sent, the guards are active.
 
-macOS 27 beta 26A5425a, SDK 27.0, arm64, target compilato 14.0. Root Hardened Runtime;
-broker/worker Hardened Runtime + App Sandbox, firme fissate come nelle prove precedenti.
-Build finale: `CascadeXPCBrokerProbe/nested-boa0k31m` in DerivedData.
+macOS 27 beta 26A5425a, SDK 27.0, arm64, compiled target 14.0. Root: Hardened Runtime;
+broker/worker: Hardened Runtime + App Sandbox, signatures pinned as in the previous tests.
+Final build: `CascadeXPCBrokerProbe/nested-boa0k31m` in DerivedData.
 
-| Scenario, finestra 2 s | Esito | Evidenza |
+| Scenario, 2 s window | Outcome | Evidence |
 | --- | --- | --- |
-| Stop A sul secondo canale, root e B vivi | FAIL | Nessun exit A; root e B reattivi |
-| Uscita normale root | PASS | Quattro servizi SIGKILL, eventi entro 1,95 ms |
-| Self-SIGKILL root | PASS | Quattro servizi SIGKILL, eventi entro 2,03 ms |
+| Stop A on the second channel, root and B alive | FAIL | No A exit; root and B responsive |
+| Normal root exit | PASS | Four services SIGKILL, events within 1.95 ms |
+| Root self-SIGKILL | PASS | Four services SIGKILL, events within 2.03 ms |
 
-Sono tempi di ricezione degli eventi kernel dal trigger, non latenze garantite.
-Il classificatore ammette status 9 o 15 per i servizi; i risultati sono tutti 9.
-Status root richiesti 0/-9. Guardia e crash accidentali non producono PASS.
+These are receipt times of the kernel events from the trigger, not guaranteed latencies.
+The classifier admits status 9 or 15 for the services; the results are all 9.
+Required root statuses 0/-9. The guard and accidental crashes do not produce PASS.
 
-Durante il **cleanup del FAIL**, root esce normalmente: B termina subito, A circa
-**5 secondi dopo il root**, prima della guardia. Osservato in entrambi i cicli.
-Il caso ha un secondo canale e uno stop pendente; non è stata isolata la causa della
-differenza rispetto a host-normal. Non si estende il PASS rapido a ogni sequenza né
-si usa il cleanup per promuovere il FAIL. Tutti i partecipanti tracciati risultano
-infine usciti. Nessun segnale a PID o gruppi individuati per scansione.
+During the **cleanup of the FAIL**, root exits normally: B terminates immediately, A about
+**5 seconds after the root**, before the guard. Observed in both cycles.
+The case has a second channel and a pending stop; the cause of the difference
+from host-normal was not isolated. The fast PASS is not extended to every sequence, nor
+is the cleanup used to promote the FAIL. All tracked participants are shown to have
+exited in the end. No signal to PIDs or groups identified by scanning.
 
-Runner finale **exit 1**, coerente con un FAIL valido. Conservati
-[ciclo iniziale](evidence/2026-09-24-xpc-frontier/frozen-initial/results.json) e
-[finale](evidence/2026-09-24-xpc-frontier/frozen-final/results.json), log, manifest e
-sorgenti corrispondenti. Il secondo aggiunge host-normal dopo il ritardo nel cleanup.
+Final runner **exit 1**, consistent with a valid FAIL. Preserved the
+[initial cycle](evidence/2026-09-24-xpc-frontier/frozen-initial/results.json) and the
+[final](evidence/2026-09-24-xpc-frontier/frozen-final/results.json) one, logs, manifests and
+the corresponding sources. The second adds host-normal after the delay in the cleanup.
 
-## Discovery dell'addon esterno
+## Discovery of the external addon
 
-Nuova fixture [XPCDiscovery](../../../Prototypes/AddonPlatform/XPCDiscovery/README.md):
-app con ID/punto della P0 e broker sandboxed con ID distinto. Ricompilato e aperto
-il contenitore vuoto della fixture P0 per registrarne i metadati. **Nessun provider
-avviato**, nessuna costruzione di AppExtensionProcess. Campionamento 2 s per entrambe
-le API. Firma controllata su entrambe le connessioni; risposta con nonce, bundle ID
-e PID verificato rispetto alla connessione Foundation. Nessun grant o dato utente.
+New fixture [XPCDiscovery](../../../Prototypes/AddonPlatform/XPCDiscovery/README.md):
+an app with the P0 ID/extension point and a sandboxed broker with a distinct ID. Recompiled and opened
+the empty container of the P0 fixture to register its metadata. **No provider
+launched**, no construction of AppExtensionProcess. 2 s sampling for both
+APIs. Signature checked on both connections; response with nonce, bundle ID
+and PID verified against the Foundation connection. No grant or user data.
 
-| Chiamante | Legacy | Monitor moderno |
+| Caller | Legacy | Modern monitor |
 | --- | --- | --- |
-| App | Provider atteso trovato | Stesso provider, disabled 0, unapproved 0 |
-| Broker | Vuoto | Vuoto, disabled 0, unapproved 1 |
+| App | Expected provider found | Same provider, disabled 0, unapproved 0 |
+| Broker | Empty | Empty, disabled 0, unapproved 1 |
 
-[Risultato autenticato](evidence/2026-09-24-xpc-frontier/discovery-final/stdout.jsonl).
-**Punto e monitor non rifiutano il target XPC** nella prova. `unapproved=1` è un
-conteggio, non l'identità autenticata di quell'elemento: suggerisce un ostacolo di
-approvazione nel contesto broker, senza isolarne la causa. Non dimostra impossibilità,
-diritto di lancio o proprietà della durata. Exit 0 del runner significa risposta
-autenticata, non qualificazione; il controllo positivo dell'app è verificato qui.
+[Authenticated result](evidence/2026-09-24-xpc-frontier/discovery-final/stdout.jsonl).
+**The extension point and the monitor do not reject the XPC target** in the test. `unapproved=1` is a
+count, not the authenticated identity of that element: it suggests an approval
+obstacle in the broker context, without isolating its cause. It does not demonstrate impossibility,
+a launch right or lifetime ownership. Exit 0 of the runner means an authenticated
+response, not qualification; the positive control of the app is verified here.
 
-[Primo tentativo](evidence/2026-09-24-xpc-frontier/discovery-initial/) inconcludente
-per difetto fixture: setter di firma su NSXPCListener.service, vietato dall'header
-Foundation. Errore 4097 e SIGSEGV nel setter, log/crash ridotto conservati. Correzione:
-requisito sulla NSXPCConnection ricevuta prima di export/resume, senza rimuovere
-l'autenticazione. La verifica preliminare non aveva individuato questo errore.
+[First attempt](evidence/2026-09-24-xpc-frontier/discovery-initial/) inconclusive
+because of a fixture defect: a signature setter on NSXPCListener.service, forbidden by the
+Foundation header. Error 4097 and SIGSEGV in the setter, reduced log/crash preserved. Fix:
+a requirement on the received NSXPCConnection before export/resume, without removing
+the authentication. The preliminary check had not identified this error.
 
-La [variante browser](evidence/2026-09-24-xpc-frontier/discovery-browser/) costruisce
-EXAppExtensionBrowserViewController dal broker, lo mantiene 60 s dopo la risposta,
-guardia autonoma 90 s. Stessi conteggi. **Verifica visiva bloccata dal Mac sulla
-schermata di blocco**: nessuna finestra acquisita, nessun toggle o consenso cambiato.
-Creare la view senza errore non dimostra visibilità o supporto del percorso UI.
+The [browser variant](evidence/2026-09-24-xpc-frontier/discovery-browser/) builds
+EXAppExtensionBrowserViewController from the broker, keeps it 60 s after the response,
+autonomous guard 90 s. Same counts. **Visual check blocked by the Mac on the
+lock screen**: no window captured, no toggle or consent changed.
+Creating the view without error does not demonstrate visibility or support of the UI path.
 
-## Ricerche e scelta pendente
+## Research and pending choice
 
-[Audit token](../../wayfinder/research/2026-09-24-audit-token-termination.md): il kernel
-verifica PID/versione, ma libproc non soddisfa il requisito di API pubblica supportata
-e la presenza nell'SDK non prova macOS 14.0. Nessuna API privata introdotta.
-[Fonte DTS](https://developer.apple.com/forums/thread/837541).
+[Audit token](../../wayfinder/research/2026-09-24-audit-token-termination.md): the kernel
+verifies PID/version, but libproc does not satisfy the requirement of a supported public API
+and presence in the SDK does not prove macOS 14.0. No private API introduced.
+[DTS source](https://developer.apple.com/forums/thread/837541).
 
-[Composizione broker/ExtensionFoundation](../../wayfinder/research/2026-09-24-extension-broker-composition.md):
-nessun parametro pubblico individuato per far approvare alla GUI un'estensione a
-nome del broker. Browser e Impostazioni Sistema richiedono ancora verifica a desktop
-sbloccato; non si modificano database interni. La [risposta DTS sull'hosting annidato](https://developer.apple.com/forums/thread/846017)
-riguarda un'estensione che ospita altre estensioni, non questo preciso broker XPC.
+[Broker/ExtensionFoundation composition](../../wayfinder/research/2026-09-24-extension-broker-composition.md):
+no public parameter identified to make the GUI approve an extension on
+behalf of the broker. Browser and System Settings still require verification on an unlocked
+desktop; internal databases are not modified. The [DTS answer on nested hosting](https://developer.apple.com/forums/thread/846017)
+concerns an extension that hosts other extensions, not this precise XPC broker.
 
-La domanda di prodotto proposta all'utente è se consentire **il riavvio di tutta
-Cascade come ultima risorsa**, interrompendo temporaneamente anche gli altri addon,
-oppure richiedere sempre recupero selettivo. Il secondo canale risolve uno stallo
-localizzato, non il caso appena misurato. Per la prima strada servono prima prova
-dell'uscita dell'intera catena, tempi e ripristino; lanciare una seconda app non basta.
-Per la seconda serve un'altra primitiva pubblica o architettura dimostrata.
+The product question put to the user is whether to allow **the relaunch of all of
+Cascade as a last resort**, temporarily interrupting the other addons as well,
+or to always require selective recovery. The second channel resolves a localized
+stall, not the case just measured. The first path first needs proof
+of the exit of the whole chain, timings and restoration; launching a second app is not enough.
+The second needs another public primitive or a demonstrated architecture.
 
-Entrambe conservano nessun processo gestito orfano, sandbox/firma, assenza di codice
-addon nella GUI e minimo macOS. Un sì al riavvio **non abilita da solo il launcher**.
-Restano: consenso e avvio esterno autenticato, proprietà della durata, pre-main,
-incarnazione esatta, altro editore, macOS 14/15/26, SwiftUI remoto. Domanda ad Apple
-preparata nella ricerca, **non inviata**.
+Both preserve: no orphaned managed process, sandbox/signature, absence of addon code
+in the GUI and the macOS minimum. A yes to the relaunch **does not by itself enable the launcher**.
+Remaining: consent and authenticated external launch, lifetime ownership, pre-main,
+exact incarnation, another publisher, macOS 14/15/26, remote SwiftUI. A question to Apple
+is prepared in the research, **not sent**.
 
-## Verifiche
+## Checks
 
-- Build firmate riuscite: C XPC, Swift discovery e contenitore P0.
-- 7 test XPCLifetime + 11 XPCBroker passati; nuove aspettative osservate fallire prima
-  dell'implementazione. Nessuna nuova suite prodotto rivendicata.
-- Gate eseguito: exit 78, senza avvio C0d; SHA-256 invariato
+- Signed builds succeeded: C XPC, Swift discovery and the P0 container.
+- 7 XPCLifetime + 11 XPCBroker tests passed; new expectations observed failing before
+  the implementation. No new product suite claimed.
+- Gate run: exit 78, without a C0d launch; SHA-256 unchanged
   `687fb3086d41e821af684d49109c9c95f8d555cf88450bdcf809b2a708b1ddaa`.
-- Solo prototipi/evidenze cambiati: nessuna nuova build Cascade necessaria.
-- Riavvio ordinario finale e percorso app registrati in
+- Only prototypes/evidence changed: no new Cascade build needed.
+- Final ordinary relaunch and app path recorded in
   [restart.json](evidence/2026-09-24-xpc-frontier/restart.json).

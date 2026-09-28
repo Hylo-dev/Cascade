@@ -1,4 +1,4 @@
-# Provare routing per app e output simultanei
+# Probe per-app routing and simultaneous outputs
 
 ID: 20
 Parent: cascade-product
@@ -11,4 +11,4 @@ Blocked by: 03, 04
 
 ## Question
 
-Sulle versioni macOS candidate e sull'hardware disponibile, un percorso minimo basato su Core Audio taps soddisfa volume/mute per app, routing e due uscite simultanee senza costi o interruzioni incompatibili con Cascade? Usare un prototipo separato dal prodotto, senza EQ, con almeno una sorgente browser e una nativa. Provare consenso negato, disconnessione, sample rate, sleep/wake e arresto del processo, verificando ripristino dell'audio originale e assenza di aggregate orfani; misurare consumo, latenza e dropout. Registrare quali combinazioni di dispositivi mancano prima di generalizzare il risultato. La ricerca sui sorgenti ha dimostrato un meccanismo, non il superamento di queste prove da parte di Cascade.
+On the candidate macOS versions and the available hardware, does a minimal path based on Core Audio taps satisfy per-app volume/mute, routing and two simultaneous outputs without costs or interruptions incompatible with Cascade? Use a prototype separate from the product, without EQ, with at least one browser source and one native source. Test denied consent, disconnection, sample rate, sleep/wake and process termination, verifying that the original audio is restored and that no orphaned aggregates remain; measure consumption, latency and dropouts. Record which device combinations are missing before generalizing the result. The source research demonstrated a mechanism, not that Cascade passes these tests.

@@ -1,6 +1,6 @@
-# Completamento del lavoro
+# Finishing the work
 
-- Al termine di ogni intervento sul progetto, prima della risposta finale, chiudi Cascade e rilanciala senza chiedere un'ulteriore conferma.
-- Se hai modificato il codice dell'app, completa prima la build e riavvia la versione aggiornata solo se la compilazione riesce.
-- Verifica che l'app sia effettivamente ripartita. Se un impedimento blocca la build o il riavvio, dichiaralo nella risposta finale.
-- A ogni build riuscita aggiorna `/Applications/Cascade.app` affinché punti alla build appena compilata. Lo schema Xcode condiviso e `scripts/build-development.sh` eseguono `scripts/update-application-link.sh`; se usi un altro comando di build, esegui lo stesso script sul relativo `.app` prima del riavvio.
+- At the end of every piece of work on the project, before the final reply, quit Cascade and relaunch it without asking for further confirmation.
+- If you changed the app's code, finish the build first and relaunch the updated version only if the build succeeds.
+- Check that the app actually started again. If something blocks the build or the relaunch, say so in the final reply.
+- On every successful build, update `/Applications/Cascade.app` so that it points to the build just produced. The shared Xcode scheme and `scripts/build-development.sh` run `scripts/update-application-link.sh`; if you use another build command, run the same script on the resulting `.app` before the relaunch.

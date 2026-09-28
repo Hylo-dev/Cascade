@@ -1,38 +1,38 @@
-# Verificare un provider addon
+# Verifying an addon provider
 
-Un provider sorgente può essere verificato senza avviare un processo addon dentro Cascade. Queste prove controllano il comportamento del provider e l’uso dei contratti pubblici; la qualificazione dell’addon installato richiede anche il percorso nativo dell’host.
+A source provider can be verified without launching an addon process inside Cascade. These tests check the provider's behavior and its use of the public contracts; qualifying the installed addon also requires the host's native path.
 
-## Progetto indipendente
+## Standalone project
 
-La [guida iniziale](quickstart.md) mostra come generare un package con provider, manifest e test. Eseguire la build da una copia esterna al checkout, indicando esplicitamente il package SDK. Il progetto deve dipendere dai prodotti `CascadeAddonSDK` e `CascadeContracts`; le loro dipendenze pubbliche sono risolte da SwiftPM. Un import di `CascadeRuntime`, `CascadeKit` o sorgenti privati dell’app introduce una dipendenza dall’host e non dimostra l’indipendenza dell’addon.
+The [getting started guide](quickstart.md) shows how to generate a package with a provider, a manifest and tests. Run the build from a copy outside the checkout, pointing explicitly at the SDK package. The project must depend on the `CascadeAddonSDK` and `CascadeContracts` products; their public dependencies are resolved by SwiftPM. An import of `CascadeRuntime`, `CascadeKit` or private app sources introduces a dependency on the host and does not demonstrate the addon's independence.
 
-Validare il manifest con `cascade-addon validate` ed eseguire `swift test` nel progetto generato. La validazione del manifest non esegue il provider e non verifica firma, autorizzazioni o identità del processo. La successiva build valuta il `Package.swift` scelto dallo sviluppatore: il percorso SDK va quindi trattato come una dipendenza di codice esplicita.
+Validate the manifest with `cascade-addon validate` and run `swift test` in the generated project. Manifest validation does not run the provider and does not verify signature, authorizations or process identity. The subsequent build evaluates the `Package.swift` chosen by the developer: the SDK path must therefore be treated as an explicit code dependency.
 
-## Casi da coprire
+## Cases to cover
 
-- Usare identità di pubblicazione assegnate dall’host e verificare il rifiuto di un owner o di una sessione estranei. L’identificatore nel manifest non costituisce autenticazione.
-- Verificare schema, contenuto, durata finita, revisioni crescenti e roundtrip dei valori restituiti. Un countdown dichiarativo non richiede un task del provider che pubblichi ogni secondo.
-- Correlare ogni risposta a un’azione con il suo `requestID`; coprire input errati, scadenze, revisione osservata obsoleta e richieste duplicate. Pubblicare uno stato aggiornato non sostituisce la completion dell’azione.
-- Per provider persistenti, distruggere e ricreare l’istanza usando storage condiviso e una nuova generazione del contesto. Verificare revisioni, dati corrotti, errori di lettura/scrittura e risultati di commit incerti. Non trasformare un errore di lettura in assenza di dati.
-- Durante gli `await`, provare una seconda richiesta, la cancellazione e lo stop. L’isolamento dell’actor da solo non rende indivisibile una sequenza di lettura, modifica e scrittura.
-- Usare client di capacità che falliscono esplicitamente quando la fixture non deve invocarli. Un servizio finto che restituisce sempre successo può nascondere una dipendenza non prevista.
+- Use host-assigned publication identities and verify that a foreign owner or session is rejected. The identifier in the manifest does not constitute authentication.
+- Verify schema, content, finite lifetime, increasing revisions and the round trip of the returned values. A declarative countdown does not require a provider task that publishes every second.
+- Correlate every action response with its `requestID`; cover wrong inputs, deadlines, a stale observed revision and duplicate requests. Publishing an updated state does not replace the action's completion.
+- For persistent providers, destroy and recreate the instance using shared storage and a new context generation. Verify revisions, corrupt data, read/write errors and uncertain commit results. Do not turn a read error into absence of data.
+- During the `await`s, try a second request, cancellation and stop. Actor isolation alone does not make a read, modify and write sequence indivisible.
+- Use capability clients that fail explicitly when the fixture must not invoke them. A fake service that always returns success can hide an unexpected dependency.
 
-Un clock iniettato rende riproducibili scadenze e ripristino. Non sostituire le prove di concorrenza con ritardi arbitrari: controllare esplicitamente i punti in cui una scrittura o una risposta rimane sospesa.
+An injected clock makes deadlines and restoration reproducible. Do not replace concurrency tests with arbitrary delays: explicitly control the points at which a write or a response stays suspended.
 
-## Limiti delle prove del provider
+## Limits of provider tests
 
-I test unitari non dimostrano l’ammissione del pacchetto, l’identità dell’editore, la revoca di una connessione OS, le quote del processo, l’uscita dopo la morte del supervisore o la parità bundled/external. Anche una scrittura riuscita non dimostra che l’host abbia ammesso il successivo output: persistenza e pubblicazione non costituiscono una transazione unica dell’API pubblica.
+Unit tests do not prove package admission, publisher identity, revocation of an OS connection, process quotas, exit after the supervisor's death, or bundled/external parity. A successful write likewise does not prove that the host admitted the following output: persistence and publication are not a single transaction of the public API.
 
-Per queste proprietà servono le prove di integrazione e piattaforma descritte nel [piano addon](../superpowers/plans/2026-09-10-addon-runtime-completion.md), usando lo stesso percorso di ammissione previsto per addon del team e di terze parti. Il gate del launcher nativo rimane distinto dai test dei package sorgente.
+These properties need the integration and platform evidence described in the [addon plan](../superpowers/plans/2026-09-10-addon-runtime-completion.md), using the same admission path planned for team and third-party addons. The native launcher gate remains distinct from the tests of source packages.
 
-## Confini dell’SDK e degli esempi
+## SDK and example boundaries
 
-Lo script ufficiale `scripts/build-development.sh` esegue obbligatoriamente il controllo prima di Xcode: una violazione o l’assenza del verificatore interrompe il percorso prima di compilazione, firma e aggiornamento di Applications. Usa lo stesso DEVELOPER_DIR e passa la root esplicita del checkout, inclusi gli esempi. Questa garanzia riguarda lo script ufficiale; le invocazioni dirette di Xcode sono separate. La [verifica della build protetta](../superpowers/verification/2026-09-18-addon-required-sdk-build-check.md) distingue fixture negative e build firmata positiva.
+The official `scripts/build-development.sh` script runs the check as a mandatory step before Xcode: a violation or a missing verifier stops the path before compilation, signing and the update of Applications. It uses the same DEVELOPER_DIR and passes the explicit checkout root, examples included. This guarantee covers the official script; direct Xcode invocations are separate. The [protected build verification](../superpowers/verification/2026-09-18-addon-required-sdk-build-check.md) distinguishes negative fixtures from the positive signed build.
 
-Per eseguirlo separatamente, dal checkout usare `scripts/check-addon-boundaries.sh`. Il controllo valuta i manifest fidati di CascadeKit, StandaloneFocus, ServiceConsumer e StandaloneClock con il toolchain Xcode selezionato, verifica le dipendenze dei target, ricava da `swift package describe` i sorgenti selezionati dal toolchain e analizza gli import Swift effettivi, inclusi i rami condizionali. I prodotti pubblici ammessi sono CascadeAddonSDK, CascadeContracts e CascadePresentation. Sono rifiutati dipendenze/import privati dell’host, accessi @testable/@_spi all’SDK e generazione tramite plugin o macro nel profilo sorgente verificato. I test degli esempi possono usare @testable sui propri target.
+To run it separately, use `scripts/check-addon-boundaries.sh` from the checkout. The check evaluates the trusted manifests of CascadeKit, StandaloneFocus, ServiceConsumer and StandaloneClock with the selected Xcode toolchain, verifies the targets' dependencies, derives from `swift package describe` the sources selected by the toolchain, and analyzes the actual Swift imports, including conditional branches. The allowed public products are CascadeAddonSDK, CascadeContracts and CascadePresentation. Private host dependencies/imports, @testable/@_spi access to the SDK, and generation through plugins or macros in the verified source profile are rejected. The examples' tests can use @testable on their own targets.
 
-`--json` include hash dei sorgenti/manifest, comandi di valutazione e versione del compilatore; `--root /percorso/checkout` seleziona un’altra copia dei quattro package. Il comando usa cache temporanee proprie e le elimina al termine. Richiede Python3 e un Xcode con SwiftParser/SwiftSyntax nel toolchain; DEVELOPER_DIR permette di selezionarlo. I manifest vengono eseguiti da SwiftPM e devono essere fidati. Questo profilo richiede il solo Package.swift: la presenza di manifest Package@swift versionati causa un errore esplicito.
+`--json` includes the source/manifest hashes, the evaluation commands and the compiler version; `--root /path/checkout` selects another copy of the four packages. The command uses its own temporary caches and deletes them when it finishes. It requires Python3 and an Xcode with SwiftParser/SwiftSyntax in the toolchain; DEVELOPER_DIR lets you select it. The manifests are executed by SwiftPM and must be trusted. This profile requires only Package.swift: the presence of versioned Package@swift manifests causes an explicit error.
 
-`--test` esegue i test del controllo e compila il parser reale. Le prove complete del comando richiedono CASCADE_BOUNDARY_FIXTURE_ROOT puntato a una copia sorgente minima e immutabile con CascadeKit e i tre esempi; se manca, questi casi vengono segnalati come saltati. Non indicare un checkout contenente build/cache o altre grandi directory: i test copiano la fixture per introdurre difetti controllati.
+`--test` runs the check's tests and compiles the real parser. The complete tests of the command require CASCADE_BOUNDARY_FIXTURE_ROOT pointed at a minimal, immutable source copy with CascadeKit and the three examples; if it is missing, these cases are reported as skipped. Do not point it at a checkout that contains build/cache or other large directories: the tests copy the fixture to introduce controlled defects.
 
-Il risultato riguarda import e grafo statici nella valutazione scelta dei manifest. Non sostituisce la compilazione dei provider, non espande macro, non certifica ambienti alternativi del manifest o caricamento dinamico e non dimostra parità, isolamento o ammissione nativi.
+The result concerns the static imports and graph in the chosen evaluation of the manifests. It does not replace compiling the providers, does not expand macros, does not certify alternative manifest environments or dynamic loading, and does not prove native parity, isolation or admission.

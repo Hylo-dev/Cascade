@@ -1,95 +1,95 @@
-# C5 — integrazione canonica degli asset
+# C5: canonical asset integration
 
-## Perimetro implementato
+## Implemented scope
 
-`AddonRuntime` possiede decoder ImageIO/CoreGraphics, coordinatore raster e
-`AssetState`, usando lo stesso ResourceGovernor. Import e rilascio controllano
-identità verificata, digest, feature, pubblicazione assegnata e connessione corrente.
-Il commit di pubblicazioni e riferimenti agli asset è sincrono e atomico dopo
-l’ammissione delle risorse. Una richiesta rifiutata non avanza la sequenza.
+`AddonRuntime` owns the ImageIO/CoreGraphics decoder, the raster coordinator and
+`AssetState`, using the same ResourceGovernor. Import and release check the
+verified identity, digest, feature, assigned publication and current connection.
+The commit of publications and asset references is synchronous and atomic after
+resource admission. A rejected request does not advance the sequence.
 
-Le pubblicazioni trattengono tutti i riferimenti dichiarati, anche nelle
-rappresentazioni non visibili e nelle voci future della timeline già ammessa e
-limitata dall’host. Uscita del provider e rilascio esplicito eliminano gli alias di
-importazione, preservando le immagini già pubblicate. Fine, scadenza, disattivazione
-e stop revocano l’autorità; le quote dei pixel restano occupate fino all’ultima
-referenza CoreGraphics reale.
+Publications retain all declared references, including in non-visible
+representations and in the future entries of the timeline already admitted and
+bounded by the host. Provider exit and explicit release remove the import
+aliases, preserving the images already published. End, expiry, deactivation
+and stop revoke the authority; the pixel quotas stay occupied until the last
+real CoreGraphics reference.
 
-Il resolver di presentazione conserva la revisione osservata dalla vista e la
-inoltra in ogni lookup. Il runtime verifica la revisione canonica e usa il proprio
-orologio: il chiamante non può scegliere una data passata per aggirare la scadenza.
+The presentation resolver keeps the revision observed by the view and
+forwards it in every lookup. The runtime verifies the canonical revision and uses its own
+clock: the caller cannot choose a past date to get around the expiry.
 
-## Prove e correzioni
+## Evidence and fixes
 
-Sono stati osservati fallimenti comportamentali prima delle implementazioni di
-riferimenti, stato asset, integrazione runtime, revisione delle viste e rilascio.
-Le prime prove con PNG reali hanno anche individuato alias UUID non conformi alla
-grammatica dei contenuti; il prefisso host `asset-` risolve il problema.
+Behavioral failures were observed before the implementations of
+references, asset state, runtime integration, view revision and release.
+The first tests with real PNGs also found UUID aliases that did not conform to the
+content grammar; the host prefix `asset-` solves the problem.
 
-La revisione e il controllo finale hanno corretto tre regressioni:
+The review and the final check fixed three regressions:
 
-- Le pubblicazioni senza asset richiedevano inutilmente metadata aggiuntivi.
-  Il caso con quota già piena ora conserva il comportamento preesistente.
-- Un import riuscito non drenava un completamento di servizio arrivato durante
-  l’ammissione. Il test deterministico osservava esito mancante e quota job ancora
-  occupata. Il drenaggio avviene ora prima dell’inserimento finale, conservando la
-  prenotazione dei metadata pendenti e ricontrollando l’autorità dopo l’attesa.
+- Publications without assets needlessly required additional metadata.
+  The case with an already full quota now keeps the pre-existing behavior.
+- A successful import did not drain a service completion that arrived during
+  admission. The deterministic test observed a missing outcome and the job quota still
+  occupied. Draining now happens before the final insertion, keeping the
+  reservation of the pending metadata and rechecking the authority after the wait.
 
-Un ulteriore test, dopo l’ammissione della memoria temporanea del messaggio,
-ha riprodotto il rifiuto della fine di una pubblicazione con immagini a quota piena.
-Fine e sostituzione con contenuto senza immagini ora usano i metadata già prenotati
-per le sole rimozioni. Un batch misto continua a prenotare tutti i nuovi riferimenti
-prima del commit, senza spendere rimborsi futuri. L’ammissione iniziale del messaggio
-rimane invariata.
+A further test, after the admission of the message's temporary memory,
+reproduced the rejection of the end of a publication with images at a full quota.
+End and replacement with content without images now use the metadata already reserved
+for the removals only. A mixed batch still reserves all new references
+before the commit, without spending future refunds. The initial admission of the message
+remains unchanged.
 
-Log mirati in `/private/tmp`: `cascade-asset-references-{red,green}.log`,
+Targeted logs in `/private/tmp`: `cascade-asset-references-{red,green}.log`,
 `cascade-asset-state-{red,green}.log`, `cascade-asset-empty-{red,green}.log`,
 `cascade-asset-release-{red,green}.log`, `cascade-asset-presentation-{red,green}.log`,
 `cascade-runtime-assets-{red,drain-red,release-red,final}.log`,
-`cascade-asset-removal-{red,green}.log` e
+`cascade-asset-removal-{red,green}.log` and
 `cascade-runtime-assets-removal-{red,green}.log`.
 
-Revisione indipendente conclusa senza rilievi aperti. La suite mirata finale del
-runtime contiene 37 test; AssetState ne contiene 12. Le prove dei riferimenti
-sono 5 e quelle di presentazione 18, inclusi i casi preesistenti di quelle suite.
+Independent review concluded with no open findings. The final targeted runtime
+suite contains 37 tests; AssetState contains 12. The reference tests
+number 5 and the presentation tests 18, including the pre-existing cases of those suites.
 
-## Verifica completa e consegna
+## Complete verification and delivery
 
-**536 test Swift passati**, 29 in più della baseline decoder (507), eseguiti con
-`--no-parallel` e uscita 0: Runtime 304, Presentation 20, CascadeKit 170,
-Contracts 38, Tool 4. Log definitivo:
+**536 Swift tests passed**, 29 more than the decoder baseline (507), run with
+`--no-parallel` and exit 0: Runtime 304, Presentation 20, CascadeKit 170,
+Contracts 38, Tool 4. Final log:
 `/private/tmp/cascade-asset-integration-final-tests.log`.
 
-Sono stati confrontati 350 input di build/test fra workspace e copia locale
-`/private/tmp/cascade-asset-integration`, poi congelati nel record
-`/private/tmp/cascade-asset-integration-build-inputs.json`. La verifica definitiva
-è successiva anche all’ultima formattazione dei test. Nessuna modifica del lavoro
-pregresso è stata ripristinata o inclusa in un commit globale.
+350 build/test inputs were compared between the workspace and the local copy
+`/private/tmp/cascade-asset-integration`, then frozen in the record
+`/private/tmp/cascade-asset-integration-build-inputs.json`. The final verification
+also comes after the last formatting of the tests. No change from the earlier
+work was reverted or included in a global commit.
 
-Build Debug firmata riuscita con `scripts/build-development.sh`; verifica
-codesign deep/strict riuscita e `/Applications/Cascade.app` aggiornato alla build
+Signed Debug build succeeded with `scripts/build-development.sh`; codesign
+deep/strict verification succeeded and `/Applications/Cascade.app` updated to the build
 in `CascadeAddonDevelopment/Build/Products/Debug/Cascade.app`.
 Log: `/private/tmp/cascade-asset-integration-app-build.log`.
-I 350 input sono ancora identici dopo la compilazione.
+The 350 inputs are still identical after the compilation.
 
-Chiusura normale e riavvio verificati: PID 60288 terminato, nuova istanza stabile
-PID 69877 nel percorso atteso, nessuna terminazione forzata. Record:
+Normal quit and relaunch verified: PID 60288 terminated, new stable instance
+PID 69877 at the expected path, no forced termination. Record:
 `/private/tmp/cascade-asset-integration-restart.json`.
-Ultima lettura disponibile del consumo settimanale: 19%, sotto il tetto del 60%.
+Last available reading of the weekly usage: 19%, below the 60% ceiling.
 
-## Ambiente e limiti
+## Environment and limits
 
-macOS 27.0 beta, build 26A5425a, arm64; Apple Swift 6.4 con Xcode beta.
-Il target minimo rimane macOS 14: non è una prova di esecuzione su macOS 14.
+macOS 27.0 beta, build 26A5425a, arm64; Apple Swift 6.4 with Xcode beta.
+The minimum target remains macOS 14: this is not evidence of execution on macOS 14.
 
-I test usano il vero decoder, CGImage e governor, con trasporto e orologio controllati.
-Non qualificano addon esterni, firma dei provider, launcher, processi reali,
-resistenza del decoder a input ostili o lifetime di vere viste SwiftUI.
-Il gate nativo C0d rimane chiuso. Nessun partecipante di tracing è stato avviato.
+The tests use the real decoder, CGImage and governor, with controlled transport and clock.
+They do not qualify external addons, provider signing, launcher, real processes,
+decoder resistance to hostile input or the lifetime of real SwiftUI views.
+The native C0d gate remains closed. No tracing participant was started.
 
-L’API è interna: ogni import è limitato a una pubblicazione. Prima di fissare il
-contratto SDK pubblico resta da scegliere il riuso fra pubblicazioni dello stesso
-addon entro ambiti di privacy compatibili. Questo incremento non introduce un
-nuovo modello di account: l’autorità delle partizioni dei servizi esiste già nel
-broker. Trasporto degli asset, trasferimento snapshot al renderer MainActor,
-cache e ripristino persistente restano da integrare. C5 non è dichiarato concluso.
+The API is internal: each import is limited to one publication. Before fixing the
+public SDK contract, reuse across publications of the same addon within compatible
+privacy scopes remains to be decided. This increment does not introduce a
+new account model: the authority of the service partitions already exists in the
+broker. Asset transport, snapshot transfer to the MainActor renderer,
+cache and persistent restore remain to be integrated. C5 is not declared complete.

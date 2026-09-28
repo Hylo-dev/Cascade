@@ -1,225 +1,225 @@
-# Laboratorio macOS piccolo per la prova sospesa
+# Small macOS lab for the suspended test
 
-Preparazione iniziata il 25 settembre 2026, autorizzata dall'utente dopo aver
-liberato spazio. **Il 26 settembre la VM piccola è avviabile, SIP è stato ripristinato
-e l'arresto completo dall'host è qualificato. La prova sospesa resta bloccata prima
-del primo HELLO: il broker non ottiene l'identità dell'estensione su questo guest.**
-Nessuna sospensione è stata armata e il gate produttivo resta invariato (exit 78).
+Preparation started on 25 September 2026, authorized by the user after freeing
+space. **On 26 September the small VM is bootable, SIP has been restored
+and the complete stop from the host is qualified. The suspended test remains blocked
+before the first HELLO: the broker does not obtain the extension's identity on this guest.**
+No suspension was armed and the production gate remains unchanged (exit 78).
 
-Il guest osservato è macOS **14.3, build 23D56**, non la versione 14.1 indicata dal
-tag scelto. La causa della discrepanza del tag non è stabilita; le conclusioni si
-riferiscono al sistema effettivamente misurato. Al checkpoint nativo: 2 CPU, 4 GiB di RAM e disco allocato
-17.855.008.768 byte (16,63 GiB). **Successivamente, su richiesta esplicita
-dell'utente, la VM è stata eliminata e la strada VM sospesa.** Rimossi anche
-Tart portatile, cache/state e credenziali SSH create per il guest; prove conservate
-nel repository. Liberati circa 18 GB, con 21.872.640.000 byte liberi al controllo.
+The observed guest is macOS **14.3, build 23D56**, not version 14.1 indicated by the
+chosen tag. The cause of the tag discrepancy is not established; the conclusions
+refer to the system actually measured. At the native checkpoint: 2 CPUs, 4 GiB of RAM and allocated disk
+17,855,008,768 bytes (16.63 GiB). **Subsequently, at the user's explicit
+request, the VM was deleted and the VM path suspended.** Also removed:
+portable Tart, cache/state and SSH credentials created for the guest; evidence preserved
+in the repository. About 18 GB freed, with 21,872,640,000 bytes free at the check.
 
-## Configurazione scelta
+## Chosen configuration
 
-- Un solo guest Sonoma vanilla, selezionato dal tag 14.1 ma osservato come 14.3,
-  senza Xcode, 2 CPU e 4 GiB di RAM.
-- Immagine fissata a
+- A single vanilla Sonoma guest, selected by the 14.1 tag but observed as 14.3,
+  without Xcode, 2 CPUs and 4 GiB of RAM.
+- Image pinned to
   `ghcr.io/cirruslabs/macos-sonoma-vanilla@sha256:a6dc5a325aae43a90244953af0a85091fbe93e8f58583138c5ac96dd707fd700`.
-  Download compresso 14,76 GiB; il disco virtuale da 50 GB è sparse. Lo spazio
-  realmente occupato deve essere misurato, non dedotto dalla capacità virtuale.
-- Tart 2.38.0 portatile verificato con codesign strict e Gatekeeper, in
-  `/private/tmp/cascade-addon-vm`; cache e clone limitati alla stessa directory.
-  Nessuna installazione di Tart in Applicazioni, Homebrew o toolchain nel guest.
-- Controllo dello spazio libero durante download e avvio. Il primo limite di
-  4,5 GiB ha interrotto il trasferimento al 99%; il tentativo successivo riserva
-  3 GiB durante il download e inizialmente 3,5 GiB per l'avvio. Dopo il primo
-  arresto in Recovery per spazio, anche l'avvio usa una riserva di 3 GiB.
-  Nessuna cancellazione di dati personali; il controller conserva i dati parziali.
-- Rete NAT standard; dopo il primo accesso SSH, rimozione delle route predefinite
-  nel solo guest e controllo IPv4/IPv6. Non è una rete host-only.
-- Stessa fixture firmata già archiviata nella prova esterna: nessuna modifica
-  agli entitlement del provider e nessuna chiave di firma trasferita.
+  Compressed download 14.76 GiB; the 50 GB virtual disk is sparse. The space
+  actually occupied must be measured, not inferred from the virtual capacity.
+- Portable Tart 2.38.0 verified with strict codesign and Gatekeeper, in
+  `/private/tmp/cascade-addon-vm`; cache and clone confined to the same directory.
+  No installation of Tart in Applications, Homebrew or toolchain in the guest.
+- Free-space check during download and boot. The first limit of
+  4.5 GiB interrupted the transfer at 99%; the next attempt reserves
+  3 GiB during the download and initially 3.5 GiB for the boot. After the first
+  stop in Recovery for lack of space, the boot also uses a 3 GiB reservation.
+  No deletion of personal data; the controller keeps the partial data.
+- Standard NAT network; after the first SSH login, removal of the default routes
+  in the guest only and IPv4/IPv6 check. It is not a host-only network.
+- Same signed fixture already archived in the external test: no change
+  to the provider's entitlements and no signing key transferred.
 
-La scelta dell'immagine, la provenienza e il comportamento dei retry sono
-documentati nella [ricerca](../../wayfinder/research/2026-09-25-small-macos-vm.md).
+The choice of image, the provenance and the retry behavior are
+documented in the [research](../../wayfinder/research/2026-09-25-small-macos-vm.md).
 
-## Preparazione eseguita
+## Preparation carried out
 
-Il payload estratto misura circa 32 MB e contiene fixture, osservatore, runner
-e un runtime Python minimo già disponibile sull'host. L'archivio di trasferimento
-misura 10.743.365 byte, SHA256
+The extracted payload measures about 32 MB and contains the fixture, observer, runner
+and a minimal Python runtime already available on the host. The transfer archive
+measures 10,743,365 bytes, SHA256
 `4da64e8ea598e196ab32ce727f1f128713a5ca5b1d0f9211f9c4f73aae9d2333`.
-Gli hash dei sorgenti e dei binari della fixture corrispondono al manifest
-originale; le firme dei bundle estratti sono state verificate.
+The hashes of the fixture's sources and binaries match the original
+manifest; the signatures of the extracted bundles were verified.
 
-Il [runner](../../../Prototypes/AddonPlatform/ExternalIdentity/run_vm_suspended.py)
-rifiuta l'esecuzione fuori da un guest VirtualMac esplicitamente dichiarato,
-richiede l'attestazione dell'arresto esterno già provato, autentica il processo
-sospeso e congela la classificazione prima del cleanup. Otto controlli automatici
-passano; questo risultato riguarda il runner, non il comportamento nativo macOS.
-La [procedura](../../../Prototypes/AddonPlatform/ExternalIdentity/VM-SUSPENDED.md)
-specifica controlli e limiti.
+The [runner](../../../Prototypes/AddonPlatform/ExternalIdentity/run_vm_suspended.py)
+refuses to run outside an explicitly declared VirtualMac guest,
+requires the attestation of the already proven external stop, authenticates the suspended
+process and freezes the classification before cleanup. Eight automated checks
+pass; this result concerns the runner, not native macOS behavior.
+The [procedure](../../../Prototypes/AddonPlatform/ExternalIdentity/VM-SUSPENDED.md)
+specifies checks and limits.
 
-Il runner successivo aggiunge una diagnostica opzionale `--stackshot`, ammessa
-solo dopo il controllo baseline e solo nel modo `release-control`. I dodici
-test del runner aggiornato passano. Il payload baseline resta quello originale:
-la diagnostica opzionale non è stata inclusa nell'archivio né eseguita. Un rapporto
-di spindump, da solo, non dimostra la fase di prima istruzione.
+The later runner adds an optional `--stackshot` diagnostic, allowed
+only after the baseline check and only in `release-control` mode. The twelve
+tests of the updated runner pass. The baseline payload remains the original one:
+the optional diagnostic was neither included in the archive nor run. A spindump
+report, by itself, does not demonstrate the first-instruction phase.
 
-Verificato anche il rifiuto reale sull'host: pur con la variabile diagnostica
-impostata, il runner termina con exit 78 prima di creare la directory risultati
-o avviare una fixture, perché il modello hardware non è VirtualMac.
+The real refusal on the host was also verified: even with the diagnostic variable
+set, the runner terminates with exit 78 before creating the results directory
+or starting a fixture, because the hardware model is not VirtualMac.
 
-## Limite di spazio misurato
+## Measured space limit
 
-Il trasferimento iniziale ha raggiunto il 99%, poi il controller ha terminato il
-proprio processo Tart con SIGTERM alla soglia configurata: 4.813.242.368 byte
-liberi, contro una riserva di 4.831.838.208 byte. Ha rimosso soltanto la propria
-directory `state` incompleta, riportando lo spazio libero a 22.428.499.968 byte.
-La VM non era stata creata né avviata. Non è un fallimento di ExtensionFoundation.
+The initial transfer reached 99%, then the controller terminated its
+own Tart process with SIGTERM at the configured threshold: 4,813,242,368 bytes
+free, against a reservation of 4,831,838,208 bytes. It removed only its own
+incomplete `state` directory, bringing free space back to 22,428,499,968 bytes.
+The VM had been neither created nor started. It is not an ExtensionFoundation failure.
 
-La cancellazione automatica ha reso necessario ripetere il download. Nel secondo
-controller questa politica è corretta: anche a soglia o timeout conserva lo stato
-parziale. Il nuovo tentativo usa la stessa immagine fissata, sei trasferimenti,
-riserva di 3 GiB e limite di quattro ore. Il margine rende plausibile completare
-il trasferimento, ma non costituisce una verifica dell'avvio o dello spazio
-necessario durante l'esecuzione.
+The automatic deletion made it necessary to repeat the download. In the second
+controller this policy is corrected: even at the threshold or on timeout it keeps the
+partial state. The new attempt uses the same pinned image, six transfers,
+a 3 GiB reservation and a four-hour limit. The margin makes it plausible to complete
+the transfer, but does not constitute a verification of the boot or of the space
+needed during execution.
 
-Il tentativo a sei flussi esaurisce i retry di alcuni segmenti e viene fermato
-con stato preservato. La ripresa a quattro flussi termina con exit 0 in
-5.876,598 secondi. L'immagine locale è un file regolare indipendente dalla cache;
-dopo la rimozione del riferimento OCI resta una sola VM, ferma. Configurazione
-confermata: 2 CPU, memoria 4.294.967.296 byte, display 1024×768 pixel.
+The six-stream attempt exhausts the retries of some segments and is stopped
+with state preserved. The four-stream resumption finishes with exit 0 in
+5,876.598 seconds. The local image is a regular file independent of the cache;
+after removal of the OCI reference a single VM remains, stopped. Configuration
+confirmed: 2 CPUs, memory 4,294,967,296 bytes, display 1024×768 pixels.
 
-Il 26 settembre la compattazione offline dei blocchi interamente zero da 64 KiB
-riduce l'allocazione da 17.812.783.104 a 17.584.783.360 byte. Dimensione logica
-invariata a 50.000.000.000 byte; SHA256 completo prima e dopo identico:
+On 26 September the offline compaction of all-zero 64 KiB blocks
+reduces the allocation from 17,812,783,104 to 17,584,783,360 bytes. Logical size
+unchanged at 50,000,000,000 bytes; full SHA256 identical before and after:
 `0c0d46984b170fe9f40bbcfc1ef3a490a878fbd95d8fdd3d6b051c677d085721`.
-Sono state rimosse anche soltanto copie temporanee del payload e cache/intermedi
-della build eseguita per questo lavoro. App compilata e archivio immutabile delle
-prove sono conservati. Il successivo passaggio da 4 KiB recupera altri 77.402.112 byte, portando
-l'allocazione a 17.507.381.248 byte con lo stesso SHA256 completo. Le variazioni
-dello spazio libero dell'host sono maggiori: non vengono attribuite tutte alla
-compattazione. Dopo avvii, importazione e log, il disco arriva a 17.855.008.768 byte.
+Also removed were only temporary copies of the payload and caches/intermediates
+of the build run for this work. The built app and the immutable evidence archive
+are preserved. The subsequent 4 KiB pass recovers another 77,402,112 bytes, bringing
+the allocation to 17,507,381,248 bytes with the same full SHA256. The changes
+in the host's free space are larger: they are not all attributed to the
+compaction. After boots, import and logs, the disk reaches 17,855,008,768 bytes.
 
-## Prove native del 26 settembre
+## Native tests of 26 September
 
-Il primo avvio risponde via SSH come `VirtualMac2,1`, account di laboratorio
-`admin`, SIP disabilitato e authenticated root abilitato. Non vengono avviate
-fixture in quel profilo. Dalla Recovery del solo guest viene eseguito
-`csrutil enable`; due avvii normali successivi confermano SIP e authenticated root
-abilitati. Nessuna protezione dell'host viene cambiata.
+The first boot answers over SSH as `VirtualMac2,1`, lab account
+`admin`, SIP disabled and authenticated root enabled. No fixtures are started
+in that profile. From the Recovery of the guest only,
+`csrutil enable` is run; two subsequent normal boots confirm SIP and authenticated root
+enabled. No host protection is changed.
 
-L'arresto esterno viene richiesto al processo Tart conservato dal controller:
-SIGINT, messaggio `Stopping VM...`, exit 0 senza fallback SIGKILL, stato `stopped`.
-Il successivo avvio della stessa configurazione cambia UUID da
-`FBA4BFDB-27B7-497E-86CA-315E8104ECE1` a
-`70146061-7758-48BA-AB56-0CED74AE20F9`. La
-[prova di cleanup](evidence/2026-09-25-addon-small-vm/cleanup-evidence.json)
-precede la creazione del marker richiesto dal runner. Questo qualifica il
-contenimento di laboratorio osservato, non la morte dei processi addon o ogni
-possibile guest bloccato.
+The external stop is requested from the Tart process kept by the controller:
+SIGINT, message `Stopping VM...`, exit 0 without SIGKILL fallback, state `stopped`.
+The next boot of the same configuration changes UUID from
+`FBA4BFDB-27B7-497E-86CA-315E8104ECE1` to
+`70146061-7758-48BA-AB56-0CED74AE20F9`. The
+[cleanup evidence](evidence/2026-09-25-addon-small-vm/cleanup-evidence.json)
+precedes the creation of the marker required by the runner. This qualifies the
+observed lab containment, not the death of addon processes or every
+possible hung guest.
 
-Le route predefinite vengono rimosse dentro il guest. Le route IPv6 con scope
-richiedono `-ifscope`: i primi tentativi incompleti sono conservati; i controlli
-prima delle fixture confermano assenza di default sia IPv4 sia IPv6. La share
-host resta in sola lettura. L'archivio originale da 10,7 MB passa il confronto
-SHA256 nel guest; Python portatile funziona senza toolchain.
+The default routes are removed inside the guest. The scoped IPv6 routes
+require `-ifscope`: the first incomplete attempts are preserved; the checks
+before the fixtures confirm the absence of both IPv4 and IPv6 defaults. The host
+share remains read-only. The original 10.7 MB archive passes the SHA256
+comparison in the guest; portable Python works without a toolchain.
 
-Il browser pubblico della fixture abilita `CascadeProbeProvider`. Dopo la
-registrazione di `BrokerRecovery.app`, anche Impostazioni di Sistema → Extensions
-→ BrokerRecovery mostra la stessa estensione già selezionata. Non sono stati
-usati database di consenso, API private o modifiche agli entitlement.
+The fixture's public browser enables `CascadeProbeProvider`. After the
+registration of `BrokerRecovery.app`, System Settings → Extensions
+→ BrokerRecovery also shows the same extension already selected. No
+consent databases, private APIs or entitlement changes were used.
 
-| Controllo | Esito osservato |
+| Check | Observed outcome |
 | --- | --- |
-| Baseline originale | FAIL prima di avviare figli: requirement con CDHash ARM verificato implicitamente su tutte le architetture |
-| Matrice firma ARM | Requirement originale completo PASS con `--arch arm64`; pin errato e slice Intel respinti; nessuna modifica alla fixture |
-| Baseline con selezione ARM | Firma/input PASS, root e broker autenticati; primo HELLO scade dopo 10 s, prima di armare `launchctl debug` |
-| Diagnosi ordinaria | Cinque risposte `broker-info` durante HELLO mostrano `startupPhase=idle`; root termina con comando `quit` |
-| Registrazione app del broker | Stesso blocco dopo `lsregister -f` dell'app esatta |
-| Avvio tramite Launch Services | Stesso blocco con `open -W -n`, FIFO e vero PID root ottenuto da `ping` |
-| Controllo diretto dall'app GUI | Discovery trova il provider, che raggiunge il proprio codice; la connessione viene correttamente respinta dal requisito broker-only (`-67050`) |
+| Original baseline | FAIL before starting children: requirement with ARM CDHash implicitly verified on all architectures |
+| ARM signing matrix | Complete original requirement PASS with `--arch arm64`; wrong pin and Intel slice rejected; no change to the fixture |
+| Baseline with ARM selection | Signature/input PASS, root and broker authenticated; first HELLO times out after 10 s, before arming `launchctl debug` |
+| Ordinary diagnosis | Five `broker-info` responses during HELLO show `startupPhase=idle`; root terminates with the `quit` command |
+| Broker app registration | Same block after `lsregister -f` of the exact app |
+| Launch through Launch Services | Same block with `open -W -n`, FIFO and the real root PID obtained from `ping` |
+| Direct check from the GUI app | Discovery finds the provider, which reaches its own code; the connection is correctly rejected by the broker-only requirement (`-67050`) |
 
-La correzione del preflight seleziona esclusivamente la slice ARM già fissata nel
-manifest; la verifica d'integrità di tutte le slice rimane. È applicata al runner
-nel repository. Nel guest è trasferita una copia separata della baseline con
-**questa sola correzione**, SHA256
+The preflight fix selects exclusively the ARM slice already pinned in the
+manifest; the integrity check of all slices remains. It is applied to the runner
+in the repository. A separate copy of the baseline with **only this fix** is
+transferred to the guest, SHA256
 `0f6fb4c590bb2647b1ee961917530d34bd168be7d1e64d0ba47e7ef3b1385522`.
-Archivio originale, manifest, requisito, binari, deadline e classificatore sono
-immutati. La diagnostica stackshot del runner successivo non viene eseguita.
+Original archive, manifest, requirement, binaries, deadline and classifier are
+unchanged. The stackshot diagnostic of the later runner is not run.
 
-I log di discovery del broker riportano `-10814`, impossibilità di risolvere il
-record dell'estensione per il suo audit token, e query con extension point nullo.
-Il risultato resta invariato dopo registrazione del contenitore e avvio applicativo
-LS. Questo circoscrive il problema al contesto broker su questa immagine/OS;
-**non prova l'impossibilità generale su ogni macOS 14**. Il controllo GUI non è un
-HELLO riuscito né un difetto nuovo del provider: la fixture originale ammette
-come peer soltanto `hylo.Cascade.AddonProbe.DiscoveryBroker` e respinge la GUI.
+The broker's discovery logs report `-10814`, inability to resolve the
+extension's record for its audit token, and queries with a null extension point.
+The result remains unchanged after registration of the container and LS application
+launch. This narrows the problem to the broker context on this image/OS;
+**it does not prove general impossibility on every macOS 14**. The GUI check is neither a
+successful HELLO nor a new provider defect: the original fixture admits
+only `hylo.Cascade.AddonProbe.DiscoveryBroker` as a peer and rejects the GUI.
 
-Tutte le sequenze native si concludono con l'arresto completo del guest verificato.
-Nessun processo è stato sospeso, nessun fault case è stato eseguito; un cleanup
-riuscito non modifica la classificazione FAIL precedente.
+All native sequences end with the verified complete stop of the guest.
+No process was suspended, no fault case was run; a successful cleanup
+does not change the previous FAIL classification.
 
-## Frontiera ancora aperta
+## Frontier still open
 
-Ottenere il primo HELLO autenticato dal broker in un guest rappresentativo resta
-prerequisito per il controllo di ripresa e i quattro casi di morte root/broker.
-Non si aumenta implicitamente il minimo macOS 14 dell'app e non si allentano le
-garanzie sui processi gestiti. La disponibilità dichiarata di un'API nel deployment
-target non qualifica questa composizione in esecuzione.
+Obtaining the first authenticated HELLO from the broker in a representative guest remains
+a prerequisite for the resume check and the four root/broker death cases.
+The app's macOS 14 minimum is not implicitly raised and the guarantees on
+managed processes are not relaxed. The declared availability of an API in the deployment
+target does not qualify this composition at run time.
 
-Le [evidenze archiviate](evidence/2026-09-25-addon-small-vm/integrity.json) includono
-manifest, controller, hash, log e risultati, senza immagini del sistema operativo,
-chiavi SSH private o toolchain. Il gate finale restituisce exit 78 e mantiene SHA256
+The [archived evidence](evidence/2026-09-25-addon-small-vm/integrity.json) includes
+manifest, controller, hashes, logs and results, without operating system images,
+private SSH keys or toolchains. The final gate returns exit 78 and keeps SHA256
 `687fb3086d41e821af684d49109c9c95f8d555cf88450bdcf809b2a708b1ddaa`.
 
-Un eventuale PASS riguarda la seconda richiesta EF e l'immagine provider
-autenticata. Non implica automaticamente copertura del primo avvio o
-dell'intervallo precedente con xpcproxy, né ammissione del launcher in produzione.
+A possible PASS concerns the second EF request and the authenticated provider
+image. It does not automatically imply coverage of the first launch or of
+the preceding interval with xpcproxy, nor admission of the launcher in production.
 
-Il contratto di `POSIX_SPAWN_START_SUSPENDED` colloca la sospensione prima
-dell'esecuzione user-space, inclusa dyld; il manuale indica SIGCONT per la ripresa.
-L'help di `launchctl debug --start-suspended` non specifica altrettanto precisamente
-il passaggio di exec interessato nella catena EF. Pertanto firma, token,
-`suspendCount > 0` e successivo HELLO della stessa istanza costituiscono osservazioni
-dirette, ma non una lettura del program counter. La fase «prima della prima
-istruzione» non verrà dichiarata provata soltanto da questi dati.
-[Manuale Apple](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/posix_spawnattr_getflags.3.html),
-[implementazione XNU della famiglia macOS 14](https://github.com/apple-oss-distributions/xnu/blob/xnu-10002.1.13/bsd/kern/kern_exec.c#L1862-L1873).
+The contract of `POSIX_SPAWN_START_SUSPENDED` places the suspension before
+user-space execution, dyld included; the manual indicates SIGCONT for resumption.
+The help of `launchctl debug --start-suspended` does not specify as precisely
+the exec step involved in the EF chain. Therefore signature, token,
+`suspendCount > 0` and the subsequent HELLO of the same instance are direct
+observations, but not a reading of the program counter. The “before the first
+instruction” phase will not be declared proven by these data alone.
+[Apple manual](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/posix_spawnattr_getflags.3.html),
+[XNU implementation of the macOS 14 family](https://github.com/apple-oss-distributions/xnu/blob/xnu-10002.1.13/bsd/kern/kern_exec.c#L1862-L1873).
 
 
-## Verifica conclusiva dell'app e revisione
+## Final app verification and review
 
-La revisione indipendente non rileva P1/P2 nel rapporto e nella nuova sezione
-dell'issue 22; i primi 139 file del manifest sono confrontati con gli originali.
-Dopo la correzione ARM, 12 test puri passano (attestazione del transcript, non un
-nuovo log di stdout). La matrice statica conserva i negativi Intel e pin errato.
+The independent review finds no P1/P2 in the report and in the new section
+of issue 22; the first 139 files of the manifest are compared with the originals.
+After the ARM fix, 12 pure tests pass (transcript attestation, not a
+new stdout log). The static matrix keeps the Intel and wrong-pin negatives.
 
-La build ufficiale di Cascade eseguita durante la preparazione è riuscita e il
-link `/Applications/Cascade.app` punta a `CascadeDevelopment/Build/Products/Debug`.
-L'intervento successivo modifica soltanto runner diagnostico e documentazione.
-Nel riavvio conclusivo Cascade passa dal PID 39220 al nuovo PID documentato in
+The official Cascade build run during preparation succeeded and the
+link `/Applications/Cascade.app` points to `CascadeDevelopment/Build/Products/Debug`.
+The subsequent change modifies only the diagnostic runner and documentation.
+In the final relaunch Cascade goes from PID 39220 to the new PID documented in
 [cascade-restart-final.json](evidence/2026-09-25-addon-small-vm/cascade-restart-final.json),
-stabile dopo tre secondi e con eseguibile corrispondente al link Applicazioni.
+stable after three seconds and with an executable matching the Applications link.
 
 
-## Chiusura del laboratorio su richiesta dell'utente
+## Closing the lab at the user's request
 
-L'utente chiede di fermare la strada VM, liberare lo spazio della macchina attuale
-e riesaminare le possibilità senza VM. `tart delete cascade-addon-small` termina
-con exit 0 dopo il controllo stopped; la lista successiva è vuota e non rimane
-alcuna `disk.img` nello state. Vengono rimossi anche runtime portatile, state/cache,
-archivio di trasferimento e sole credenziali SSH generate per questo laboratorio.
-I risultati delle prove e la fixture firmata originale già archiviata sono
-conservati. Non vengono scaricate immagini nuove né modificate decisioni di
-architettura/minimo OS. [Rimozione VM](evidence/2026-09-25-addon-small-vm/vm-removal.json),
-[rimozione residui](evidence/2026-09-25-addon-small-vm/runtime-removal.json).
+The user asks to stop the VM path, free the space on the current machine
+and re-examine the options without a VM. `tart delete cascade-addon-small` finishes
+with exit 0 after the stopped check; the subsequent list is empty and no
+`disk.img` remains in the state. Also removed: the portable runtime, state/cache,
+the transfer archive and only the SSH credentials generated for this lab.
+The test results and the original signed fixture already archived are
+preserved. No new images are downloaded and no architecture/minimum-OS decisions
+are changed. [VM removal](evidence/2026-09-25-addon-small-vm/vm-removal.json),
+[residue removal](evidence/2026-09-25-addon-small-vm/runtime-removal.json).
 
-Cascade viene chiusa e riaperta nuovamente dopo la rimozione: eseguibile della
-build corrente verificato e nuovo PID stabile dopo tre secondi. Il record
+Cascade is quit and reopened again after the removal: executable of the
+current build verified and new PID stable after three seconds. The record
 [cascade-restart-after-removal.json](evidence/2026-09-25-addon-small-vm/cascade-restart-after-removal.json)
-conferma anche assenza del disco e del runtime VM.
+also confirms the absence of the disk and of the VM runtime.
 
-La prossima prova candidata senza VM è un recupero diagnostico sul job esatto di
-un provider ordinario autenticato, con broker ancora vivo e guardia temporale
-attiva. Non è ancora eseguita. `launchctl kill` individua un servizio, non una
-capability della sua specifica incarnazione; un eventuale PASS non prova il
-recupero dopo morte root/broker o il comportamento prima della prima istruzione.
-SIGSTOP/SIGCONT resta un esperimento distinto: fermare il processo può impedire
-alla guardia temporale di intervenire e non equivale a START_SUSPENDED.
+The next candidate test without a VM is a diagnostic recovery on the exact job of
+an ordinary authenticated provider, with the broker still alive and the time guard
+active. It has not yet been run. `launchctl kill` identifies a service, not a
+capability of its specific incarnation; a possible PASS does not prove
+recovery after root/broker death or the behavior before the first instruction.
+SIGSTOP/SIGCONT remains a separate experiment: stopping the process can prevent
+the time guard from intervening and is not equivalent to START_SUSPENDED.

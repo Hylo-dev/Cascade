@@ -1,49 +1,49 @@
-# Verifica del notch interattivo
+# Interactive notch verification
 
-Branch: `codex/interactive-notch`. Ambiente: macOS 27.0 beta, Xcode 27 beta,
-deployment target macOS 14. Build locale Debug con firma ad hoc verificata.
+Branch: `codex/interactive-notch`. Environment: macOS 27.0 beta, Xcode 27 beta,
+deployment target macOS 14. Local Debug build with verified ad hoc signing.
 
-## Implementazione
+## Implementation
 
-- Aptica AppKit `.alignment` richiesta all'ingresso accettato in hover, prima
-  dell'apertura. Preferenza disattivabile; nessun impulso sugli eventi automatici.
-- Superfici compatte ed estese per Live Activities, controlli SwiftUI interattivi,
-  maschera coincidente con la sagoma e coda transitoria limitata a otto elementi.
-  Gli avvisi durano quattro secondi e restituiscono spazio all'attività persistente.
-- Monitor Classic Bluetooth tramite callback IOBluetooth. Baseline iniziale
-  silenziosa, deduplicazione e ricostruzione dopo wake; nessuna discovery o polling.
-- Tentativo selettivo di chiusura dei banner nativi tramite Accessibilità,
-  correlato a un collegamento reale recente. Osserva soltanto Control Center.
-  Una finestra non riconosciuta non viene chiusa. L'anteprima non arma il servizio.
-- Contratto `NowPlayingProviding`, snapshot immutabili, capacità dei comandi e
-  contenuti musicali compatti/estesi. Provider dimostrativo esplicito senza audio;
-  collegamento a player reali ancora da implementare.
+- AppKit `.alignment` haptic requested on the accepted hover entry, before
+  the opening. The preference can be turned off; no pulse on automatic events.
+- Compact and expanded surfaces for Live Activities, interactive SwiftUI controls,
+  a mask matching the shape and a transient queue limited to eight items.
+  Notices last four seconds and give space back to the persistent activity.
+- Classic Bluetooth monitor through IOBluetooth callbacks. Silent initial
+  baseline, deduplication and rebuild after wake; no discovery or polling.
+- Selective attempt to close native banners through Accessibility,
+  correlated with a recent real connection. It observes only Control Center.
+  An unrecognized window is not closed. The preview does not arm the service.
+- `NowPlayingProviding` contract, immutable snapshots, command capabilities and
+  compact/expanded music content. Explicit demo provider without audio;
+  connection to real players still to be implemented.
 
-Nessuna nuova dipendenza esterna. BoringNotch è stato esaminato come riferimento;
-non è stato copiato codice. Gli snapshot consultati non contengono un monitor
-Bluetooth o un override nativo riutilizzabile.
+No new external dependency. BoringNotch was examined as a reference;
+no code was copied. The snapshots consulted do not contain a reusable Bluetooth
+monitor or native override.
 
-## Verifiche automatiche
+## Automated checks
 
-- Package CascadeKit: **47 test in 10 suite, tutti superati**, per geometria, molle, hover, routing
-  degli eventi, lifecycle, priorità delle attività e snapshot musicali.
-- `scripts/test-bluetooth.sh`: 10 verifiche monitor e 13 verifiche di riconoscimento
-  selettivo dei banner. I test del monitor non simulano un collegamento hardware.
-- Build completa `xcodebuild` Debug con firma locale ad hoc: riuscita; `codesign --verify --deep --strict` superato.
-- Integrazioni Bluetooth verificate con Swift 6 e isolamento predefinito MainActor.
-- `git diff --check`: nessun errore.
+- CascadeKit package: **47 tests in 10 suites, all passed**, for geometry, springs, hover, event
+  routing, lifecycle, activity priority and music snapshots.
+- `scripts/test-bluetooth.sh`: 10 monitor checks and 13 checks of selective banner
+  recognition. The monitor tests do not simulate a hardware connection.
+- Full `xcodebuild` Debug build with local ad hoc signing: succeeded; `codesign --verify --deep --strict` passed.
+- Bluetooth integrations verified with Swift 6 and default MainActor isolation.
+- `git diff --check`: no errors.
 
-La revisione indipendente conclusiva non ha rilevato altri difetti nel perimetro
-esaminato. Sei test di regressione aggiunti in revisione verificano widget coperti
-da un'attività, animazioni a schermo bloccato, eliminazione degli avvisi ricevuti
-durante il blocco, hover sulle estensioni compatte, durata del trascinamento e
-assenza di segmenti del puntatore obsoleti dopo stop/start. Il campionamento del
-puntatore su pressione/rilascio del mouse supera il limite di frequenza usato
-per i soli movimenti. La build finale successiva alle correzioni è riuscita.
+The final independent review found no further defects in the examined
+scope. Six regression tests added during review verify widgets covered
+by an activity, animations with the screen locked, discarding of notices received
+while locked, hover on the compact extensions, drag duration and
+absence of stale pointer segments after stop/start. Pointer sampling on
+mouse press/release bypasses the rate limit used
+for movements only. The final build after the fixes succeeded.
 
-Totale: **70 verifiche automatiche superate** (47 package + 10 monitor + 13 policy).
+Total: **70 automated checks passed** (47 package + 10 monitor + 13 policy).
 
-Comandi ripetibili:
+Repeatable commands:
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer CLANG_MODULE_CACHE_PATH=/private/tmp/cascade-notch-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/private/tmp/cascade-notch-module-cache /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift test --package-path CascadeKit --scratch-path /private/tmp/cascade-notch-build --disable-sandbox
@@ -52,83 +52,83 @@ DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer xcodebuild -projec
 git diff --check
 ```
 
-## Limiti verificati
+## Verified limits
 
-**L'override nativo non è ancora convalidato sul dispositivo.** Il sistema espone
-stringhe e componenti compatibili con l'approccio scelto, ma non è stato possibile
-confermare l'albero Accessibilità di un banner reale. Lo stato «monitoraggio
-attivo» conferma soltanto la registrazione dell'osservatore. Non dimostra che un
-banner sia stato chiuso. La chiusura avviene dopo la comparsa e può lasciare un
-breve lampo; non è una soppressione preventiva.
+**The native override is not yet validated on the device.** The system exposes
+strings and components compatible with the chosen approach, but it was not possible
+to confirm the Accessibility tree of a real banner. The “monitoring
+active” status confirms only the observer's registration. It does not demonstrate that a
+banner was closed. The closing happens after the banner appears and can leave a
+brief flash; it is not a preventive suppression.
 
-Il riconoscimento richiede nome esatto del dispositivo, testo di collegamento
-localizzato dal sistema, finestra compatta non modale e un solo controllo di
-chiusura esplicito. Richieste di associazione, codici, input, altre azioni,
-finestre troncate o non riconosciute sono escluse. La verifica su macOS 14–26 e
-sulle altre lingue resta necessaria. Dopo un riavvio di Control Center si può
-riattivare l'osservatore aprendo il menu o usando «Riprova».
+Recognition requires the exact device name, connection text localized
+by the system, a compact non-modal window and a single explicit close
+control. Pairing requests, codes, input, other actions,
+truncated or unrecognized windows are excluded. Verification on macOS 14–26 and
+in the other languages remains necessary. After a Control Center restart the
+observer can be reactivated by opening the menu or using “Riprova”.
 
-IOBluetooth copre i dispositivi Classic esposti dal framework; non garantisce
-gli accessori esclusivamente BLE. Le letture dei record Bluetooth già presenti
-sono sincrone sul main actor: non interrogano il dispositivo remoto, ma il loro
-costo reale resta da misurare. Le letture AX potenzialmente bloccanti sono su un
-worker e hanno limiti di tempo, finestre e nodi.
+IOBluetooth covers the Classic devices exposed by the framework; it does not guarantee
+BLE-only accessories. The reads of already present Bluetooth records
+are synchronous on the main actor: they do not query the remote device, but their
+real cost remains to be measured. The potentially blocking AX reads are on a
+worker and have limits on time, windows and nodes.
 
-L'architettura evita timer ricorrenti per Bluetooth e metadati. Il progresso
-musicale ha un aggiornamento visivo al secondo soltanto durante riproduzione
-nella vista estesa. Queste proprietà non sostituiscono una misura energetica.
+The architecture avoids recurring timers for Bluetooth and metadata. Music
+progress has one visual update per second only during playback
+in the expanded view. These properties do not replace an energy measurement.
 
-## Verifica manuale ancora da eseguire
+## Manual verification still to be carried out
 
-La revisione automatica delle autorizzazioni aveva richiesto consenso esplicito
-all'esecuzione della build locale. L'utente ha poi autorizzato avvio e riavvio.
-Nessun aggiramento del blocco è stato tentato. Accessibilità non risulta ancora
-abilitata per una prova attendibile del servizio.
+The automatic permissions review had required explicit consent
+to run the local build. The user then authorized launch and relaunch.
+No attempt was made to bypass the block. Accessibility does not yet appear
+enabled for a reliable test of the service.
 
-Il primo controllo del solo bundle identifier aveva avviato una precedente build
-rossa nella DerivedData di Xcode. La verifica successiva del percorso del processo
-e dei crash report ha identificato un crash reale della build nuova: IOBluetooth
-invoca il selector di connessione sulla propria `coordinatorQueue`, anche durante
-la registrazione iniziale. Il selector isolato MainActor causava un assertion trap
-in Swift 6. La compilazione non rilevava questa violazione dinamica; il precedente
-harness del monitor usava Swift 5. È necessaria una regressione che eserciti la
-callback Objective-C da un thread in background con le stesse impostazioni Swift 6
-dell'app, seguita da avvio verificato del percorso esatto e del menu aggiornato.
+The first check of the bundle identifier alone had launched an earlier red
+build in Xcode's DerivedData. The subsequent check of the process path
+and of the crash reports identified a real crash of the new build: IOBluetooth
+invokes the connection selector on its own `coordinatorQueue`, even during
+the initial registration. The MainActor-isolated selector caused an assertion trap
+in Swift 6. Compilation did not detect this dynamic violation; the previous
+monitor harness used Swift 5. A regression is needed that exercises the
+Objective-C callback from a background thread with the same Swift 6 settings
+as the app, followed by a verified launch of the exact path and of the updated menu.
 
-1. Avviare la build, entrare nel notch dal corpo centrale e dalle estensioni
-   compatte: un impulso all'ingresso, nessuno durante la permanenza.
-2. Abilitare l'anteprima musicale dal menu; verificare play/pausa, precedente,
-   successivo e il passaggio da compatto a esteso. Non viene riprodotto audio.
-3. Provare un avviso Bluetooth durante la musica e verificarne il ritorno dopo
-   quattro secondi. Una pagina già aperta deve mantenere i controlli correnti.
-4. Collegare e scollegare un accessorio reale; verificare nome, stato, assenza di
-   duplicati e nessun avviso per connessioni già presenti all'avvio.
-5. Abilitare esplicitamente Accessibilità dal menu e riaprire il menu. Ripetere
-   un collegamento che produce un banner nativo; verificare con Accessibility
-   Inspector il riconoscimento e la chiusura effettiva prima di dichiarare supporto.
-6. Verificare che associazione, passkey e altre notifiche restino intatte;
-   disattivare la sostituzione e controllare che non avvengano chiusure tardive.
-7. Provare click nella barra dei menu fuori sagoma e trascinamento di un controllo
-   oltre il bordo, lock/unlock, sleep/wake, Mission Control e cambio display.
-8. Misurare CPU/energia a riposo e con vista estesa usando Instruments o Activity
-   Monitor; ripetere con Riduci movimento attivo.
+1. Launch the build, enter the notch from the central body and from the compact
+   extensions: one pulse on entry, none while staying inside.
+2. Enable the music preview from the menu; verify play/pause, previous,
+   next and the switch from compact to expanded. No audio is played.
+3. Try a Bluetooth notice during music and verify its return after
+   four seconds. A page already open must keep the current controls.
+4. Connect and disconnect a real accessory; verify name, state, absence of
+   duplicates and no notice for connections already present at launch.
+5. Explicitly enable Accessibility from the menu and reopen the menu. Repeat
+   a connection that produces a native banner; verify with Accessibility
+   Inspector the recognition and the actual closing before declaring support.
+6. Verify that pairing, passkey and other notifications stay intact;
+   disable the replacement and check that no late closings happen.
+7. Try clicks in the menu bar outside the shape and dragging a control
+   past the edge, lock/unlock, sleep/wake, Mission Control and display change.
+8. Measure CPU/energy at rest and with the expanded view using Instruments or Activity
+   Monitor; repeat with Reduce Motion enabled.
 
 Build: `/private/tmp/cascade-notch-derived/Build/Products/Debug/Cascade.app`.
 
-## Esito della correzione e del riavvio
+## Outcome of the fix and the relaunch
 
-Il monitor ora riceve le callback tramite un osservatore non isolato e inoltra
-soltanto metadati copiati al MainActor in modo asincrono. Identità della sessione,
-token ed epoca della baseline escludono callback obsolete dopo stop/start e wake.
-Nessun lock resta acquisito durante chiamate al framework o dispatch. Il test del
-selector Objective-C da background gira con Swift 6; il test dell'epoca impedisce
-a una callback già accodata di modificare la nuova baseline. Revisione mirata
-conclusa senza altri blocchi.
+The monitor now receives the callbacks through a nonisolated observer and forwards
+only copied metadata to the MainActor asynchronously. Session identity,
+token and baseline epoch exclude stale callbacks after stop/start and wake.
+No lock stays held during calls into the framework or dispatch. The test of the
+Objective-C selector from background runs with Swift 6; the epoch test prevents
+an already queued callback from modifying the new baseline. Targeted review
+concluded with no further blockers.
 
-Avvio della build esatta verificato: il processo esegue
+Launch of the exact build verified: the process runs
 `/private/tmp/cascade-notch-derived/Build/Products/Debug/Cascade.app/Contents/MacOS/Cascade`.
-Il menu effettivo contiene «Feedback aptico in hover», «Avvisi Bluetooth»,
-«Consenti Accessibilità…», «Anteprima Live Activity musicale» e «Prova avviso
-Bluetooth». L'istanza precedente nella DerivedData di Xcode è stata chiusa.
-L'override nativo rimane da convalidare dopo concessione esplicita di Accessibilità
-e collegamento reale; l'avvio riuscito non dimostra la chiusura di un banner.
+The actual menu contains “Feedback aptico in hover”, “Avvisi Bluetooth”,
+“Consenti Accessibilità…”, “Anteprima Live Activity musicale” and “Prova avviso
+Bluetooth”. The previous instance in Xcode's DerivedData was closed.
+The native override remains to be validated after explicit granting of Accessibility
+and a real connection; the successful launch does not demonstrate the closing of a banner.

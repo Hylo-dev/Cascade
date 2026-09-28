@@ -1,20 +1,19 @@
-# Tracker delle decisioni: Local Markdown
+# Decision tracker: Local Markdown
 
-Per questa mappa si usa il fallback locale previsto da wayfinder; non vengono pubblicate issue su GitHub. Per configurare successivamente il toolkit su un altro tracker, eseguire `/setup-matt-pocock-skills`.
+For this map the local fallback provided by wayfinder is used; no issues are published on GitHub. To configure the toolkit on another tracker later, run `/setup-matt-pocock-skills`.
 
 ## Wayfinding operations
 
-- Mappa canonica: `.scratch/cascade-product/map.md`, con etichetta `wayfinder:map`.
-- Figli: un file per ticket in `.scratch/cascade-product/issues/NN-nome.md`; `ID` è l'identità e `Parent` identifica la mappa.
-- Tipo ed etichetta: `Type: research|prototype|grilling|task` e `Labels: wayfinder:<tipo>`.
-- Stati: `open`, `claimed`, `resolved`, `closed-out-of-scope`. Questi ultimi due sono chiusi.
-- Claim: impostare `Assignee` e `Status: claimed` **prima** del lavoro. Rilasciare entrambi se il lavoro viene abbandonato. Non prendere un ticket già assegnato.
-- Dipendenze: `Blocked by: NN, NN`, oppure `none`. È il fallback testuale per un tracker senza relazioni native.
-- Frontiera: figli con stato open, assignee none e tutti i blocchi chiusi; ordinare per ID. `docs/wayfinder/frontier.md` è una vista derivata, non una seconda fonte delle decisioni.
-- Risoluzione: aggiungere `## Answer` con esito, prove e asset; impostare resolved e aggiungere alla mappa soltanto titolo collegato e gist. Non inserire la risposta nella Question.
-- Fuori ambito: stato closed-out-of-scope, motivazione e collegamento in Out of scope della mappa, senza inserirlo tra le decisioni raggiunte.
-- Nuovi ticket: creare prima tutti i file e poi collegare le dipendenze in una seconda passata. Vietati riferimenti inesistenti e cicli.
-- Citare i ticket per titolo collegato in tutto il testo destinato alle persone; gli ID nudi sono riservati ai metadati.
+- Canonical map: `.scratch/cascade-product/map.md`, with the label `wayfinder:map`.
+- Children: one file per ticket in `.scratch/cascade-product/issues/NN-name.md`; `ID` is the identity and `Parent` identifies the map.
+- Type and label: `Type: research|prototype|grilling|task` and `Labels: wayfinder:<tipo>`.
+- States: `open`, `claimed`, `resolved`, `closed-out-of-scope`. The last two are closed.
+- Claim: set `Assignee` and `Status: claimed` **before** the work. Release both if the work is abandoned. Do not take a ticket that is already assigned.
+- Dependencies: `Blocked by: NN, NN`, or `none`. This is the textual fallback for a tracker without native relations.
+- Frontier: children with state open, assignee none and all blockers closed; sort by ID. `docs/wayfinder/frontier.md` is a derived view, not a second source of the decisions.
+- Resolution: add `## Answer` with outcome, evidence and assets; set resolved and add to the map only the linked title and the gist. Do not put the answer in the Question.
+- Out of scope: state closed-out-of-scope, a rationale and a link in the map's Out of scope, without adding it to the decisions reached.
+- New tickets: first create all the files, then link the dependencies in a second pass. Nonexistent references and cycles are forbidden.
+- Cite tickets by linked title in all text meant for people; bare IDs are reserved for metadata.
 
-Adattato dal [template local-markdown originale](https://github.com/mattpocock/skills/blob/main/skills/engineering/setup-matt-pocock-skills/issue-tracker-local.md). Il file è configurazione della mappa corrente; il setup globale delle skill non è stato eseguito.
-
+Adapted from the [original local-markdown template](https://github.com/mattpocock/skills/blob/main/skills/engineering/setup-matt-pocock-skills/issue-tracker-local.md). This file is configuration for the current map; the global setup of the skills has not been run.

@@ -1,4 +1,4 @@
-# Definire quando gli sforamenti CPU diventano violazioni distinte
+# Define when CPU overruns become distinct violations
 
 ID: 49
 Parent: cascade-product
@@ -11,25 +11,25 @@ Blocked by: 48
 
 ## Question
 
-Il credito condiviso è definito e le osservazioni possono ora conservare il debito. Per applicare «tre violazioni moderate in cinque minuti», quando un nuovo campione rappresenta una nuova violazione CPU?
+The shared credit is defined and the observations can now retain the debt. To apply "three moderate violations in five minutes", when does a new sample represent a new CPU violation?
 
-## Contesto
+## Context
 
-La specifica richiede riduzione delle concessioni dopo uno sforamento moderato e quarantena della versione dopo tre violazioni in cinque minuti. `AddonHealthStore` riceve violazioni già classificate: non decide se un debito persistente rappresenti uno o più incidenti. La scelta cambia il tempo e le condizioni della quarantena, non soltanto la rappresentazione dei dati.
+The spec requires reducing grants after a moderate overrun and quarantining the version after three violations in five minutes. `AddonHealthStore` receives already classified violations: it does not decide whether a persistent debt represents one or more incidents. The choice changes the timing and the conditions of the quarantine, not only the representation of the data.
 
-Esempio: un addon consuma 150 ms, supera di 50 ms il credito iniziale e poi rimane inattivo. Il debito resterà visibile per dieci secondi. Contare ogni saldo negativo provocherebbe tre violazioni anche senza altro lavoro: la raccomandazione esclude questo doppio conteggio.
+Example: an addon consumes 150 ms, exceeds the initial credit by 50 ms and then stays idle. The debt will stay visible for ten seconds. Counting every negative balance would produce three violations even without any other work: the recommendation excludes this double counting.
 
-## Alternative
+## Alternatives
 
-1. **Nuovo consumo oltre il credito (raccomandazione).** Al massimo una violazione per addon per giro comune di misurazione, se nel giro viene effettivamente consumata altra CPU oltre il credito disponibile. Il solo debito residuo non conta. Se l’addon continua a consumare oltre il budget in tre giri entro cinque minuti, raggiunge la quarantena; più processi dello stesso addon nello stesso giro non moltiplicano gli incidenti. Un giro comprende sia campioni periodici sia osservazioni esplicite ai confini dei job o per pressione: la frequenza dei giri può quindi influire sul tempo di rilevamento.
-2. **Un incidente per episodio di debito.** Il primo passaggio in negativo conta; finché il saldo non torna almeno a zero non si conta un secondo incidente. Tre episodi distinti portano alla quarantena. Un consumo continuo che non recupera credito resta un solo incidente: prima di applicare questo modello serve anche una soglia/durata separata di arresto per uno sforamento continuo.
+1. **New consumption beyond the credit (recommendation).** At most one violation per addon per shared measurement round, if in that round more CPU is actually consumed beyond the available credit. Residual debt alone does not count. If the addon keeps consuming beyond the budget in three rounds within five minutes, it reaches quarantine; several processes of the same addon in the same round do not multiply the incidents. A round includes both periodic samples and explicit observations at job boundaries or under pressure: the frequency of rounds can therefore affect the detection time.
+2. **One incident per debt episode.** The first move into negative counts; until the balance returns to at least zero a second incident is not counted. Three distinct episodes lead to quarantine. Continuous consumption that does not recover credit remains a single incident: before applying this model, a separate threshold/duration for stopping on a continuous overrun is also needed.
 
-I campioni incompleti non devono essere classificati come consumo nullo o stato sano; l’abilitazione del profilo richiede comunque misure e arresto qualificati. Questo ticket non apre il launcher, non attribuisce costi dei servizi condivisi e non abilita UI/audio continui.
+Incomplete samples must not be classified as zero consumption or as a healthy state; enabling the profile still requires qualified measurements and stop. This ticket does not open the launcher, does not attribute the costs of shared services and does not enable continuous UI/audio.
 
-L’utente ha chiesto di proseguire fino a una scelta progettuale necessaria. Completare revisione, test e consegna del collegamento osservativo autorizzato, quindi presentare questa scelta. Nessuna politica di conteggio viene implementata prima della risposta.
+The user asked to continue up to a necessary design choice. Complete the review, tests and delivery of the authorized observational wiring, then present this choice. No counting policy is implemented before the answer.
 
-## Answer — decisione dell’utente, 21 settembre 2026
+## Answer: user decision, 21 September 2026
 
-L’utente approva l’approccio consigliato: nuovo consumo CPU oltre il credito disponibile, al massimo una violazione moderata per addon e giro comune. Il solo debito residuo non conta. Più processi dello stesso addon non moltiplicano le violazioni nello stesso giro. Restano validi i tre incidenti in cinque minuti per la quarantena della versione e i confini del profilo event-driven. I campioni incompleti non diventano zero o stato sano.
+The user approves the recommended approach: new CPU consumption beyond the available credit, at most one moderate violation per addon and shared round. Residual debt alone does not count. Several processes of the same addon do not multiply the violations in the same round. The three incidents in five minutes for quarantining the version and the boundaries of the event-driven profile remain valid. Incomplete samples do not become zero or a healthy state.
 
-Il consenso include il comportamento dei giri periodici e delle osservazioni esplicite già descritto sopra. Non modifica i gate nativi o i profili continui.
+The consent includes the behavior of periodic rounds and explicit observations already described above. It does not change the native gates or the continuous profiles.

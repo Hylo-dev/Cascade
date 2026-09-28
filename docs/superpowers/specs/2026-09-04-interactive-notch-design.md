@@ -1,98 +1,98 @@
-# Notch interattivo: aptica, Bluetooth e base Live Activities
+# Interactive notch: haptics, Bluetooth and a Live Activities base
 
-Stato: impostazione confermata dall'utente il 4 settembre 2026, con aptica all'inizio dell'hover. Accessibilità e integrazioni private ammesse con verifica delle capacità.
+Status: approach confirmed by the user on 4 September 2026, with haptics at the start of the hover. Accessibility and private integrations allowed with capability verification.
 
-## Obiettivo della prima tranche
+## Goal of the first tranche
 
-Rendere utilizzabili i controlli nel notch, aggiungere un impulso aptico all'inizio dell'hover e presentare gli eventi di collegamento Bluetooth. Introdurre il contratto e le superfici per attività persistenti, iniziando dalla predisposizione per musica e media. Conservare macOS 14 come minimo e il motore AppKit/Core Animation esistente.
+Make the controls in the notch usable, add a haptic pulse at the start of the hover and present Bluetooth connection events. Introduce the contract and the surfaces for persistent activities, starting with the groundwork for music and media. Keep macOS 14 as the minimum and the existing AppKit/Core Animation engine.
 
-La sostituzione degli avvisi Bluetooth nativi è un requisito esplicito. Il rilevamento di una connessione e la soppressione dell'avviso di macOS sono capacità separate: entrambe richiedono verifica, e il funzionamento della prima non dimostra il funzionamento della seconda.
+Replacing the native Bluetooth notices is an explicit requirement. Detecting a connection and suppressing the macOS notice are separate capabilities: both require verification, and the first one working does not prove that the second one works.
 
-## Riscontri sul progetto
+## Findings in the project
 
-- `NotchEngine` è il confine pubblico del package `CascadeKit`; i servizi delle integrazioni possono restare nell'app, con dipendenze iniettate attraverso protocolli.
-- `NotchController` coordina hover, display, stato e molle. Le variazioni per frame non invalidano SwiftUI e il display link si ferma quando l'animazione si assesta.
-- `NotchPanel.ignoresMouseEvents` è sempre `true`; `NotchHostView.hitTest` restituisce il contenitore invece dei controlli ospitati. I widget attuali non sono quindi una base già funzionante per pulsanti interattivi.
-- `NotchState` descrive i lati aperti. Non rappresenta la distinzione fra attività compatta, attività espansa, pagina widget e avviso transitorio.
-- `NotchGeometry` lega altezza ed estensione laterale allo stesso progresso: una Live Activity deve invece poter allargare il notch mantenendone l'altezza compatta.
-- I widget seguono `activate`/`suspend`. Il futuro monitor degli eventi deve avere una durata indipendente dalla visibilità della pagina.
-- L'app usa la configurazione rossa di debug e registra undici orologi dimostrativi. La tranche deve sostituire questa composizione dimostrativa con un esempio verificabile delle nuove capacità.
+- `NotchEngine` is the public boundary of the `CascadeKit` package; the integration services can stay in the app, with dependencies injected through protocols.
+- `NotchController` coordinates hover, display, state and springs. Per-frame changes do not invalidate SwiftUI and the display link stops when the animation settles.
+- `NotchPanel.ignoresMouseEvents` is always `true`; `NotchHostView.hitTest` returns the container instead of the hosted controls. The current widgets are therefore not an already working base for interactive buttons.
+- `NotchState` describes the open sides. It does not represent the distinction between compact activity, expanded activity, widget page and transient notice.
+- `NotchGeometry` ties height and side extension to the same progress: a Live Activity must instead be able to widen the notch while keeping its compact height.
+- The widgets follow `activate`/`suspend`. The future event monitor must have a lifetime independent of the page's visibility.
+- The app uses the red debug configuration and registers eleven demo clocks. The tranche must replace this demo composition with a verifiable example of the new capabilities.
 
-## Approcci valutati
+## Approaches evaluated
 
-1. **Estendere il motore attuale e introdurre un coordinatore delle attività — raccomandato.** Conserva geometria, finestra e animazione; separa i servizi di sistema dalla presentazione. Aggiunge soltanto i contratti necessari alla prima tranche.
-2. **Implementare Bluetooth e musica come widget normali.** È più breve inizialmente, ma il loro ciclo di vita cesserebbe alla chiusura della pagina e non coprirebbe le superfici compatte persistenti.
-3. **Portare il coordinatore di BoringNotch.** Offre esempi di comportamento, ma è accoppiato a numerosi manager e dipendenze. Non risolve direttamente l'override Bluetooth e richiederebbe anche una scelta esplicita sulla copia di sorgenti GPL-3.0.
+1. **Extend the current engine and introduce an activity coordinator: recommended.** It keeps geometry, window and animation; it separates the system services from the presentation. It adds only the contracts needed for the first tranche.
+2. **Implement Bluetooth and music as normal widgets.** It is shorter at first, but their lifecycle would end when the page closes and would not cover the persistent compact surfaces.
+3. **Port the BoringNotch coordinator.** It offers examples of behavior, but it is coupled to many managers and dependencies. It does not directly solve the Bluetooth override and would also require an explicit choice about copying GPL-3.0 sources.
 
-## Comportamento proposto
+## Proposed behavior
 
-### Interazioni e aptica
+### Interactions and haptics
 
-- L'hover conserva l'apertura attuale e l'isteresi contro le oscillazioni del puntatore.
-- I click raggiungono i controlli SwiftUI soltanto dentro la sagoma effettivamente interattiva. Il resto della fascia lascia passare i click alla barra dei menu e alle altre app.
-- Il pannello resta non attivante. Questa tranche non richiede la gestione della digitazione nei futuri campi di ricerca.
-- Un solo impulso AppKit `.alignment` viene richiesto all'ingresso in hover, prima di avviare il morph. Una permanenza in hover non genera altri impulsi; gli aggiornamenti musicali e gli avvisi automatici non ripetono la vibrazione.
-- L'aptica può essere disattivata. La disponibilità effettiva dipende da hardware e preferenze macOS.
+- Hover keeps the current opening and the hysteresis against pointer jitter.
+- Clicks reach the SwiftUI controls only inside the actually interactive outline. The rest of the band lets clicks through to the menu bar and to other apps.
+- The panel stays nonactivating. This tranche does not require handling typing in future search fields.
+- A single AppKit `.alignment` pulse is requested on entering hover, before starting the morph. Staying in hover generates no further pulses; music updates and automatic notices do not repeat the vibration.
+- Haptics can be turned off. Actual availability depends on hardware and macOS preferences.
 
-### Attività e priorità
+### Activities and priority
 
-- Un contratto pubblico per Live Activities espone identità stabile, contenuti compatti leading/trailing, contenuto espanso e notifiche di cambiamento.
-- Uno stato di presentazione separato decide il contenuto visibile; `NotchState` mantiene il significato esistente di apertura dei lati.
-- Le attività persistenti restano registrate mentre un avviso transitorio occupa il notch. Alla scadenza torna l'attività corrente, senza ricreare il relativo provider.
-- Una selezione manuale già aperta non viene sostituita improvvisamente da un evento: l'avviso resta una presentazione compatta o attende entro una scadenza limitata.
-- La prima tranche mostra una sola attività persistente in primo piano. Identità e registrazione devono consentire più attività, ma la selezione visuale fra attività simultanee non entra implicitamente in questo rilascio.
-- Per gli avvisi Bluetooth: durata proposta di quattro secondi, coalescenza per dispositivo e coda limitata. Nessuna riproduzione di vecchi eventi al ritorno dalla schermata bloccata.
+- A public contract for Live Activities exposes a stable identity, leading/trailing compact content, expanded content and change notifications.
+- A separate presentation state decides the visible content; `NotchState` keeps its existing meaning of which sides are open.
+- Persistent activities stay registered while a transient notice occupies the notch. At expiry the current activity returns, without recreating its provider.
+- A manual selection that is already open is not suddenly replaced by an event: the notice stays a compact presentation or waits within a bounded expiry.
+- The first tranche shows a single persistent activity in the foreground. Identity and registration must allow several activities, but visual selection between simultaneous activities does not implicitly enter this release.
+- For Bluetooth notices: proposed duration of four seconds, coalescing per device and a bounded queue. No replay of old events on return from the lock screen.
 
 ### Bluetooth
 
-- Monitor tramite callback `IOBluetoothDevice` di connessione e disconnessione; lettura iniziale dei dispositivi già connessi senza mostrarli come nuovi collegamenti.
-- Identità stabile del dispositivo per deduplicare le callback. Le riconnessioni rapide vanno accorpate senza ignorare una connessione successiva reale.
-- Avviso con nome, categoria/icona e stato. Una batteria sconosciuta rimane assente; nessun valore inventato né scansione periodica con `system_profiler`.
-- Un ciclo di vita esplicito rilascia le registrazioni a stop e ricostruisce lo stato dopo sleep/wake senza una raffica di avvisi arretrati.
-- La copertura va distinta tra dispositivi Classic esposti da IOBluetooth e periferiche esclusivamente BLE; non si promette un inventario universale dal solo monitor Classic.
+- Monitor through `IOBluetoothDevice` connection and disconnection callbacks; initial read of the already connected devices without showing them as new connections.
+- Stable device identity to deduplicate callbacks. Fast reconnections must be coalesced without ignoring a real later connection.
+- Notice with name, category/icon and state. An unknown battery stays absent; no invented value and no periodic scan with `system_profiler`.
+- An explicit lifecycle releases the registrations on stop and rebuilds the state after sleep/wake without a burst of backlogged notices.
+- Coverage must distinguish between Classic devices exposed by IOBluetooth and BLE-only peripherals; a universal inventory from the Classic monitor alone is not promised.
 
-### Override degli avvisi nativi
+### Override of the native notices
 
-- Definire un'interfaccia di soppressione separata dal monitor: disponibile, autorizzazione necessaria, non supportata, errore.
-- Verificare prima la provenienza e il comportamento degli avvisi sul macOS locale, che è **27.0 beta**, poi sulle versioni di rilascio supportate.
-- Una chiusura via Accessibilità dopo la comparsa può lasciare un breve lampo del banner: va chiamata chiusura, non soppressione preventiva.
-- Privilegiare un intervento selettivo e reversibile sul solo avviso pertinente. Non disabilitare globalmente Notification Center, Focus o i servizi Bluetooth per simulare l'override.
-- Quando non è disponibile una sostituzione verificata, esporre lo stato non supportato; non dichiarare il requisito completato. La tecnica esatta resta subordinata alla verifica sul sistema e alla scelta sulle integrazioni private.
+- Define a suppression interface separate from the monitor: available, authorization required, unsupported, error.
+- First verify the origin and behavior of the notices on the local macOS, which is **27.0 beta**, then on the supported release versions.
+- Closing via Accessibility after the banner appears can leave a brief flash of it: it must be called closing, not preventive suppression.
+- Prefer a selective and reversible intervention on the relevant notice only. Do not globally disable Notification Center, Focus or the Bluetooth services to simulate the override.
+- When a verified replacement is not available, expose the unsupported state; do not declare the requirement completed. The exact technique stays subject to verification on the system and to the choice about private integrations.
 
-### Predisposizione musica
+### Music groundwork
 
-- Definire snapshot immutabili per sorgente, titolo/artista, riproduzione, durata, posizione con timestamp e capacità dei comandi.
-- Separare il provider musicale dal contenuto compatto/espanso: metadati e comandi arrivano attraverso il contratto, senza riferimenti al controller del notch.
-- Verificare la presentazione con un provider dimostrativo deterministico, attivo soltanto in modalità demo/test e chiaramente identificato.
-- La connessione reale a Apple Music, Spotify e browser costituisce il passaggio successivo: la richiesta corrente è interpretata come predisposizione. Il contratto deve consentire un adapter Now Playing senza modificare il renderer.
+- Define immutable snapshots for source, title/artist, playback, duration, position with timestamp and command capabilities.
+- Separate the music provider from the compact/expanded content: metadata and commands arrive through the contract, with no references to the notch controller.
+- Verify the presentation with a deterministic demo provider, active only in demo/test mode and clearly identified.
+- The real connection to Apple Music, Spotify and browsers is the next step: the current request is interpreted as groundwork. The contract must allow a Now Playing adapter without changing the renderer.
 
-## Risorse e concorrenza
+## Resources and concurrency
 
-- Nessun polling periodico per connessioni o metadati, nessun display link attivo a riposo.
-- Una sola scadenza cancellabile per l'avviso in primo piano; niente timer per elemento nella coda.
-- UI e coordinamento sul main actor. IO, decodifica immagini e operazioni eventualmente bloccanti su worker dedicati.
-- Conservare solo snapshot leggeri; creare e rilasciare le viste e le immagini in funzione della presentazione visibile.
-- Pubblicare solo variazioni effettive. Separare il progresso musicale dai metadati; un'eventuale progress bar ha aggiornamenti gestiti dall'host e sospesi quando non visibile.
-- Avvio e arresto idempotenti, annullamento dei task e nessuna callback capace di riattivare un servizio già fermato.
+- No periodic polling for connections or metadata, no display link active at rest.
+- A single cancellable expiry for the notice in the foreground; no per-item timer in the queue.
+- UI and coordination on the main actor. IO, image decoding and any blocking operations on dedicated workers.
+- Keep only lightweight snapshots; create and release views and images according to the visible presentation.
+- Publish only actual changes. Separate music progress from metadata; any progress bar has updates managed by the host and suspended when not visible.
+- Idempotent start and stop, task cancellation and no callback able to reactivate a service already stopped.
 
-## Verifica prevista
+## Planned verification
 
-- Test deterministici per transizioni di presentazione, preemption e ripristino, deduplicazione, scadenze, coda limitata e riavvio.
-- Test aptici con performer iniettato: un impulso all'ingresso in hover, nessuno durante la permanenza, aggiornamento automatico o disattivazione.
-- Test della geometria compatta e del passaggio fra compatto ed espanso senza perdita della posizione corrente delle molle.
-- Test del passaggio degli eventi ai controlli e fuori sagoma, inclusi punti nella bounding box ma fuori dagli angoli arrotondati.
-- Build di CascadeKit e dell'app con Xcode locale, mantenendo intatta la modifica preesistente al team di firma.
-- Verifica manuale necessaria per vibrazione percepita, click sulla barra dei menu, dispositivi Bluetooth reali, override senza duplicati, sleep/wake, lock, Mission Control e più display.
-- Misurare a riposo e durante transizioni: la sola assenza di timer nel codice non dimostra un budget energetico raggiunto.
+- Deterministic tests for presentation transitions, preemption and restore, deduplication, expiries, bounded queue and restart.
+- Haptic tests with an injected performer: one pulse on entering hover, none while staying, on automatic update or when turned off.
+- Tests of the compact geometry and of the move between compact and expanded without losing the springs' current position.
+- Tests of event routing to the controls and outside the outline, including points inside the bounding box but outside the rounded corners.
+- Build of CascadeKit and of the app with the local Xcode, keeping the pre-existing change to the signing team intact.
+- Manual verification needed for perceived vibration, clicks on the menu bar, real Bluetooth devices, override without duplicates, sleep/wake, lock, Mission Control and multiple displays.
+- Measure at rest and during transitions: the mere absence of timers in the code does not prove that an energy budget is met.
 
-## Riferimenti esaminati
+## References examined
 
-- [BoringNotch, fork indicato](https://github.com/leekangmmin/boringNotch/tree/e15691026b577caeb721e4ec1865e5a9975e2db1): `ContentView.swift` usa sensory feedback; `NowPlayingController.swift` riceve uno stream da MediaRemoteAdapter e invia comandi tramite MediaRemote. Bluetooth compare ancora nella roadmap, senza un servizio Bluetooth nei sorgenti consultati.
-- [BoringNotch originale](https://github.com/TheBoredTeam/boring.notch/tree/99900bf630a3d3e97fae079df2175993318d51f7): struttura analoga per i media; nessuna implementazione Bluetooth trovata nello snapshot consultato.
-- [Licenza del fork BoringNotch](https://github.com/leekangmmin/boringNotch/blob/e15691026b577caeb721e4ec1865e5a9975e2db1/LICENSE): GPL-3.0. Questa ricognizione non incorpora sorgenti esterni.
-- [Apple: callback di connessione IOBluetooth](https://developer.apple.com/documentation/iobluetooth/iobluetoothdevice/register(forconnectnotifications:selector:)).
+- [BoringNotch, the fork indicated](https://github.com/leekangmmin/boringNotch/tree/e15691026b577caeb721e4ec1865e5a9975e2db1): `ContentView.swift` uses sensory feedback; `NowPlayingController.swift` receives a stream from MediaRemoteAdapter and sends commands through MediaRemote. Bluetooth still appears in the roadmap, with no Bluetooth service in the sources consulted.
+- [Original BoringNotch](https://github.com/TheBoredTeam/boring.notch/tree/99900bf630a3d3e97fae079df2175993318d51f7): similar structure for media; no Bluetooth implementation found in the snapshot consulted.
+- [BoringNotch fork license](https://github.com/leekangmmin/boringNotch/blob/e15691026b577caeb721e4ec1865e5a9975e2db1/LICENSE): GPL-3.0. This survey does not incorporate external sources.
+- [Apple: IOBluetooth connection callback](https://developer.apple.com/documentation/iobluetooth/iobluetoothdevice/register(forconnectnotifications:selector:)).
 - [Apple: NSHapticFeedbackManager](https://developer.apple.com/documentation/appkit/nshapticfeedbackmanager).
 
-## Decisione
+## Decision
 
-L'utente ha confermato la prima tranche e corretto l'aptica all'inizio dell'hover. Le ricerche disponibili non dimostrano ancora una soppressione preventiva universale: l'implementazione deve rendere osservabili i limiti effettivi.
+The user confirmed the first tranche and corrected the haptics to the start of the hover. The research available does not yet prove a universal preventive suppression: the implementation must make the actual limits observable.

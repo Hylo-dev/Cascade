@@ -1,4 +1,4 @@
-# Collegare i retry dopo crash alla scadenza comune
+# Connect crash retries to the shared deadline
 
 ID: 63
 Parent: cascade-product
@@ -11,10 +11,10 @@ Blocked by: 61, 62
 
 ## Question
 
-Comporre la policy di crash già approvata nel runtime interno: causa di uscita fornita dall'host, sessione di salute anche prima delle metriche, domanda canonica corrente, consumo una sola volta e attese di 1/5/30 secondi nella coda comune. Stop/disable/wake annullano retry; nessun replay di comandi incerti o avvio nativo. Sol medium implementa con fake adapter, root e revisore verificano. Analisi preliminare in [audit](../../codex-addon/20260922-transitive-cpu/post61-crash-audit.md).
+Compose the already approved crash policy into the internal runtime: exit cause provided by the host, a health session even before the metrics, current canonical demand, consumption only once, and waits of 1/5/30 seconds in the shared queue. Stop/disable/wake cancel retries; no replay of uncertain commands and no native start. Sol medium implements with a fake adapter, the root and the reviewer verify. Preliminary analysis in [audit](../../codex-addon/20260922-transitive-cpu/post61-crash-audit.md).
 
 ## Answer
 
-Runtime puro implementato e revisionato PASS da root e Sol indipendente. Sessione pre-metrica al handoff, uscita inattesa classificata dall’host, domanda canonica corrente, ticket1/5/30secondi e quarantena al quarto crash con domanda. La decisione di crash usa la pulizia comune; i controlli della domanda e il consumo dovuto condividono l’ammissione, con verifica anche dopo le riserve. Retry senza domanda rimossi, rifiuti precedenti al handoff rimborsati, handoff rifiutato consumato senza replay. Stop/disable/wake annullano anche decisioni sospese. CPU delegata durante retry usa solo il ticket esatto.
+Pure runtime implemented and reviewed PASS by the root and an independent Sol. Pre-metric session at the handoff, unexpected exit classified by the host, current canonical demand, 1/5/30 second tickets and quarantine at the fourth crash with demand. The crash decision uses the shared cleanup; the demand checks and the due consumption share the admission, with a check also after the reserves. Retries without demand removed, refusals before the handoff refunded, refused handoff consumed without replay. Stop/disable/wake also cancel suspended decisions. Delegated CPU during a retry uses only the exact ticket.
 
-[Report worker](../../codex-addon/20260922-transitive-cpu/task-63-report.md), [revisione indipendente](../../codex-addon/20260922-transitive-cpu/task-63-independent-review.md):230 test mirati/20 suite PASS. Suite completa root **1.209 test/113 suite PASS**, [log](../../codex-addon/20260922-transitive-cpu/package-tests.log). Sette hash finali verificati. Nessuna attivazione o qualifica nativa. La [verifica della tranche](../../../docs/superpowers/verification/2026-09-22-addon-transitive-cpu.md) conserva build firmata e avvio aggiornato verificati da497 input identici.
+[Worker report](../../codex-addon/20260922-transitive-cpu/task-63-report.md), [independent review](../../codex-addon/20260922-transitive-cpu/task-63-independent-review.md): 230 targeted tests/20 suites PASS. Root full suite **1,209 tests/113 suites PASS**, [log](../../codex-addon/20260922-transitive-cpu/package-tests.log). Seven final hashes verified. No native activation or qualification. The [tranche verification](../../../docs/superpowers/verification/2026-09-22-addon-transitive-cpu.md) retains the signed build and the updated launch verified from 497 identical inputs.

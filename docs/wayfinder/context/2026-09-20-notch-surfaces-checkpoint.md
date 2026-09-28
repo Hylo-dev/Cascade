@@ -1,44 +1,44 @@
-# Superfici del notch: stato e scelta residua
+# Notch surfaces: state and remaining choice
 
-Ricognizione del 20 settembre 2026 per [Disegnare stati e superfici del notch](../../../.scratch/cascade-product/issues/07-notch-surfaces.md). Documento di confronto, non un nuovo prototipo eseguito né una specifica approvata.
+Survey of 20 September 2026 for [Design the notch states and surfaces](../../../.scratch/cascade-product/issues/07-notch-surfaces.md). A comparison document, not a newly run prototype nor an approved specification.
 
-## Decisioni già acquisite
+## Decisions already settled
 
-| Stato | Contratto da conservare |
+| State | Contract to keep |
 | --- | --- |
-| Riposo | Allineamento al notch fisico, chrome anche sul display senza notch; pannello non attivante. |
-| Hover | Aptica all'inizio dell'hover, come nella specifica approvata; il testo iniziale del ticket «dopo l'apertura» è storico. |
-| Compatto | Attività primaria a sinistra; seconda attività nel cerchio destro distinto. |
-| Espanso | Hover sulla primaria; click o azione accessibile sulla secondaria. L'interazione manuale non viene sostituita da un avviso. |
-| Avviso | Occupa entrambe le ali; il più recente sostituisce il precedente. Hover lo rimuove. Nessuna riproduzione degli avvisi scartati durante espansione o blocco schermo. |
-| Widget | Pagina ospitata nell'espanso; editor, personalizzazione e priorità contestuali restano nei propri ticket. |
-| Nero e glass | Conservare il renderer esistente; luci glass nell'espanso, ferme quando non servono e con Reduce Motion. |
-| Ricerca | Campo e risultati del vero Spotlight, con dimensioni native, confermati dall’utente. Integrazione già presente; restano prove native di focus, raccordo e ripristino. |
-| Impostazioni | Sotto il notch, linguaggio macOS. Sidebar, Form, ricerca e collegamento al focus già presenti; resta la verifica visiva della build corrente. Gli scope funzionali dipendono dai rispettivi ticket. |
+| Rest | Alignment to the physical notch, chrome also on the display without a notch; non-activating panel. |
+| Hover | Haptics at the start of the hover, as in the approved specification; the ticket's initial text "after opening" is historical. |
+| Compact | Primary activity on the left; second activity in the separate right circle. |
+| Expanded | Hover on the primary; click or accessible action on the secondary. The manual interaction is not replaced by a notice. |
+| Notice | Occupies both wings; the most recent replaces the previous one. Hover removes it. No replay of the notices discarded during expansion or screen lock. |
+| Widgets | Page hosted in the expanded state; editor, customization and contextual priorities stay in their own tickets. |
+| Black and glass | Keep the existing renderer; glass lights in the expanded state, still when not needed and with Reduce Motion. |
+| Search | Field and results of the real Spotlight, with native sizes, confirmed by the user. Integration already present; native proofs of focus, join and restore remain. |
+| Settings | Under the notch, macOS language. Sidebar, Form, search and connection to focus already present; the visual verification of the current build remains. The functional scopes depend on their respective tickets. |
 
-Fonti: [specifica interattiva approvata](../../superpowers/specs/2026-09-04-interactive-notch-design.md), [contratti delle attività](../../architecture/live-activity-contracts.md), [glass](../../architecture/glass-lighting.md), [requisiti ricevuti](project-baseline.md). Non si ripropongono come scelte aperte le prime sei righe.
+Sources: [approved interactive specification](../../superpowers/specs/2026-09-04-interactive-notch-design.md), [activity contracts](../../architecture/live-activity-contracts.md), [glass](../../architecture/glass-lighting.md), [requirements received](project-baseline.md). The first six rows are not proposed again as open choices.
 
-## Confronto che ha portato alla scelta della ricerca
+## Comparison that led to the search choice
 
-La [prova locale del 9 settembre](../research/spotlight-notch-live-probe-macos27.md) ha spostato il vero Spotlight sotto il notch tramite Accessibility su macOS27 beta. Il campo interno non risultava ridimensionabile; focus/IME/VoiceOver, ripristino dopo chiusura, altri display/OS e composizione visiva completa non sono qualificati. Non è stata rieseguita oggi.
+The [local probe of 9 September](../research/spotlight-notch-live-probe-macos27.md) moved the real Spotlight under the notch through Accessibility on macOS 27 beta. The inner field did not turn out to be resizable; focus/IME/VoiceOver, restore after closing, other displays/OSes and the complete visual composition are not qualified. It was not rerun today.
 
-| Percorso | Cosa vede e usa la persona | Conseguenza |
+| Path | What the person sees and uses | Consequence |
 | --- | --- | --- |
-| **Prima tranche con Spotlight originale (raccomandata)** | Campo e risultati di sistema, dimensioni native; Cascade studia soltanto il raccordo al notch. La tastiera resta a Spotlight. | Conserva la preferenza per il vero Spotlight. Accetta che il campo non segua le dimensioni personalizzate di Cascade. AX richiede consenso e verifica; se indisponibile, Spotlight resta nella sua posizione normale. |
-| Campo ridisegnato come parte del notch | Un campo con geometria e stile Cascade che dovrebbe continuare a comandare i risultati originali. | La prova disponibile non dimostra sostituzione del campo, IME, selezione, tastiera o accessibilità. Serve una ricerca distinta; un'eventuale nuova API privata richiede la singola eccezione appena approvata come policy. Non è implementabile come semplice rifinitura del primo percorso. |
+| **First tranche with the original Spotlight (recommended)** | System field and results, native sizes; Cascade only studies the join to the notch. The keyboard stays with Spotlight. | Keeps the preference for the real Spotlight. Accepts that the field does not follow Cascade's custom sizes. AX requires consent and verification; if unavailable, Spotlight stays in its normal position. |
+| Field redrawn as part of the notch | A field with Cascade geometry and style that should keep driving the original results. | The available probe does not demonstrate replacement of the field, IME, selection, keyboard or accessibility. Separate research is needed; any new private API requires the individual exception just approved as policy. It cannot be implemented as a simple refinement of the first path. |
 
-**Decisione presentata (ora approvata):** accettare per la prima tranche il campo originale di Spotlight, con dimensioni proprie, invece di esigere subito un campo ridisegnato dentro il notch. Questa è una scelta sul risultato visibile; non un'approvazione a qualificare anticipatamente AX o a usare API private.
+**Decision presented (now approved):** accept for the first tranche Spotlight's original field, with its own sizes, instead of immediately demanding a field redrawn inside the notch. This is a choice about the visible result; not an approval to qualify AX in advance or to use private APIs.
 
-La scelta è stata approvata. La successiva ricognizione ha trovato il raccordo già implementato: il passo seguente è verificarne il ciclo nativo di chiusura/ripristino e focus, senza produrre un prototipo duplicato. Anche le impostazioni sono già implementate; la verifica della loro posizione non sostituisce le decisioni funzionali dei rispettivi ticket.
+The choice was approved. The subsequent survey found the join already implemented: the next step is to verify its native close/restore and focus cycle, without producing a duplicate prototype. The settings are also already implemented; verifying their position does not replace the functional decisions of their respective tickets.
 
-## Risposta acquisita
+## Answer received
 
-Il20settembre l’utente conferma «sì esatto»: prima tranche con campo Spotlight originale e dimensioni native. La decisione canonica è registrata nel ticket delle superfici. Rimangono da provare raccordo, ripristino, focus/accessibilità e combinazioni di display/OS.
+On 20 September the user confirms "yes, exactly": first tranche with the original Spotlight field and native sizes. The canonical decision is recorded in the surfaces ticket. The join, restore, focus/accessibility and display/OS combinations remain to be tested.
 
-## Correzione successiva alla conferma
+## Correction after the confirmation
 
-La ricerca nel codice ha individuato SpotlightCoordinator, SpotlightAccessibilityMonitor e SpotlightDropletPanel già integrati in CascadeServices, con [piano e prove del9settembre](../../superpowers/plans/2026-09-09-spotlight-droplet.md). Il riferimento precedente alla sola prova usa informazioni incomplete. Il percorso con campo originale esiste già; il lavoro residuo riguarda qualifica e ripristino, non la sua prima implementazione. I dettagli correnti sono nel ticket delle superfici.
+The search in the code found SpotlightCoordinator, SpotlightAccessibilityMonitor and SpotlightDropletPanel already integrated in CascadeServices, with the [plan and tests of 9 September](../../superpowers/plans/2026-09-09-spotlight-droplet.md). The earlier reference to the probe alone uses incomplete information. The path with the original field already exists; the remaining work concerns qualification and restore, not its first implementation. The current details are in the surfaces ticket.
 
-## Esito della prosecuzione
+## Outcome of the continuation
 
-Il ticket delle superfici è risolto come decisione/prototipo. La [verifica locale](../../superpowers/verification/2026-09-20-spotlight-native-continuation.md) osserva campo nativo, focus, calcolo via AX e ripristino nei due cicli, oltre alle impostazioni. Le qualifiche generali rimangono elencate nel rapporto; non giustificano un nuovo prototipo delle stesse superfici. Il successivo arbitraggio è nel proprio ticket.
+The surfaces ticket is resolved as a decision/prototype. The [local verification](../../superpowers/verification/2026-09-20-spotlight-native-continuation.md) observes native field, focus, calculation via AX and restore in the two cycles, as well as the settings. The general qualifications remain listed in the report; they do not justify a new prototype of the same surfaces. The subsequent arbitration is in its own ticket.

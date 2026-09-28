@@ -1,155 +1,155 @@
-# Cascade — architettura per SDK, addon e runtime
+# Cascade: architecture for the SDK, addons and runtime
 
-Data: 9 settembre 2026. Stato: architettura approvata nella conversazione; piano esecutivo richiesto. I nomi delle API e i budget numerici restano proposte da verificare durante l'implementazione. Nessuna fase implementativa è dichiarata completata da questo documento.
+Date: 9 September 2026. Status: architecture approved in the conversation; execution plan requested. The API names and the numeric budgets remain proposals to be verified during implementation. This document declares no implementation phase completed.
 
-Piano esecutivo: [implementazione del sistema addon](../plans/2026-09-09-addon-runtime.md). Questa revisione incorpora il modello ispirato a WidgetKit, le due modalità SwiftUI e l'obbligo di usare il sistema anche per i widget sviluppati dal team Cascade.
+Execution plan: [implementation of the addon system](../plans/2026-09-09-addon-runtime.md). This revision incorporates the WidgetKit-inspired model, the two SwiftUI modes and the obligation to use the system for the widgets developed by the Cascade team as well.
 
-**Modifica approvata il 10 settembre:** il [confine di controllo aggiornato](2026-09-10-addon-control-policy.md) accetta il rischio del lavoro autonomamente delegato a macOS. Questa decisione prevale sulle richieste originarie di contenimento totale; restano vincolanti controllo dei processi gestiti, permessi e tutte le altre garanzie.
+**Change approved on 10 September:** the [updated control boundary](2026-09-10-addon-control-policy.md) accepts the risk of work delegated autonomously to macOS. This decision prevails over the original requests for total containment; control of managed processes, permissions and all the other guarantees remain binding.
 
-## 1. Requisito confermato
+## 1. Confirmed requirement
 
-Un addon deve poter funzionare con l'app sorgente chiusa e, se autosufficiente, anche senza l'app sorgente installata. Cascade deve essere aperta: non serve un servizio generale che mantenga gli addon in esecuzione dopo la sua chiusura.
+An addon must be able to work with the source app closed and, if self-sufficient, even without the source app installed. Cascade must be open: there is no need for a general service that keeps addons running after it closes.
 
-L'addon include il codice, le librerie e le risorse necessarie alle proprie funzioni autonome. Le eventuali dipendenze esterne vengono dichiarate e verificate. La presenza dell'app sorgente può abilitare altre funzioni, senza diventare una dipendenza implicita di tutto l'addon.
+The addon includes the code, libraries and resources its own autonomous functions need. Any external dependencies are declared and verified. The presence of the source app can enable other functions, without becoming an implicit dependency of the whole addon.
 
-CPU, memoria, risvegli, lavoro grafico e traffico devono essere parte del contratto. Il runtime deve poter negare lavoro, revocare risorse e isolare guasti. Una dichiarazione dello sviluppatore non costituisce un limite tecnico.
+CPU, memory, wakeups, graphics work and traffic must be part of the contract. The runtime must be able to deny work, revoke resources and isolate faults. A developer's declaration does not constitute a technical limit.
 
-Assunzioni conservate dal progetto: macOS 14 come minimo dell'app, Swift come SDK iniziale, distribuzione diretta candidata, interfaccia nativa. Il formato esterno e il supporto effettivo dei diversi macOS richiedono le prove indicate sotto. Non si alza implicitamente il deployment target.
+Assumptions kept from the project: macOS 14 as the app's minimum, Swift as the initial SDK, direct distribution as the candidate, native interface. The external format and the actual support of the various macOS versions require the proofs listed below. The deployment target is not raised implicitly.
 
-### Parità obbligatoria per i widget Cascade
+### Mandatory parity for Cascade widgets
 
-Tutti i futuri widget, avvisi e attività sviluppati dal team usano lo stesso SDK, manifest, REQUIRES, modello di contenuti/azioni, catalogo, lifecycle e controllo delle risorse degli addon esterni. L'origine incorporata nel prodotto cambia il canale di distribuzione, non concede un accesso alternativo al motore o esenzioni dalle quote. Il codice personalizzato segue la stessa politica di isolamento.
+All future widgets, notices and activities developed by the team use the same SDK, manifest, REQUIRES, content/action model, catalog, lifecycle and resource control as external addons. Being built into the product changes the distribution channel; it does not grant alternative access to the engine or exemptions from quotas. Custom code follows the same isolation policy.
 
-I renderer nativi e gli adapter di sistema rimangono servizi dell'host: sono infrastruttura condivisa, non un secondo SDK riservato ai nostri widget. Un widget del team ottiene un servizio tramite lo stesso broker e le stesse concessioni di un addon esterno. Le concessioni preconfigurate per servizi distribuiti con Cascade devono essere esplicite e revocabili, senza bypass dell'autorizzazione.
+Native renderers and system adapters remain host services: they are shared infrastructure, not a second SDK reserved for our widgets. A team widget obtains a service through the same broker and the same grants as an external addon. Preconfigured grants for services distributed with Cascade must be explicit and revocable, with no authorization bypass.
 
-I moduli esistenti sono una migrazione delimitata dal piano, non un precedente per nuove eccezioni. Clock è il primo caso; alimentazione, volume, Bluetooth e media seguono. Il nuovo sistema non è pronto per la v1 finché il team non ha usato i contratti pubblici in questi casi e in un addon standalone compilato fuori dall'host.
+The existing modules are a migration bounded by the plan, not a precedent for new exceptions. Clock is the first case; power, volume, Bluetooth and media follow. The new system is not ready for v1 until the team has used the public contracts in these cases and in a standalone addon compiled outside the host.
 
-## 2. Dove siamo oggi
+## 2. Where we are today
 
-L'analisi riguarda il working tree del 9 settembre, comprese modifiche e file non ancora committati. Il grafo MCP non contiene questo progetto; dopo averlo interrogato, la verifica è proseguita sui sorgenti.
+The analysis covers the working tree of 9 September, including changes and files not yet committed. The MCP graph does not contain this project; after querying it, the verification continued on the sources.
 
-| Area | Evidenza attuale | Valutazione |
+| Area | Current evidence | Assessment |
 | --- | --- | --- |
-| Libreria separata | `CascadeKit/Package.swift`: un prodotto, un target, macOS 14, tools 6.2, language mode Swift 5, isolamento predefinito MainActor | Confine interno reale; non ancora SDK esterno versionato |
-| Widget | `NotchWidget`, `WidgetContext`, `WidgetHost` | Identità, griglia, factory SwiftUI, attivazione e sospensione; chiamate dirette nello stesso processo |
-| Attività e avvisi | `NotchActivity`, `NotchLiveActivity`, `NotchTransientNotice`, `LiveActivityHost` | Contratti distinti, revisioni, privacy, scadenze, arbitraggio e contesti revocabili |
-| Limiti di presentazione | Sessioni fino a 8 ore, avvisi fino a 10 secondi, backlog avvisi limitato a 8, fino a due sorgenti compatte | Alcune politiche già applicate dal codice |
-| Integrazioni | `CascadeServices`, protocolli dei monitor, `NowPlayingProviding` | Fonti separate dalle viste, ma costruite e collegate manualmente nell'app |
-| Aggiornamenti | Diversi monitor usano `AsyncStream` con buffer limitato | Buone soluzioni locali; manca una policy uniforme per terze parti |
-| Addon esterni | Nessun manifest, catalogo, resolver o trasporto esterno nei percorsi esaminati | Da implementare |
-| Risorse per addon | Nessun supervisore con quote CPU/memoria e gestione dei processi | Da implementare |
-| Distribuzione | Ricerca precedente su ExtensionKit e binari; ticket 05, 06, 16, 19 aperti | Fattibilità studiata, prova integrata mancante |
+| Separate library | `CascadeKit/Package.swift`: one product, one target, macOS 14, tools 6.2, language mode Swift 5, default MainActor isolation | Real internal boundary; not yet a versioned external SDK |
+| Widgets | `NotchWidget`, `WidgetContext`, `WidgetHost` | Identity, grid, SwiftUI factory, activation and suspension; direct calls in the same process |
+| Activities and notices | `NotchActivity`, `NotchLiveActivity`, `NotchTransientNotice`, `LiveActivityHost` | Distinct contracts, revisions, privacy, expirations, arbitration and revocable contexts |
+| Presentation limits | Sessions up to 8 hours, notices up to 10 seconds, notice backlog limited to 8, up to two compact sources | Some policies already enforced by the code |
+| Integrations | `CascadeServices`, monitor protocols, `NowPlayingProviding` | Sources separate from the views, but built and wired manually in the app |
+| Updates | Several monitors use `AsyncStream` with a bounded buffer | Good local solutions; a uniform policy for third parties is missing |
+| External addons | No manifest, catalog, resolver or external transport in the paths examined | To be implemented |
+| Per-addon resources | No supervisor with CPU/memory quotas and process management | To be implemented |
+| Distribution | Earlier research on ExtensionKit and binaries; tickets 05, 06, 16, 19 open | Feasibility studied, integrated proof missing |
 
-Verifica eseguita: `swift test --filter 'LiveActivityHostTests|NotchActivityLifetimeTests'`, con Xcode beta e cache/scratch temporanei. **26 test in 2 suite superati**. Non è una verifica dell'intera app, di addon esterni o dei consumi. Log della sessione: `/private/tmp/cascade-addon-audit-tests.log`.
+Verification run: `swift test --filter 'LiveActivityHostTests|NotchActivityLifetimeTests'`, with Xcode beta and temporary cache/scratch. **26 tests in 2 suites passed**. It is not a verification of the whole app, of external addons or of resource consumption. Session log: `/private/tmp/cascade-addon-audit-tests.log`.
 
-### Lacune concrete da non ereditare nell'SDK
+### Concrete gaps not to inherit into the SDK
 
-- `AnyView` e `@MainActor` sono un contratto locale, non un formato IPC. Un addon chiamato direttamente può bloccare Cascade.
-- `suspend()` è cooperativo e ha anche un'implementazione predefinita vuota. Non interrompe forzatamente timer, task o allocazioni.
-- `WidgetContext` conserva una callback senza revoca: rimuoverlo dalla tabella dell'host non rende inerte una copia trattenuta dal widget. `LiveActivityContext` ha già una revoca esplicita.
-- Un'invalidazione widget richiama il percorso di ricostruzione della pagina; manca una revisione per widget che limiti il lavoro al contenuto cambiato.
-- Le attività persistenti sono conservate in un array senza quota d'ammissione per produttore. I limiti temporali non limitano il numero di nuove sessioni.
-- Gli ID e `sourceID` dichiarati dal codice non sono identità autenticate. Il futuro gateway deve assegnare namespace prima di chiamare il motore.
-- `CODE_STYLE.md` descrive anche obiettivi non ancora implementati, come lavoro assegnato dal contesto e misurazione/espulsione del widget. La documentazione non prova l'esistenza del meccanismo.
+- `AnyView` and `@MainActor` are a local contract, not an IPC format. An addon called directly can block Cascade.
+- `suspend()` is cooperative and also has an empty default implementation. It does not forcibly interrupt timers, tasks or allocations.
+- `WidgetContext` keeps a callback without revocation: removing it from the host's table does not make a copy retained by the widget inert. `LiveActivityContext` already has an explicit revocation.
+- A widget invalidation triggers the page rebuild path; a per-widget revision that limits the work to the changed content is missing.
+- Persistent activities are kept in an array with no admission quota per producer. The time limits do not limit the number of new sessions.
+- The IDs and `sourceID` declared by the code are not authenticated identities. The future gateway must assign namespaces before calling the engine.
+- `CODE_STYLE.md` also describes goals not yet implemented, such as work assigned by the context and measurement/eviction of the widget. The documentation does not prove the mechanism exists.
 
-Conclusione: abbiamo un motore di presentazione e contratti interni utilizzabili; la piattaforma di addon indipendenti deve ancora essere costruita. Una percentuale di completamento sarebbe arbitraria senza fissare i criteri della v1.
+Conclusion: we have a presentation engine and usable internal contracts; the platform of independent addons still has to be built. A completion percentage would be arbitrary without fixing the v1 criteria.
 
-## 3. Autosufficienza del binario
+## 3. Self-sufficiency of the binary
 
-Il modello proposto è questo; `FocusCore` è solo un esempio, non codice esistente:
+The proposed model is this; `FocusCore` is only an example, not existing code:
 
 ```text
-                    FocusCore (libreria senza UI dell'app)
+                    FocusCore (the app's library, without UI)
                          /                     \
-                 App Focus completa       Addon Focus per Cascade
-                                          + adapter Cascade
-                                          + risorse necessarie
+                 Complete Focus app       Focus addon for Cascade
+                                          + Cascade adapter
+                                          + required resources
 ```
 
-Il codice condiviso può essere collegato staticamente, oppure distribuito come libreria privata dentro il pacchetto firmato dell'addon. L'addon non cerca framework dentro l'installazione dell'app sorgente e non ne carica l'eseguibile.
+The shared code can be linked statically, or distributed as a private library inside the addon's signed package. The addon does not look for frameworks inside the source app's installation and does not load its executable.
 
-Questo è sensato se la funzione ha tutti i suoi input: un timer può essere autonomo; un client di un servizio remoto può esserlo dopo autenticazione; un comando a un player specifico richiede quel player. Includere codice non include automaticamente credenziali, database dell'utente, licenze, servizi remoti o accesso a file protetti.
+This makes sense if the function has all its inputs: a timer can be autonomous; a client of a remote service can be so after authentication; a command to a specific player requires that player. Including code does not automatically include credentials, the user's database, licenses, remote services or access to protected files.
 
-L'addon mantiene un proprio spazio dati e un percorso di autenticazione quando necessario. Se app e addon condividono dati, usano un contratto esplicito, con permessi e migrazioni; non leggono percorsi privati dell'app presumendo che esista. Eventuali App Groups/Keychain sharing vanno verificati per firma e distribuzione e non assunti utilizzabili tra sviluppatori diversi.
+The addon keeps its own data space and an authentication path when needed. If app and addon share data, they use an explicit contract, with permissions and migrations; they do not read the app's private paths assuming it exists. Any App Groups/Keychain sharing must be verified for signing and distribution and not assumed usable across different developers.
 
-App e addon possono includere due copie del codice condiviso: accettiamo questo costo su disco per indipendenza e aggiornamenti. In esecuzione si avvia soltanto ciò che serve; non creiamo un servizio condiviso residente per ogni libreria.
+App and addon can include two copies of the shared code: we accept this disk cost for independence and updates. At run time only what is needed is launched; we do not create a resident shared service for each library.
 
-## 4. Alternative e scelta approvata
+## 4. Alternatives and approved choice
 
-| Modello | Vantaggio | Limite |
+| Model | Advantage | Limit |
 | --- | --- | --- |
-| Bundle SwiftUI caricato dentro Cascade | UI libera e chiamate dirette | Un blocco o crash coinvolge l'host; nessuna espulsione sicura del singolo modulo |
-| Processo separato con dati dichiarativi | UI prevedibile, rendering governato da Cascade, superficie misurabile | Componenti e layout limitati al vocabolario dell'SDK |
-| Processo separato con UI remota ExtensionKit | Lo sviluppatore può scrivere UI SwiftUI propria | Più memoria, GPU e complessità; compatibilità, lifecycle e arresto devono essere provati |
+| SwiftUI bundle loaded inside Cascade | Free-form UI and direct calls | A hang or crash affects the host; no safe eviction of the single module |
+| Separate process with declarative data | Predictable UI, rendering governed by Cascade, measurable surface | Components and layout limited to the SDK's vocabulary |
+| Separate process with ExtensionKit remote UI | The developer can write their own SwiftUI UI | More memory, GPU and complexity; compatibility, lifecycle and stop must be proven |
 
-**Scelta: runtime nativo, presentazioni dichiarative conservate dall'host, codice addon in processi separati su domanda e UI SwiftUI remota come capacità aggiuntiva verificata.** Le ali compatte, gli avvisi e gli elementi comuni usano componenti Cascade; una superficie espansa può richiedere una scena remota. Il processo del provider non deve restare attivo soltanto perché il suo contenuto è visibile. Non carichiamo codice personalizzato degli addon nel processo grafico di Cascade.
+**Choice: native runtime, declarative presentations kept by the host, addon code in separate on-demand processes and remote SwiftUI UI as an additional verified capability.** The compact wings, the notices and the common elements use Cascade components; an expanded surface can request a remote scene. The provider's process must not stay alive only because its content is visible. We do not load custom addon code into Cascade's graphics process.
 
-Questo conserva una via per SwiftUI personalizzato senza imporne il costo a ogni addon. Nel processo host rimangono renderer e operazioni comuni controllate da Cascade. Un addon del team non può aggirare questo confine usando una factory privata in-process; gli esecutori in-process di codice addon sono ammessi soltanto come sostituti nei test.
+This keeps a path for custom SwiftUI without imposing its cost on every addon. The host process keeps the renderers and the common operations controlled by Cascade. A team addon cannot bypass this boundary by using a private in-process factory; in-process executors of addon code are allowed only as stand-ins in tests.
 
-Non introduciamo WebAssembly, JavaScriptCore o un interprete generale. Non incorporiamo i widget WidgetKit delle altre app nel notch: riprendiamo il modello di produzione occasionale del contenuto e rendering indipendente, implementando contratti nostri con API pubbliche.
+We do not introduce WebAssembly, JavaScriptCore or a general interpreter. We do not embed other apps' WidgetKit widgets in the notch: we take up the model of occasional content production and independent rendering, implementing our own contracts with public APIs.
 
-ExtensionKit supporta UI di estensione in un host attraverso un processo distinto. Non rende `AnyView` serializzabile. Il progetto ha già documentato che diverse nuove API di definizione degli extension point richiedono macOS 26: sul minimo 14 servono il percorso legacy e una verifica effettiva. [Apple: ExtensionKit](https://developer.apple.com/documentation/extensionkit), [supporto alle estensioni](https://developer.apple.com/documentation/extensionfoundation/adding-support-for-app-extensions-to-your-app).
+ExtensionKit supports extension UI in a host through a distinct process. It does not make `AnyView` serializable. The project has already documented that several new extension point definition APIs require macOS 26: on the 14 minimum the legacy path and an actual verification are needed. [Apple: ExtensionKit](https://developer.apple.com/documentation/extensionkit), [extension support](https://developer.apple.com/documentation/extensionfoundation/adding-support-for-app-extensions-to-your-app).
 
-## 5. Confini della libreria e del runtime
+## 5. Library and runtime boundaries
 
-Questi sono moduli logici proposti. Possono partire come target SwiftPM nello stesso repository: non richiedono sei progetti o sei processi.
+These are proposed logical modules. They can start as SwiftPM targets in the same repository: they do not require six projects or six processes.
 
-| Modulo | Contiene | Dipendenze consentite |
+| Module | Contains | Allowed dependencies |
 | --- | --- | --- |
-| `CascadeContracts` | Identità, manifest, versioni, requisiti, messaggi, snapshot, errori | Valori `Sendable`, serializzabili; nessun motore grafico |
-| `CascadeAddonSDK` | Facciata async per addon, publisher, comandi, storage, lease | Contracts e adapter del trasporto |
-| `CascadePresentation` | Modelli dichiarativi e componenti SwiftUI autorizzati | Contracts; SwiftUI solo dove serve |
-| `CascadeTransport` | Connessioni, autenticazione peer, codec, envelope, interruzioni | Contracts e API native IPC |
-| `CascadeRuntime` | Catalogo, resolver, scheduler, broker, quote, supervisione | Contracts/Transport; indipendente da finestre e geometria |
-| `CascadeKit` | Pannello, layout, animazioni, rendering, adattamento delle presentazioni | Contracts/Presentation; nessun riferimento alle app fornitrici |
-| App Cascade | Preferenze, installazione/abilitazione e composizione dei moduli | Runtime e CascadeKit |
+| `CascadeContracts` | Identity, manifest, versions, requirements, messages, snapshots, errors | `Sendable`, serializable values; no graphics engine |
+| `CascadeAddonSDK` | Async facade for addons, publishers, commands, storage, leases | Contracts and transport adapters |
+| `CascadePresentation` | Declarative models and authorized SwiftUI components | Contracts; SwiftUI only where needed |
+| `CascadeTransport` | Connections, peer authentication, codecs, envelopes, interruptions | Contracts and native IPC APIs |
+| `CascadeRuntime` | Catalog, resolver, scheduler, broker, quotas, supervision | Contracts/Transport; independent of windows and geometry |
+| `CascadeKit` | Panel, layout, animations, rendering, adaptation of presentations | Contracts/Presentation; no references to the provider apps |
+| Cascade app | Preferences, installation/enabling and composition of the modules | Runtime and CascadeKit |
 
-L'SDK sviluppatore non deve importare il motore del notch o trascinarsi monitor Bluetooth/audio. Le interfacce di elaborazione sono async e non isolate globalmente al MainActor. Solo l'adapter grafico lo è. La migrazione a controlli di concorrenza più severi avviene per target, senza cambiare alla cieca il language mode dell'intero progetto.
+The developer SDK must not import the notch engine or drag in Bluetooth/audio monitors. The processing interfaces are async and not globally isolated to the MainActor. Only the graphics adapter is. The migration to stricter concurrency checks happens per target, without blindly changing the language mode of the whole project.
 
 ```mermaid
 flowchart LR
-    A[App sorgente opzionale] -. contratto esplicito .-> P[Processo addon]
-    P <-->|Messaggi asincroni| R[CascadeRuntime]
-    S[Provider condivisi] <-->|Lease e servizi tipizzati| R
-    R -->|Snapshot validati| K[CascadeKit]
+    A[Optional source app] -. explicit contract .-> P[Addon process]
+    P <-->|Asynchronous messages| R[CascadeRuntime]
+    S[Shared providers] <-->|Leases and typed services| R
+    R -->|Validated snapshots| K[CascadeKit]
     K --> N[Notch]
-    P -. scena remota opzionale .-> N
+    P -. optional remote scene .-> N
 ```
 
-## 6. Contratti pubblici
+## 6. Public contracts
 
-Ogni addon è un pacchetto identificato, non una singola vista. Può fornire più widget, attività, avvisi o servizi senza UI, condividendo un processo quando appartengono allo stesso addon e dominio di fiducia. Addon di editori diversi non condividono un processo.
+Each addon is an identified package, not a single view. It can provide several widgets, activities, notices or services without UI, sharing a process when they belong to the same addon and trust domain. Addons from different publishers do not share a process.
 
-| Contratto proposto | Responsabilità |
+| Proposed contract | Responsibility |
 | --- | --- |
-| `AddonDescriptor` | Identità, compatibilità, entry point, funzioni e richieste statiche |
-| `AddonSession` | Sessione negoziata con Cascade, epoch, budget e contesti revocabili |
-| `AddonLifecycle` | Avvio, checkpoint, stop idempotente e motivi di arresto |
-| `ServiceProvider` / `ServiceClient` | Servizi tipizzati, versionati e ottenuti tramite broker |
-| `ActivityPublisher` | Creazione, revisione e conclusione di sessioni finite |
-| `NoticePublisher` | Evento breve distinto dall'aggiornamento dello stesso evento |
-| `WidgetPublisher` | Snapshot della singola istanza e azioni supportate |
-| `PresentationSession` | Visibilità/famiglia, dimensioni, privacy e contesto grafico |
-| `ActionHandler` | Intenti tipizzati, cancellazione, risultato o errore |
-| `ResourceLease` | Diritto temporaneo e revocabile a lavoro, sottoscrizione o asset |
+| `AddonDescriptor` | Identity, compatibility, entry point, functions and static requests |
+| `AddonSession` | Session negotiated with Cascade, epoch, budget and revocable contexts |
+| `AddonLifecycle` | Launch, checkpoint, idempotent stop and stop reasons |
+| `ServiceProvider` / `ServiceClient` | Typed, versioned services obtained through the broker |
+| `ActivityPublisher` | Creation, revision and conclusion of finite sessions |
+| `NoticePublisher` | Short event distinct from the update of the same event |
+| `WidgetPublisher` | Snapshot of the single instance and supported actions |
+| `PresentationSession` | Visibility/family, dimensions, privacy and graphics context |
+| `ActionHandler` | Typed intents, cancellation, result or error |
+| `ResourceLease` | Temporary, revocable right to work, a subscription or an asset |
 
-Il trasporto porta valori, mai closure, puntatori o oggetti UI Swift. La facciata Swift usa tipi forti; l'IPC usa schemi espliciti. Non si presume che `Codable` sia automaticamente un protocollo XPC: il codec e l'adapter devono essere implementati e verificati.
+The transport carries values, never closures, pointers or Swift UI objects. The Swift facade uses strong types; the IPC uses explicit schemas. It is not assumed that `Codable` is automatically an XPC protocol: the codec and the adapter must be implemented and verified.
 
-Errori minimi: `missingRequirement`, `versionConflict`, `permissionDenied`, `dependencyUnavailable`, `resolutionTooComplex`, `resourceDenied`, `rateLimited`, `deadlineExceeded`, `sessionRevoked`, `invalidPayload`, `outcomeUnknown`. I dettagli includono la funzione coinvolta e un rimedio comprensibile; non stringhe da interpretare nel codice.
+Minimum errors: `missingRequirement`, `versionConflict`, `permissionDenied`, `dependencyUnavailable`, `resolutionTooComplex`, `resourceDenied`, `rateLimited`, `deadlineExceeded`, `sessionRevoked`, `invalidPayload`, `outcomeUnknown`. The details include the function involved and an understandable remedy; not strings to be interpreted in code.
 
-I nomi della tabella indicano responsabilità, non protocolli da creare tutti separatamente. P1 concretizza queste responsabilità in AddonManifest, AddonProvider, ProviderOutput, Publication e client di servizio; il vocabolario del piano esecutivo è il riferimento per le firme proposte. I risultati di azioni/chiamate di servizio sono correlati alla richiesta e distinti dalle pubblicazioni di stato.
+The table's names indicate responsibilities, not protocols to be created all separately. P1 makes these responsibilities concrete in AddonManifest, AddonProvider, ProviderOutput, Publication and service clients; the execution plan's vocabulary is the reference for the proposed signatures. The results of actions/service calls are correlated to the request and distinct from state publications.
 
-## 7. Manifest e semantica di REQUIRES
+## 7. Manifest and REQUIRES semantics
 
-Il manifest è un documento dichiarativo validato prima dell'esecuzione. JSON è la proposta iniziale per usare strumenti nativi e uno schema condiviso; i nomi sotto sono una bozza di API. Nessuna shell, espressione eseguibile o script di installazione.
+The manifest is a declarative document validated before execution. JSON is the initial proposal, to use native tools and a shared schema; the names below are a draft API. No shell, executable expression or install script.
 
-### Tre cose diverse
+### Three different things
 
-1. **Librerie incorporate:** risolte al momento della build dello sviluppatore; elencate come inventario del pacchetto. Non avviano processi e non entrano nel resolver runtime.
-2. **Servizi runtime:** una capacità pubblicata da Cascade o da un addon abilitato. `REQUIRES` specifica contratto/versione; il broker collega un provider autorizzato.
-3. **Condizioni:** versione del sistema, protocollo, presenza o esecuzione di un'app, permessi. Queste abilitano o bloccano una funzione; non installano né aprono app implicitamente.
+1. **Bundled libraries:** resolved at the developer's build time; listed as the package inventory. They do not launch processes and do not enter the runtime resolver.
+2. **Runtime services:** a capability published by Cascade or by an enabled addon. `REQUIRES` specifies contract/version; the broker connects an authorized provider.
+3. **Conditions:** system version, protocol, presence or execution of an app, permissions. These enable or block a function; they do not install or open apps implicitly.
 
-### Esempio autosufficiente
+### Self-sufficient example
 
 ```json
 {
@@ -200,42 +200,42 @@ Il manifest è un documento dichiarativo validato prima dell'esecuzione. JSON è
 }
 ```
 
-Il timer usa `FocusCore` incluso nel pacchetto e una deadline del runtime. L'assenza dell'app disabilita soltanto `openInSourceApp`. L'app installata non significa app aperta: un'integrazione può dichiarare `state: running` e diventare indisponibile alla chiusura, mentre un'azione esplicita dell'utente può aprire l'app installata.
+The timer uses the `FocusCore` included in the package and a runtime deadline. The absence of the app disables only `openInSourceApp`. App installed does not mean app open: an integration can declare `state: running` and become unavailable when the app closes, while an explicit user action can open the installed app.
 
-Un secondo addon può richiedere `com.example.focus.sessions` come servizio: non eredita il binario o i permessi di Focus. Richiede un'interfaccia e ottiene un handle limitato. I dati esposti dal servizio richiedono a loro volta una concessione al consumatore.
+A second addon can require `com.example.focus.sessions` as a service: it does not inherit Focus's binary or permissions. It requires an interface and obtains a limited handle. The data exposed by the service in turn require a grant to the consumer.
 
-### Regole del resolver
+### Resolver rules
 
-- La lista `REQUIRES` è una congiunzione: tutti i requisiti devono essere soddisfatti. Quelli alla radice bloccano tutto l'addon; quelli di una feature bloccano soltanto quella feature.
-- `PROVIDES` elenca contratti e versioni, non implementazioni da caricare. Una feature non disponibile non può annunciare un servizio che dipende da essa.
-- Per fallback espliciti si ammette un solo livello di `anyOf` con alternative nominate. Niente linguaggio booleano ricorsivo o condizioni eseguibili.
-- Un fallback può cambiare implementazione, non falsificare il risultato: senza player, "pausa player" resta indisponibile; senza rete, il dato in cache viene marcato obsoleto.
-- Versioni dei pacchetti e versioni dei contratti sono distinte. Range SemVer espliciti; prerelease solo se richieste. Si negoziano major/minor del wire protocol separatamente.
-- Catalogo di soli pacchetti installati, verificati e abilitati. Niente download, elevazione di permessi o avvio dell'app sorgente provocati dal resolver.
-- Scelta deterministica: binding esplicito valido dell'utente, poi binding già risolto ancora valido, poi provider host compatibile, poi candidato compatibile nell'ordine stabile versione/identità verificata. Una restrizione di editore nel requisito elimina i candidati non ammessi. Alla prima scelta tra terzi con accesso a dati serve una concessione specifica.
-- Il risultato viene salvato con versione, identità verificata e digest del pacchetto. Nessun cambio di provider durante una sessione; gli aggiornamenti producono un nuovo piano atomico.
-- Una sola versione attiva per addon ID nella v1. Se due consumatori richiedono major incompatibili, si spiega il conflitto; non si installano due runtime implicitamente.
-- Cicli rifiutati con percorso leggibile; limiti iniziali: 32 addon, 128 archi e profondità 8 per chiusura di dipendenze. Si evita ricerca combinatoria senza limiti. Il resolver opera fuori dal MainActor e ammette anche un budget di lavoro.
-- Avvio in ordine topologico e rilascio inverso. I servizi condivisi restano attivi finché esiste una lease valida; se nessun consumatore li richiede, si arrestano.
-- Disabilitazione, rimozione o crash di un provider revocano gli handle. Si rivalutano solo i dipendenti interessati; le altre funzioni continuano. L'attesa di un requisito non usa polling.
+- The `REQUIRES` list is a conjunction: all requirements must be satisfied. Those at the root block the whole addon; those of a feature block only that feature.
+- `PROVIDES` lists contracts and versions, not implementations to load. An unavailable feature cannot announce a service that depends on it.
+- For explicit fallbacks a single level of `anyOf` with named alternatives is allowed. No recursive boolean language or executable conditions.
+- A fallback can change the implementation, not falsify the result: without a player, "pause player" stays unavailable; without network, the cached data is marked stale.
+- Package versions and contract versions are distinct. Explicit SemVer ranges; prereleases only if requested. Major/minor of the wire protocol are negotiated separately.
+- Catalog of installed, verified and enabled packages only. No downloads, permission elevation or source app launch caused by the resolver.
+- Deterministic choice: valid explicit user binding, then an already resolved binding that is still valid, then a compatible host provider, then a compatible candidate in the stable version/verified identity order. A publisher restriction in the requirement eliminates the candidates not allowed. The first choice among third parties with data access needs a specific grant.
+- The result is saved with version, verified identity and package digest. No provider change during a session; updates produce a new atomic plan.
+- A single active version per addon ID in v1. If two consumers require incompatible majors, the conflict is explained; two runtimes are not installed implicitly.
+- Cycles rejected with a readable path; initial limits: 32 addons, 128 edges and depth 8 per dependency closure. Unbounded combinatorial search is avoided. The resolver runs off the MainActor and also accepts a work budget.
+- Launch in topological order and release in reverse. Shared services stay active as long as a valid lease exists; if no consumer requires them, they stop.
+- Disabling, removal or crash of a provider revoke the handles. Only the affected dependents are re-evaluated; the other functions continue. Waiting for a requirement does not use polling.
 
-La funzione "apri nell'app" non è una dipendenza del timer. Questa distinzione è necessaria per evitare che un'opzione accessoria renda l'addon inutilizzabile.
+The "open in the app" function is not a dependency of the timer. This distinction is necessary to prevent an accessory option from making the addon unusable.
 
-## 8. Distribuzione e discovery
+## 8. Distribution and discovery
 
-Preferenza iniziale: addon compilato e firmato, distribuito dentro un contenitore compatibile con la registrazione delle estensioni macOS. Può arrivare insieme all'app completa oppure dentro una **piccola app contenitore dedicata al solo addon**. Nel secondo caso l'app sorgente completa non è installata.
+Initial preference: a compiled and signed addon, distributed inside a container compatible with macOS extension registration. It can ship together with the full app or inside a **small container app dedicated to the addon alone**. In the second case the full source app is not installed.
 
-Questo dettaglio conta: ExtensionKit non equivale a trascinare una `.appex` arbitraria in una cartella. Una distribuzione indipendente deve comunque rispettare il packaging richiesto dal sistema. La discovery e l'abilitazione avvengono tramite il percorso supportato; il manifest Cascade si aggiunge ai metadati della piattaforma. [Apple: costruire un'estensione](https://developer.apple.com/documentation/extensionfoundation/building-an-app-extension-to-support-a-host-app).
+This detail matters: ExtensionKit is not the same as dragging an arbitrary `.appex` into a folder. An independent distribution must still respect the packaging the system requires. Discovery and enabling happen through the supported path; the Cascade manifest is added to the platform's metadata. [Apple: building an extension](https://developer.apple.com/documentation/extensionfoundation/building-an-app-extension-to-support-a-host-app).
 
-Due pacchetti che dichiarano lo stesso addon richiedono una selezione unica. Il runtime impedisce che installazione standalone e app completa producano doppie attività o doppi monitor. L'identità del firmatario e l'identità logica dell'addon devono coincidere con il binding approvato; non basta un bundle ID uguale.
+Two packages declaring the same addon require a single selection. The runtime prevents a standalone installation and the full app from producing duplicate activities or duplicate monitors. The signer's identity and the addon's logical identity must match the approved binding; an equal bundle ID is not enough.
 
-Una cartella di pacchetti `.cascadeaddon` con eseguibile isolato rimane un'alternativa di distribuzione da provare se il contenitore non soddisfa i requisiti. Non la rendiamo un secondo loader v1 prima di dimostrarne firma, sandbox, discovery, IPC e arresto.
+A folder of `.cascadeaddon` packages with an isolated executable remains a distribution alternative to prove if the container does not meet the requirements. We do not make it a second v1 loader before demonstrating its signing, sandbox, discovery, IPC and stop.
 
-Un XPC service incorporato in un'altra app non è un endpoint pubblico generico al quale Cascade possa semplicemente collegarsi per nome. XPC è il trasporto; discovery e diritto di avvio sono responsabilità separate. Non prevediamo LaunchAgent persistenti: il requisito è Cascade aperta. [Apple: XPC e tipi di servizio](https://developer.apple.com/documentation/xpc).
+An XPC service embedded in another app is not a generic public endpoint that Cascade can simply connect to by name. XPC is the transport; discovery and the right to launch are separate responsibilities. We do not plan persistent LaunchAgents: the requirement is Cascade open. [Apple: XPC and service types](https://developer.apple.com/documentation/xpc).
 
-## 9. Lifecycle: UI e lavoro indipendenti
+## 9. Lifecycle: independent UI and work
 
-Stati dell'addon:
+Addon states:
 
 ```text
 discovered → disabled → resolving → ready → starting → active → stopping → ready
@@ -243,221 +243,221 @@ discovered → disabled → resolving → ready → starting → active → stop
                           blocked            failed / quarantined
 ```
 
-`ready` significa utilizzabile ma senza processo necessariamente residente. Abilitazione non significa esecuzione continua.
+`ready` means usable but without a process that is necessarily resident. Enabling does not mean continuous execution.
 
-Ogni feature può dichiarare una o più modalità: contenuto occasionale, aggiornamento programmato, azione dell'utente e lavoro continuativo. Un addon può combinarle. La raccolta dei contenuti appartiene all'host e ha una durata distinta dalla connessione al processo: uscita prevista del provider non equivale a fine dell'attività. Disabilitazione, revoca della pubblicazione, scadenza e fine esplicita rimuovono invece il contenuto.
+Each feature can declare one or more modes: occasional content, scheduled update, user action and continuous work. An addon can combine them. The content collection belongs to the host and has a lifetime distinct from the connection to the process: an expected exit of the provider is not the same as the end of the activity. Disabling, revocation of the publication, expiration and explicit end instead remove the content.
 
-Cascade conserva snapshot, piano temporale limitato, azioni identificabili e riferimenti agli asset ammessi. Il processo consegna questi valori e può terminare; una nuova azione o un evento riavvia il provider se necessario. La generazione della connessione cambia al riavvio e rende inutilizzabili i vecchi handle, senza cancellare automaticamente una pubblicazione ancora valida posseduta dall'host.
+Cascade keeps snapshots, a bounded timeline, identifiable actions and references to the admitted assets. The process delivers these values and can terminate; a new action or an event restarts the provider if needed. The connection generation changes on restart and makes the old handles unusable, without automatically deleting a still valid publication owned by the host.
 
-Una risposta tardiva di una generazione precedente non può sovrascrivere lo stato nuovo. Dopo un crash imprevisto si applicano scadenza e policy di obsolescenza del contenuto, senza riprodurre avvisi vecchi. Le azioni che richiedono informazioni fresche restano indisponibili finché il provider non le riconvalida.
+A late response from an earlier generation cannot overwrite the new state. After an unexpected crash the content's expiration and staleness policy apply, without replaying old notices. Actions that require fresh information stay unavailable until the provider revalidates them.
 
-Tre durate distinte:
+Three distinct lifetimes:
 
-- **Installazione:** metadati e configurazione possono rimanere su disco.
-- **Lavoro/provider:** attivo per un comando, una sottoscrizione necessaria o una deadline concessa, anche senza UI visibile.
-- **Presentazione:** costruita quando visibile, revocata quando nascosta. Il runtime può continuare a rappresentare uno snapshot senza tenere vivo il provider.
+- **Installation:** metadata and configuration can remain on disk.
+- **Work/provider:** active for a command, a needed subscription or a granted deadline, even without visible UI.
+- **Presentation:** built when visible, revoked when hidden. The runtime can keep presenting a snapshot without keeping the provider alive.
 
-Visibilità: `hidden`, `compact`, `expanded`. Il processo riceve solo transizioni e input reali. Un'attività compatta è visibile anche quando il notch non è espanso: non si sospende una sorgente indispensabile confondendo chiusura del pannello e fine del task.
+Visibility: `hidden`, `compact`, `expanded`. The process receives only real transitions and input. A compact activity is visible even when the notch is not expanded: an indispensable source is not suspended by confusing the panel closing with the end of the task.
 
-Esempio timer: memorizziamo scadenza e stato; la UI interpola il tempo residuo quando visibile; il runtime arma una sola deadline condivisa. Il processo dell'addon può terminare tra avvio e scadenza. Nessun tick IPC ogni secondo.
+Timer example: we store expiration and state; the UI interpolates the remaining time when visible; the runtime arms a single shared deadline. The addon's process can terminate between launch and expiration. No IPC tick every second.
 
-Un processo senza lavoro può attendere messaggi durante una breve finestra di riutilizzo, poi terminare. La durata della finestra è una policy misurata, non un valore fissato dall'addon. Il congelamento con primitive del sistema non è il comportamento predefinito della v1: eventuali esperimenti richiedono assenza di operazioni/risorse condivise pendenti e un beneficio misurato rispetto all'attesa IPC e al nuovo avvio.
+A process with no work can wait for messages during a short reuse window, then terminate. The window's duration is a measured policy, not a value set by the addon. Freezing with system primitives is not the v1 default behavior: any experiments require the absence of pending shared operations/resources and a measured benefit compared with IPC waiting and a new launch.
 
-Esempio musica: una sottoscrizione condivisa produce cambi di stato; l'analisi audio ottiene una lease distinta e solo mentre la superficie che la usa è visibile. Non duplichiamo la cattura perché due addon visualizzano gli stessi dati.
+Music example: a shared subscription produces state changes; audio analysis obtains a distinct lease and only while the surface that uses it is visible. We do not duplicate the capture because two addons display the same data.
 
-Ogni lease ha proprietario, scopo, scadenza monotona, costo massimo e token di generazione. Revoca o cambio sessione rendono inerti anche risultati tardivi. Le lease non si rinnovano con heartbeat periodici: il rinnovo richiede una ragione verificabile e l'approvazione dello scheduler.
+Each lease has an owner, purpose, monotonic expiration, maximum cost and generation token. Revocation or a session change also make late results inert. Leases are not renewed with periodic heartbeats: renewal requires a verifiable reason and the scheduler's approval.
 
-Una sottoscrizione di interesse può essere posseduta dall'host, con feature/sessione, concessione, scadenza e quota proprie. Può sopravvivere all'uscita prevista del provider per risvegliarlo su un evento ammesso; non conserva un token della vecchia connessione. La riconnessione riceve token nuovi, mentre disabilitazione o revoca eliminano anche l'interesse. Analogamente, gli asset conservati da una pubblicazione hanno una revisione propria, distinta dalla generazione del processo.
+An interest subscription can be owned by the host, with its own feature/session, grant, expiration and quota. It can survive the provider's expected exit to wake it on an admitted event; it does not keep a token of the old connection. The reconnection receives new tokens, while disabling or revocation also remove the interest. Likewise, the assets kept by a publication have their own revision, distinct from the process generation.
 
-Alla chiusura di Cascade: stop nuove ammissioni → revoca delle lease → checkpoint limitati nel tempo → disconnessione e arresto dei processi gestiti. L'arresto dopo crash dell'host deve dipendere dal lifecycle della piattaforma o da un supervisore controllato, non soltanto dal buon comportamento dell'addon. **Questa è una prova obbligatoria del launcher**: nessuna promessa di indipendenza dalla vita dell'app sorgente può aggirarla.
+When Cascade closes: stop new admissions → revoke leases → time-bounded checkpoints → disconnection and stop of the managed processes. The stop after a host crash must depend on the platform's lifecycle or on a controlled supervisor, not only on the addon's good behavior. **This is a mandatory launcher proof**: no promise of independence from the source app's lifetime can bypass it.
 
-Sospensione, blocco schermo e risparmio energetico riducono le concessioni. Al risveglio si rivalutano scadenze e requisiti, senza riprodurre avvisi vecchi. Clock monotono per durate operative; timestamp persistenti e regole esplicite per ricostruire attività dopo un riavvio o cambio dell'orologio.
+Sleep, screen lock and energy saving reduce the grants. On wake, expirations and requirements are re-evaluated, without replaying old notices. Monotonic clock for operational durations; persistent timestamps and explicit rules to rebuild activities after a restart or a clock change.
 
-## 10. IPC, aggiornamenti e comandi
+## 10. IPC, updates and commands
 
-Handshake: identità firmata del peer, addon ID verificato, versioni del protocollo, capacità richieste/offerte, epoch e concessioni effettive. I dati del manifest vengono confrontati con l'artefatto firmato; non sono un'autenticazione.
+Handshake: signed peer identity, verified addon ID, protocol versions, requested/offered capabilities, epoch and effective grants. The manifest data are compared with the signed artifact; they are not an authentication.
 
-Identità completa assegnata dal runtime: `(publisher, addonID, instanceID, sessionID)`. Nessun addon può scegliere il namespace di un altro. Revisioni strettamente crescenti per sessione ed epoch: duplicati e messaggi vecchi sono scartati. Un reset della revisione richiede una nuova sessione negoziata.
+Full identity assigned by the runtime: `(publisher, addonID, instanceID, sessionID)`. No addon can choose another's namespace. Strictly increasing revisions per session and epoch: duplicates and old messages are discarded. A revision reset requires a new negotiated session.
 
-Tre canali con regole differenti:
+Three channels with different rules:
 
-| Canale | Consegna e limiti |
+| Channel | Delivery and limits |
 | --- | --- |
-| Stato | Snapshot completi v1, un solo aggiornamento pendente per istanza; vince la revisione più recente; ack/credito impediscono crescita delle code |
-| Avvisi | Eventi con ID, TTL e quota; accorpamento ammesso, scarto esplicito quando superati o scaduti; nessun replay dopo disconnessione |
-| Comandi | Request ID, deadline, cancellazione e risposta; coda limitata; mai eliminati silenziosamente come uno snapshot |
+| State | Full v1 snapshots, a single pending update per instance; the most recent revision wins; ack/credit prevent queue growth |
+| Notices | Events with ID, TTL and quota; coalescing allowed, explicit discard when superseded or expired; no replay after disconnection |
+| Commands | Request ID, deadline, cancellation and response; bounded queue; never silently dropped like a snapshot |
 
-Non servono delta arbitrari nella v1: richiederebbero recovery delle revisioni mancanti e complessità aggiuntiva. Una riconnessione chiede uno snapshot nuovo e rinnova i binding; non rigioca comandi.
+Arbitrary deltas are not needed in v1: they would require recovery of the missing revisions and additional complexity. A reconnection asks for a new snapshot and renews the bindings; it does not replay commands.
 
-Un ack di trasporto non prova che un'azione sia stata completata. I comandi ripetibili dichiarano idempotenza e la relativa finestra; quelli non idempotenti non vengono ritentati automaticamente. Se il processo muore dopo l'effetto ma prima della risposta, restituiamo `outcomeUnknown` e, quando disponibile, interroghiamo lo stato. Non promettiamo exactly-once generico.
+A transport ack does not prove that an action was completed. Repeatable commands declare idempotency and its window; non-idempotent ones are not retried automatically. If the process dies after the effect but before the response, we return `outcomeUnknown` and, when available, query the state. We do not promise generic exactly-once.
 
-Validazione e decodifica fuori dal MainActor. Limiti prima del parsing applicativo: dimensione, profondità, numero di elementi, stringhe e asset. Nessuna lista illimitata. Un processo che ignora i crediti perde la connessione e viene fermato dal percorso di supervisione verificato. I limiti applicativi non eliminano tutte le allocazioni preliminari del trasporto: il test di flooding deve misurare anche queste.
+Validation and decoding off the MainActor. Limits before application parsing: size, depth, number of elements, strings and assets. No unbounded list. A process that ignores the credits loses the connection and is stopped by the verified supervision path. The application limits do not eliminate all the transport's preliminary allocations: the flooding test must measure these as well.
 
-Le immagini passano per handle opachi assegnati dal broker, con quote di byte compressi e pixel decodificati. Niente percorsi arbitrari o base64 ripetuto negli snapshot. Decoder fuori dal percorso grafico, concorrenza limitata, cache contabilizzata al proprietario e rilascio alla revoca. Per formati non fidati va provato un worker isolato.
+Images go through opaque handles assigned by the broker, with quotas on compressed bytes and decoded pixels. No arbitrary paths or repeated base64 in snapshots. Decoders off the graphics path, bounded concurrency, cache charged to the owner and release on revocation. For untrusted formats an isolated worker must be proven.
 
-## 11. Contratto delle risorse
+## 11. Resource contract
 
-### Che cosa imponiamo e che cosa misuriamo
+### What we enforce and what we measure
 
-**Limiti applicativi effettivi:** numero di attività, coda dei comandi, aggiornamenti ammessi, dimensione dello stato accettato, lease concorrenti, storage gestito, cache del renderer e asset autorizzati. Il broker può rifiutarli prima che generino ulteriore lavoro applicativo.
+**Effective application limits:** number of activities, command queue, admitted updates, size of the accepted state, concurrent leases, managed storage, renderer cache and authorized assets. The broker can reject them before they generate further application work.
 
-**Soglie sorvegliate:** CPU, footprint del processo, wakeup e costo della UI remota. Richiedono misurazione affidabile e un mezzo per arrestare il processo; non sono tetti istantanei garantiti. QoS non è una quota CPU, `Task.cancel()` non interrompe codice non cooperativo, una connessione invalidata non prova l'uscita di un processo.
+**Watched thresholds:** CPU, process footprint, wakeups and cost of the remote UI. They require reliable measurement and a means to stop the process; they are not guaranteed instantaneous ceilings. QoS is not a CPU quota, `Task.cancel()` does not interrupt non-cooperative code, an invalidated connection does not prove a process has exited.
 
-Non basiamo la promessa di memoria massima su un generico `setrlimit`: il limite CPU documentato misura tempo cumulativo e il comportamento RSS non equivale a una quota rigida di memoria moderna. Le API utilizzabili vanno provate sulle versioni target. [Apple: setrlimit](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/setrlimit.2.html).
+We do not base the maximum-memory promise on a generic `setrlimit`: the documented CPU limit measures cumulative time and the RSS behavior is not equivalent to a hard modern memory quota. The usable APIs must be proven on the target versions. [Apple: setrlimit](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/setrlimit.2.html).
 
-Il contratto "severo" consiste in ammissione preventiva dove controlliamo l'operazione, isolamento, osservazione e revoca altrove, più una barriera di rilascio sulle prestazioni. Non garantisce che codice nativo arbitrario non possa mai produrre un picco prima del rilevamento. Se questo requisito diventasse assoluto, servirebbe valutare un runtime limitato/interprete invece di addon nativi liberi: sarebbe una scelta di prodotto distinta.
+The "strict" contract consists of up-front admission where we control the operation, isolation, observation and revocation elsewhere, plus a release gate on performance. It does not guarantee that arbitrary native code can never produce a spike before detection. If this requirement became absolute, a limited runtime/interpreter would have to be evaluated instead of free native addons: that would be a distinct product choice.
 
-### Profilo iniziale da misurare
+### Initial profile to measure
 
-Valori proposti per prototipo e test, **non benchmark già ottenuti né soglie definitive**. La policy host può concedere meno del richiesto; il manifest non può alzare autonomamente i massimi.
+Values proposed for prototype and tests, **not benchmarks already obtained nor final thresholds**. The host policy can grant less than requested; the manifest cannot raise the maximums on its own.
 
-| Risorsa | Proposta iniziale | Reazione |
+| Resource | Initial proposal | Reaction |
 | --- | --- | --- |
-| Addon abilitato senza domanda | Nessun processo addon necessario; nessun timer addon | Conservare solo metadati e snapshot limitati |
-| Snapshot wire | 64 KiB; profondità 8; 128 nodi; stringa singola 4 KiB | Rifiuto prima del parsing applicativo profondo |
-| Envelope e risultati | 512 KiB totali; massimo 16 pubblicazioni e 16 operazioni; input azione 4 KiB, checkpoint 64 KiB | Rifiuto sia per numero sia per byte; asset trasferiti separatamente |
-| Piani temporali e stato host | 32 voci / 256 KiB per istanza; 8 MiB globali di stato conservato | Ammissione prima della conservazione; asset e disco hanno quote distinte |
-| Snapshot pendenti | 1 per istanza; massimo 16 istanze dichiarate per addon | Sostituire stato superato entro la quota |
-| Aggiornamenti dati | 2/s compatto, 10/s espanso, burst fino a 4 per istanza | Accorpamento; limite aggregato 20/s per addon e 40/s globale |
-| Attività | 4 sessioni ammesse per addon, 16 globali | Rifiuto motivato; priorità assegnata dall'host |
-| Avvisi | Backlog globale 8, durata massima 10 s, burst 3 per addon in 10 s | Scarto/accorpamento esplicito |
-| Lavoro e comandi | 1 job pesante per addon, 2 globali; 4 comandi pendenti per addon | Attesa limitata o `resourceDenied` |
-| CPU addon event-driven | Credito condiviso addon: capacità 100 ms CPU, ricarica 5 ms/s; conservato fra job e riavvii provider | Concessioni ridotte; revoca per violazioni ripetute |
-| Memoria provider event-driven | Profilo interno: moderato oltre 64 MiB; severo oltre 96 MiB osservati | Pausa nuove ammissioni per episodio; richiesta di stop severo, qualifica nativa separata |
-| UI remota | Obiettivo footprint totale addon 128 MiB; soglia candidata 192 MiB | Revocare la scena; se necessario arrestare addon |
-| Processi e memoria aggregata | 3 provider attivi al massimo; 1 scena remota; 256 MiB come budget di ammissione | Nuovo lavoro attende o viene rifiutato |
-| Asset renderer | 8 MiB per addon, 32 MiB globali; 1 MiB compresso e 1 megapixel per immagine | Downsample controllato o rifiuto |
-| Storage gestito | 10 MiB stato/configurazione e 20 MiB cache per addon, 100 MiB globali | Scrittura atomica rifiutata o cache espulsa |
-| Latenza | Ack azioni 100 ms, risposta ordinaria 2 s, avvio freddo 2 s, stop cooperativo 500 ms | Placeholder, timeout; nessuna attesa della UI |
-| MainActor Cascade | Lavoro addon introdotto dall'adapter p95 <1 ms e p99 <2 ms su dispositivo di riferimento | Test prestazioni bloccante per il rilascio |
+| Enabled addon with no demand | No addon process needed; no addon timer | Keep only metadata and bounded snapshots |
+| Wire snapshot | 64 KiB; depth 8; 128 nodes; single string 4 KiB | Rejection before deep application parsing |
+| Envelopes and results | 512 KiB total; at most 16 publications and 16 operations; action input 4 KiB, checkpoint 64 KiB | Rejection both by count and by bytes; assets transferred separately |
+| Timelines and host state | 32 entries / 256 KiB per instance; 8 MiB global of kept state | Admission before retention; assets and disk have distinct quotas |
+| Pending snapshots | 1 per instance; at most 16 declared instances per addon | Replace superseded state within the quota |
+| Data updates | 2/s compact, 10/s expanded, burst up to 4 per instance | Coalescing; aggregate limit 20/s per addon and 40/s global |
+| Activities | 4 admitted sessions per addon, 16 global | Reasoned rejection; priority assigned by the host |
+| Notices | Global backlog 8, maximum duration 10 s, burst 3 per addon in 10 s | Explicit discard/coalescing |
+| Work and commands | 1 heavy job per addon, 2 global; 4 pending commands per addon | Bounded wait or `resourceDenied` |
+| Event-driven addon CPU | Shared addon credit: capacity 100 ms CPU, refill 5 ms/s; kept across jobs and provider restarts | Reduced grants; revocation for repeated violations |
+| Event-driven provider memory | Internal profile: moderate above 64 MiB; severe above 96 MiB observed | Pause new admissions per episode; severe stop request, separate native qualification |
+| Remote UI | Total addon footprint target 128 MiB; candidate threshold 192 MiB | Revoke the scene; if needed stop the addon |
+| Processes and aggregate memory | 3 active providers at most; 1 remote scene; 256 MiB as admission budget | New work waits or is rejected |
+| Renderer assets | 8 MiB per addon, 32 MiB global; 1 MiB compressed and 1 megapixel per image | Controlled downsample or rejection |
+| Managed storage | 10 MiB state/configuration and 20 MiB cache per addon, 100 MiB global | Atomic write rejected or cache evicted |
+| Latency | Action ack 100 ms, ordinary response 2 s, cold launch 2 s, cooperative stop 500 ms | Placeholder, timeout; no UI wait |
+| Cascade MainActor | Addon work introduced by the adapter p95 <1 ms and p99 <2 ms on the reference device | Performance test blocking the release |
 
-CPU significa tempo user+system del processo, non percentuale totale della macchina. La ricarica 5 ms/s corrisponde allo 0,5% di un singolo core nel lungo periodo, con credito massimo 100 ms. La [decisione del 20 settembre](../../../.scratch/cascade-product/issues/46-addon-cpu-burst-policy.md) sostituisce la precedente finestra mobile rigida e il burst per job; l’host conserva il conto fra lavori e riavvii del provider. Non è il profilo della UI SwiftUI remota o dell'analisi audio continua: questi richiedono profili separati, solo visibili, misurati prima dell'ammissione pubblica. Fino ad allora non ottengono una deroga generica.
+CPU means the process's user+system time, not a percentage of the whole machine. The 5 ms/s refill corresponds to 0.5% of a single core over the long run, with a maximum credit of 100 ms. The [decision of 20 September](../../../.scratch/cascade-product/issues/46-addon-cpu-burst-policy.md) replaces the earlier rigid sliding window and the per-job burst; the host keeps the account across jobs and provider restarts. It is not the profile for remote SwiftUI UI or continuous audio analysis: these require separate, visible-only profiles, measured before public admission. Until then they get no generic exemption.
 
-Il budget globale conta processi una sola volta, runtime, broker, asset e costo delegato attribuibile. Una UI remota e il suo provider condividono il budget dell'addon: i 128 MiB non sono un'aggiunta gratuita ai 64. I servizi condivisi si misurano una volta nel totale; il lavoro causato dai consumatori viene attribuito anche a essi per impedire che scarichino costi fuori dalla propria quota. La [scelta conservativa del22settembre](../../../.scratch/cascade-product/issues/55-addon-delegated-cpu-attribution.md) attribuisce l’intero intervallo misurato a ciascun consumatore canonico attivo in quell’intervallo, una volta per consumatore e processo fisico; interessi ripetuti non moltiplicano lo stesso addebito. Non è una misura precisa per richiesta e può penalizzare un consumatore per lavoro altrui. La [propagazione lungo le catene approvata](../../../.scratch/cascade-product/issues/57-addon-transitive-cpu-attribution.md) include gli antenati attraverso interessi canonici contemporaneamente attivi; percorsi multipli non moltiplicano il medesimo addebito e archi attivi in momenti disgiunti non creano una catena. Le soglie osservate possono superare temporaneamente il budget di ammissione: quest'ultimo è una decisione preventiva, non un limite imposto dal kernel.
+The global budget counts processes only once, runtime, broker, assets and attributable delegated cost. A remote UI and its provider share the addon's budget: the 128 MiB are not a free addition to the 64. Shared services are measured once in the total; the work caused by consumers is also attributed to them to prevent them from offloading costs outside their own quota. The [conservative choice of 22 September](../../../.scratch/cascade-product/issues/55-addon-delegated-cpu-attribution.md) attributes the whole measured interval to each canonical consumer active in that interval, once per consumer and physical process; repeated interests do not multiply the same charge. It is not a precise per-request measure and can penalize a consumer for others' work. The [approved propagation along chains](../../../.scratch/cascade-product/issues/57-addon-transitive-cpu-attribution.md) includes the ancestors through simultaneously active canonical interests; multiple paths do not multiply the same charge and edges active at disjoint times do not create a chain. The observed thresholds can temporarily exceed the admission budget: the latter is an up-front decision, not a limit enforced by the kernel.
 
-La [scelta sulla memoria osservata](../../../.scratch/cascade-product/issues/64-addon-memory-attribution.md) assegna invece il footprint RAM al solo proprietario verificato del processo
-fisico: non viene attribuito a consumer diretti o transitivi di un servizio condiviso.
-La successiva [decisione sul profilo provider](../../../.scratch/cascade-product/issues/65-addon-provider-memory-policy.md) approva64/96MiB e gli episodi descritti sotto per il runtime interno. Il budget UI resta condiviso con il provider, come sopra: obiettivo totale128MiB e soglia candidata192MiB. Calibrazione, episodi, recupero e azioni del profilo UI richiedono le misure previste prima della loro definizione; misura e arresto nativi restano prerequisiti.
+The [choice on observed memory](../../../.scratch/cascade-product/issues/64-addon-memory-attribution.md) instead assigns the RAM footprint only to the verified owner of the physical
+process: it is not attributed to direct or transitive consumers of a shared service.
+The subsequent [decision on the provider profile](../../../.scratch/cascade-product/issues/65-addon-provider-memory-policy.md) approves 64/96 MiB and the episodes described below for the internal runtime. The UI budget stays shared with the provider, as above: total target 128 MiB and candidate threshold 192 MiB. Calibration, episodes, recovery and actions of the UI profile require the planned measurements before they are defined; native measurement and stop remain prerequisites.
 
-### Osservazione senza creare un problema energetico
+### Observation without creating an energy problem
 
-Nessun timer di controllo per ogni addon. Un solo supervisore esegue campionamenti raggruppati mentre ci sono processi attivi, inizialmente al massimo una volta al secondo, oltre a misure su avvio/fine job ed eventi di pressione. Quando non vi sono processi addon, il campionamento si ferma. Costo del supervisore incluso nel benchmark.
+No monitoring timer per addon. A single supervisor performs grouped sampling while there are active processes, initially at most once per second, in addition to measurements on job start/end and pressure events. When there are no addon processes, sampling stops. Supervisor cost included in the benchmark.
 
-Questo introduce un intervallo di rilevamento: una soglia CPU/RAM non può essere descritta come istantanea. Gli eventi di pressione possono anticipare la revoca. Una metrica non leggibile o un processo non arrestabile impediscono di abilitare quel profilo, invece di simulare una garanzia.
+This introduces a detection interval: a CPU/RAM threshold cannot be described as instantaneous. Pressure events can bring the revocation forward. An unreadable metric or an unstoppable process prevents enabling that profile, instead of simulating a guarantee.
 
-### Violazioni e recupero
+### Violations and recovery
 
-Rate limit: accorpamento/rifiuto immediato. Superamento moderato misurato: riduzione delle concessioni e richiesta di rilascio. Tre violazioni in cinque minuti: quarantena per quella versione, riattivabile esplicitamente. Per la CPU event-driven, la [decisione sul conteggio](../../../.scratch/cascade-product/issues/49-addon-cpu-violation-counting.md) considera al massimo una violazione per addon e giro comune quando viene misurato nuovo consumo oltre il credito disponibile: il solo debito residuo non conta, né più processi nello stesso giro moltiplicano gli incidenti. La [riduzione approvata il 21 settembre](../../../.scratch/cascade-product/issues/52-addon-cpu-reduced-admission.md) rifiuta subito nuovi lavori event-driven fino a quando un campione completo e attendibile dimostra credito strettamente positivo; non richiede il ripristino di tutti i 100 ms. Nessuna nuova coda o replay automatico. Dati mancanti/errori non riaprono e i lavori già ammessi mantengono le proprie scadenze. Superamento della soglia di arresto, flooding o crash: chiusura della sessione e arresto verificato del processo gestito, senza bloccare il notch.
+Rate limit: immediate coalescing/rejection. Measured moderate overrun: reduction of the grants and release request. Three violations in five minutes: quarantine for that version, explicitly re-enableable. For event-driven CPU, the [decision on counting](../../../.scratch/cascade-product/issues/49-addon-cpu-violation-counting.md) counts at most one violation per addon and common round when new consumption beyond the available credit is measured: residual debt alone does not count, nor do several processes in the same round multiply the incidents. The [reduction approved on 21 September](../../../.scratch/cascade-product/issues/52-addon-cpu-reduced-admission.md) immediately rejects new event-driven jobs until a complete and reliable sample shows strictly positive credit; it does not require restoring all 100 ms. No new queue or automatic replay. Missing data/errors do not reopen, and the jobs already admitted keep their own deadlines. Stop threshold exceeded, flooding or crash: session closed and verified stop of the managed process, without blocking the notch.
 
-Per la RAM del provider event-driven, il [profilo progressivo approvato il23settembre](../../../.scratch/cascade-product/issues/65-addon-provider-memory-policy.md) conta un episodio moderato quando una misura fisica corrente supera64MiB, fino a96MiB inclusi. Chiude le nuove ammissioni del solo owner; un campione valido a64MiB o meno chiude l’episodio e rimuove il solo blocco RAM. Permanenza sopra soglia, misura mancante e wake non moltiplicano incidenti. Un nuovo processo verificato può produrre un nuovo episodio, senza azzerare la storia per versione. Oltre96MiB prevale la richiesta di stop atteso, senza contare anche un moderato nello stesso giro o generare un retry crash. CPU e RAM hanno blocchi indipendenti e condividono la storia di salute: al massimo un moderato per owner/giro anche se entrambi lo provano. Quarantena non rimossa dal recupero. Nessun rilascio cache simulato o nuovo messaggio al provider: il primo intervento moderato è il rifiuto dei nuovi lavori, quelli già ammessi mantengono le proprie scadenze. Le riserve fisiche restano fino all’uscita osservata e il launcher rimane bloccato.
+For event-driven provider RAM, the [progressive profile approved on 23 September](../../../.scratch/cascade-product/issues/65-addon-provider-memory-policy.md) counts a moderate episode when a current physical measurement exceeds 64 MiB, up to 96 MiB inclusive. It closes new admissions of that owner only; a valid sample at 64 MiB or less closes the episode and removes only the RAM block. Staying above the threshold, a missing measurement and wake do not multiply incidents. A new verified process can produce a new episode, without resetting the per-version history. Above 96 MiB the expected-stop request prevails, without also counting a moderate in the same round or generating a crash retry. CPU and RAM have independent blocks and share the health history: at most one moderate per owner/round even if both register one. Quarantine not removed by recovery. No simulated cache release or new message to the provider: the first moderate intervention is rejecting new jobs; those already admitted keep their own deadlines. The physical reservations remain until the observed exit and the launcher stays blocked.
 
-Per crash transitori: tentativi al massimo dopo 1, 5 e 30 secondi, solo se rimane una domanda valida; poi quarantena. Non si continua a tentare per ore. Sleep e stop annullano i retry. La possibilità tecnica di terminare un'estensione di sistema deve essere dimostrata dal launcher; in caso contrario quel percorso non soddisfa questa proposta.
+For transient crashes: retries at most after 1, 5 and 30 seconds, only if a valid demand remains; then quarantine. Retrying does not continue for hours. Sleep and stop cancel the retries. The technical ability to terminate a system extension must be demonstrated by the launcher; otherwise that path does not satisfy this proposal.
 
-## 12. Permessi e confini di fiducia
+## 12. Permissions and trust boundaries
 
-Permessi dichiarati e concessioni effettive sono diversi. Capability, API del sistema, entitlements, TCC e consenso dell'utente si intersecano: il manifest non aggira macOS.
+Declared permissions and effective grants are different. Capabilities, system APIs, entitlements, TCC and user consent intersect: the manifest does not bypass macOS.
 
-Il broker offre API mirate: leggere stato audio autorizzato, eseguire uno specifico comando, leggere file selezionati, fare richieste di rete autorizzate, accedere allo storage proprio. Non offre un proxy universale verso shell, filesystem o API private di Cascade.
+The broker offers targeted APIs: read authorized audio state, execute a specific command, read selected files, make authorized network requests, access its own storage. It does not offer a universal proxy to the shell, the filesystem or Cascade's private APIs.
 
-La firma viene verificata all'installazione, al binding e alla connessione attraverso l'identità del peer fornita dal sistema; non tramite un PID o un Team ID autodichiarato. Gli handle hanno scope, proprietario e generazione, e non sono trasferibili arbitrariamente ad altri addon.
+The signature is verified at installation, at binding and at connection through the peer identity provided by the system; not through a PID or a self-declared Team ID. Handles have scope, owner and generation, and are not arbitrarily transferable to other addons.
 
-Un provider non presta i propri permessi al consumatore: il broker verifica chiamante, destinazione, operazione e concessione al momento della richiesta. I servizi di terzi non ricevono file o dati di altri addon solo perché soddisfano `REQUIRES`.
+A provider does not lend its own permissions to the consumer: the broker verifies caller, destination, operation and grant at the time of the request. Third-party services do not receive files or data of other addons just because they satisfy `REQUIRES`.
 
-Le quote di rete/storage sono vincolanti soltanto per operazioni che transitano dal broker e per accessi effettivamente vietati dalla sandbox. Un entitlement di rete diretta non diventa una whitelist di domini grazie al JSON. Il profilo standard deve vietare gli accessi diretti che promette di governare; se packaging/entitlements non lo permettono, si riduce esplicitamente la garanzia o si rifiuta il profilo. Non si confonde "firmato" con "isolato".
+Network/storage quotas are binding only for operations that pass through the broker and for accesses actually forbidden by the sandbox. A direct network entitlement does not become a domain whitelist thanks to the JSON. The standard profile must forbid the direct accesses it promises to govern; if packaging/entitlements do not allow it, the guarantee is explicitly reduced or the profile is rejected. "Signed" is not confused with "isolated".
 
-Revoca di un permesso: cancellazione delle operazioni interessate, invalidazione delle lease e aggiornamento della disponibilità della feature. Le altre funzioni autonome restano attive se sicure.
+Revocation of a permission: cancellation of the affected operations, invalidation of the leases and update of the feature's availability. The other autonomous functions stay active if safe.
 
-Privacy: lo stato sensibile viene classificato prima del rendering; testo, accessibilità, URL e asset seguono la stessa redazione. I comandi sono intenti espliciti; i link vengono validati e richiedono l'azione dell'utente per aprire l'app sorgente. Log senza contenuti sensibili, con dimensione e durata limitate.
+Privacy: sensitive state is classified before rendering; text, accessibility, URLs and assets follow the same redaction. Commands are explicit intents; links are validated and require the user's action to open the source app. Logs without sensitive content, with bounded size and lifetime.
 
-## 13. Rendering e prestazioni percepite
+## 13. Rendering and perceived performance
 
-### Due modalità SwiftUI nello stesso addon
+### Two SwiftUI modes in the same addon
 
-La modalità ordinaria usa un builder Swift del nostro SDK con componenti come riga, simbolo, testo, progresso, conto alla rovescia e pulsante con azione identificata. Il builder produce una descrizione serializzabile limitata; il renderer di Cascade la realizza con vere viste SwiftUI. Non serializza `AnyView`, closure di `Button` o una vista SwiftUI arbitraria. Preview e runtime devono usare lo stesso renderer e gli stessi limiti.
+The ordinary mode uses a Swift builder from our SDK with components such as row, symbol, text, progress, countdown and button with an identified action. The builder produces a bounded serializable description; Cascade's renderer realizes it with real SwiftUI views. It does not serialize `AnyView`, `Button` closures or an arbitrary SwiftUI view. Preview and runtime must use the same renderer and the same limits.
 
-La modalità avanzata usa una scena SwiftUI nell'estensione, ospitata tramite ExtensionKit. La scena viene acquisita soltanto per una superficie visibile ammessa e rilasciata quando non serve; l'eventuale lavoro continuativo usa una lease separata. All'assenza della scena si mostra la presentazione ordinaria o uno stato di attesa limitato. Non si promette di conservare il comportamento completo della scena dopo la fine del suo processo.
+The advanced mode uses a SwiftUI scene in the extension, hosted through ExtensionKit. The scene is acquired only for an admitted visible surface and released when not needed; any continuous work uses a separate lease. When the scene is absent the ordinary presentation or a bounded waiting state is shown. There is no promise to keep the scene's full behavior after its process ends.
 
-Un piano temporale è una lista finita di presentazioni con date e scadenza: la v1 limita a 32 voci e 256 KiB per istanza, contando tutti i byte nel budget globale dello stato host. Countdown e orologio sono componenti temporali dell'host e non richiedono 32 voci al minuto. Azioni e servizi rimangono messaggi tipizzati; uno snapshot fotografico della vista non sostituisce accessibilità e interazioni.
+A timeline is a finite list of presentations with dates and expiration: v1 limits it to 32 entries and 256 KiB per instance, counting all the bytes in the global host state budget. Countdown and clock are host time components and do not require 32 entries per minute. Actions and services remain typed messages; a photographic snapshot of the view does not replace accessibility and interactions.
 
-Il notch anima geometria e snapshot già validati. Nessuna chiamata remota nel callback del display link, nessun getter dell'addon nel loop di animazione, nessuna decodifica sul MainActor. Un addon lento mostra stato precedente valido o un placeholder.
+The notch animates geometry and snapshots already validated. No remote call in the display link callback, no addon getter in the animation loop, no decoding on the MainActor. A slow addon shows the previous valid state or a placeholder.
 
-La presentazione dichiarativa v1 offre testo, simbolo, immagine limitata, progresso, timer basato su deadline, indicatore di stato e azioni tipizzate. Una pubblicazione può contenere le rappresentazioni richieste dalla sua famiglia (widget, attività, avviso), sotto la stessa identità e revisione; non si creano sessioni distinte per lato compatto e vista estesa. Profondità/layout massimi fanno parte dello schema. Non introduce HTML/JavaScript, shader arbitrari o animazioni continue non governate.
+The v1 declarative presentation offers text, symbol, bounded image, progress, deadline-based timer, status indicator and typed actions. A publication can contain the representations required by its family (widget, activity, notice), under the same identity and revision; distinct sessions are not created for the compact side and the extended view. Maximum depth/layout are part of the schema. It does not introduce HTML/JavaScript, arbitrary shaders or ungoverned continuous animations.
 
-La migrazione verifica le sequenze visive già esistenti: se occorre un componente imageSequence pubblico, P3 ne limita durata, frame, dimensioni, visibilità e costo totale, aggiornando anche schema e test. Non concede animazioni arbitrarie né una factory riservata al widget del team.
+The migration verifies the existing visual sequences: if a public imageSequence component is needed, P3 limits its duration, frames, dimensions, visibility and total cost, also updating schema and tests. It grants neither arbitrary animations nor a factory reserved for the team's widget.
 
-Una scena remota viene creata soltanto per una superficie ammessa e visibile. Per l'espansione possiamo animare subito il contenitore e incorporare il contenuto quando pronto: la reattività dell'hover non dipende dalla partenza del processo. Focus, menu, resize, trasparenza e accessibilità sono prove necessarie, non dettagli rimandati alla fine.
+A remote scene is created only for an admitted and visible surface. For the expansion we can animate the container immediately and embed the content when ready: hover responsiveness does not depend on the process starting. Focus, menus, resize, transparency and accessibility are necessary proofs, not details deferred to the end.
 
-Riduci movimento elimina interpolazioni non essenziali; Riduci trasparenza e VoiceOver rispettano i contratti esistenti. Il rendering dello stato di un timer può avanzare localmente senza nuove revisioni dal provider.
+Reduce Motion removes non-essential interpolations; Reduce Transparency and VoiceOver respect the existing contracts. The rendering of a timer's state can advance locally without new revisions from the provider.
 
-## 14. Persistenza, aggiornamento e rimozione
+## 14. Persistence, update and removal
 
-Separare configurazione persistente, snapshot effimero e cache espellibile. Scritture atomiche, quote prima del commit, schema versionato. Checkpoint su cambi significativi e stop, non su ogni frame. L'attività non si riattiva dopo un crash soltanto perché esiste un vecchio snapshot: deve risultare ancora valida.
+Separate persistent configuration, ephemeral snapshot and evictable cache. Atomic writes, quotas before commit, versioned schema. Checkpoints on significant changes and on stop, not on every frame. The activity is not reactivated after a crash only because an old snapshot exists: it must still turn out to be valid.
 
-Aggiornamento: verificare artefatto e schema, risolvere l'intero piano, mostrare nuovi permessi eventualmente richiesti, fermare la vecchia versione, migrare una copia dello stato e attivare la nuova. Conservare vecchio artefatto e vecchio stato fino all'esito; non promettere rollback dopo una migrazione distruttiva senza una copia compatibile.
+Update: verify artifact and schema, resolve the whole plan, show any newly requested permissions, stop the old version, migrate a copy of the state and activate the new one. Keep the old artifact and old state until the outcome; do not promise rollback after a destructive migration without a compatible copy.
 
-Se il contenitore viene aggiornato da un meccanismo esterno e la vecchia versione non è più disponibile, Cascade può disabilitare in sicurezza e conservare i dati; non può promettere il ripristino di un binario che non possiede.
+If the container is updated by an external mechanism and the old version is no longer available, Cascade can safely disable and keep the data; it cannot promise to restore a binary it does not own.
 
-Rimozione: prima revoca e rivalutazione dei dipendenti, poi eliminazione del pacchetto gestito. Dati dell'utente eliminati soltanto mediante scelta esplicita; cache sempre ricostruibile. Se scompare l'app completa che conteneva fisicamente l'estensione, scompare anche quella copia dell'addon: per sopravvivere alla disinstallazione serve la distribuzione standalone, non soltanto codice autosufficiente.
+Removal: first revocation and re-evaluation of the dependents, then deletion of the managed package. User data deleted only through an explicit choice; cache always rebuildable. If the full app that physically contained the extension disappears, that copy of the addon disappears too: surviving uninstallation needs the standalone distribution, not just self-sufficient code.
 
-## 15. Percorso di realizzazione e criteri di completamento
+## 15. Implementation path and completion criteria
 
-Queste sono fasi e barriere verificabili, non stime di calendario o un piano di implementazione approvato.
+These are verifiable phases and gates, not calendar estimates or an approved implementation plan.
 
-### Fase 0 — provare il confine di esecuzione
+### Phase 0: prove the execution boundary
 
-Prototipo separato con Cascade host di prova e addon timer autosufficiente in contenitore minimo. Verificare macOS 14/15/26 secondo disponibilità, firma di editori diversi quando possibile, discovery, abilitazione, IPC async, lettura metriche e arresto dopo stop, crash dell'host e addon non cooperativo. UI remota come prova separata dello stesso trasporto.
+Separate prototype with a test Cascade host and a self-sufficient timer addon in a minimal container. Verify macOS 14/15/26 according to availability, signing by different publishers when possible, discovery, enabling, async IPC, metrics reading and halting after stop, host crash and non-cooperative addon. Remote UI as a separate proof of the same transport.
 
-Uscita: evidenze riproducibili. Se una versione OS o una seconda identità di firma non è disponibile, il caso resta non verificato e non viene dichiarato supportato. Se il launcher non permette controllo sufficiente, rivediamo il launcher o il supporto OS prima di congelare l'SDK.
+Exit: reproducible evidence. If an OS version or a second signing identity is not available, the case stays unverified and is not declared supported. If the launcher does not allow sufficient control, we revise the launcher or the OS support before freezing the SDK.
 
-### Fase 1 — congelare il contratto v0.1
+### Phase 1: freeze the v0.1 contract
 
-Schema manifest, identità, versioni, snapshot, errori e policy host. Resolver puro e deterministico. Test di cicli, conflitti, dipendenze mancanti, optional per feature, binding persistiti e limiti del grafo. Pacchetto SDK compilabile da un progetto esterno senza importare il motore.
+Manifest schema, identity, versions, snapshots, errors and host policy. Pure, deterministic resolver. Tests for cycles, conflicts, missing dependencies, per-feature optionals, persisted bindings and graph limits. SDK package compilable from an external project without importing the engine.
 
-### Fase 2 — runtime e broker
+### Phase 2: runtime and broker
 
-Lease, scheduler, crediti, code finite, ammissione globale, storage e supervisore. Fuzzing dei payload, flooding, timeout, risultati tardivi, revoca, terminazione e retry limitati. Nessun percorso sincrono verso addon sul MainActor.
+Leases, scheduler, credits, finite queues, global admission, storage and supervisor. Payload fuzzing, flooding, timeouts, late results, revocation, termination and bounded retries. No synchronous path to addons on the MainActor.
 
-### Fase 3 — rendering e adattamento dell'esistente
+### Phase 3: rendering and adaptation of the existing code
 
-Adattare `NotchWidget` e attività a identità e snapshot del runtime. Uniformare revoca e invalidazione per widget. Spostare gradualmente l'orchestrazione da `CascadeServices` al runtime, conservando i contratti e i comportamenti verificati del motore. Migrare un provider semplice prima di audio/Bluetooth.
+Adapt `NotchWidget` and activities to runtime identity and snapshots. Unify revocation and per-widget invalidation. Gradually move the orchestration from `CascadeServices` to the runtime, keeping the engine's verified contracts and behaviors. Migrate a simple provider before audio/Bluetooth.
 
-La migrazione usa lo stesso SDK distribuito agli sviluppatori esterni. È vietato creare nuovi widget direttamente contro `NotchEngine`, `WidgetHost` o `NotchController`. Un controllo delle dipendenze e prove di parità fra addon incorporato e standalone rendono verificabile questa regola.
+The migration uses the same SDK distributed to external developers. Creating new widgets directly against `NotchEngine`, `WidgetHost` or `NotchController` is forbidden. A dependency check and parity proofs between built-in and standalone addons make this rule verifiable.
 
-### Fase 4 — sviluppatore esterno e distribuzione
+### Phase 4: external developer and distribution
 
-Template di addon, validatore manifest, host di test, due esempi indipendenti: timer senza app sorgente e addon che consuma il suo servizio via `REQUIRES`. Installazione standalone, aggiornamento, rimozione, collisione con copia incorporata e permessi spiegati. Firma/compatibilità del wire protocol con SDK vecchio e host nuovo.
+Addon template, manifest validator, test host, two independent examples: timer without source app and an addon that consumes its service via `REQUIRES`. Standalone installation, update, removal, collision with a built-in copy and explained permissions. Signing/wire protocol compatibility with old SDK and new host.
 
-### Fase 5 — budget misurati e pubblicazione v1
+### Phase 5: measured budgets and v1 release
 
-Soglie calibrate su macchine di riferimento, alimentazione/batteria, 60/120 Hz, attività visibile/nascosta, sleep/wake e pressione memoria. Registrare build, OS, hardware, durata, baseline, p95/p99, footprint di tutti i processi, CPU e wakeup. La profilazione diagnostica non deve falsificare la misura della release.
+Thresholds calibrated on reference machines, AC power/battery, 60/120 Hz, visible/hidden activity, sleep/wake and memory pressure. Record build, OS, hardware, duration, baseline, p95/p99, footprint of all processes, CPU and wakeups. Diagnostic profiling must not falsify the release measurement.
 
-Matrice minima di accettazione:
+Minimum acceptance matrix:
 
-1. App sorgente assente, sua cache e dati non disponibili: l'addon standalone esegue tutte le funzioni dichiarate autonome.
-2. App installata ma chiusa: nessun avvio implicito; il comando esplicito di apertura funziona.
-3. Cascade chiusa normalmente o terminata improvvisamente: nessun lavoro addon gestito rimane residente oltre il limite dichiarato e verificato del launcher.
-4. 100 addon installati ma inattivi: nessun processo per addon, nessun polling proporzionale agli installati.
-5. Venti richieste contemporanee: concorrenza, memoria prenotata e code restano nei limiti; motivi di rifiuto corretti.
-6. Due consumer dello stesso servizio: una sorgente condivisa, rilascio all'ultima lease; nessun raddoppio della cattura.
-7. Dependency crash/revoca: feature dipendenti degradano, funzioni autonome e notch restano utilizzabili.
-8. Loop CPU, crescita RAM, flooding, payload profondo/oversize e decoder ostile: niente blocco dell'host; rilevamento/arresto misurati con i limiti residui documentati.
-9. Cento cicli apertura/chiusura: nessuna crescita monotona di risorse trattenute, nessuna invalidazione tramite contesto revocato.
-10. Aggiornamento incompatibile o migrazione fallita: vecchia versione ripristinata quando disponibile, altrimenti addon disabilitato con dati conservati.
-11. Nessun heartbeat o polling dell'addon a riposo; costo del solo supervisore misurato quando necessario.
-12. UI remota: crash, focus, input, accessibilità e consumi verificati prima di offrire questa capacità pubblicamente.
+1. Source app absent, its cache and data unavailable: the standalone addon runs all the functions declared autonomous.
+2. App installed but closed: no implicit launch; the explicit open command works.
+3. Cascade closed normally or terminated abruptly: no managed addon work stays resident beyond the launcher's declared and verified limit.
+4. 100 addons installed but inactive: no process per addon, no polling proportional to the installed ones.
+5. Twenty simultaneous requests: concurrency, reserved memory and queues stay within limits; correct rejection reasons.
+6. Two consumers of the same service: one shared source, release at the last lease; no doubling of the capture.
+7. Dependency crash/revocation: dependent features degrade, autonomous functions and the notch stay usable.
+8. CPU loop, RAM growth, flooding, deep/oversize payload and hostile decoder: no host hang; detection/stop measured with the documented residual limits.
+9. One hundred open/close cycles: no monotonic growth of retained resources, no invalidation through a revoked context.
+10. Incompatible update or failed migration: old version restored when available, otherwise addon disabled with data kept.
+11. No heartbeat or polling by the addon at rest; cost of the supervisor alone measured when needed.
+12. Remote UI: crash, focus, input, accessibility and resource consumption verified before offering this capability publicly.
 
-## 16. Decisioni approvate e prove ancora necessarie
+## 16. Approved decisions and proofs still needed
 
-Sono approvati: autonomia rispetto all'app sorgente con Cascade aperta; sistema nativo; contenuto ordinario conservato dall'host; SDK Swift a componenti con renderer SwiftUI; scene SwiftUI remote avanzate; processi su domanda per codice personalizzato; servizi condivisi e REQUIRES per feature; stessa piattaforma per i widget del team e quelli esterni; limiti applicativi e supervisione dei processi.
+Approved: autonomy from the source app with Cascade open; native system; ordinary content kept by the host; component-based Swift SDK with a SwiftUI renderer; advanced remote SwiftUI scenes; on-demand processes for custom code; shared services and per-feature REQUIRES; the same platform for the team's widgets and external ones; application limits and process supervision.
 
-Rimangono da dimostrare: packaging e launcher sulle versioni target; firma e comunicazione fra editori distinti; arresto anche dopo crash dell'host; API delle metriche realmente disponibili; comportamento delle scene remote nel pannello; soglie e finestra di riutilizzo misurate. Un caso non verificato non diventa supportato per dichiarazione e non richiede di riaprire le scelte di prodotto già approvate. Se una prova invalida un vincolo approvato, si presenta il risultato e la modifica concreta necessaria.
+Still to be demonstrated: packaging and launcher on the target versions; signing and communication between distinct publishers; stop even after a host crash; metrics APIs actually available; behavior of remote scenes in the panel; measured thresholds and reuse window. An unverified case does not become supported by declaration and does not require reopening the product choices already approved. If a proof invalidates an approved constraint, the result and the concrete change needed are presented.
 
-Il [piano esecutivo](../plans/2026-09-09-addon-runtime.md) ordina queste prove prima delle dipendenze produttive, include la migrazione dei widget del team e mantiene tutti i task implementativi non completati.
+The [execution plan](../plans/2026-09-09-addon-runtime.md) orders these proofs before the production dependencies, includes the migration of the team's widgets and keeps all implementation tasks as not completed.
 
-## Riferimenti del progetto
+## Project references
 
-- [Contratti attività esistenti](../../architecture/live-activity-contracts.md)
-- [Ricerca SwiftUI ed estensioni](../../wayfinder/research/swiftui-extensions.md)
+- [Existing activity contracts](../../architecture/live-activity-contracts.md)
+- [SwiftUI and extensions research](../../wayfinder/research/swiftui-extensions.md)
 - [NotchWidget](../../../CascadeKit/Sources/CascadeKit/Core/Widgets/NotchWidget.swift)
 - [WidgetContext](../../../CascadeKit/Sources/CascadeKit/Core/Widgets/WidgetContext.swift)
 - [WidgetHost](../../../CascadeKit/Sources/CascadeKit/Core/Widgets/WidgetHost.swift)

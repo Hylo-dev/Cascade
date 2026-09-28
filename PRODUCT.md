@@ -6,40 +6,40 @@ product
 
 ## Users
 
-Utenti macOS che consultano attività e controlli contestuali senza lasciare l'app in uso.
+macOS users who check activities and contextual controls without leaving the app they are using.
 
 ## Product Purpose
 
-Cascade raccoglie widget, Live Activities e strumenti contestuali in un notch modulare, mantenendo basso il consumo di CPU, memoria ed energia.
+Cascade gathers widgets, Live Activities and contextual tools in a modular notch, while keeping CPU, memory and energy use low.
 
 ## Brand Personality
 
-Nativo, discreto, reattivo. Riferimenti funzionali: Dynamic Island e BoringNotch; per il futuro stile glass, Sapphire.
+Native, discreet, responsive. Functional references: Dynamic Island and BoringNotch; for the future glass style, Sapphire.
 
 ## Anti-references
 
-Controlli che rubano il focus, animazioni decorative continue, interfacce che interrompono il lavoro e duplicazione degli avvisi di sistema. Vincoli ricavati da CLAUDE.md e dalla specifica interattiva approvata.
+Controls that steal focus, continuous decorative animations, interfaces that interrupt work, and duplicates of system alerts. Constraints taken from CLAUDE.md and the approved interactive specification.
 
 ## Design Principles
 
-- Mostrare il contesto senza interrompere l'azione in corso.
-- Conservare il legame fisico con il notch e le convenzioni native macOS.
-- Rendere i moduli indipendenti attraverso contratti piccoli e verificabili.
-- Sviluppare anche i widget Cascade con lo stesso [SDK e runtime degli addon](docs/superpowers/specs/2026-09-09-addon-runtime-design.md): identici permessi, isolamento e limiti, senza percorsi privati privilegiati.
-- Conservare i contenuti validi senza tenere inutilmente attivo il codice che li ha prodotti; separare visibilità, lavoro e durata dell'attività.
-- Aggiornare la UI solo quando cambia un input reale.
-- Attività e avvisi seguono i [contratti del notch](docs/architecture/live-activity-contracts.md), adattati dalle HIG Apple Live Activities.
+- Show context without interrupting the action in progress.
+- Keep the physical bond with the notch and the native macOS conventions.
+- Make modules independent through small, verifiable contracts.
+- Build Cascade's own widgets with the same [addon SDK and runtime](docs/superpowers/specs/2026-09-09-addon-runtime-design.md) too: identical permissions, isolation and limits, with no privileged private paths.
+- Keep valid content without needlessly keeping alive the code that produced it; separate an activity's visibility, work and lifetime.
+- Update the UI only when a real input changes.
+- Activities and notices follow the [notch contracts](docs/architecture/live-activity-contracts.md), adapted from Apple's Live Activities HIG.
 
 ## Design Workflow
 
-Per il design usare **Impeccable** e **Taste** (`design-taste-frontend`), applicando le loro indicazioni al prodotto nativo SwiftUI/AppKit e alle [linee guida Apple per Live Activities e Dynamic Island](https://developer.apple.com/design/human-interface-guidelines/live-activities). Il widget Musica è il riferimento interno per dimensioni, densità, colori diffusi e movimento.
+For design, use **Impeccable** and **Taste** (`design-taste-frontend`), applying their guidance to the native SwiftUI/AppKit product and to [Apple's guidelines for Live Activities and the Dynamic Island](https://developer.apple.com/design/human-interface-guidelines/live-activities). The Music widget is the internal reference for size, density, diffused color and motion.
 
-- Nessuna pagina del ripiano supera l'ingombro standard del notch: ridisporre il contenuto, non ingrandire la superficie.
-- Il taglio fisico esclude solo il centro superiore; i lati possono usare la fascia superiore. Mantenere margini coerenti con la sagoma, senza una fascia vuota uniforme.
-- Usare bagliori contenuti e colore del notch per dare identità al contenuto, come la musica; rispettare Riduci trasparenza e Riduci movimento.
-- La priorità di una pagina occupata non implica apertura permanente: il ripiano rimane il contesto principale fino allo svuotamento, con normali apertura e chiusura del notch.
-- Il riconoscimento e l'ammissione del drag non dipendono dalla durata delle animazioni.
+- No shelf page exceeds the notch's standard footprint: rearrange the content, do not enlarge the surface.
+- The physical cutout excludes only the top center; the sides may use the top band. Keep margins consistent with the silhouette, without a uniform empty band.
+- Use contained glows and the notch's color to give the content identity, as the music does; respect Reduce Transparency and Reduce Motion.
+- An occupied page's priority does not mean it stays open: the shelf remains the main context until it is cleared, with the notch opening and closing normally.
+- Recognizing and admitting a drag does not depend on how long animations take.
 
 ## Accessibility & Inclusion
 
-Usare controlli nativi con etichette accessibili, contrasto leggibile, preferenze di movimento ridotto e aptica facoltativa. Nessun obiettivo formale di certificazione è stato specificato.
+Use native controls with accessible labels, readable contrast, reduced-motion preferences and optional haptics. No formal certification target has been specified.

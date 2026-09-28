@@ -1,4 +1,4 @@
-# Instradare il ripiano locale e riconoscere il drag in ingresso
+# Route the local shelf and recognize the incoming drag
 
 ID: 88
 Parent: cascade-product
@@ -11,8 +11,8 @@ Blocked by: 80, 87
 
 ## Question
 
-Eseguire la fase B del [piano locale approvato](../../../docs/superpowers/plans/2026-09-26-local-file-shelf.md): slot di pagina dedicato nel motore, default all'apertura quando occupato e navigazione manuale preservata. `NSDraggingDestination` riconosce file correnti, batte una sola volta e mostra il bersaglio; testo, annullamento e pasteboard stantia non acquisiscono. Verificare cambio display/proprietario, chiusura e Riduci movimento. Nessuna attività fittizia, fallback Musica o apertura del launcher. Test mirati, review root e commit selettivo.
+Run phase B of the [approved local plan](../../../docs/superpowers/plans/2026-09-26-local-file-shelf.md): a dedicated page slot in the engine, default on opening when occupied and manual navigation preserved. `NSDraggingDestination` recognizes current files, pulses only once and shows the target; text, cancellation and a stale pasteboard do not capture. Verify display/owner change, closing and Reduce Motion. No fake activity, no Music fallback and no opening of the launcher. Targeted tests, root review and selective commit.
 
 ## Answer
 
-Implementato in `ec14e70` e accettato dopo review root: slot contestuale dedicato, selezione predefinita del ripiano occupato senza cancellare la scelta manuale, riconoscimento del drag file e battito/preview finiti con gestione di annullamento e Riduci movimento. Verifica indipendente root: 71/71 test mirati passati (`root-task88-tests.log`). Il filtro combinato ha passato 139/140 test; l'unico errore è il test intermittente preesistente del drag già documentato, quindi la suite combinata non è dichiarata verde. Composizione app, consegna in uscita e QA nel notch reale seguono nei ticket locali; nessuna qualifica del launcher addon.
+Implemented in `ec14e70` and accepted after root review: a dedicated contextual slot, default selection of the occupied shelf without erasing the manual choice, recognition of the file drag and a finite pulse/preview with handling of cancellation and Reduce Motion. Independent root verification: 71/71 targeted tests passed (`root-task88-tests.log`). The combined filter passed 139/140 tests; the only failure is the already documented pre-existing intermittent drag test, so the combined suite is not claimed green. App composition, outgoing delivery and QA in the real notch follow in the local tickets; no qualification of the addon launcher.

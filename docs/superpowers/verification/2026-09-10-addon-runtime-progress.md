@@ -1,105 +1,105 @@
-# Addon runtime — avanzamento del 10 settembre 2026
+# Addon runtime: progress on 10 September 2026
 
-La feature non è conclusa. È terminata l'indagine C0 con esito **bloccato**; sono disponibili parti indipendenti di C2, C4 e C12, estese nella continuazione descritta sotto. L'utente ha successivamente [accettato il rischio del lavoro delegato](../specs/2026-09-10-addon-control-policy.md). Il piano è stato aggiornato su quel solo confine; nessun launcher è stato abilitato e gli altri difetti tecnici restano da risolvere.
+The feature is not complete. The C0 investigation has finished with outcome **blocked**; independent parts of C2, C4 and C12 are available, extended in the continuation described below. The user later [accepted the risk of delegated work](../specs/2026-09-10-addon-control-policy.md). The plan was updated on that boundary alone; no launcher has been enabled and the other technical defects remain to be resolved.
 
-## Codice implementato e revisionato
+## Code implemented and reviewed
 
-- `PublicationStore.accept([Publication], owner:)`: fino a 16 identità distinte, un istante comune, aggiornamento atomico di contenuti/quote/revisioni. Il fallimento di una voce ripristina ogni voce precedente. Un solo conteggio senza copie dello store per batch. Quattro test nuovi, incluso un test di mutazione che rileva l'omissione del ripristino dei byte.
-- `ResourcePolicy` e `ResourceGovernor`: prenotazioni dell'host, limiti per addon e globali su lavoro, contenuti, memoria ammessa e disco; metadati delle prenotazioni conteggiati; rilascio canonico per proprietario e rilascio automatico al termine dell'operazione anche su errore. Dieci test nuovi. I valori di memoria sono stime di ammissione e non limiti istantanei del processo; non sono ancora collegati a launcher, scheduler o broker.
-- `cascade-addon validate`: eseguibile Swift dipendente solo dai contratti pubblici. Legge file regolari con limite prima del parsing, usa AddonManifest.decode e restituisce esiti distinti per dati non validi e argomenti errati. Quattro test nuovi e verifica dell'eseguibile reale. [Guida](../../addons/README.md).
-- Harness C0: validatore dei report e regressioni per non considerare prova di uscita un errore di osservazione, né invalidazione autenticata un messaggio mancante. Deadline comune di cinque secondi nei limiti delle attese richieste. Dieci test del validatore e otto del produttore di evidenze; non sostituiscono osservazioni native.
+- `PublicationStore.accept([Publication], owner:)`: up to 16 distinct identities, one shared instant, atomic update of contents/quotas/revisions. The failure of one entry restores every previous entry. One count per batch, with no copies of the store. Four new tests, including a mutation test that detects the omission of the byte restoration.
+- `ResourcePolicy` and `ResourceGovernor`: host reservations, per-addon and global limits on work, content, admitted memory and disk; reservation metadata counted; canonical release per owner and automatic release at the end of the operation, even on error. Ten new tests. The memory values are admission estimates and not instantaneous process limits; they are not yet connected to the launcher, scheduler or broker.
+- `cascade-addon validate`: a Swift executable that depends only on the public contracts. It reads regular files with a limit before parsing, uses AddonManifest.decode and returns distinct outcomes for invalid data and wrong arguments. Four new tests and verification of the real executable. [Guide](../../addons/README.md).
+- C0 harness: report validator and regressions so that an observation error is not taken as proof of exit, nor a missing message as authenticated invalidation. Shared five-second deadline within the limits of the required waits. Ten validator tests and eight for the evidence producer; they do not replace native observations.
 
-## Verifica del primo incremento
+## Verification of the first increment
 
-Suite intera: `swift test --package-path CascadeKit --scratch-path /private/tmp/cascade-addon-swift-build --no-parallel --disable-sandbox`, Xcode beta. **248 test passati**, exit 0: Runtime49, Presentation15, motore156, Contracts24, tool4. Log `/private/tmp/cascade-completion-current-all-tests.log`.
+Full suite: `swift test --package-path CascadeKit --scratch-path /private/tmp/cascade-addon-swift-build --no-parallel --disable-sandbox`, Xcode beta. **248 tests passed**, exit 0: Runtime 49, Presentation 15, engine 156, Contracts 24, tool 4. Log `/private/tmp/cascade-completion-current-all-tests.log`.
 
-Sono conservati i RED comportamentali e i GREEN mirati. Le revisioni delle tre parti Swift sono passate; anche i tre rilievi della revisione C0 sono stati corretti e rivalutati. Nessun commit o staging del lavoro preesistente.
+The behavioral REDs and the targeted GREENs are preserved. The reviews of the three Swift parts passed; the three findings of the C0 review were also corrected and reassessed. No commit or staging of the pre-existing work.
 
-Le [prove native](2026-09-10-addon-launcher-decision.md) conservano i controesempi. Venti sequenze di arresto del figlio diretto e quaranta echo hanno prodotto misure, senza qualificare il launcher. Il worker può sopravvivere al supervisore e può avviare una fixture innocua tramite Launch Services; il cambio eseguibile conserva il canale diagnostico. Le correzioni successive degli harness hanno nuove prove deterministiche, non sono presentate come una nuova esecuzione dei vecchi esperimenti nativi.
+The [native tests](2026-09-10-addon-launcher-decision.md) preserve the counterexamples. Twenty termination sequences of the direct child and forty echoes produced measurements, without qualifying the launcher. The worker can survive the supervisor and can start a harmless fixture through Launch Services; the executable change keeps the diagnostic channel. The later harness fixes have new deterministic tests; they are not presented as a new run of the old native experiments.
 
-Build app: **riuscita**, exit 0, con lo script ufficiale dalla copia locale verificata. L'avvio dal checkout iCloud si era fermato in NSFileCoordinator prima della compilazione, confermato da sample; prima del nuovo tentativo sono stati confrontati 259 file di input identici. Firma deep/strict verificata e `/Applications/Cascade.app` aggiornato alla build `CascadeAddonDevelopment`. Riavvio verificato: PID59576 → PID65407, stesso percorso atteso in DerivedData. Log `/private/tmp/cascade-completion-current-app-build-local.log` e `/private/tmp/cascade-completion-current-restart.json`. La toolchain ha emesso avvisi sulle variabili SWIFT_DEBUG_INFORMATION nel post-action; nessun errore di compilazione. La revisione complessiva di questo incremento è passata e non certifica il completamento della feature.
+App build: **succeeded**, exit 0, with the official script from the verified local copy. The start from the iCloud checkout had stalled in NSFileCoordinator before compilation, confirmed by sample; before the new attempt 259 identical input files were compared. Deep/strict signing verified and `/Applications/Cascade.app` updated to the `CascadeAddonDevelopment` build. Relaunch verified: PID59576 → PID65407, same expected path in DerivedData. Logs `/private/tmp/cascade-completion-current-app-build-local.log` and `/private/tmp/cascade-completion-current-restart.json`. The toolchain emitted warnings about the SWIFT_DEBUG_INFORMATION variables in the post-action; no compilation errors. The overall review of this increment passed and does not certify completion of the feature.
 
-## Continuazione dopo la decisione sul controllo diretto
+## Continuation after the decision on direct control
 
-- `ActionJournal`: richiesta duplicata senza nuovo lavoro, distinzione fra invio/ricezione/esito, risultato incerto senza retry automatico, rifiuto di risposte di altre generazioni; spazio per la risposta riservato prima del comando.
-- `AddonScheduler`: un lavoro per addon e due globali, quattro comandi pendenti, aggiornamenti accorpati, priorità con invecchiamento e posti liberati solo alla conclusione effettiva del lavoro. Scadenze scadute e disattivazioni vengono restituite al coordinatore, senza perdita silenziosa dei comandi.
-- `DeadlineQueue` e `RuntimeInstant`: date civili separate dal tempo trascorso, sostituzioni limitate e drenaggio una volta sola dopo sleep/wake. Nessun timer o processo proprio.
-- `AddonHealthStore`: storia della versione limitata, quarantena, ritardi di retry, ticket monouso e invalidazione delle vecchie sessioni. Nessun campionamento o arresto nativo attribuito a questa componente pura.
-- [Nuove prove C0](2026-09-10-addon-direct-v1.md): controllo isolato dei messaggi tramite audit token positivo dopo exec, inclusa una risposta già in coda; pulizia del gruppo launchd insufficiente per i processi gestiti che cambiano gruppo/sessione. Il nuovo record `launcher-admission-direct-v1` resta negativo; la limitazione già accettata non viene estesa.
+- `ActionJournal`: duplicate request without new work, distinction between send/receipt/outcome, uncertain result without automatic retry, rejection of responses from other generations; space for the response reserved before the command.
+- `AddonScheduler`: one job per addon and two global, four pending commands, coalesced updates, priority with aging and slots released only on the actual completion of the job. Expired deadlines and deactivations are returned to the coordinator, with no silent loss of commands.
+- `DeadlineQueue` and `RuntimeInstant`: civil dates separated from elapsed time, bounded replacements and a single drain after sleep/wake. No timer or process of their own.
+- `AddonHealthStore`: bounded version history, quarantine, retry delays, single-use tickets and invalidation of old sessions. No sampling or native termination is attributed to this pure component.
+- [New C0 tests](2026-09-10-addon-direct-v1.md): isolated message check through the audit token, positive after exec, including a response already in the queue; launchd group cleanup insufficient for managed processes that change group/session. The new record `launcher-admission-direct-v1` remains negative; the limitation already accepted is not extended.
 
-Le revisioni hanno corretto il ricalcolo della scadenza civile di un comando già ammesso e due problemi dei nuovi harness: possibile confusione fra guardrail e arresto effettivo, perdita del rapporto durante errori di pulizia. La revisione della salute della versione ha corretto anche un alias del numero di versione che poteva separare le storie di quarantena; le tre revisioni mirate sono concluse senza rilievi aperti. Le nuove componenti pure devono ancora essere collegate al runtime produttivo e al controllo aggregato delle risorse. [Contratto di lifecycle](../../addons/lifecycle.md).
+The reviews corrected the recomputation of the civil deadline of an already admitted command and two problems in the new harnesses: possible confusion between guardrail and actual termination, and loss of the report during cleanup errors. The version-health review also corrected an alias of the version number that could split the quarantine histories; the three targeted reviews concluded with no open findings. The new pure components must still be connected to the production runtime and to the aggregate resource control. [Lifecycle contract](../../addons/lifecycle.md).
 
-Verifica della continuazione: **288 test Swift passati**, exit 0 (Runtime89, Presentation15, motore156, Contracts24, tool4), log `/private/tmp/cascade-direct-v1-final-swift.log`. **36 test Python passati**, log `/private/tmp/cascade-direct-v1-full-python.log`. I nuovi casi Swift sono 40: 26 su scheduler/scadenze/azioni e 14 su salute/retry. Conservati i RED comportamentali dei difetti corretti. L'avviso sulla variabile weak nei vecchi test di PublicationStore è preesistente.
+Verification of the continuation: **288 Swift tests passed**, exit 0 (Runtime 89, Presentation 15, engine 156, Contracts 24, tool 4), log `/private/tmp/cascade-direct-v1-final-swift.log`. **36 Python tests passed**, log `/private/tmp/cascade-direct-v1-full-python.log`. The new Swift cases are 40: 26 on scheduler/deadlines/actions and 14 on health/retry. The behavioral REDs of the corrected defects are preserved. The warning about the weak variable in the old PublicationStore tests is pre-existing.
 
-Integrati 25 file esatti con controllo dei contenuti rispetto alla baseline e alle modifiche già presenti; confrontati 267 input di build identici fra copia locale e checkout iCloud. Nessun commit o staging. La revisione complessiva della continuazione è passata senza rilievi P1/P2. Build app **riuscita**, exit 0, tramite lo script ufficiale `scripts/build-development.sh` dalla copia locale verificata; firma deep/strict verificata e collegamento `/Applications/Cascade.app` aggiornato. Le due istanze precedenti, PID66182 e PID73001, sono state chiuse tramite le API native senza forzatura; alla verifica finale è in esecuzione una sola istanza aggiornata, PID74458, nel percorso atteso `CascadeAddonDevelopment`. Log `/private/tmp/cascade-direct-v1-app-build.log` e `/private/tmp/cascade-direct-v1-restart.json`. I risultati del primo incremento sopra restano storici. Questa verifica conclude il presente incremento, non la feature completa.
+25 exact files integrated, with a content check against the baseline and the changes already present; 267 identical build inputs compared between the local copy and the iCloud checkout. No commit or staging. The overall review of the continuation passed with no P1/P2 findings. App build **succeeded**, exit 0, through the official script `scripts/build-development.sh` from the verified local copy; deep/strict signing verified and the `/Applications/Cascade.app` link updated. The two previous instances, PID66182 and PID73001, were closed through the native APIs without forcing; at the final check a single updated instance is running, PID74458, in the expected path `CascadeAddonDevelopment`. Logs `/private/tmp/cascade-direct-v1-app-build.log` and `/private/tmp/cascade-direct-v1-restart.json`. The results of the first increment above remain historical. This verification concludes the present increment, not the complete feature.
 
-## Continuazione servizi e stato
+## Services and state continuation
 
-Il [rapporto servizi e checkpoint](2026-09-10-addon-services-storage.md) registra l'incremento successivo: broker host, permessi, interessi condivisi, protezione dei requestID e persistenza limitata con migrazioni. I conteggi e i riavvii riportati sopra restano prove storiche delle rispettive revisioni.
+The [services and checkpoint report](2026-09-10-addon-services-storage.md) records the next increment: host broker, permissions, shared interests, requestID protection and bounded persistence with migrations. The counts and relaunches reported above remain historical evidence of their respective revisions.
 
-## Continuazione delle azioni
+## Actions continuation
 
-`ActionAuthorizer` e `ActionDispatcher` aggiungono autorizzazione sul contenuto corrente, controllo al consumo monouso, composizione transazionale del journal/scheduler e contabilità locale combinata.36 test mirati passati,15 nuovi. Corretto e rivalutato il recupero dell’esito dopo rimozione della pubblicazione: la cronologia resta accessibile al contesto autorizzato senza creare altro lavoro o rinnovare le scadenze. Restano annotate due osservazioni minori su stile e avvisi preesistenti; il coordinatore actor, la quota globale e il trasporto nativo non sono inclusi in questa prova. [Contratto](../../addons/actions.md).
+`ActionAuthorizer` and `ActionDispatcher` add authorization on the current content, a check at single-use consumption, transactional composition of the journal/scheduler and combined local accounting. 36 targeted tests passed, 15 new. Recovery of the outcome after removal of the publication was corrected and reassessed: the history remains accessible to the authorized context without creating further work or renewing the deadlines. Two minor observations on style and pre-existing warnings remain noted; the actor coordinator, the global quota and the native transport are not included in this test. [Contract](../../addons/actions.md).
 
-## Continuazione del coordinatore — 12 settembre
+## Coordinator continuation: 12 September
 
-`AddonRuntime` compone ora le componenti pure con autorità canonica, governor comune,
-ammissioni e restituzioni coordinate, interessi durevoli e completamenti indipendenti
-per sessione. La [verifica corrente](2026-09-12-addon-runtime-composition.md) registra
-104 test mirati,436 test completi seriali e revisione approvata senza rilievi richiesti.
-Il codice è nella copia isolata; integrazione nell'app e qualificazione dei processi
-restano separate. I conteggi e i riavvii precedenti sopra sono prove storiche.
+`AddonRuntime` now composes the pure components with canonical authority, a shared governor,
+coordinated admissions and returns, durable interests and completions independent
+per session. The [current verification](2026-09-12-addon-runtime-composition.md) records
+104 targeted tests, 436 full serial tests and an approved review with no findings requested.
+The code is in the isolated copy; integration into the app and qualification of the processes
+remain separate. The earlier counts and relaunches above are historical evidence.
 
-## Resta da fare
+## Remaining work
 
-C1 richiede un launcher ammesso e identità/canale reali. C2 richiede ora il collegamento del coordinatore approvato alla consegna reale e all'app; C3 collegamento del broker al trasporto, cache e sorgenti reali; C4 metriche native e collegamento delle decisioni di salute all'arresto verificato; C5 storage SDK per chiave, asset e ripristino delle pubblicazioni. C6–C10 comprendono Clock, timer, scene SwiftUI, avvisi e media sul percorso pubblico. C11–C13 comprendono distribuzione, strumenti restanti, parità, piattaforme e misure finali. Il minimo macOS14, altri editori e le scene remote non sono qualificati dalla macchina beta disponibile.
+C1 requires an admitted launcher and real identity/channel. C2 now requires connecting the approved coordinator to real delivery and to the app; C3 connecting the broker to real transport, caches and sources; C4 native metrics and connecting health decisions to verified termination; C5 keyed SDK storage, assets and restoration of publications. C6–C10 cover Clock, timers, SwiftUI scenes, notices and media on the public path. C11–C13 cover distribution, remaining tools, parity, platforms and final measurements. The macOS 14 minimum, other publishers and remote scenes are not qualified by the available beta machine.
 
-Il [piano](../plans/2026-09-10-addon-runtime-completion.md) resta la fonte del lavoro residuo. La decisione di prodotto sul lavoro delegato è risolta. Nessun addon nativo viene ammesso finché non sono provati arresto, identità e altri controlli del profilo aggiornato.
+The [plan](../plans/2026-09-10-addon-runtime-completion.md) remains the source of the remaining work. The product decision on delegated work is resolved. No native addon is admitted until termination, identity and the other controls of the updated profile are proven.
 
-## Consegna verificata del 12 settembre
+## Verified delivery of 12 September
 
-Coordinatore C2b2 e diagnostica C0o approvati e integrati:43 file,332 input di build
-identici.436 test Swift seriali passati;54 test storici e26 test del prototipo passati.
-Il bootstrap con sandbox ereditata ha completato4 casi e8 uscite normali osservate,
-con dati separati e continuità dello stesso owner. Build firmata riuscita dalla copia
-locale identica, collegamento Applications aggiornato e riavvio verificato da PID8956
-a47210. L’avvio di Xcode sul progetto originale era in attesa di coordinamento file;
-quel processo è stato interrotto, senza modificare iCloud o Xcode.
+C2b2 coordinator and C0o diagnostics approved and integrated: 43 files, 332 identical build
+inputs. 436 serial Swift tests passed; 54 historical tests and 26 prototype tests passed.
+The bootstrap with inherited sandbox completed 4 cases and 8 observed normal exits,
+with separate data and continuity of the same owner. Signed build succeeded from the identical
+local copy, Applications link updated and relaunch verified from PID8956
+to 47210. The Xcode launch on the original project was waiting on file coordination;
+that process was interrupted, without modifying iCloud or Xcode.
 
-La feature rimane aperta: storage per chiave, trasporto e morte dei processi gestiti,
-integrazione reale nell’app, migrazione dei nostri widget e qualificazione finale.
-[Runtime e consegna](2026-09-12-addon-runtime-composition.md),
-[prova del bootstrap](2026-09-12-addon-owner-bootstrap.md).
+The feature remains open: keyed storage, transport and death of managed processes,
+real integration into the app, migration of our widgets and final qualification.
+[Runtime and delivery](2026-09-12-addon-runtime-composition.md),
+[bootstrap evidence](2026-09-12-addon-owner-bootstrap.md).
 
-## Backend storage per chiave — 12 settembre
+## Keyed storage backend: 12 September
 
-Implementato e revisionato C5b: valori indipendenti dal checkpoint, isolamento per
-publisher/addon, quote condivise con gli altri consumatori, scritture atomiche, cache
-separata e recupero dopo chiusura/errori. La prima revisione ha rilevato un errore nel
-recupero della sincronizzazione delle cartelle; la correzione ha una riproduzione
-comportamentale su nove scenari e un riesame mirato.38 test mirati e474 test della
-libreria in modalità seriale passati sulla versione finale. Il risultato iniziale di
-471 test resta storico. Trasporto SDK e restante C5 ancora aperti.
-[Verifica e stato della consegna](2026-09-12-addon-keyed-storage.md).
+C5b implemented and reviewed: values independent of the checkpoint, isolation per
+publisher/addon, quotas shared with the other consumers, atomic writes, separate
+cache and recovery after close/errors. The first review found an error in the
+recovery of folder synchronization; the fix has a behavioral reproduction
+over nine scenarios and a targeted re-review. 38 targeted tests and 474 library
+tests in serial mode passed on the final version. The initial result of
+471 tests remains historical. SDK transport and the rest of C5 still open.
+[Verification and delivery status](2026-09-12-addon-keyed-storage.md).
 
-## Diagnostica della morte del worker — C0d offline
+## Worker death diagnostics: C0d offline
 
-Il nuovo osservatore e il protocollo finito D0–D3 sono approvati sul piano offline:
-35 test nuovi, 54 storici e 26 owner passati. La correzione F01 conserva stdout e
-osservazioni avverse quando la registrazione proc viene rifiutata. G01 è un requisito
-operativo distinto: il driver termina con exit 78 prima di setup e compilazione.
-La prova nativa resta sospesa per il confine del parent perso prima di PT_TRACE_ME;
-nessun esito della piattaforma viene dedotto dai test simulati. C0 e la feature
-restano aperti; il lavoro indipendente ha completato il backing raster C5c1 sotto descritto.
-[Rapporto corrente](2026-09-12-addon-managed-death.md).
+The new observer and the finite D0–D3 protocol are approved at the offline level:
+35 new tests, 54 historical and 26 owner tests passed. The F01 fix keeps stdout and
+adverse observations when the proc registration is rejected. G01 is a distinct operational
+requirement: the driver terminates with exit 78 before setup and compilation.
+The native test remains suspended because of the boundary of the parent lost before PT_TRACE_ME;
+no platform outcome is inferred from the simulated tests. C0 and the feature
+remain open; the independent work completed the C5c1 raster backing described below.
+[Current report](2026-09-12-addon-managed-death.md).
 
-## C5c1 — backing raster approvato, 12 settembre 2026
+## C5c1: raster backing approved, 12 September 2026
 
-Implementati memoria immutabile CoreGraphics, quota raster nel budget complessivo,
-prenotazioni protette e rilascio limitato all'ultima referenza effettiva. La revisione
-indipendente ha approvato conformità e qualità senza rilievi. 37 test mirati e 498 test
-completi seriali passati sul sorgente congelato; nessun nuovo warning nel log finale.
-Rimangono AssetState/SDK, decoder e autorizzazioni, renderer, cache e ripristino.
-Nessuna prova nativa/tracing aggiunta e gate C0 ancora HOLD. L'utente ha chiesto
-di fermarsi dopo la consegna di questo task; nessun C5c2 avviato.
-[Contratto](../../addons/assets.md) e [verifica](2026-09-12-addon-raster-backing.md).
+Implemented: immutable CoreGraphics memory, raster quota within the overall budget,
+protected reservations and release limited to the last actual reference. The independent
+review approved conformance and quality with no findings. 37 targeted tests and 498 full
+serial tests passed on the frozen source; no new warnings in the final log.
+AssetState/SDK, decoders and authorizations, renderer, cache and restoration remain.
+No native/tracing test added and the C0 gate is still HOLD. The user asked
+to stop after delivering this task; no C5c2 started.
+[Contract](../../addons/assets.md) and [verification](2026-09-12-addon-raster-backing.md).

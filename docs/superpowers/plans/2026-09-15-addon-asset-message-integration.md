@@ -1,4 +1,4 @@
-> Completato il 18 settembre 2026 con agenti Codex: revisione PASS, 883 test / 83 suite, build firmata e riavvio verificato. [Consegna e limiti](../verification/2026-09-18-addon-asset-message-integration.md). I vincoli di quota/routing della baseline sotto sono storici e sostituiti dalle istruzioni successive dell’utente.
+> Completed on 18 September 2026 with Codex agents: review PASS, 883 tests / 83 suites, signed build and verified relaunch. [Delivery and limits](../verification/2026-09-18-addon-asset-message-integration.md). The baseline quota/routing constraints below are historical and superseded by the user's later instructions.
 
 # Authenticated asset messages and concrete SDK client — Implementation Plan
 
@@ -10,7 +10,7 @@
 
 **Tech Stack:** Existing Swift6/Swift Testing, Foundation/ImageIO; macOS14 floor. No new external library is needed for the existing mechanisms.
 
-**Spec:** Existing approved addon architecture, docs/addons/assets.md, docs/superpowers/verification/2026-09-14-addon-asset-chunks.md and user request “collegalo e poi continua con l’implementazione”. The user already approved message chunks/sharing/persistence and continued integration. Routine composition choices below do not require reapproval.
+**Spec:** Existing approved addon architecture, docs/addons/assets.md, docs/superpowers/verification/2026-09-14-addon-asset-chunks.md and user request “connect it and then continue with the implementation”. The user already approved message chunks/sharing/persistence and continued integration. Routine composition choices below do not require reapproval.
 
 ## Constraints and baseline
 

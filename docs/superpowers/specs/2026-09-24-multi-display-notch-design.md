@@ -1,102 +1,102 @@
-# Notch su più display — specifica per il piano
+# Notch on multiple displays: specification for the plan
 
-Data: 24 settembre 2026. Stato: requisiti ricevuti il 24 settembre; implementazione del piano autorizzata il 25 settembre. Le scelte proposte restano identificate come impostazioni iniziali reversibili.
+Date: 24 September 2026. Status: requirements received on 24 September; implementation of the plan authorized on 25 September. The proposed choices stay identified as reversible initial settings.
 
-## Risultato richiesto
+## Required result
 
-Cascade mantiene una presenza compatta sul bordo superiore di ogni display collegato. Il focus decide dove mostrare le Live Activities solo quando l'utente sceglie quella modalità; non decide dove esiste il notch. Una sola superficie può essere aperta alla volta.
+Cascade keeps a compact presence on the top edge of every connected display. Focus decides where to show the Live Activities only when the user chooses that mode; it does not decide where the notch exists. Only one surface can be open at a time.
 
-Requisiti espliciti dell'utente:
+Explicit user requirements:
 
-- Su display senza notch hardware sono disponibili **Notch** e **Dynamic Island**.
-- A riposo entrambi sono una piccola sporgenza dal bordo superiore.
-- Senza Live Activity, Dynamic Island si espande a goccia.
-- Durante una Live Activity si conservano gli stessi elementi e interazioni del notch hardware, con uno spazio centrale più piccolo.
-- L'«ombra», cioè la sagoma chiusa, resta su tutti gli schermi indipendentemente dal focus.
-- È possibile aprire il notch su un solo schermo alla volta.
-- Le Live Activities possono essere ripetute su tutti i display, seguire il focus oppure apparire sempre e solo su un display scelto.
-- **Chiarimento confermato:** focus della finestra attiva; puntatore soltanto come fallback.
+- On displays without a hardware notch, **Notch** and **Dynamic Island** are available.
+- At rest both are a small bump from the top edge.
+- Without a Live Activity, Dynamic Island expands as a droplet.
+- During a Live Activity the same elements and interactions as the hardware notch are kept, with a smaller central space.
+- The "shadow", that is the closed silhouette, stays on all screens regardless of focus.
+- The notch can be open on only one screen at a time.
+- Live Activities can be repeated on all displays, follow focus or always appear only on one chosen display.
+- **Confirmed clarification:** focus of the active window; pointer only as a fallback.
 
-## Comportamento delle superfici
+## Surface behavior
 
-| Display/stato | Riposo senza attività | Attività compatta | Espansione |
+| Display/state | At rest without activity | Compact activity | Expansion |
 | --- | --- | --- | --- |
-| Con notch hardware | Sagoma allineata al taglio e alla calibrazione esistente | Layout attuale, spazio centrale legato al taglio | Comportamento attuale |
-| Senza hardware, Notch | Piccola sporgenza ancorata al bordo | Layout attuale con separazione centrale ridotta | Pannello collegato al bordo |
-| Senza hardware, Dynamic Island | Piccola sporgenza ancorata al bordo | Stessi elementi e separazione ridotta del Notch software | Senza Live Activity: corpo arrotondato sotto il bordo, collegato mediante collo a goccia; con Live Activity: espansione dell'attività già prevista dal renderer |
+| With hardware notch | Silhouette aligned to the cut-out and to the existing calibration | Current layout, central space tied to the cut-out | Current behavior |
+| Without hardware, Notch | Small bump anchored to the edge | Current layout with a reduced central separation | Panel connected to the edge |
+| Without hardware, Dynamic Island | Small bump anchored to the edge | Same elements and reduced separation as the software Notch | Without a Live Activity: rounded body below the edge, connected through a droplet neck; with a Live Activity: the activity expansion already provided by the renderer |
 
-«Sempre» riguarda i display del desktop mentre Cascade è in esecuzione nella sessione sbloccata. Si conserva l'attuale esclusione dalla schermata di blocco. Fullscreen e cambi di Space non devono eliminare le sagome; Mission Control può chiudere la superficie espansa senza cancellare la presenza compatta.
+"Always" refers to the desktop displays while Cascade is running in the unlocked session. The current exclusion from the lock screen is kept. Fullscreen and Space changes must not remove the silhouettes; Mission Control can close the expanded surface without removing the compact presence.
 
-La geometria di riposo, l'ingombro dei contenuti compatti e la riserva per il taglio hardware diventano misure distinte. Una sporgenza bassa non deve rendere illeggibili icone e testo delle attività. `hardwareNotchWidth` non deve più ricevere una larghezza software su un display senza taglio.
+The resting geometry, the footprint of the compact content and the reserve for the hardware cut-out become distinct measurements. A low bump must not make the activities' icons and text unreadable. `hardwareNotchWidth` must no longer receive a software width on a display without a cut-out.
 
-## Routing delle Live Activities
+## Live Activity routing
 
-| Modalità | Destinazioni compatte | Se il focus cambia |
+| Mode | Compact destinations | If focus changes |
 | --- | --- | --- |
-| Tutti gli schermi | Tutti i display collegati | Nessuno spostamento |
-| Segui il focus | Display della finestra attiva; fallback puntatore, poi display principale | Cambiano soltanto i contenuti dell'attività; le sagome restano |
-| Schermo specifico | Solo il display scelto tramite identità persistente | Nessuno spostamento |
+| All screens | All connected displays | No move |
+| Follow focus | Display of the active window; pointer fallback, then the main display | Only the activity content changes; the silhouettes stay |
+| Specific screen | Only the display chosen through a persistent identity | No move |
 
-Il contenuto replicato ha la stessa identità, revisione, priorità, scadenza e stato privacy. Le viste possono adattarsi alle dimensioni locali, ma non diventano attività indipendenti. Chiudere/dismettere l'attività con il relativo comando agisce su tutte le copie; richiudere il pannello non conclude l'attività.
+Replicated content has the same identity, revision, priority, expiry and privacy state. The views can adapt to the local dimensions, but they do not become independent activities. Closing/dismissing the activity with its command acts on all the copies; closing the panel again does not end the activity.
 
-Un'attività espansa su un display non rimuove le copie compatte dagli altri display destinatari. Due attività conservano l'attuale disposizione: primaria e satellite della secondaria; il satellite resta compatto se l'altra superficie è aperta.
+An activity expanded on one display does not remove the compact copies from the other destination displays. Two activities keep the current arrangement: the primary and the secondary's satellite; the satellite stays compact if the other surface is open.
 
-## Apertura e passaggio tra display
+## Opening and moving between displays
 
-- Hover, clic e azione accessibile chiedono l'apertura sul display che li ha ricevuti, anche se il focus applicativo è altrove.
-- La richiesta su B fa richiudere A e apre B solo quando A ha raggiunto lo stato chiuso. Nessun frame con due superfici espanse. Con Riduci movimento il passaggio è immediato.
-- Durante il passaggio rimangono visibili le sagome di entrambi gli schermi. Richieste ulteriori aggiornano la destinazione: prevale l'ultima ancora valida.
-- Il semplice cambio di finestra attiva non trasferisce un pannello aperto, impostazioni, popover o un trascinamento in corso.
-- Un'interazione in corso con un controllo, un popover, le impostazioni o Spotlight trattiene il proprietario dell'apertura; una richiesta concorrente resta pendente solo finché il suo trigger è valido.
-- Se il display aperto viene scollegato, si eliminano subito pannello, viste e interazioni di quel display. Gli altri rimangono compatti; nessuna apertura automatica altrove.
+- Hover, click and accessible action request opening on the display that received them, even if application focus is elsewhere.
+- The request on B makes A close and opens B only when A has reached the closed state. No frame with two expanded surfaces. With Reduce Motion the move is immediate.
+- During the move the silhouettes of both screens stay visible. Further requests update the destination: the last one that is still valid wins.
+- A mere change of active window does not transfer an open panel, settings, popovers or a drag in progress.
+- An interaction in progress with a control, a popover, the settings or Spotlight holds the opening owner; a concurrent request stays pending only while its trigger is valid.
+- If the open display is disconnected, the panel, views and interactions of that display are removed immediately. The others stay compact; no automatic opening elsewhere.
 
-## Scelte proposte, distinte dai requisiti confermati
+## Proposed choices, distinct from the confirmed requirements
 
-Queste scelte rendono eseguibile il piano e possono essere modificate in revisione:
+These choices make the plan executable and can be changed during review:
 
-1. **Stile per display senza hardware**, ricordato tramite UUID. Default: Notch. Vale anche per un display integrato senza taglio, non solo per quelli esterni. Se l'UUID non è disponibile, la scelta resta utilizzabile per il collegamento corrente tramite ID runtime, senza salvataggio persistente; viene cancellata alla disconnessione o all'arresto di Cascade e la riga spiega questa eccezione.
-2. **Default Live Activities: Segui il focus.** L'impostazione è globale per le attività, non diversa per ogni provider.
-3. **Display fisso assente:** nessuna copia su altri schermi; conservare la scelta e riprendere sul display alla riconnessione. Le sagome e i widget restano disponibili ovunque. È l'interpretazione letterale di «sempre e solo».
-4. **Apertura su un display escluso dal routing:** mostra i widget, senza portare lì la Live Activity. In modalità Segui il focus un'attività già aperta rimane consultabile fino alla chiusura, anche se la copia compatta passa al nuovo display attivo. In modalità fissa non si concede questa eccezione su altri display. Un cambio esplicito di preferenza che esclude il display aperto richiude prima l'attività.
-5. **Avvisi transitori:** mantengono la loro semantica e appaiono soltanto sul display attivo; non vengono replicati dall'impostazione delle Live Activities. Sopprimere gli avvisi durante qualsiasi espansione e blocco schermo come oggi, senza riprodurli dopo. Un avviso già visibile può seguire il focus mantenendo la scadenza originale.
-6. **Misure iniziali da verificare visivamente:** sporgenza software 96 × 8 pt; altezza attività compatta 32 pt; spazio centrale software 24 pt; ali con misure/inset correnti. La sporgenza di riposo e il corpo attivo hanno dimensioni indipendenti. Nessun nuovo slider in questa tranche.
-7. **Goccia:** il corpo rimane collegato alla sporgenza attraverso un collo durante l'apertura; non è una capsula permanentemente flottante. Profilo iniziale: collo 12 pt e corpo 8 pt sotto la sporgenza, dimensioni espanse del contenuto già limitate dal renderer. Calibrare questi valori nella verifica visiva senza alterare il contratto.
+1. **Style for displays without hardware**, remembered through the UUID. Default: Notch. It also applies to a built-in display without a cut-out, not only to external ones. If the UUID is not available, the choice stays usable for the current connection through the runtime ID, without persistent saving; it is cleared on disconnection or when Cascade stops, and the row explains this exception.
+2. **Live Activities default: Follow focus.** The setting is global for activities, not different for each provider.
+3. **Fixed display absent:** no copy on other screens; keep the choice and resume on the display when it reconnects. The silhouettes and the widgets stay available everywhere. This is the literal interpretation of "always and only".
+4. **Opening on a display excluded from routing:** shows the widgets, without bringing the Live Activity there. In Follow focus mode an activity that is already open stays viewable until it closes, even if the compact copy moves to the new active display. In fixed mode this exception is not granted on other displays. An explicit preference change that excludes the open display closes the activity first.
+5. **Transient notices:** they keep their semantics and appear only on the active display; they are not replicated by the Live Activities setting. Suppress notices during any expansion and screen lock as today, without replaying them afterwards. A notice that is already visible can follow focus while keeping its original expiry.
+6. **Initial measurements to verify visually:** software bump 96 × 8 pt; compact activity height 32 pt; software central space 24 pt; wings with the current measurements/insets. The resting bump and the active body have independent dimensions. No new slider in this tranche.
+7. **Droplet:** the body stays connected to the bump through a neck while opening; it is not a permanently floating capsule. Initial profile: neck 12 pt and body 8 pt below the bump, expanded content dimensions already limited by the renderer. Calibrate these values in the visual verification without altering the contract.
 
-## Focus e identità dei display
+## Focus and display identity
 
-Osservare la finestra focalizzata dell'app in primo piano, compresi cambio finestra e spostamento della stessa finestra fra display. Usare il display con la maggiore area d'intersezione con la finestra. In parità conservare il precedente se ancora candidato, poi usare un ordinamento stabile dei display.
+Observe the focused window of the frontmost app, including window changes and moving the same window between displays. Use the display with the largest intersection area with the window. On a tie keep the previous one if it is still a candidate, then use a stable ordering of the displays.
 
-Normalizzare esplicitamente le coordinate Accessibility e AppKit, anche per display a sinistra o sopra il principale. Se la finestra non è disponibile, i permessi Accessibility mancano o l'app non risponde, usare il puntatore; se anche questo non individua un display, usare il principale. Un errore non lascia valido il vecchio focus. Rileggere al cambio reale degli input, senza polling o chiamate AX nel percorso del mouse/animazione.
+Normalize Accessibility and AppKit coordinates explicitly, also for displays to the left of or above the main one. If the window is not available, Accessibility permissions are missing or the app does not respond, use the pointer; if that does not identify a display either, use the main one. An error does not leave the old focus valid. Read again on a real change of the inputs, with no polling or AX calls in the mouse/animation path.
 
-Usare snapshot e notifiche. Le letture AX avvengono su worker con timeout e generazioni, secondo il modello già presente nell'integrazione Spotlight. Callback tardivi di app/finestra precedenti vengono scartati. Non occorre un nuovo permesso Screen Recording; il fallback resta operativo senza Accessibility.
+Use snapshots and notifications. AX reads happen on a worker with timeouts and generations, following the model already present in the Spotlight integration. Late callbacks from previous apps/windows are discarded. No new Screen Recording permission is needed; the fallback stays operational without Accessibility.
 
-Il pannello non attivante non deve diventare origine del focus. Impostazioni e superfici ausiliarie di Cascade conservano l'ancora del display sul quale sono state aperte.
+The nonactivating panel must not become a source of focus. Cascade's settings and auxiliary surfaces keep the anchor of the display on which they were opened.
 
-Identità persistente: riutilizzare la risoluzione UUID già impiegata da `NotchSizePreferences`. L'ID numerico CoreGraphics resta una chiave della sessione corrente. Un UUID non disponibile non va inventato né rimpiazzato con il nome del monitor: quel display funziona nella sessione ma non viene proposto come destinazione persistente. Display speculari producono una sola superficie per desktop logico, già ripetuta dal sistema sugli schermi fisici.
+Persistent identity: reuse the UUID resolution already used by `NotchSizePreferences`. The numeric CoreGraphics ID stays a key of the current session. An unavailable UUID must not be invented or replaced with the monitor's name: that display works in the session but is not offered as a persistent destination. Mirrored displays produce a single surface per logical desktop, already repeated by the system on the physical screens.
 
-## Architettura scelta
+## Chosen architecture
 
-Approcci considerati:
+Approaches considered:
 
-- **Consigliato: un coordinatore, una superficie per display, un host delle attività condiviso.** Riutilizza pannello, vista, molle e controller, rendendo il controller locale a un display. Richiede separare selezione dei contenuti e loro visibilità.
-- Un engine completo per display: meno modifiche iniziali, ma duplica scadenze, attivazioni, contesti e avvisi. Incompatibile con il ciclo di vita attuale dei provider.
-- Sagome passive su tutti i display e un solo pannello mobile: sufficiente per il riposo, ma la replica delle attività imporrebbe comunque un secondo percorso di rendering e interazione.
+- **Recommended: one coordinator, one surface per display, one shared activity host.** It reuses panel, view, springs and controller, making the controller local to a display. It requires separating content selection from its visibility.
+- A full engine per display: fewer initial changes, but it duplicates expiries, activations, contexts and notices. Incompatible with the current provider lifecycle.
+- Passive silhouettes on all displays and a single moving panel: enough for the resting state, but replicating activities would still force a second rendering and interaction path.
 
-`NotchEngine` rimane la facciata pubblica. Un `NotchDisplayCoordinator` possiede inventario, focus, preferenze, host delle attività, host widget e apertura esclusiva. Ogni `NotchController` possiede soltanto pannello, vista, geometria, animazione e stato di interazione del suo display. Nessun controller locale decide di fermare provider condivisi.
+`NotchEngine` stays the public facade. A `NotchDisplayCoordinator` owns inventory, focus, preferences, activity host, widget host and exclusive opening. Each `NotchController` owns only the panel, view, geometry, animation and interaction state of its display. No local controller decides to stop shared providers.
 
-`LiveActivityHost` conserva una sola raccolta e una sola scadenza. Pubblica separatamente selezione live compatta, avviso e attività scelta per l'espansione. Il coordinatore determina quali viste sono realmente visibili e consegna all'host l'unione delle identità visibili: `activate` una volta alla prima presentazione, `suspend` una volta dopo l'ultima. Le factory producono viste distinte per ciascuna superficie.
+`LiveActivityHost` keeps a single collection and a single expiry. It publishes the compact live selection, the notice and the activity chosen for expansion separately. The coordinator determines which views are actually visible and hands the host the union of the visible identities: `activate` once at the first presentation, `suspend` once after the last. The factories produce distinct views for each surface.
 
-Mantenere gli SDK e i protocolli dei provider; nessun runtime addon per monitor. Verificare esplicitamente `SnapshotActivity` e `MediaLiveActivity`, che oggi trattengono un solo contesto di attivazione.
+Keep the SDKs and the provider protocols; no addon runtime per monitor. Explicitly verify `SnapshotActivity` and `MediaLiveActivity`, which today hold a single activation context.
 
-## Vincoli e accettazione
+## Constraints and acceptance
 
-- macOS 14 minimo; Swift 6; AppKit/Core Animation per pannelli e morph, SwiftUI per contenuti.
-- Nessuna nuova dipendenza o API privata per questa funzionalità.
-- Un solo monitor globale del mouse; niente polling del focus o dei display.
-- I display link si fermano a geometria stabile. Gli aggiornamenti di focus non ricreano pannelli.
-- Privacy e accessibilità applicate a ogni copia prima delle factory sensibili.
-- Calibrazioni hardware esistenti preservate; vecchie calibrazioni software non devono impedire la nuova piccola sporgenza. Con le misure software fisse di questa tranche, il comando di calibrazione è disponibile soltanto per un display con notch hardware; i dati precedenti restano conservati.
-- Verificare più display, scale diverse, coordinate negative, mirroring, collegamento/scollegamento, chiusura del coperchio, blocco/sblocco e Riduci movimento.
-- Fine implementazione: test pertinenti, build con `scripts/build-development.sh`, aggiornamento del collegamento `/Applications/Cascade.app`, riavvio e verifica del processo.
+- macOS 14 minimum; Swift 6; AppKit/Core Animation for panels and morph, SwiftUI for content.
+- No new dependency or private API for this feature.
+- A single global mouse monitor; no polling of focus or displays.
+- The display links stop at stable geometry. Focus updates do not recreate panels.
+- Privacy and accessibility applied to every copy before the sensitive factories.
+- Existing hardware calibrations preserved; old software calibrations must not prevent the new small bump. With the fixed software measurements of this tranche, the calibration command is available only for a display with a hardware notch; the previous data stays preserved.
+- Verify multiple displays, different scales, negative coordinates, mirroring, connection/disconnection, lid closing, lock/unlock and Reduce Motion.
+- End of implementation: relevant tests, build with `scripts/build-development.sh`, update of the `/Applications/Cascade.app` link, relaunch and verification of the process.
 
-Piano associato: [implementazione multi-display](../plans/2026-09-24-multi-display-notch.md).
+Associated plan: [multi-display implementation](../plans/2026-09-24-multi-display-notch.md).

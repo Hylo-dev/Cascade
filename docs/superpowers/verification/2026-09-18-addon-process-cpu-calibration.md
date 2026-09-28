@@ -1,25 +1,25 @@
-# Calibrazione indipendente delle unità CPU — 18 settembre 2026
+# Independent calibration of the CPU units: 18 September 2026
 
-**PASS sul percorso di lettura e riduzione, limitato a macOS27 arm64 e al processo della prova.** Copie identiche dei due sorgenti di produzione sono state compilate con un diagnostico locale. Il lettore nativo acquisisce i contatori; il riduttore applica la conversione Mach. Il riferimento `getrusage(RUSAGE_SELF)` somma separatamente secondi e microsecondi di utente/sistema, senza riusare timebase o contatori Mach per costruire il riferimento.
+**PASS on the reading and reduction path, limited to macOS27 arm64 and to the test's process.** Identical copies of the two production sources were compiled with a local diagnostic. The native reader acquires the counters; the reducer applies the Mach conversion. The `getrusage(RUSAGE_SELF)` reference sums user/system seconds and microseconds separately, without reusing the Mach timebase or counters to build the reference.
 
-## Risultati
+## Results
 
-Timebase effettivo125/3, Swift6.4 e SDK CLT27.0, macOS27.0 build26A5425a. I valori convertiti sono tutti dentro gli intervalli del riferimento; non è stata necessaria la tolleranza di2000µs dichiarata prima della prova.
+Effective timebase125/3, Swift6.4 and SDK CLT27.0, macOS27.0 build26A5425a. The converted values all fall inside the reference intervals; the tolerance of2000µs declared before the test was not needed.
 
-| Campione | CPU del riduttore, µs | Intervallo POSIX, µs | CPU / tempo acquisizioni |
+| Sample | Reducer CPU, µs | POSIX interval, µs | CPU / acquisition time |
 | --- | ---: | ---: | ---: |
-| 1 | 150064,791 | 150062–150074 | 99,998473% |
-| 2 | 150021,583 | 150016–150027 | 100,000111% |
-| 3 | 150020,666 | 150014–150027 | 97,002418% |
+| 1 | 150064.791 | 150062–150074 | 99.998473% |
+| 2 | 150021.583 | 150016–150027 | 100.000111% |
+| 3 | 150020.666 | 150014–150027 | 97.002418% |
 
-I riferimenti sono acquisiti prima e dopo ogni lettura. L’intervallo della differenza è `[prima corrente − dopo precedente, dopo corrente − prima precedente]`; ampiezze12,11 e13µs. Il lieve superamento del100% nel secondo campione rientra nell’incertezza di acquisizione/quantizzazione. I controlli negativi sui medesimi dati rifiutano tick trattati come nanosecondi, come microsecondi o convertiti con timebase inverso: nessun carico ulteriore.
+The references are acquired before and after each reading. The interval of the difference is `[current before − previous after, current after − previous before]`; widths12, 11 and13µs. The slight excess over100% in the second sample falls within the acquisition/quantization uncertainty. The negative checks on the same data reject ticks treated as nanoseconds, as microseconds or converted with an inverse timebase: no additional load.
 
-Tre carichi seriali hanno registrato circa0,45s di CPU; il valore454435µs è la CPU dalla nascita **all’ultima acquisizione**, non la misura esatta all’uscita. Il runner ha atteso l’uscita normale con status0 in0,6898s. La compilazione separata è durata33,93s. I limiti del workload e i timeout sono guardie diagnostiche, non un meccanismo di enforcement CPU del processo. Cache privata rimossa; nessuna modifica a produzione, test o app.
+Three serial loads recorded about0.45s of CPU; the value454435µs is the CPU from birth **to the last acquisition**, not the exact measurement at exit. The runner waited for the normal exit with status0 in0.6898s. The separate compilation took33.93s. The workload limits and the timeouts are diagnostic guards, not a CPU enforcement mechanism for the process. Private cache removed; no change to production, tests or the app.
 
-[Rapporto e sonda preservati](../../../.scratch/codex-addon/20260918-continuation/cpu-calibration-evidence/cpu-calibration-report.md), [osservazioni grezze](../../../.scratch/codex-addon/20260918-continuation/cpu-calibration-evidence/cpu-calibration-observations.json), [sorgente diagnostico](../../../.scratch/codex-addon/20260918-continuation/cpu-calibration-evidence/cpu-calibration-main.swift), [comando/esito della sonda](../../../.scratch/codex-addon/20260918-continuation/cpu-calibration-evidence/cpu-calibration-probe-log.json), [hash delle evidenze](../../../.scratch/codex-addon/20260918-continuation/cpu-calibration-evidence/cpu-calibration-evidence-sha256.json), [revisione indipendente PASS](../../../.scratch/codex-addon/20260918-continuation/cpu-calibration-independent-review.md). La review ha ricalcolato aritmetica e hash senza rieseguire la prova. Le precisazioni sopra prevalgono sulle formulazioni più generali del report congelato.
+[Preserved report and probe](../../../.scratch/codex-addon/20260918-continuation/cpu-calibration-evidence/cpu-calibration-report.md), [raw observations](../../../.scratch/codex-addon/20260918-continuation/cpu-calibration-evidence/cpu-calibration-observations.json), [diagnostic source](../../../.scratch/codex-addon/20260918-continuation/cpu-calibration-evidence/cpu-calibration-main.swift), [probe command/outcome](../../../.scratch/codex-addon/20260918-continuation/cpu-calibration-evidence/cpu-calibration-probe-log.json), [evidence hashes](../../../.scratch/codex-addon/20260918-continuation/cpu-calibration-evidence/cpu-calibration-evidence-sha256.json), [independent review PASS](../../../.scratch/codex-addon/20260918-continuation/cpu-calibration-independent-review.md). The review recomputed the arithmetic and the hashes without rerunning the test. The clarifications above take precedence over the more general wording of the frozen report.
 
-## Limiti
+## Limits
 
-Le API possono condividere la contabilità del kernel: il confronto qualifica scala e conversione, non la precisione assoluta di tale contabilità. La percentuale riusa il denominatore temporale del riduttore; non è una misura indipendente dell’accuratezza del clock. Non c’è precisione sperimentale al nanosecondo, né archivio ermetico di compilatore/SDK e ambiente ereditato.
+The APIs may share the kernel's accounting: the comparison qualifies scale and conversion, not the absolute precision of that accounting. The percentage reuses the reducer's time denominator; it is not an independent measurement of the clock's accuracy. There is no experimental nanosecond precision, nor a hermetic archive of the compiler/SDK and the inherited environment.
 
-L’identità è ottenuta esplicitamente dal solo processo diagnostico. Nessuna autenticazione addon, misura RSS, garanzia macOS14/Intel, campionamento comune/disarmo, soglia, rimborso di quote o uscita gestita viene qualificata. C4 completo e C0d rimangono aperti; il driver C0d non è stato eseguito né modificato. Il risultato è una verifica in sola lettura del codice già consegnato, non una nuova build dell’app. L’integrazione dei servizi prosegue separatamente.
+Identity is obtained explicitly from the diagnostic process alone. No addon authentication, RSS measurement, macOS14/Intel guarantee, common sampling/disarming, threshold, quota refund or managed exit is qualified. Full C4 and C0d remain open; the C0d driver was neither run nor modified. The result is a read-only verification of the already delivered code, not a new build of the app. The services integration continues separately.

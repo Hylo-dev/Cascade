@@ -1,4 +1,4 @@
-# Definire Now Playing e le prime Live Activities
+# Define Now Playing and the first Live Activities
 
 ID: 18
 Parent: cascade-product
@@ -11,4 +11,4 @@ Blocked by: 02, 04, 06, 08
 
 ## Question
 
-Quali sorgenti musicali e media del browser vengono supportate, con quali metadati e comandi, e come si sceglie la sorgente quando più app riproducono audio? Distinguere attività media dichiarata, rilevamento di audio effettivo e sorgenti senza metadati. Decidere presentazione compatta ed espansa, pausa, fine sessione, dati obsoleti e comportamento quando il provider si interrompe. Concordare anche l'elenco iniziale di attività oltre ai media, incluso se il timer citato è fornito da Cascade o da un'app integrata: il riferimento alla Dynamic Island non definisce da solo tale elenco né implica l'uso diretto delle attività di iOS.
+Which music sources and browser media are supported, with which metadata and commands, and how is the source chosen when several apps play audio? Distinguish a declared media activity, detection of actual audio and sources without metadata. Decide the compact and expanded presentation, pause, end of session, stale data and the behavior when the provider stops. Also agree on the initial list of activities beyond media, including whether the mentioned timer is provided by Cascade or by an integrated app: the Dynamic Island reference does not by itself define that list, nor does it imply the direct use of iOS activities.

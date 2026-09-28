@@ -1,4 +1,4 @@
-# Definire installazione e isolamento delle estensioni
+# Define extension installation and isolation
 
 ID: 05
 Parent: cascade-product
@@ -11,18 +11,18 @@ Blocked by: 01, 04, 19, 22
 
 ## Question
 
-Come devono arrivare i widget all'utente: installati automaticamente dall'app sorgente, moduli aggiunti a una cartella, o entrambi? L'utente vuole SwiftUI e ha proposto import o caricamento da cartella: precisare il significato di import e decidere formato, discovery, attivazione, origine verificabile, aggiornamento, rimozione, revoca e comportamento dopo un crash. Scegliere il confine di processo e documentare se il codice esterno possa bloccare l'host. Il risultato deve rendere concreta la promessa «integra il protocollo e compare un widget».
+How should widgets reach the user: installed automatically by the source app, modules added to a folder, or both? The user wants SwiftUI and has proposed import or loading from a folder: clarify what import means and decide format, discovery, activation, verifiable origin, update, removal, revocation and behavior after a crash. Choose the process boundary and document whether external code can block the host. The outcome must make concrete the promise "integrate the protocol and a widget appears".
 
-## Avanzamento del 9 settembre 2026
+## Progress of 9 September 2026
 
-Approvato il confine nativo in processi su domanda, con contenuti ordinari conservati dall'host e scene SwiftUI remote. L'addon può includere le librerie necessarie e funzionare senza l'app sorgente; Cascade deve rimanere aperta. Preferenza per il contenitore registrabile dal sistema, da provare prima di fissare il formato. Nessun percorso speciale per i widget del team.
+The native boundary in on-demand processes is approved, with ordinary content kept by the host and remote SwiftUI scenes. The addon can include the libraries it needs and work without the source app; Cascade must remain open. Preference for the container the system can register, to be tested before fixing the format. No special path for the team's widgets.
 
-La [specifica approvata](../../../docs/superpowers/specs/2026-09-09-addon-runtime-design.md) è resa eseguibile in [P0](../../../docs/superpowers/plans/2026-09-09-addon-runtime-00-platform.md), [P2](../../../docs/superpowers/plans/2026-09-09-addon-runtime-02-execution.md) e [P4](../../../docs/superpowers/plans/2026-09-09-addon-runtime-04-release.md). Il ticket resta aperto per le prove effettive di discovery, firma, sandbox, arresto dopo crash host e aggiornamento sulle versioni macOS supportate.
+The [approved spec](../../../docs/superpowers/specs/2026-09-09-addon-runtime-design.md) is made executable in [P0](../../../docs/superpowers/plans/2026-09-09-addon-runtime-00-platform.md), [P2](../../../docs/superpowers/plans/2026-09-09-addon-runtime-02-execution.md) and [P4](../../../docs/superpowers/plans/2026-09-09-addon-runtime-04-release.md). The ticket stays open for the actual tests of discovery, signing, sandbox, shutdown after a host crash and update on the supported macOS versions.
 
-## Riallineamento del 14 settembre 2026
+## Realignment of 14 September 2026
 
-Il [piano corrente](../../../docs/superpowers/plans/2026-09-10-addon-runtime-completion.md) documenta contratti, resolver, coordinatore runtime, servizi, risorse e storage interni implementati. L'ultimo percorso completo verificato resta una suite del package, non l'installazione e l'esecuzione di un addon esterno.
+The [current plan](../../../docs/superpowers/plans/2026-09-10-addon-runtime-completion.md) documents the implemented internal contracts, resolver, runtime coordinator, services, resources and storage. The last complete path verified is still a package suite, not the installation and execution of an external addon.
 
-La [politica di controllo approvata](../../../docs/superpowers/specs/2026-09-10-addon-control-policy.md) accetta il rischio del lavoro autonomamente delegato a macOS; conserva i requisiti sui processi gestiti. La qualificazione del launcher resta aperta. Il distinto impedimento C0d è ora tracciato in [Definire una prova sicura di uscita dei processi gestiti](22-managed-process-exit-proof.md); le prove delle scene restano nel [ticket UI SwiftUI](19-extension-host-probe.md).
+The [approved control policy](../../../docs/superpowers/specs/2026-09-10-addon-control-policy.md) accepts the risk of work delegated autonomously to macOS; it keeps the requirements on managed processes. The launcher qualification stays open. The distinct C0d blocker is now tracked in [Define a safe exit proof for managed processes](22-managed-process-exit-proof.md); the scene tests remain in the [SwiftUI UI ticket](19-extension-host-probe.md).
 
-Restano da completare e provare trasporto/provider nativi, discovery e attivazione reali, identità nel lifecycle di aggiornamento, installazione/distribuzione e integrazione nell'app. Questo aggiornamento conserva il ticket aperto e non abilita alcun launcher.
+Native transport/provider, real discovery and activation, identity in the update lifecycle, installation/distribution and integration into the app remain to be completed and tested. This update keeps the ticket open and does not enable any launcher.

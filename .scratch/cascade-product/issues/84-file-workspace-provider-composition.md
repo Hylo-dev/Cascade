@@ -1,4 +1,4 @@
-# Comporre il provider del ripiano e i comandi di conversione
+# Compose the shelf provider and the conversion commands
 
 ID: 84
 Parent: cascade-product
@@ -11,4 +11,4 @@ Blocked by: 77, 80, 82, 83
 
 ## Question
 
-Implementare il task 8 del [piano del ripiano file](../../../docs/superpowers/plans/2026-09-26-file-shelf.md): provider con sola API SDK, composizione host tramite percorso qualificato, comandi chiusi, selezione/formati/progresso e azioni autorizzate. Accettazione: mazzo↔lista, Avvia solo con formato, aggiornamento snapshot senza riavvio job, progresso indeterminato onesto, ingressi conservati, anteprima/Finder e ricollegamento espliciti, alternative tastiera; freccia centrata con controlli separati. Test provider, prova schermo reale, VoiceOver/Riduci movimento, review root e commit. La UI non è autorità sui file e non costruisce processi o store propri.
+Implement task 8 of the [file shelf plan](../../../docs/superpowers/plans/2026-09-26-file-shelf.md): a provider with the SDK API only, host composition through the qualified path, closed commands, selection/formats/progress and authorized actions. Acceptance: deck↔list, Start only with a format, snapshot update without restarting the job, honest indeterminate progress, inputs preserved, explicit preview/Finder and relink, keyboard alternatives; centered arrow with separate controls. Provider tests, real screen test, VoiceOver/Reduce Motion, root review and commit. The UI is not an authority over the files and does not build its own processes or store.

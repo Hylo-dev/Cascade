@@ -1,4 +1,4 @@
-# Definire l’attribuzione CPU dei servizi ai consumatori
+# Define the CPU attribution of services to consumers
 
 ID: 55
 Parent: cascade-product
@@ -11,27 +11,27 @@ Blocked by: 54
 
 ## Question
 
-Come attribuire ai consumatori il consumo CPU misurato nel processo di un provider condiviso, senza fingere una misura precisa del singolo lavoro?
+How should the CPU consumption measured in a shared provider's process be attributed to consumers, without pretending to have a precise measurement of each individual piece of work?
 
-## Contesto
+## Context
 
-La specifica richiede di contare una volta il processo nel totale globale e di attribuire anche ai consumatori il lavoro delegato, per impedire che aggirino la propria quota. Le decisioni sul credito e sulle violazioni hanno lasciato espressamente separata questa attribuzione. Il lettore corrente misura CPU user+system dell’intero processo: un intervallo può includere invocazioni di consumatori diversi, sorgenti condivise e lavoro interno. Non misura direttamente la quota causata da ciascuno.
+The spec requires counting the process once in the global total and also attributing the delegated work to the consumers, to prevent them from getting around their own quota. The decisions on credit and violations expressly left this attribution separate. The current reader measures the user+system CPU of the whole process: an interval can include invocations from different consumers, shared sources and internal work. It does not directly measure the share caused by each one.
 
-Dopo il rifiuto dei nuovi lavori e il collegamento delle scadenze, il prossimo incremento deve scegliere una regola di addebito, con conseguenze visibili su disponibilità e quarantena dei consumatori. La regola non modifica il credito del provider né moltiplica il consumo globale fisicamente misurato.
+After the refusal of new work and the wiring of the deadlines, the next increment must choose a charging rule, with visible consequences on the availability and quarantine of consumers. The rule does not change the provider's credit and does not multiply the physically measured global consumption.
 
-## Alternative da valutare con l’utente
+## Alternatives to evaluate with the user
 
-1. **Attribuzione conservativa (raccomandazione iniziale).** L’intero consumo dell’intervallo interessato viene addebitato anche a ciascun consumatore con lavoro/interesse attivo per quel provider. Evita di concedere credito ulteriore attraverso la condivisione, ma può penalizzare un consumatore per lavoro richiesto da un altro.
-2. **Ripartizione fra consumatori attivi.** Il costo dell’intervallo viene diviso fra i consumatori interessati secondo una regola esplicita uniforme. Riduce la penalizzazione della condivisione, ma può sottostimare il consumatore che ha causato quasi tutto il lavoro. È una policy contabile, non una misura per richiesta.
+1. **Conservative attribution (initial recommendation).** The entire consumption of the interval concerned is also charged to each consumer with active work/interest for that provider. It avoids granting extra credit through sharing, but can penalize a consumer for work requested by another.
+2. **Split among active consumers.** The cost of the interval is divided among the consumers concerned according to an explicit uniform rule. It reduces the penalty of sharing, but can underestimate the consumer that caused almost all of the work. It is an accounting policy, not a per-request measurement.
 
-Esempio: 40 ms CPU del provider con due consumatori attivi significano 40 ms per ciascuno con la prima regola, 20 ms ciascuno con la seconda; il totale globale resta 40 ms in entrambi i casi. Il comportamento di intervalli senza consumatori e campioni incompleti deve restare esplicito. Non implementare nessuna alternativa prima della scelta; completare prima la tranche già autorizzata.
+Example: 40 ms of provider CPU with two active consumers means 40 ms for each with the first rule, 20 ms each with the second; the global total stays 40 ms in both cases. The behavior of intervals without consumers and of incomplete samples must stay explicit. Do not implement either alternative before the choice; first complete the tranche already authorized.
 
 
-La raccomandazione privilegia il requisito di non aggirare le quote attraverso la condivisione; il costo è l’eventuale penalizzazione di un altro consumatore. La ripartizione uniforme può invece diluire il costo aggiungendo interessi poco attivi. In entrambi i casi, gli interessi e il lavoro devono provenire dal registro canonico host e riferirsi all’intervallo osservato; assenza di consumatori attribuibili non crea un addebito inventato, e misure sconosciute/incomplete non diventano consumo zero.
+The recommendation favors the requirement of not getting around quotas through sharing; the cost is the possible penalization of another consumer. The uniform split can instead dilute the cost by adding barely active interests. In both cases, the interests and the work must come from the host's canonical ledger and refer to the observed interval; the absence of attributable consumers does not create an invented charge, and unknown/incomplete measurements do not become zero consumption.
 
-Riferimenti: [specifica delle risorse](../../../docs/superpowers/specs/2026-09-09-addon-runtime-design.md), [esclusione dalla scelta sul burst](46-addon-cpu-burst-policy.md), [esclusione dalla scelta sul conteggio](49-addon-cpu-violation-counting.md). La revisione indipendente del 21 settembre conferma che nessuna di quelle scelte ha già risolto la ripartizione.
+References: [resource spec](../../../docs/superpowers/specs/2026-09-09-addon-runtime-design.md), [exclusion from the burst choice](46-addon-cpu-burst-policy.md), [exclusion from the counting choice](49-addon-cpu-violation-counting.md). The independent review of 21 September confirms that none of those choices has already resolved the split.
 
 
 ## Answer
 
-Il22settembre2026 l’utente ha scelto **1, attribuzione conservativa**: l’intero consumo CPU misurato del provider è attribuito anche a ogni consumatore con lavoro/interesse canonico attivo nell’intervallo. Il costo fisico globale resta contato una volta; il conto del provider resta invariato. Si accetta la possibile penalizzazione di un consumatore per lavoro altrui nello stesso intervallo condiviso. Più interessi dello stesso consumatore non moltiplicano il medesimo intervallo; misure incomplete restano sconosciute, non zero. Il tracciamento deve conservare il lavoro concluso fra due campioni, senza dedurlo soltanto dagli interessi ancora presenti al momento della lettura. Attuazione interna circoscritta, launcher sempre bloccato.
+On 22 September 2026 the user chose **1, conservative attribution**: the provider's entire measured CPU consumption is also attributed to every consumer with active canonical work/interest in the interval. The global physical cost stays counted once; the provider's account stays unchanged. The possible penalization of a consumer for someone else's work in the same shared interval is accepted. Several interests of the same consumer do not multiply the same interval; incomplete measurements stay unknown, not zero. The tracking must keep work that finished between two samples, without inferring it only from the interests still present at the time of the reading. Bounded internal implementation, launcher always blocked.

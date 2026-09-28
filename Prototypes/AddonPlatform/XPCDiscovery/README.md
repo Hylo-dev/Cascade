@@ -1,26 +1,26 @@
-# Discovery dal broker XPC — fixture diagnostica
+# Discovery from the XPC broker: diagnostic fixture
 
-Confronta la ricerca dell'addon esterno P0 nell'app e nel broker sandboxed.
-Non costruisce AppExtensionProcess, non carica addon e non qualifica un launcher.
-Campiona API legacy e Monitor moderno per due secondi.
+Compares the lookup of the external P0 addon in the app and in the sandboxed broker.
+It does not construct AppExtensionProcess, does not load addons and does not qualify a launcher.
+It samples the legacy API and the modern Monitor for two seconds.
 
-Richiede Xcode-beta, il certificato fissato nello script e contenitore P0 registrato.
-Non cambia l'abilitazione. Prima di interpretare un confronto negativo, l'app deve
-trovare `hylo.Cascade.AddonProbeContainer.Provider`.
+Requires Xcode-beta, the certificate pinned in the script and a registered P0 container.
+It does not change enablement. Before interpreting a negative comparison, the app must
+find `hylo.Cascade.AddonProbeContainer.Provider`.
 
 ```sh
 python3 Prototypes/AddonPlatform/XPCDiscovery/run_discovery.py --build-only
-python3 Prototypes/AddonPlatform/XPCDiscovery/run_discovery.py --run /percorso/stampato
+python3 Prototypes/AddonPlatform/XPCDiscovery/run_discovery.py --run /path/printed
 ```
 
-Exit 0 indica solo risposta autenticata. Leggere legacy/modern/disabled/unapproved
-di entrambi i chiamanti. Il runner verifica hash e salva log/manifest in una nuova
-cartella DerivedData a ogni build. Non ripetere un comando nella stessa cartella
-se si vogliono preservare i log.
+Exit 0 indicates only an authenticated response. Read legacy/modern/disabled/unapproved
+for both callers. The runner verifies hashes and saves logs/manifests in a new
+DerivedData folder on every build. Do not repeat a command in the same folder
+if you want to preserve the logs.
 
-`--run-browser` crea il browser Apple dal broker per ispezione manuale, uscita host
-60 s dopo la risposta e guardia 90 s. Non è consenso qualificato. Richiede desktop
-sbloccato: prima esecuzione non ispezionabile, nessuna modifica dei permessi.
+`--run-browser` creates the Apple browser from the broker for manual inspection, with host exit
+60 s after the response and a 90 s guard. It is not qualified consent. Requires an
+unlocked desktop: first run not inspectable, no permission changes.
 
-[Risultati](../../../docs/superpowers/verification/2026-09-24-addon-xpc-frontier.md):
-app trova provider, broker nessuna identità e un elemento non approvato.
+[Results](../../../docs/superpowers/verification/2026-09-24-addon-xpc-frontier.md):
+the app finds the provider, the broker finds no identity and one unapproved element.

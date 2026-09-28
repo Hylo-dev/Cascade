@@ -1,4 +1,4 @@
-# Preparare l'host locale e le copie verificate del ripiano
+# Prepare the local host and the shelf's verified copies
 
 ID: 87
 Parent: cascade-product
@@ -11,8 +11,8 @@ Blocked by: 78
 
 ## Question
 
-Eseguire la fase A del [piano locale approvato](../../../docs/superpowers/plans/2026-09-26-local-file-shelf.md): un solo host/store/governor, snapshot 12 di default e massimo wire 32, add/remove/relink con ID stabili, preparazione opaca per elemento senza pin anticipato, copia FD verificata con creazione esclusiva senza overwrite e `fsync`. Persistenza e ricevuta precedono la rimozione della sola voce consegnata; originali, errori e annullamenti conservati. Test mirati, review root e commit selettivo. L'eccezione è solo per la pagina locale: grant, quote e gate addon non cambiano.
+Run phase A of the [approved local plan](../../../docs/superpowers/plans/2026-09-26-local-file-shelf.md): a single host/store/governor, a snapshot of 12 by default and a wire maximum of 32, add/remove/relink with stable IDs, opaque per-item preparation without early pinning, a verified FD copy with exclusive creation, no overwrite and `fsync`. Persistence and receipt precede the removal of only the delivered entry; originals, errors and cancellations preserved. Targeted tests, root review and selective commit. The exception is only for the local page: grants, quotas and the addon gate do not change.
 
 ## Answer
 
-Implementato in `a0508ef` e accettato dopo review e correzioni root: facade con store/governor condivisi, snapshot limitati, ID conservati, capability per voce/generazione, copia controllata senza overwrite e ricevuta solo dopo copia completata. La review ha verificato pulizia su annullamento, concorrenza, metadati, vita condivisa e gate della preview. Verifica indipendente root: 73 test passati (53 runtime, 9 presentazione, 11 contratti), log `.superpowers/sdd/2026-09-26-file-shelf/root-task87-tests.log`. Non costituisce ancora consegna app: pagina, drag e QA nativa seguono nei ticket locali successivi; launcher addon e gate nativo restano invariati.
+Implemented in `a0508ef` and accepted after the root's review and fixes: facade with shared store/governor, bounded snapshots, preserved IDs, per-entry/generation capability, controlled copy without overwrite and a receipt only after the copy completes. The review verified cleanup on cancellation, concurrency, metadata, shared lifetime and the preview gate. Independent root verification: 73 tests passed (53 runtime, 9 presentation, 11 contracts), log `.superpowers/sdd/2026-09-26-file-shelf/root-task87-tests.log`. It is not yet an app delivery: page, drag and native QA follow in the next local tickets; the addon launcher and the native gate stay unchanged.

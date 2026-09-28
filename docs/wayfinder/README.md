@@ -1,109 +1,109 @@
-# Piano globale di Cascade
+# Cascade global plan
 
-La [mappa del prodotto modulare](../../.scratch/cascade-product/map.md) è il piano canonico. Segue wayfinder: chiarisce le decisioni prima di trasformarle in specifiche e attività di implementazione.
+The [modular product map](../../.scratch/cascade-product/map.md) is the canonical plan. It follows wayfinder: it clarifies decisions before turning them into specifications and implementation tasks.
 
-**Aggiornata al 23 settembre 2026:** 68 ticket, 52 risolti, 16 aperti non assegnati; attribuzione RAM al proprietario e profilo progressivo dei provider approvati; integrazione runtime verificata; drag/ricerca resta separata. Gli avanzamenti addon sono collegati dai ticket pertinenti; una decisione approvata non equivale a una prova di piattaforma conclusa.
+**Updated as of 23 September 2026:** 68 tickets, 52 resolved, 16 open and unassigned; RAM attribution to the owner and the progressive provider profile approved; runtime integration verified; drag/search stays separate. Addon progress is linked from the relevant tickets; an approved decision is not the same as a completed platform proof.
 
-Ultima prosecuzione: [ricerca launchd](research/2026-09-23-launchd-managed-lifetime.md) conclusa con verifica root; la pista non sblocca la garanzia di uscita. Nessun codice modificato; riavvio verificato della build invariata, quota77%.
+Latest continuation: [launchd research](research/2026-09-23-launchd-managed-lifetime.md) concluded with root verification; the lead does not unlock the exit guarantee. No code changed; verified relaunch of the unchanged build, quota 77%.
 
-Ultima tranche addon: [RAM dei provider](../superpowers/verification/2026-09-23-addon-provider-memory.md), revisioni PASS,1.222 test/115 suite, build firmata da500 input e avvio aggiornato verificato. Quota residua77%; seguito dipendente da prove native sospese, launcher bloccato.
+Latest addon tranche: [provider RAM](../superpowers/verification/2026-09-23-addon-provider-memory.md), reviews PASS, 1,222 tests/115 suites, signed build from 500 inputs and updated launch verified. Remaining quota 77%; follow-up depends on suspended native proofs, launcher blocked.
 
-[Collegare i messaggi asset al runtime e al client SDK](../../.scratch/cascade-product/issues/23-asset-message-integration.md) è completato: revisione indipendente PASS, **883 test / 83 suite**, build firmata e riavvio verificato. La [verifica della consegna](../superpowers/verification/2026-09-18-addon-asset-message-integration.md) conserva prove e limiti. La precedente pipeline pi/DeepSeek e l’arresto alla riserva35% sono storici; la prosecuzione usa esclusivamente Codex, con deroga alla riserva richiesta dall’utente.
+[Connect asset messages to the runtime and the SDK client](../../.scratch/cascade-product/issues/23-asset-message-integration.md) is complete: independent review PASS, **883 tests / 83 suites**, signed build and verified relaunch. The [delivery verification](../superpowers/verification/2026-09-18-addon-asset-message-integration.md) keeps the evidence and the limits. The earlier pi/DeepSeek pipeline and the stop at the 35% reserve are historical; the continuation uses Codex exclusively, with a waiver of the reserve requested by the user.
 
-La nuova richiesta di continuare fino al limite Codex estende il lavoro alle tranche residue del [piano addon](../superpowers/plans/2026-09-10-addon-runtime-completion.md). È completato [Generare un progetto addon SDK compilabile](../../.scratch/cascade-product/issues/24-sdk-source-scaffold.md): [896 test / 84 suite, revisione PASS e consegna firmata](../superpowers/verification/2026-09-18-addon-sdk-scaffold.md). È completato [Osservare le risorse di un processo senza abilitare il launcher](../../.scratch/cascade-product/issues/25-process-resource-observations.md): [929 test / 85 suite, revisione PASS e consegna firmata](../superpowers/verification/2026-09-18-addon-process-metrics.md). È completato [Creare l’esempio Focus con il solo SDK pubblico](../../.scratch/cascade-product/issues/26-standalone-focus-source.md): [37 test, build indipendente e revisione PASS](../superpowers/verification/2026-09-18-standalone-focus-source.md). È completato anche [Mostrare il consumo di un servizio tramite SDK pubblico](../../.scratch/cascade-product/issues/27-service-consumer-source.md): [16 test, build indipendente e revisione PASS](../superpowers/verification/2026-09-18-service-consumer-source.md). È completato anche [Collegare il client storage SDK al percorso a messaggi](../../.scratch/cascade-product/issues/28-storage-message-client.md). L’analisi del requisito sui processi gestiti non ha prodotto una soluzione qualificata: nessuna prova nativa o nuova eccezione viene dichiarata approvata.
+The new request to continue up to the Codex limit extends the work to the remaining tranches of the [addon plan](../superpowers/plans/2026-09-10-addon-runtime-completion.md). [Generate a compilable addon SDK project](../../.scratch/cascade-product/issues/24-sdk-source-scaffold.md) is complete: [896 tests / 84 suites, review PASS and signed delivery](../superpowers/verification/2026-09-18-addon-sdk-scaffold.md). [Observe a process's resources without enabling the launcher](../../.scratch/cascade-product/issues/25-process-resource-observations.md) is complete: [929 tests / 85 suites, review PASS and signed delivery](../superpowers/verification/2026-09-18-addon-process-metrics.md). [Create the Focus example with the public SDK only](../../.scratch/cascade-product/issues/26-standalone-focus-source.md) is complete: [37 tests, independent build and review PASS](../superpowers/verification/2026-09-18-standalone-focus-source.md). [Show the consumption of a service through the public SDK](../../.scratch/cascade-product/issues/27-service-consumer-source.md) is also complete: [16 tests, independent build and review PASS](../superpowers/verification/2026-09-18-service-consumer-source.md). [Connect the SDK storage client to the message path](../../.scratch/cascade-product/issues/28-storage-message-client.md) is also complete. The analysis of the managed-process requirement did not produce a qualified solution: no native proof or new exception is declared approved.
 
-Sono implementati contratti/SDK di base, runtime e servizi interni, quote e immagini condivise, storage SwiftData, salvataggio/ripristino e percorsi interni a messaggi per storage e asset. Restano launcher/trasporto nativi, collegamento al ciclo e alla presentazione dell’app, migrazione dei widget, completamento degli esempi e della parità SDK e installazione/distribuzione con addon reali. I test del package non chiudono questi requisiti.
+Base contracts/SDK, runtime and internal services, quotas and shared images, SwiftData storage, save/restore and internal message paths for storage and assets are implemented. Still remaining: native launcher/transport, connection to the app's lifecycle and presentation, widget migration, completion of the examples and of SDK parity, and installation/distribution with real addons. The package tests do not close these requirements.
 
-Wayfinder è l'indice delle **decisioni**. Il knowledge graph dei simboli è un servizio distinto: la consultazione del 14 settembre ha restituito `project not found or not indexed` per Cascade. Questo aggiornamento non esegue indicizzazione del codice.
+Wayfinder is the index of **decisions**. The symbol knowledge graph is a separate service: the query of 14 September returned `project not found or not indexed` for Cascade. This update does not index the code.
 
-- [Frontiera delle decisioni](frontier.md): punto di ingresso alle questioni disponibili e a quelle bloccate.
-- [Verifica del riallineamento](context/2026-09-14-map-sync.md): controlli della mappa e impedimento al riavvio odierno.
-- [Base del progetto](context/project-baseline.md): requisiti ricevuti e stato verificato del codice.
-- [Vocabolario di prodotto](../../CONTEXT.md): termini usati nei ticket.
-- [Convenzioni del tracker](../agents/issue-tracker.md): claim, dipendenze e risoluzioni.
+- [Decision frontier](frontier.md): entry point to the available questions and to the blocked ones.
+- [Realignment check](context/2026-09-14-map-sync.md): map checks and the obstacle to today's relaunch.
+- [Project baseline](context/project-baseline.md): requirements received and verified state of the code.
+- [Product vocabulary](../../CONTEXT.md): terms used in the tickets.
+- [Tracker conventions](../agents/issue-tracker.md): claims, dependencies and resolutions.
 
-Le ricerche sono disponibili separatamente: [estensioni SwiftUI](research/swiftui-extensions.md), [integrazioni macOS](research/macos-integrations.md), [Sapphire e FineTune](research/sapphire-finetune.md). Sono letture di documentazione e sorgenti, non prove runtime.
+The research notes are available separately: [SwiftUI extensions](research/swiftui-extensions.md), [macOS integrations](research/macos-integrations.md), [Sapphire and FineTune](research/sapphire-finetune.md). They are readings of documentation and sources, not runtime proofs.
 
-## Percorso della pianificazione
+## Planning path
 
-1. Accertare fattibilità di estensioni SwiftUI, integrazioni macOS, glass e audio.
-2. Concordare compatibilità e formato delle estensioni; definire contratti e superfici.
-3. Definire griglia, attività simultanee, contesto e comportamento dei moduli richiesti.
-4. Concordare impostazioni, input, display, budget e recupero dai guasti.
-5. Ordinare i rilasci e consegnare i requisiti alle specifiche dei sottosistemi.
+1. Establish the feasibility of SwiftUI extensions, macOS integrations, glass and audio.
+2. Agree on compatibility and the extension format; define contracts and surfaces.
+3. Define the grid, simultaneous activities, context and the behavior of the requested modules.
+4. Agree on settings, input, displays, budgets and failure recovery.
+5. Order the releases and hand the requirements over to the subsystem specifications.
 
-Questa sequenza esprime dipendenze decisionali, non una stima temporale. Per il sottosistema addon l'ordine operativo è ora nel piano esecutivo collegato sopra. I ticket aperti riportano le decisioni approvate e restano aperti dove mancano altre scelte o prove; i risultati delle ricerche non sostituiscono le preferenze dell'utente.
+This sequence expresses decision dependencies, not a time estimate. For the addon subsystem the operational order is now in the execution plan linked above. The open tickets record the approved decisions and stay open where other choices or proofs are missing; the research results do not replace the user's preferences.
 
 ```mermaid
 flowchart TD
-    A["Ricerche: SwiftUI, macOS, glass e audio"] --> B["Compatibilità e integrazioni ammesse"]
-    B --> C["Estensioni e contratti pubblici"]
-    B --> D["Stati, superfici e interazioni"]
-    C --> E["Pagine, attività e moduli contestuali"]
+    A["Research: SwiftUI, macOS, glass and audio"] --> B["Compatibility and admitted integrations"]
+    B --> C["Extensions and public contracts"]
+    B --> D["States, surfaces and interactions"]
+    C --> E["Pages, activities and contextual modules"]
     D --> E
-    E --> F["Impostazioni e budget delle risorse"]
-    F --> G["Perimetro dei rilasci e specifiche"]
+    E --> F["Settings and resource budgets"]
+    F --> G["Release scope and specifications"]
 ```
 
-Il diagramma è una sintesi; le dipendenze complete sono nei metadati dei ticket.
+The diagram is a summary; the complete dependencies are in the ticket metadata.
 
-## Aree dell'app da specificare
+## App areas to specify
 
-La tabella orienta la lettura dei ticket; i confini definitivi sono da concordare nelle decisioni collegate.
+The table guides the reading of the tickets; the final boundaries are to be agreed in the linked decisions.
 
-| Area | Responsabilità da chiarire | Ticket |
+| Area | Responsibilities to clarify | Tickets |
 | --- | --- | --- |
-| Motore del notch | Geometria, hover e feedback aptico, nero/glass, transizioni, input e focus. Evoluzione di CascadeKit. | [Superfici](../../.scratch/cascade-product/issues/07-notch-surfaces.md), [Display e input](../../.scratch/cascade-product/issues/14-displays-input.md) |
-| Estensioni e SDK | Discovery, UI SwiftUI, installazione, identità, compatibilità, azioni e lifecycle. | [Installazione e isolamento](../../.scratch/cascade-product/issues/05-extension-distribution.md), [Contratti pubblici](../../.scratch/cascade-product/issues/06-public-contract.md) |
-| Attività e contesto | Attività compatte e simultanee, notifiche, priorità e selezione della superficie pertinente. | [Priorità e contesto](../../.scratch/cascade-product/issues/08-context-arbitration.md) |
-| Composizione | Pagine, griglia, dimensioni dei widget, riordino e persistenza. | [Griglia e pagine](../../.scratch/cascade-product/issues/09-grid-pages.md) |
-| Moduli iniziali | Media, notifiche delle altre app, Bluetooth, ripiano file, Spotlight e gestione audio. | [Media e attività](../../.scratch/cascade-product/issues/18-media-live-activities.md), [Notifiche](../../.scratch/cascade-product/issues/11-notification-experience.md), [Ripiano](../../.scratch/cascade-product/issues/10-file-shelf.md), [Spotlight](../../.scratch/cascade-product/issues/12-spotlight-experience.md), [Audio](../../.scratch/cascade-product/issues/13-audio-experience.md) |
-| Preferenze | Aspetto e dimensioni per display, attività e schermate contestuali, integrazioni e accessibilità. | [Impostazioni](../../.scratch/cascade-product/issues/15-settings-experience.md) |
-| Qualità e distribuzione | Misure di risorse e latenza, recupero dai guasti, compatibilità macOS, release e Homebrew. | [Budget](../../.scratch/cascade-product/issues/16-resource-contract.md), [Compatibilità](../../.scratch/cascade-product/issues/04-platform-policy.md), [Rilasci](../../.scratch/cascade-product/issues/17-delivery-roadmap.md) |
+| Notch engine | Geometry, hover and haptic feedback, black/glass, transitions, input and focus. Evolution of CascadeKit. | [Surfaces](../../.scratch/cascade-product/issues/07-notch-surfaces.md), [Displays and input](../../.scratch/cascade-product/issues/14-displays-input.md) |
+| Extensions and SDK | Discovery, SwiftUI UI, installation, identity, compatibility, actions and lifecycle. | [Installation and isolation](../../.scratch/cascade-product/issues/05-extension-distribution.md), [Public contracts](../../.scratch/cascade-product/issues/06-public-contract.md) |
+| Activities and context | Compact and simultaneous activities, notifications, priorities and selection of the relevant surface. | [Priorities and context](../../.scratch/cascade-product/issues/08-context-arbitration.md) |
+| Composition | Pages, grid, widget sizes, reordering and persistence. | [Grid and pages](../../.scratch/cascade-product/issues/09-grid-pages.md) |
+| Initial modules | Media, notifications from other apps, Bluetooth, file shelf, Spotlight and audio management. | [Media and activities](../../.scratch/cascade-product/issues/18-media-live-activities.md), [Notifications](../../.scratch/cascade-product/issues/11-notification-experience.md), [Shelf](../../.scratch/cascade-product/issues/10-file-shelf.md), [Spotlight](../../.scratch/cascade-product/issues/12-spotlight-experience.md), [Audio](../../.scratch/cascade-product/issues/13-audio-experience.md) |
+| Preferences | Appearance and sizes per display, activities and contextual screens, integrations and accessibility. | [Settings](../../.scratch/cascade-product/issues/15-settings-experience.md) |
+| Quality and distribution | Resource and latency measurements, failure recovery, macOS compatibility, releases and Homebrew. | [Budget](../../.scratch/cascade-product/issues/16-resource-contract.md), [Compatibility](../../.scratch/cascade-product/issues/04-platform-policy.md), [Releases](../../.scratch/cascade-product/issues/17-delivery-roadmap.md) |
 
-L'architettura addon separa la vista nascosta dal servizio ancora necessario: pubblicazioni, lavoro e scene hanno durate distinte e concessioni revocabili. P2 e P3 ne verificano gli effetti reali, compresa la sorgente che segnala eventi senza widget espanso. Le specifiche di nuove funzioni, come l'audio instradato, devono usare questo modello senza considerarsi già implementate.
+The addon architecture separates the hidden view from the service that is still needed: publications, work and scenes have distinct lifetimes and revocable grants. P2 and P3 verify their real effects, including the source that signals events without an expanded widget. Specifications of new features, such as routed audio, must use this model without considering themselves already implemented.
 
-## Fonti delle skill
+## Skill sources
 
-Wayfinder è installata in `/Users/c4v4h/.codex/skills/wayfinder/SKILL.md`. Le sue skill complementari non erano installate: sono state lette dalla fonte originale, senza installare o modificare plugin globali:
+Wayfinder is installed at `/Users/c4v4h/.codex/skills/wayfinder/SKILL.md`. Its companion skills were not installed: they were read from the original source, without installing or modifying global plugins:
 
 - [grilling](https://github.com/mattpocock/skills/blob/main/skills/productivity/grilling/SKILL.md)
 - [domain-modeling](https://github.com/mattpocock/skills/blob/main/skills/engineering/domain-modeling/SKILL.md)
 - [research](https://github.com/mattpocock/skills/blob/main/skills/engineering/research/SKILL.md)
-- [tracker local-markdown](https://github.com/mattpocock/skills/blob/main/skills/engineering/setup-matt-pocock-skills/issue-tracker-local.md)
+- [local-markdown tracker](https://github.com/mattpocock/skills/blob/main/skills/engineering/setup-matt-pocock-skills/issue-tracker-local.md)
 
-Prima dei ticket di prototipo sarà necessario leggere anche la skill prototype dalla stessa raccolta; non è stata usata in questa sessione.
+Before the prototype tickets, the prototype skill from the same collection will also have to be read; it was not used in this session.
 
-È completato [Gestire il ciclo SDK delle invocazioni ai servizi](../../.scratch/cascade-product/issues/29-service-invocation-lifecycle.md), senza introdurre contratti di trasporto o sottoscrizione non definiti.
+[Manage the SDK lifecycle of service invocations](../../.scratch/cascade-product/issues/29-service-invocation-lifecycle.md) is complete, without introducing undefined transport or subscription contracts.
 
-È completato [Definire e implementare i messaggi dedicati alle invocazioni dei servizi](../../.scratch/cascade-product/issues/30-service-invocation-frames.md); la negoziazione del runtime resta invariata.
+[Define and implement the messages dedicated to service invocations](../../.scratch/cascade-product/issues/30-service-invocation-frames.md) is complete; the runtime negotiation stays unchanged.
 
-È completato [Collegare le invocazioni dei servizi al runtime e allo scambio SDK](../../.scratch/cascade-product/issues/31-service-invocation-host.md), con compatibilità legacy e attivazione solo del percorso interno completo.
+[Connect service invocations to the runtime and to the SDK exchange](../../.scratch/cascade-product/issues/31-service-invocation-host.md) is complete, with legacy compatibility and activation of the complete internal path only.
 
-È completato [Verificare indipendentemente le unità delle metriche CPU](../../.scratch/cascade-product/issues/32-process-cpu-calibration.md), diagnostica sul solo processo della prova e senza controllo nativo degli addon.
+[Independently verify the units of the CPU metrics](../../.scratch/cascade-product/issues/32-process-cpu-calibration.md) is complete, with diagnostics on the test's own process only and without native control of the addons.
 
-[Contratti di sottoscrizione](../../.scratch/cascade-product/issues/33-service-subscription-frames.md): revisione PASS, integrazione e consegna completate; 1048 test / 94 suite.
+[Subscription contracts](../../.scratch/cascade-product/issues/33-service-subscription-frames.md): review PASS, integration and delivery completed; 1048 tests / 94 suites.
 
-È completato [Completare client servizi, sottoscrizioni e aggiornamenti](../../.scratch/cascade-product/issues/34-service-subscriptions-host-sdk.md):1084 test/96 suite, revisione finale, Release e consegna firmata con riavvio verificato. Protocollo1.4 condizionato all’assembly completo; gate nativi aperti.
+[Complete the service client, subscriptions and updates](../../.scratch/cascade-product/issues/34-service-subscriptions-host-sdk.md) is complete: 1084 tests/96 suites, final review, Release and signed delivery with verified relaunch. Protocol 1.4 conditional on the complete assembly; native gates open.
 
-In parallelo: [Verificare i confini pubblici dell’SDK e degli esempi](../../.scratch/cascade-product/issues/35-sdk-boundary-check.md), controllo sorgente consegnato e revisionato. Il successivo [controllo obbligatorio nella build](../../.scratch/cascade-product/issues/37-required-sdk-build-check.md) è consegnato: quattro fixture e revisione PASS, controllo positivo prima della build firmata reale.
+In parallel: [Verify the public boundaries of the SDK and of the examples](../../.scratch/cascade-product/issues/35-sdk-boundary-check.md), source check delivered and reviewed. The subsequent [mandatory check in the build](../../.scratch/cascade-product/issues/37-required-sdk-build-check.md) is delivered: four fixtures and review PASS, positive check before the real signed build.
 
-[Modello offline del bootstrap](../../.scratch/cascade-product/issues/39-bootstrap-abort-offline.md): completato con31 test, replay root e revisione PASS. Il gate nativo resta invariato; nessuna osservazione sintetica vale come prova fisica.
+[Offline bootstrap model](../../.scratch/cascade-product/issues/39-bootstrap-abort-offline.md): completed with 31 tests, root replay and review PASS. The native gate stays unchanged; no synthetic observation counts as physical proof.
 
-Ripresa del19settembre con Ponytail e tetto20% settimanale Codex: [bootstrap C](../../.scratch/cascade-product/issues/40-bootstrap-abort-c.md) consegnato come candidato compilato e testato nella logica, con revisione root; esperimento nativo separato.
+Resumption of 19 September with Ponytail and a 20% weekly Codex ceiling: [C bootstrap](../../.scratch/cascade-product/issues/40-bootstrap-abort-c.md) delivered as a candidate compiled and tested in its logic, with root review; native experiment separate.
 
-[Contatore del prototipo RemoteUI](../../.scratch/cascade-product/issues/41-remote-scene-counter.md): incremento sorgente completato il20settembre, check locale e build firmata separata; interazione nativa e launcher non qualificati.
+[RemoteUI prototype counter](../../.scratch/cascade-product/issues/41-remote-scene-counter.md): source increment completed on 20 September, local check and separate signed build; native interaction and launcher not qualified.
 
-Completati nello stesso ciclo i due incrementi di callback: [provider](../../.scratch/cascade-product/issues/42-counter-provider-lifecycle.md) e [host](../../.scratch/cascade-product/issues/43-counter-host-lifecycle.md), con regressioni riprodotte, tre check e build firmata separata. La policy sulle nuove integrazioni è risolta: API pubbliche predefinite ed eccezioni private decise singolarmente.
+The two callback increments were completed in the same cycle: [provider](../../.scratch/cascade-product/issues/42-counter-provider-lifecycle.md) and [host](../../.scratch/cascade-product/issues/43-counter-host-lifecycle.md), with reproduced regressions, three checks and a separate signed build. The policy on new integrations is resolved: public APIs by default and private exceptions decided one by one.
 
-[StandaloneClock sorgente](../../.scratch/cascade-product/issues/44-standalone-clock-source.md): build indipendente,3 test Swift,21 test checker e5 fixture build PASS, revisione root e riavvio verificati. Non chiude C6. Le [decisioni sulle superfici](context/2026-09-20-notch-surfaces-checkpoint.md) sono concluse: campo Spotlight originale e dimensioni native approvati, con verifica locale di focus, calcolo e ripristino. Il seguito riguarda le priorità tra drag e ricerca; la qualifica generale resta distinta.
+[StandaloneClock source](../../.scratch/cascade-product/issues/44-standalone-clock-source.md): independent build, 3 Swift tests, 21 checker tests and 5 build fixtures PASS, root review and relaunch verified. It does not close C6. The [surface decisions](context/2026-09-20-notch-surfaces-checkpoint.md) are concluded: original Spotlight field and native sizes approved, with local verification of focus, calculation and restore. The follow-up concerns the priorities between drag and search; the general qualification stays separate.
 
-[Campionatore addon interno](../../.scratch/cascade-product/issues/45-process-metrics-coordinator.md):47 test metriche,1.098 test package/97 suite, revisioni e build firmata con riavvio PASS. La successiva [scelta sul burst CPU](../../.scratch/cascade-product/issues/46-addon-cpu-burst-policy.md) approva il credito condiviso 100 ms con ricarica 5 ms/s.
+[Internal addon sampler](../../.scratch/cascade-product/issues/45-process-metrics-coordinator.md): 47 metrics tests, 1,098 package tests/97 suites, reviews and signed build with relaunch PASS. The subsequent [choice on the CPU burst](../../.scratch/cascade-product/issues/46-addon-cpu-burst-policy.md) approves the shared 100 ms credit with a 5 ms/s refill.
 
-[Credito CPU condiviso e osservazioni comuni](../superpowers/verification/2026-09-20-addon-cpu-credit.md): implementazione Terra/Sol medium, revisioni root e indipendenti PASS, 71 test mirati e 1.122 test completi in 99 suite. Build ufficiale firmata e riavvio PID 25071 verificati. Quella tranche si è fermata alla [definizione delle violazioni CPU distinte](../../.scratch/cascade-product/issues/49-addon-cpu-violation-counting.md), con budget residuo 92%; launcher bloccato invariato.
+[Shared CPU credit and common observations](../superpowers/verification/2026-09-20-addon-cpu-credit.md): Terra/Sol medium implementation, root and independent reviews PASS, 71 focused tests and 1,122 full tests in 99 suites. Official signed build and relaunch PID 25071 verified. That tranche stopped at the [definition of distinct CPU violations](../../.scratch/cascade-product/issues/49-addon-cpu-violation-counting.md), with 92% remaining budget; launcher blocked, unchanged.
 
-[Violazioni CPU e salute del runtime](../superpowers/verification/2026-09-21-addon-cpu-violations.md), 21 settembre: decisione sul conteggio approvata e due ticket implementati da Terra/Sol medium, con revisioni root e indipendenti PASS. 100 test mirati, 1.135 test completi/101 suite, build firmata e riavvio PID 32112 verificati. Quella tranche si era fermata a [la riduzione dei nuovi lavori](../../.scratch/cascade-product/issues/52-addon-cpu-reduced-admission.md); residuo 90%, launcher bloccato e sanzioni non ancora attivate.
+[CPU violations and runtime health](../superpowers/verification/2026-09-21-addon-cpu-violations.md), 21 September: decision on the counting approved and two tickets implemented by Terra/Sol medium, with root and independent reviews PASS. 100 focused tests, 1,135 full tests/101 suites, signed build and relaunch PID 32112 verified. That tranche had stopped at [the reduction of new work](../../.scratch/cascade-product/issues/52-addon-cpu-reduced-admission.md); 90% remaining, launcher blocked and sanctions not yet activated.
 
-[Ammissione CPU e scadenze comuni](../superpowers/verification/2026-09-21-addon-cpu-admission.md): due ticket implementati con Sol/Terra medium e revisioni root/indipendenti PASS.1.153 test/104 suite, build ufficiale firmata da487 input verificati e avvio stabile PID42941; Cascade era già chiusa prima dell’avvio. Residuo settimanale87%. Prossima scelta: [attribuzione CPU dei servizi ai consumatori](../../.scratch/cascade-product/issues/55-addon-delegated-cpu-attribution.md). Launcher bloccato.
+[CPU admission and common deadlines](../superpowers/verification/2026-09-21-addon-cpu-admission.md): two tickets implemented with Sol/Terra medium and root/independent reviews PASS. 1,153 tests/104 suites, official signed build from 487 verified inputs and stable launch PID 42941; Cascade was already closed before the launch. Weekly remainder 87%. Next choice: [CPU attribution of services to consumers](../../.scratch/cascade-product/issues/55-addon-delegated-cpu-attribution.md). Launcher blocked.
 
-[Contabilità CPU delegata](../superpowers/verification/2026-09-22-addon-delegated-cpu.md): formula conservativa approvata e coordinatore implementato daSol medium, revisioni root/Sol indipendente PASS.126 test mirati,1.161 test completi/105 suite, build ufficiale firmata da488 input verificati e riavvio PID46952. Budget residuo86%. Il collegamento al broker attende [la scelta sulle catene di servizi](../../.scratch/cascade-product/issues/57-addon-transitive-cpu-attribution.md); launcher bloccato.
+[Delegated CPU accounting](../superpowers/verification/2026-09-22-addon-delegated-cpu.md): conservative formula approved and coordinator implemented by Sol medium, root and independent Sol reviews PASS. 126 focused tests, 1,161 full tests/105 suites, official signed build from 488 verified inputs and relaunch PID 46952. Remaining budget 86%. The connection to the broker waits on [the choice on service chains](../../.scratch/cascade-product/issues/57-addon-transitive-cpu-attribution.md); launcher blocked.

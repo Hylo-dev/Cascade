@@ -1,60 +1,60 @@
-# Riesame delle opzioni host dopo la VM — 26 settembre 2026
+# Review of the host options after the VM: 26 September 2026
 
-Solo ricerca: nessun nuovo processo addon/helper/root della fixture, segnale,
-sospensione, privilegio o modifica dell’app. La pausa richiesta dall’utente è
-rispettata. La policy contro i processi gestiti orfani e il gate restano invariati.
+Research only: no new addon/helper/fixture-root process, signal,
+suspension, privilege or app change. The pause requested by the user is
+respected. The policy against orphaned managed processes and the gate stay unchanged.
 
-La prossima prova candidata è **il recupero amministrativo di un provider avviato
-normalmente**, autenticato, con guardia già attiva, root e broker vivi. Non risulta
-già eseguita nelle evidenze consultate; il SIGCONT previsto dal runner VM non è
-mai stato raggiunto. Il comando da valutare nel successivo disegno esecutivo è:
+The next candidate probe is **administrative recovery of a normally launched
+provider**, authenticated, with its guard already active, root and broker alive. It does
+not appear to have been run already in the evidence consulted; the SIGCONT planned by the
+VM runner was never reached. The command to evaluate in the next execution design is:
 
 ```text
-launchctl kill SIGKILL pid/<broker-autenticato>/<job-esatto-della-fixture>
+launchctl kill SIGKILL pid/<authenticated-broker>/<exact-fixture-job>
 ```
 
-Non è un comando da eseguire ora. Nessun sudo sull’host è implicito. Il manuale
-pubblico descrive l’invio del segnale al servizio in esecuzione. L’eventuale PASS
-richiederebbe l’uscita SIGKILL della precisa istanza già registrata in kqueue,
-prima delle guardie, senza richieste concorrenti di avvio o nuova incarnazione.
-Diniego, timeout o intervento del cleanup restano FAIL/inconclusivi. Il recupero
-ordinario tramite root già misurato sarebbe separato dal risultato.
-[Manuale locale launchctl](</usr/share/man/man1/launchctl.1>),
-[prove di identità esterna](</Users/c4v4h/Library/Mobile Documents/com~apple~CloudDocs/Projects/XcodeProjects/Cascade/docs/superpowers/verification/2026-09-25-addon-external-identity.md>).
+It is not a command to run now. No sudo on the host is implied. The public
+manual describes sending the signal to the running service. Any PASS
+would require the SIGKILL exit of the precise instance already registered in kqueue,
+before the guards, without concurrent launch requests or a new incarnation.
+Denial, timeout or intervention of the cleanup remain FAIL/inconclusive. The ordinary
+recovery through root already measured would be separate from the result.
+[Local launchctl manual](</usr/share/man/man1/launchctl.1>),
+[external identity probes](</Users/c4v4h/Library/Mobile Documents/com~apple~CloudDocs/Projects/XcodeProjects/Cascade/docs/superpowers/verification/2026-09-25-addon-external-identity.md>).
 
-**Servizio non significa incarnazione.** Il comando indirizza il servizio corrente,
-non un audit token. Inoltre `pid/<pid>` risolve il dominio mediante un numero PID:
-la connessione conservata al broker e controlli prima/dopo non ne impediscono
-atomicamente il riuso. Occorre rivedere questo indirizzamento prima dell’esecuzione;
-un PASS col dominio vivo non qualifica recupero dopo la morte di broker/root.
-Il parsing di `launchctl print` resta diagnostico, non API produttiva.
-[Manuale locale launchctl](</usr/share/man/man1/launchctl.1>).
+**Service does not mean incarnation.** The command addresses the current service,
+not an audit token. Moreover, `pid/<pid>` resolves the domain through a PID number:
+the retained connection to the broker and before/after checks do not atomically prevent
+its reuse. This addressing must be reviewed before execution;
+a PASS with the domain alive does not qualify recovery after the death of broker/root.
+Parsing `launchctl print` remains diagnostic, not production API.
+[Local launchctl manual](</usr/share/man/man1/launchctl.1>).
 
-**Nessun passaggio automatico a SIGSTOP/SIGCONT o START_SUSPENDED.** Un processo
-fermato dopo HELLO ha già eseguito codice. Una guardia SIGALRM attiva può restare
-pendente mentre il processo è fermo: non è un recupero indipendente. XNU 14 usa
-`task_suspend_internal` sia nello stop da segnale sia nello spawn sospeso, ma ciò
-non rende equivalenti il punto temporale o i contatori misurati su ogni OS.
-SIGKILL ha un percorso specifico; il suo successo su un processo ordinario non è
-già una prova sul provider fermo prima della prima istruzione.
-[XNU segnali](https://github.com/apple-oss-distributions/xnu/blob/xnu-10002.1.13/bsd/kern/kern_sig.c#L2155),
-[XNU spawn sospeso](https://github.com/apple-oss-distributions/xnu/blob/xnu-10002.1.13/bsd/kern/kern_exec.c#L1862).
+**No automatic move to SIGSTOP/SIGCONT or START_SUSPENDED.** A process
+stopped after HELLO has already run code. An active SIGALRM guard can stay
+pending while the process is stopped: it is not an independent recovery. XNU 14 uses
+`task_suspend_internal` both in the signal stop and in the suspended spawn, but that
+does not make the point in time or the measured counters equivalent on every OS.
+SIGKILL has a specific path; its success on an ordinary process is not
+already proof about the provider stopped before its first instruction.
+[XNU signals](https://github.com/apple-oss-distributions/xnu/blob/xnu-10002.1.13/bsd/kern/kern_sig.c#L2155),
+[XNU suspended spawn](https://github.com/apple-oss-distributions/xnu/blob/xnu-10002.1.13/bsd/kern/kern_exec.c#L1862).
 
-Una calibrazione separata potrebbe creare un minuscolo figlio diretto ordinario
-con `POSIX_SPAWN_START_SUSPENDED`, acquisire task-name port/token/firma senza HELLO,
-poi terminarlo e confrontare kqueue con wait. Il controller vivo, unico reaper,
-con SIGCHLD predefinito e senza SA_NOCLDWAIT conserva il PID del proprio figlio
-fino al reap; `WNOWAIT` non lo consuma. È diverso da un PID scoperto. Ma la morte
-del controller fa perdere quel presupposto: **non risolve il lifetime EF e non
-offre il contenimento della VM**. Non la propongo come prossimo esperimento né
-come nuova prova necessaria per sbloccare il prodotto.
+A separate calibration could create a tiny ordinary direct child
+with `POSIX_SPAWN_START_SUSPENDED`, acquire task-name port/token/signature without HELLO,
+then terminate it and compare kqueue with wait. The live controller, the only reaper,
+with default SIGCHLD and without SA_NOCLDWAIT keeps the PID of its own child
+until the reap; `WNOWAIT` does not consume it. This is different from a discovered PID. But the
+death of the controller loses that premise: **it does not resolve the EF lifetime and does
+not offer the containment of the VM**. I do not propose it as the next experiment nor
+as a new probe needed to unblock the product.
 [Apple spawn](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/posix_spawnattr_setflags.3.html),
-[Apple DTS e limiti di compatibilità](https://developer.apple.com/forums/thread/842442),
+[Apple DTS and compatibility limits](https://developer.apple.com/forums/thread/842442),
 [XNU reap/WNOWAIT](https://github.com/apple-oss-distributions/xnu/blob/xnu-10002.1.13/bsd/kern/kern_exit.c#L2562).
 
-Non serve una scelta architetturale per questa ricerca o per progettare la prova
-ordinaria. Adottare figli diretti al posto di EF oppure launchctl come controllo
-produttivo sarebbe invece una scelta nuova, con problemi di packaging, privilegi
-e lifetime ancora da risolvere. Non si ripropongono invalidate già fallito,
-guardie/EOF dopo main o un’eccezione agli orfani già rifiutata.
-[Analisi spawn già conclusa](</Users/c4v4h/Library/Mobile Documents/com~apple~CloudDocs/Projects/XcodeProjects/Cascade/docs/wayfinder/research/2026-09-24-spawn-managed-lifetime.md>).
+No architectural choice is needed for this research or for designing the ordinary
+probe. Adopting direct children in place of EF, or launchctl as production
+control, would instead be a new choice, with packaging, privilege
+and lifetime problems still to be solved. The already failed invalidate,
+guards/EOF after main, or an exception for orphans already refused are not proposed again.
+[Spawn analysis already concluded](</Users/c4v4h/Library/Mobile Documents/com~apple~CloudDocs/Projects/XcodeProjects/Cascade/docs/wayfinder/research/2026-09-24-spawn-managed-lifetime.md>).

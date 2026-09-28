@@ -1,29 +1,29 @@
-# Esempi sorgente con SDK pubblico
+# Source examples with the public SDK
 
-Gli esempi sono librerie SwiftPM indipendenti. Si compilano indicando esplicitamente il package SDK tramite `CASCADE_SDK_PATH`; ciascun README mostra come copiarli e verificarli fuori dal checkout. Dipendono dai prodotti pubblici `CascadeAddonSDK` e `CascadeContracts` e dalle loro dipendenze pubbliche.
+The examples are standalone SwiftPM libraries. They build by pointing explicitly at the SDK package through `CASCADE_SDK_PATH`; each README shows how to copy them and verify them outside the checkout. They depend on the public `CascadeAddonSDK` and `CascadeContracts` products and on their public dependencies.
 
-| Esempio | Comportamento | Stato e autorità richiesti |
+| Example | Behavior | Required state and authority |
 | --- | --- | --- |
-| [StandaloneClock](../../Examples/StandaloneClock/README.md) | Ora e minuti dichiarativi, senza tick del provider | Identità e revisione precedente assegnate dall’host; nessuno storage o servizio |
-| [StandaloneFocus](../../Examples/StandaloneFocus/README.md) | Avvio, pausa, ripresa e fine di un timer con countdown dichiarativo | Identità assegnata dall’host, storage autorevole e un solo writer; revisioni e ricevute persistenti |
-| [ServiceConsumer](../../Examples/ServiceConsumer/README.md) | Richiesta di un grant e lettura di un conteggio sintetico da un provider dimostrativo | Grant e client forniti dall’host; revisioni locali per una nuova assegnazione |
+| [StandaloneClock](../../Examples/StandaloneClock/README.md) | Declarative hours and minutes, without provider ticks | Identity and previous revision assigned by the host; no storage or service |
+| [StandaloneFocus](../../Examples/StandaloneFocus/README.md) | Start, pause, resume and end of a timer with a declarative countdown | Host-assigned identity, authoritative storage and a single writer; persistent revisions and receipts |
+| [ServiceConsumer](../../Examples/ServiceConsumer/README.md) | Requesting a grant and reading a synthetic count from a demonstration provider | Grant and client supplied by the host; local revisions for a new assignment |
 
-## Timer persistente
+## Persistent timer
 
-StandaloneFocus separa lo stato del timer dalla vita dell’actor. La modalità iniziale distingue una nuova assegnazione dichiarata dal chiamante dal ripristino di una precedente; dati mancanti, corrotti o appartenenti a un’altra assegnazione non vengono sostituiti con un timer nuovo.
+StandaloneFocus separates the timer's state from the actor's lifetime. The initial mode distinguishes a new assignment declared by the caller from the restoration of a previous one; data that is missing, corrupt or belongs to another assignment is not replaced with a new timer.
 
-Ogni snapshot riserva una revisione nello stesso record dello stato. Le ricevute conservano gli esiti recenti delle azioni: un risultato già noto rimane distinto dall’esito di una successiva scrittura dello snapshot. Quando la cronologia non è utilizzabile, una richiesta valida non riceve una falsa conferma di rifiuto. I dettagli dei limiti, del recupero e delle scadenze sono nel README dell’esempio.
+Every snapshot reserves a revision in the same record as the state. The receipts keep the recent outcomes of actions: an already known result stays distinct from the outcome of a later snapshot write. When the history is not usable, a valid request does not receive a false rejection confirmation. The details of the limits, recovery and deadlines are in the example's README.
 
-Il countdown è un valore dichiarativo disegnato dall’host. L’esempio non crea un task che aggiorni la pubblicazione ogni secondo. Il token di una scadenza persistito non dimostra che l’host abbia ammesso il corrispondente evento pianificato; una successiva richiesta può riconciliare uno stato già scaduto.
+The countdown is a declarative value drawn by the host. The example does not create a task that updates the publication every second. A persisted deadline token does not prove that the host admitted the corresponding scheduled event; a later request can reconcile a state that has already expired.
 
-## Consumer e provider dimostrativi
+## Demonstration consumer and provider
 
-ServiceConsumer include un contratto d’esempio, un provider che restituisce il valore sintetico 3 e un consumer. Il consumer dipende dal contratto condiviso, senza importare l’implementazione del provider. Quel valore non proviene dalla cronologia del timer StandaloneFocus.
+ServiceConsumer includes an example contract, a provider that returns the synthetic value 3, and a consumer. The consumer depends on the shared contract without importing the provider's implementation. That value does not come from the StandaloneFocus timer's history.
 
-Il consumer seleziona un grant fornito nel contesto per lo specifico servizio, scope e generazione. Se non ne ha uno utilizzabile, emette una richiesta di servizio e attende una successiva chiamata dell’host. Non risolve da solo le versioni, non ottiene consenso e non attiva automaticamente altri processi. I test controllano i messaggi pubblici e la propagazione degli esiti forniti dal client; la reale risoluzione REQUIRES e la revoca canonica restano dell’host.
+The consumer selects a grant supplied in the context for the specific service, scope and generation. If it has no usable one, it emits a service request and waits for a later call from the host. It does not resolve versions on its own, does not obtain consent and does not automatically activate other processes. The tests check the public messages and the propagation of the outcomes supplied by the client; the actual REQUIRES resolution and canonical revocation remain with the host.
 
-## Dal sorgente all’addon installato
+## From source to installed addon
 
-I manifest degli esempi descrivono contratti sorgente e non forniscono un eseguibile di bootstrap, una firma o un contenitore distribuibile. La build indipendente e i test del provider non dimostrano ammissione nativa, parità bundled/external, arresto del processo o esecuzione su tutte le versioni macOS supportate. Queste prove restano nel [piano di completamento](../superpowers/plans/2026-09-10-addon-runtime-completion.md).
+The examples' manifests describe source contracts and do not provide a bootstrap executable, a signature or a distributable container. The standalone build and the provider tests do not prove native admission, bundled/external parity, process termination, or execution on every supported macOS version. That evidence remains in the [completion plan](../superpowers/plans/2026-09-10-addon-runtime-completion.md).
 
-Per creare un esempio più semplice usare la [guida al generatore](quickstart.md); per progettare i test consultare [Verificare un provider addon](testing.md).
+To create a simpler example, use the [generator guide](quickstart.md); to design the tests, see [Verifying an addon provider](testing.md).

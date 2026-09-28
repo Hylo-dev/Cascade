@@ -1,4 +1,4 @@
-# Mantenere i pannelli e arbitrare una sola apertura
+# Keep the panels and arbitrate a single opening
 
 ID: 72
 Parent: cascade-product
@@ -11,8 +11,8 @@ Blocked by: 70, 71
 
 ## Question
 
-Implementare e verificare il task 4 del [piano multi-display](../../../docs/superpowers/plans/2026-09-24-multi-display-notch.md) rispettando la [specifica](../../../docs/superpowers/specs/2026-09-24-multi-display-notch-design.md). La tranche esecutiva è autorizzata dalla richiesta del 25 settembre; chiudere solo con prove e revisione.
+Implement and verify task 4 of the [multi-display plan](../../../docs/superpowers/plans/2026-09-24-multi-display-notch.md) following the [spec](../../../docs/superpowers/specs/2026-09-24-multi-display-notch-design.md). The execution tranche is authorized by the request of 25 September; close only with evidence and review.
 
 ## Answer
 
-Pannelli persistenti per display e apertura esclusiva implementati con un solo coordinatore e servizi condivisi. Handoff basato sulla chiusura effettiva, richieste annullabili e riserve per interazioni ausiliarie verificati. 118 test iniziali e 28 test finali del coordinatore superati; revisione indipendente PASS/PASS dopo due correzioni circoscritte. Restano alle tranche successive geometria software e collegamento delle impostazioni.
+Persistent per-display panels and exclusive opening implemented with a single coordinator and shared services. Handoff based on the actual closing, cancelable requests and reserves for auxiliary interactions verified. 118 initial tests and 28 final coordinator tests passed; independent review PASS/PASS after two scoped fixes. Software geometry and the settings connection remain for the later tranches.

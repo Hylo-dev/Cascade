@@ -1,4 +1,4 @@
-# Chiarire come il burst CPU consuma il budget addon
+# Clarify how a CPU burst consumes the addon budget
 
 ID: 46
 Parent: cascade-product
@@ -11,23 +11,23 @@ Blocked by: 45
 
 ## Question
 
-Prima di collegare le osservazioni CPU alle violazioni, come convivono i candidati «50 ms su finestra mobile di 10 s» e «burst iniziale 100 ms/job»? Il credito iniziale deve consumare un budget dell’addon che non si ricarica con nuovi job/processi, oppure deve essere aggiuntivo per ogni job ammesso dall’host?
+Before connecting the CPU observations to violations, how do the candidates "50 ms over a sliding 10 s window" and "initial burst of 100 ms/job" coexist? Must the initial credit consume an addon budget that does not refill with new jobs/processes, or must it be additional for every job admitted by the host?
 
-## Contesto
+## Context
 
-La [specifica approvata](../../../docs/superpowers/specs/2026-09-09-addon-runtime-design.md) e il [piano C4](../../../docs/superpowers/plans/2026-09-09-addon-runtime-02-execution.md) nominano entrambi i valori ma non definiscono la loro precedenza, esenzione o accumulo. Il lettore, riduttore e coordinatore consegnano osservazioni; AddonHealthStore accetta violazioni già classificate, senza definire il budget CPU. Anche la [ricognizione del 18 settembre](../../codex-addon/20260918-continuation/addon-remaining-work-audit.md) aveva lasciato esplicitamente aperta la definizione degli intervalli/burst. Un job da 80 ms sarebbe entro il burst ma oltre la finestra ordinaria da 50 ms: la classificazione non può essere ricavata dai due numeri da soli. Riavviare molti job non deve diventare implicitamente una deroga alle quote.
+The [approved spec](../../../docs/superpowers/specs/2026-09-09-addon-runtime-design.md) and the [C4 plan](../../../docs/superpowers/plans/2026-09-09-addon-runtime-02-execution.md) name both values but do not define their precedence, exemption or accumulation. The reader, reducer and coordinator deliver observations; AddonHealthStore accepts already classified violations, without defining the CPU budget. The [survey of 18 September](../../codex-addon/20260918-continuation/addon-remaining-work-audit.md) had also explicitly left the definition of the intervals/bursts open. An 80 ms job would be within the burst but beyond the ordinary 50 ms window: the classification cannot be derived from the two numbers alone. Restarting many jobs must not implicitly become a waiver of the quotas.
 
-## Alternative concrete da decidere
+## Concrete alternatives to decide
 
-1. **Credito condiviso dell’addon (raccomandazione):** capacità iniziale 100 ms, recupero di 5 ms di CPU per secondo trascorso; ogni lavoro consuma lo stesso credito, conservato fra job e riavvii del provider. La specifica passerebbe esplicitamente da finestra mobile rigida a budget ricaricabile: consente lo spunto ma limita il consumo sostenuto. Il credito non si rigenera semplicemente creando un job.
-2. **Burst aggiuntivo per ogni job:** mantenere 100 ms aggiuntivi per job host ammesso e 50 ms/10 s per il restante lavoro. Occorre inoltre fissare un limite cumulativo ai burst/frequenza dei job; senza questo limite non si può dedurre un tetto sostenuto per addon.
+1. **Shared addon credit (recommendation):** initial capacity 100 ms, recovery of 5 ms of CPU per elapsed second; every piece of work consumes the same credit, retained across jobs and provider restarts. The spec would explicitly move from a rigid sliding window to a refillable budget: it allows the initial spike but limits sustained consumption. The credit is not regenerated simply by creating a job.
+2. **Additional burst for every job:** keep an additional 100 ms per admitted host job and 50 ms/10 s for the remaining work. A cumulative limit on bursts/job frequency must also be set; without that limit a sustained cap per addon cannot be inferred.
 
-Sono politiche diverse, non dettagli intercambiabili d’implementazione. Nessuna è applicata dal presente ticket. La scelta vale solo per gli addon event-driven; profili continui UI/audio, attribuzione dei servizi condivisi e qualifica nativa rimangono distinti. Non si modifica né riapre il blocco del launcher.
+These are different policies, not interchangeable implementation details. Neither is applied by this ticket. The choice applies only to event-driven addons; continuous UI/audio profiles, attribution of shared services and native qualification remain separate. The launcher block is neither changed nor reopened.
 
-L’utente ha richiesto di fermare l’esecuzione a una scelta progettuale necessaria. Completare e verificare l’incremento del coordinatore già in corso, poi presentare questo punto; nessun worker implementa la policy prima della risposta.
+The user asked to stop execution at a necessary design choice. Complete and verify the coordinator increment already in progress, then present this point; no worker implements the policy before the answer.
 
-## Answer — decisione dell’utente, 20 settembre 2026
+## Answer: user decision, 20 September 2026
 
-L’utente sceglie «la consigliata»: credito comune per addon con capacità iniziale 100 ms e ricarica 5 ms CPU/secondo monotono. Nuovi job e riavvii del provider non ricreano il credito. Questo sostituisce esplicitamente la precedente finestra mobile rigida 50 ms/10 s e il burst aggiuntivo 100 ms/job.
+The user chooses "the recommended one": a shared credit per addon with an initial capacity of 100 ms and a refill of 5 ms CPU/monotonic second. New jobs and provider restarts do not re-create the credit. This explicitly replaces the previous rigid 50 ms/10 s sliding window and the additional 100 ms/job burst.
 
-La decisione riguarda gli addon event-driven. Non concede una deroga ai profili UI/audio continui, non risolve attribuzione dei servizi condivisi o la verifica nativa, non apre il launcher. Le alternative sopra sono storiche: la prima è ora approvata.
+The decision concerns event-driven addons. It grants no waiver to continuous UI/audio profiles, does not resolve the attribution of shared services or the native verification, and does not open the launcher. The alternatives above are historical: the first one is now approved.

@@ -1,4 +1,4 @@
-# Decidere l’attribuzione CPU nelle catene di servizi
+# Decide CPU attribution in service chains
 
 ID: 57
 Parent: cascade-product
@@ -11,22 +11,22 @@ Blocked by: 56
 
 ## Question
 
-Se A usa B e B usa C nello stesso intervallo, il consumo misurato di C viene attribuito anche ad A oppure soltanto al consumatore diretto B?
+If A uses B and B uses C in the same interval, is the measured consumption of C also attributed to A, or only to the direct consumer B?
 
-## Contesto
+## Context
 
-[Definire l’attribuzione CPU dei servizi ai consumatori](55-addon-delegated-cpu-attribution.md) ha risolto la formula: intervallo completo a ciascun consumatore canonico attivo, senza dividere il costo e senza moltiplicare il totale fisico. Non ha risolto la propagazione attraverso più servizi. Il coordinatore aritmetico può ricevere un insieme deduplicato; il prossimo collegamento al broker deve invece produrre quell’insieme secondo una regola esplicita.
+[Define the CPU attribution of services to consumers](55-addon-delegated-cpu-attribution.md) resolved the formula: the complete interval to each active canonical consumer, without splitting the cost and without multiplying the physical total. It did not resolve propagation across several services. The arithmetic coordinator can receive a deduplicated set; the next wiring to the broker must instead produce that set according to an explicit rule.
 
-La specifica richiede di non scaricare costi fuori dalla propria quota, ma non definisce la chiusura transitiva. Il percorso statico del resolver ordina i processi da avviare e non prova il lavoro effettivamente delegato. Un provider condiviso può usare un altro servizio per lavoro proprio o per un consumatore diverso: nemmeno una catena di interessi attivi dimostra la causalità della singola richiesta.
+The spec requires not offloading costs outside one's own quota, but does not define the transitive closure. The resolver's static path orders the processes to start and does not prove the work actually delegated. A shared provider can use another service for its own work or for a different consumer: not even a chain of active interests demonstrates the causality of the single request.
 
-## Alternative
+## Alternatives
 
-1. **Propagazione conservativa lungo gli interessi attivi (consigliata).** Nell’esempio,40ms CPU di C si addebitano a C, B e A. Evita che A aggiri la quota inserendo un intermediario; accetta di attribuire ad A anche lavoro interno di B o richiesto da altri suoi consumatori. Si seguono soltanto relazioni canoniche attive nell’intervallo, non dipendenze installate ma inutilizzate. Ogni identità paga al massimo una volta per processo/intervallo, anche se più percorsi conducono alla stessa dipendenza.
-2. **Solo consumatori diretti.** I40ms di C si addebitano a C e B. A paga la CPU di B, ma non quella che B delega ulteriormente; minore penalizzazione indiretta, con il limite esplicito che la quota di A può essere aggirata usando intermediari.
+1. **Conservative propagation along active interests (recommended).** In the example, 40 ms of CPU of C are charged to C, B and A. It prevents A from getting around its quota by inserting an intermediary; it accepts attributing to A also B's internal work or work requested by B's other consumers. Only canonical relations active in the interval are followed, not dependencies that are installed but unused. Each identity pays at most once per process/interval, even if several paths lead to the same dependency.
+2. **Direct consumers only.** The 40 ms of C are charged to C and B. A pays for B's CPU, but not for what B delegates further; less indirect penalization, with the explicit limit that A's quota can be circumvented by using intermediaries.
 
-In entrambi i casi il totale fisico resta40ms. Nessuna alternativa è implementata prima della risposta. La revisione delle fonti effettuata da Terra e root conferma che questa scelta non è già stata risolta; la sincronizzazione fra registri e campioni resta un problema tecnico separato.
+In both cases the physical total stays 40 ms. Neither alternative is implemented before the answer. The review of the sources carried out by Terra and the root confirms that this choice has not already been resolved; the synchronization between ledgers and samples remains a separate technical problem.
 
 
 ## Answer
 
-Il22settembre2026 l’utente ha scelto1: **propagazione conservativa lungo le catene canoniche attive**. In A→B→C, il consumo di C ricade su C, B e A, una volta per identità/processo/intervallo anche in presenza di più percorsi. Si accetta il costo della condivisione e del lavoro interno del provider intermedio. Non si usano dipendenze statiche prive di interessi attivi. Le relazioni della catena devono essere contemporaneamente attive almeno in un tratto dell’intervallo: l’unione di archi esistiti in momenti disgiunti non inventa una catena. Globale fisico sempre contato una volta.
+On 22 September 2026 the user chose 1: **conservative propagation along the active canonical chains**. In A→B→C, the consumption of C falls on C, B and A, once per identity/process/interval even when there are several paths. The cost of sharing and of the intermediate provider's internal work is accepted. Static dependencies without active interests are not used. The relations of the chain must be simultaneously active for at least part of the interval: the union of edges that existed at disjoint moments does not invent a chain. The physical global is always counted once.

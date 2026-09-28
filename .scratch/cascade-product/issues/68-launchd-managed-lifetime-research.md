@@ -1,4 +1,4 @@
-# Verificare la gestione della durata tramite launchd
+# Verify lifetime management through launchd
 
 ID: 68
 Parent: cascade-product
@@ -11,12 +11,12 @@ Blocked by: none
 
 ## Question
 
-La pista launchd/ServiceManagement lasciata aperta nell’indagine del18settembre offre un vincolo verificabile dalla creazione del bootstrap fino all’uscita dopo la perdita del supervisore/host, sotto i requisiti già approvati? Controllare fonti Apple correnti e sorgenti primari, distinguendo process-group cleanup, possibilità di uscire dal gruppo, identità e durata del job. Nessuna installazione di job, avvio di provider/prototipi, modifica a entitlement o gate, né nuova eccezione. Produrre soltanto un esito documentato che alimenti la prova dei processi gestiti.
+Does the launchd/ServiceManagement lead left open in the 18 September investigation offer a verifiable constraint from the creation of the bootstrap until the exit after the loss of the supervisor/host, under the requirements already approved? Check current Apple sources and primary source code, distinguishing process-group cleanup, the possibility of leaving the group, identity and job lifetime. No job installation, no start of providers/prototypes, no change to entitlements or gates, and no new exception. Produce only a documented outcome that feeds the managed process proof.
 
-## Contesto
+## Context
 
-La [decisione di mantenere il launcher bloccato](22-managed-process-exit-proof.md) resta vincolante. La continuazione dell’utente autorizza questa ricerca tecnica, senza riaprire la policy. [Indagine precedente](../../codex-addon/20260918-continuation/managed-process-design.md).
+The [decision to keep the launcher blocked](22-managed-process-exit-proof.md) remains binding. The user's continuation authorizes this technical research, without reopening the policy. [Previous investigation](../../codex-addon/20260918-continuation/managed-process-design.md).
 
 ## Answer
 
-Ricerca Sol medium e verifica root concluse: i contratti pubblici esaminati non stabiliscono la garanzia richiesta. La registrazione ServiceManagement persiste oltre l’app, mentre il cleanup launchd riguarda il gruppo al decesso del job; appartenenza non dimostrata inescapabile e uscita fisica non provata. [Rapporto con fonti e limiti](../../../docs/wayfinder/research/2026-09-23-launchd-managed-lifetime.md). Nessuna prova nativa o modifica al prodotto. Il ticket della prova dei processi gestiti resta aperto; launcher bloccato, nessuna nuova scelta di policy richiesta.
+Sol medium research and root verification concluded: the public contracts examined do not establish the required guarantee. The ServiceManagement registration persists beyond the app, while the launchd cleanup concerns the group at the job's death; membership not shown to be inescapable and physical exit not proven. [Report with sources and limits](../../../docs/wayfinder/research/2026-09-23-launchd-managed-lifetime.md). No native test and no product change. The managed process proof ticket stays open; launcher blocked, no new policy choice required.

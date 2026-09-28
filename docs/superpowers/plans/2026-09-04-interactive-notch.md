@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Aptica all'inizio dell'hover, prima del morph; nessun impulso per aggiornamenti automatici.
+- Haptics at the start of the hover, before the morph; no pulse for automatic updates.
 - No new third-party dependencies, polling loops, blocking main-thread work or fabricated device data.
 - Preserve pre-existing project signing changes. Work on `codex/interactive-notch` in the shared checkout so the user can inspect the app immediately.
 - Only claim native-notice suppression when the implementation can verify it; disclose AX dismissal limits.

@@ -1,4 +1,4 @@
-# Collegare il client storage SDK al percorso a messaggi
+# Connect the SDK storage client to the message path
 
 ID: 28
 Parent: cascade-product
@@ -11,16 +11,16 @@ Blocked by: 23
 
 ## Question
 
-Implementare un client SDK concreto read/write/remove con canale a messaggi iniettato, preservando correlazione, cancellazione, esiti incerti e attesa della pulizia fisica. Verificare il collegamento al runtime e al backend storage reali con un bridge di test e risorse preammesse.
+Implement a concrete read/write/remove SDK client with an injected message channel, preserving correlation, cancellation, uncertain outcomes and waiting for physical cleanup. Verify the wiring to the real runtime and storage backend with a test bridge and pre-admitted resources.
 
 ## Context
 
-Incremento storage/SDK della prosecuzione autorizzata il 18 settembre. [Piano e matrice di accettazione](../../../docs/superpowers/plans/2026-09-18-addon-storage-message-client.md). Nessun nuovo protocollo o launcher; i test non qualificano il trasporto OS.
+Storage/SDK increment of the continuation authorized on 18 September. [Plan and acceptance matrix](../../../docs/superpowers/plans/2026-09-18-addon-storage-message-client.md). No new protocol or launcher; the tests do not qualify the OS transport.
 
 ## Progress
 
-Disegno esaminato; implementazione presa in carico con Codex Sol high.
+Design examined; implementation taken on with Codex Sol high.
 
 ## Answer
 
-Client concreto e bridge interno implementati e revisionati: 955 test / 87 suite, esempi esterni 37 + 16 test, build firmata e riavvio verificato. [Evidenze e limiti](../../../docs/superpowers/verification/2026-09-18-addon-storage-message-client.md). Nessun requisito nativo chiuso; P3 facoltativi e copertura finita dichiarati.
+Concrete client and internal bridge implemented and reviewed: 955 tests / 87 suites, external examples 37 + 16 tests, signed build and restart verified. [Evidence and limits](../../../docs/superpowers/verification/2026-09-18-addon-storage-message-client.md). No native requirement closed; optional P3s and finite coverage declared.

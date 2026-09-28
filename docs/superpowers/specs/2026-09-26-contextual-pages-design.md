@@ -1,346 +1,346 @@
-# Pagine, selezione contestuale e tre attività
+# Pages, contextual selection and three activities
 
-Data: 26 settembre 2026.
+Date: 26 September 2026.
 
-Stato: specifica in discussione. Le decisioni della sezione 2 provengono dalle
-richieste esplicite dell'utente. Le proposte delle sezioni successive completano
-i casi limite e non costituiscono ancora una specifica esecutiva approvata.
-Nessuna implementazione applicativa fa parte di questo intervento.
+Status: specification under discussion. The decisions in section 2 come from the
+user's explicit requests. The proposals in the following sections complete
+the edge cases and do not yet form an approved execution specification.
+No application implementation is part of this change.
 
-## 1. Obiettivo
+## 1. Goal
 
-Rendere accessibili widget personali, Live Activities e controlli dell'app in uso
-attraverso lo stesso notch. Il sistema sceglie una principale per priorità e
-rispetta la selezione dell'utente. Le attività restano raggiungibili tramite bolle
-e navigazione orizzontale, senza sostituire improvvisamente una pagina aperta.
+Make personal widgets, Live Activities and the controls of the app in use accessible
+through the same notch. The system chooses a primary by priority and
+respects the user's selection. The activities stay reachable through bubbles
+and horizontal navigation, without suddenly replacing an open page.
 
-## 2. Decisioni confermate dall'utente
+## 2. Decisions confirmed by the user
 
-| ID | Decisione | Vincolo |
+| ID | Decision | Constraint |
 | --- | --- | --- |
-| D1 | La pagina aperta è protetta dagli eventi automatici. | Nuove attività e cambi di priorità non cambiano di colpo il contenuto in uso. |
-| D2 | Il notch presenta fino a tre attività. | Una principale e fino a due bolle, con riferimento alla Dynamic Island di iPhone 18 Pro. |
-| D3 | Esiste una Pagina 0 personalizzabile. | È la base del notch; le attività la mettono in secondo piano senza eliminarla. |
-| D4 | Pagina 0 è raggiungibile scorrendo da destra verso sinistra. | La navigazione deve conservarne un accesso prevedibile. |
-| D5 | La principale viene scelta per priorità oppure dall'utente. | Se l'utente seleziona un'attività nel notch aperto e lo chiude, l'ultima visualizzata diventa principale compatta. |
-| D6 | Il focus di un'app può rendere disponibile un'attività contestuale. | Esempi: comandi Photoshop e comandi di un player. |
-| D7 | L'hover centrale apre la principale. | Si mantiene la relazione fra corpo compatto e contenuto espanso. |
-| D8 | Il clic su una bolla apre direttamente l'attività selezionata. | Questa indicazione sostituisce la precedente proposta di apertura della bolla in hover. |
-| D9 | Lo slide sulle bolle ruota le attività compatte. | La bolla entrante si unisce visivamente al notch e diventa principale; le altre si riposizionano. |
-| D10 | Una nuova registrazione prevale sulla musica scelta manualmente. | A notch chiuso la registrazione diventa principale e la musica passa in una bolla. A notch aperto continua a valere D1. |
+| D1 | The open page is protected from automatic events. | New activities and priority changes do not abruptly change the content in use. |
+| D2 | The notch presents up to three activities. | One primary and up to two bubbles, with the iPhone 18 Pro Dynamic Island as reference. |
+| D3 | There is a customizable Page 0. | It is the base of the notch; activities push it into the background without removing it. |
+| D4 | Page 0 is reachable by swiping from right to left. | Navigation must keep a predictable access to it. |
+| D5 | The primary is chosen by priority or by the user. | If the user selects an activity in the open notch and closes it, the last one viewed becomes the compact primary. |
+| D6 | An app's focus can make a contextual activity available. | Examples: Photoshop commands and a player's commands. |
+| D7 | Central hover opens the primary. | The relationship between compact body and expanded content is kept. |
+| D8 | Clicking a bubble opens the selected activity directly. | This indication replaces the previous proposal of opening the bubble on hover. |
+| D9 | Sliding on the bubbles rotates the compact activities. | The incoming bubble visually merges with the notch and becomes primary; the others reposition. |
+| D10 | A new recording takes precedence over music chosen manually. | With the notch closed the recording becomes primary and the music moves into a bubble. With the notch open D1 still applies. |
 
-La precedente proposta di riportare sempre la principale alla selezione
-automatica dopo la chiusura è superata da D5.
+The previous proposal of always returning the primary to the automatic
+selection after closing is superseded by D5.
 
-## 3. Riferimento visivo verificato
+## 3. Verified visual reference
 
-Apple documenta tre Live Activities simultanee su iPhone 18 Pro e lo swipe per
-passare fra attività. La documentazione HIG generale consultata riporta ancora
-il precedente caso a due; per il riferimento richiesto usiamo la guida del
-modello e il materiale di lancio aggiornato.
+Apple documents three simultaneous Live Activities on iPhone 18 Pro and the swipe to
+move between activities. The general HIG documentation consulted still reports
+the previous two-activity case; for the requested reference we use the model's
+guide and the updated launch material.
 
-- [Apple: guida Dynamic Island](https://support.apple.com/en-by/guide/iphone/iph28f50d10d/ios).
-- [Apple: presentazione iPhone 18 Pro, sezione Dynamic Island](https://www.apple.com/newsroom/2026/09/apple-debuts-iphone-18-pro-and-iphone-18-pro-max/).
-- [Riferimento visivo pubblicato da MacRumors](https://www.macrumors.com/2026/09/09/iphone-18-pro-features-smaller-dynamic-island/).
-- [Immagine delle tre attività osservata nel browser](https://images.macrumors.com/t/15I1H8_5to6Md7Sle3RpeKoL3Qs%3D/400x0/article-new/2026/09/three-live-activities.jpg?lossy=).
+- [Apple: Dynamic Island guide](https://support.apple.com/en-by/guide/iphone/iph28f50d10d/ios).
+- [Apple: iPhone 18 Pro presentation, Dynamic Island section](https://www.apple.com/newsroom/2026/09/apple-debuts-iphone-18-pro-and-iphone-18-pro-max/).
+- [Visual reference published by MacRumors](https://www.macrumors.com/2026/09/09/iphone-18-pro-features-smaller-dynamic-island/).
+- [Image of the three activities observed in the browser](https://images.macrumors.com/t/15I1H8_5to6Md7Sle3RpeKoL3Qs%3D/400x0/article-new/2026/09/three-live-activities.jpg?lossy=).
 
-L'immagine mostra una capsula principale con una bolla a sinistra e una a destra,
-allineate orizzontalmente. Per Cascade adattiamo questa disposizione al taglio
-hardware del Mac. L'hardware resta fisso: si muovono le superfici disegnate e i
-loro contenuti. La fusione durante la rotazione è un requisito dell'utente;
-l'immagine statica non ne dimostra la curva o la durata su iPhone.
+The image shows a primary capsule with one bubble on the left and one on the right,
+aligned horizontally. For Cascade we adapt this arrangement to the Mac's hardware
+cut-out. The hardware stays fixed: the drawn surfaces and their
+content move. The merging during rotation is a user requirement;
+the static image does not show its curve or duration on iPhone.
 
-Proposta per gli stati compatti:
+Proposal for the compact states:
 
-- Nessuna attività: sagoma di riposo; l'hover apre Pagina 0.
-- Una attività: principale intorno al notch, con contenuti sui due lati utili.
-- Due attività: principale e bolla destra, conservando la disposizione attuale.
-- Tre attività: bolla sinistra, principale, bolla destra.
+- No activity: resting outline; hover opens Page 0.
+- One activity: primary around the notch, with content on the two usable sides.
+- Two activities: primary and right bubble, keeping the current arrangement.
+- Three activities: left bubble, primary, right bubble.
 
-## 4. Pagine e navigazione — proposta
+## 4. Pages and navigation: proposal
 
-Pagina 0 conserva identità, disposizione e preferenze fra aperture. Ogni attività
-ha una destinazione espansa identificata dalla sessione, indipendente dalla sua
-posizione corrente fra principale e bolle. Gli addon contribuiscono widget e
-attività attraverso il contratto comune.
+Page 0 keeps identity, arrangement and preferences across openings. Each activity
+has an expanded destination identified by the session, independent of its
+current position among primary and bubbles. Addons contribute widgets and
+activities through the common contract.
 
-Per rendere letterale l'accesso richiesto a Pagina 0, la proposta pone le altre
-attività a sinistra della principale e Pagina 0 immediatamente a destra:
+To make the requested access to Page 0 literal, the proposal places the other
+activities to the left of the primary and Page 0 immediately to the right:
 
     [altre attività] [principale all'apertura] [Pagina 0] [altre pagine personali]
 
-Dalla principale, uno scorrimento del contenuto da destra verso sinistra rivela
-Pagina 0; il gesto opposto porta alle altre attività. Le etichette delle pagine
-restano stabili anche se cambia la principale. La sequenza viene fissata
-all'apertura, così non si riordina sotto il puntatore durante la consultazione.
-Sono disponibili anche controlli accessibili per cambiare pagina.
+From the primary, a right-to-left scroll of the content reveals
+Page 0; the opposite gesture leads to the other activities. The page labels
+stay stable even if the primary changes. The sequence is fixed
+on opening, so it does not reorder under the pointer while the user is browsing.
+Accessible controls to change page are also available.
 
-Una nuova attività aggiorna l'insieme disponibile; la nuova disposizione viene
-applicata alla chiusura/riapertura. La conclusione della sessione visualizzata
-rende immediatamente inerti i suoi comandi. Si propone una breve superficie
-«Attività conclusa» mantenuta fino a navigazione o chiusura, evitando un cambio
-automatico di pagina mentre il puntatore sta per premere un comando.
+A new activity updates the available set; the new arrangement is
+applied on close/reopen. The end of the displayed session
+immediately makes its commands inert. A brief
+"Activity ended" surface is proposed, kept until navigation or closing, avoiding an
+automatic page change while the pointer is about to press a command.
 
-Interpretazione proposta di D2: tre sono le attività visibili nel compatto.
-Eventuali ulteriori sessioni valide rimangono raggiungibili fra le pagine;
-il limite di ammissione del runtime non viene ridotto implicitamente a tre.
+Proposed interpretation of D2: three is the number of activities visible in the compact state.
+Any further valid sessions stay reachable among the pages;
+the runtime's admission limit is not implicitly reduced to three.
 
-Visitare Pagina 0 non la trasforma in una Live Activity e non conclude le attività
-in corso. Si propone che chiudere da Pagina 0 conservi l'ultima attività
-esplicitamente consultata in quella apertura, se ancora valida; se non ce n'è
-una, conserva la principale precedente. Esempio: principale A, visita di B,
-visita di Pagina 0, chiusura: la nuova principale è B.
+Visiting Page 0 does not turn it into a Live Activity and does not end the activities
+in progress. It is proposed that closing from Page 0 keeps the last activity
+explicitly viewed in that opening, if still valid; if there is none,
+it keeps the previous primary. Example: primary A, visit to B,
+visit to Page 0, close: the new primary is B.
 
-## 5. Selezione automatica e manuale
+## 5. Automatic and manual selection
 
-La selezione mantiene separati:
+The selection keeps separate:
 
-- la principale compatta;
-- la destinazione aperta;
-- l'eventuale attività scelta esplicitamente dall'utente;
-- le attività ordinate per priorità;
-- la sequenza di navigazione della consultazione corrente.
+- the compact primary;
+- the open destination;
+- any activity explicitly chosen by the user;
+- the activities ordered by priority;
+- the navigation sequence of the current browsing.
 
-Un semplice hover della principale non costituisce una nuova preferenza manuale.
-Un clic sulla bolla o una navigazione esplicita seleziona la destinazione; alla
-chiusura l'ultima attività visualizzata diventa principale. Uno slide completato
-nel compatto imposta subito la nuova principale senza richiedere un'apertura.
+A mere hover over the primary does not constitute a new manual preference.
+A click on the bubble or an explicit navigation selects the destination; on
+closing, the last activity viewed becomes primary. A completed slide
+in the compact state sets the new primary right away without requiring an opening.
 
-Il riferimento manuale riguarda la sessione: conclusione, revoca o rimozione
-definitiva lo invalidano. Una revisione dei contenuti conserva l'identità e non
-annulla la scelta. Si propone che chiusure forzate per blocco schermo, stop o
-scollegamento display non trasformino un'apertura automatica in preferenza.
+The manual reference concerns the session: ending, revocation or permanent
+removal invalidate it. A content revision keeps the identity and does not
+cancel the choice. It is proposed that forced closings due to screen lock, stop or
+display disconnection do not turn an automatic opening into a preference.
 
-### Decisione: nuova registrazione dopo una scelta manuale
+### Decision: new recording after a manual choice
 
-Scenario: l'utente sceglie Musica, chiude il notch e poi avvia una registrazione.
+Scenario: the user chooses Music, closes the notch and then starts a recording.
 
-L'utente ha scelto la precedenza al nuovo evento: la registrazione diventa
-principale e Musica passa nella bolla laterale. È scartata l'alternativa che
-manteneva Musica principale fino alla fine della sua sessione.
+The user chose precedence for the new event: the recording becomes
+primary and Music moves into the side bubble. The alternative that
+kept Music primary until the end of its session is discarded.
 
-La regola generale proposta è: una nuova sessione con priorità maggiore supera
-la scelta manuale precedente quando il notch è chiuso. Aggiornamenti ordinari,
-cambio brano e ripubblicazioni della stessa sessione non sono nuovi eventi.
-L'utente può selezionare nuovamente Musica dopo l'arrivo della registrazione:
-la scelta vale fino al prossimo evento che soddisfa la regola.
+The proposed general rule is: a new session with a higher priority overrides
+the previous manual choice when the notch is closed. Ordinary updates,
+track changes and republications of the same session are not new events.
+The user can select Music again after the recording arrives:
+the choice holds until the next event that satisfies the rule.
 
-Se la registrazione inizia con il notch aperto, D1 protegge la pagina corrente.
-Come completamento del comportamento, si propone di applicare la precedenza
-alla chiusura, salvo una nuova selezione manuale effettuata dopo l'arrivo
-dell'attività. La semplice permanenza sulla pagina non conta come nuova scelta.
+If the recording starts with the notch open, D1 protects the current page.
+To complete the behavior, it is proposed to apply the precedence
+on closing, unless a new manual selection is made after the activity
+arrives. Merely staying on the page does not count as a new choice.
 
-L'ordine automatico iniziale resta una proposta: registrazione/condivisione,
-chiamata, comandi dell'app con focus, media e altre attività. La precedenza fra
-registrazione e chiamata simultanee va ancora concordata. A parità di priorità
-si conserva l'ordine precedente per evitare oscillazioni. Gli addon dichiarano
-il proprio contesto; l'host assegna la precedenza finale.
+The initial automatic order stays a proposal: recording/sharing,
+call, commands of the focused app, media and other activities. The precedence between
+simultaneous recording and call is still to be agreed. On equal priority
+the previous order is kept to avoid oscillation. Addons declare
+their own context; the host assigns the final precedence.
 
-## 6. Clic, slide e animazione — proposta
+## 6. Click, slide and animation: proposal
 
-Si propone di supportare sia il trascinamento orizzontale della bolla con il
-puntatore sia lo scorrimento orizzontale del trackpad sopra l'area compatta.
-Entrambi attraversano lo stesso riconoscimento del gesto; le soglie si tarano
-sul prototipo di interazione, senza intercettare lo scorrimento fuori dal notch.
+It is proposed to support both horizontal dragging of the bubble with the
+pointer and horizontal trackpad scrolling over the compact area.
+Both go through the same gesture recognition; the thresholds are tuned
+on the interaction prototype, without intercepting scrolling outside the notch.
 
-Il clic viene riconosciuto al rilascio se il movimento non supera la soglia del
-gesto. Lo slide riconosciuto annulla il clic e l'hover di apertura per tutta la
-rotazione, compreso il passaggio del puntatore sulla zona centrale.
+The click is recognized on release if the movement does not exceed the gesture
+threshold. A recognized slide cancels the click and the opening hover for the whole
+rotation, including the pointer passing over the central zone.
 
-La bolla selezionata si avvicina al corpo, crea un breve raccordo liquido e vi
-confluisce. La principale uscente diventa una bolla; la terza attività completa
-la rotazione. Il gesto opposto inverte il verso. La posizione logica viene
-confermata al completamento del gesto; un gesto annullato torna alla disposizione
-precedente. Dopo il gesto si richiede un nuovo ingresso nella zona centrale per
-aprire, così lo slide non provoca un'apertura involontaria.
+The selected bubble approaches the body, creates a brief liquid bridge and
+flows into it. The outgoing primary becomes a bubble; the third activity completes
+the rotation. The opposite gesture reverses the direction. The logical position is
+confirmed when the gesture completes; a cancelled gesture returns to the previous
+arrangement. After the gesture a new entry into the central zone is required to
+open, so the slide does not cause an unintended opening.
 
-Una sessione revocata durante il movimento non può tornare attiva al completamento
-dell'animazione. Riduci movimento conserva il risultato con transizione minima.
-Geometria, maschera e zone cliccabili seguono la stessa posizione. Nessun timer
-di animazione rimane attivo a transizione conclusa.
+A session revoked during the movement cannot become active again when the
+animation completes. Reduce Motion keeps the result with a minimal transition.
+Geometry, mask and clickable zones follow the same position. No animation
+timer stays active once the transition has finished.
 
-Nel notch aperto lo scorrimento delle pagine deve lasciare ai controlli interni
-i gesti iniziati su slider e altre superfici interattive. La rotazione compatta
-e la navigazione espansa condividono le identità, ma hanno gesti distinti.
+In the open notch, page scrolling must leave to the inner controls
+the gestures started on sliders and other interactive surfaces. The compact rotation
+and the expanded navigation share the identities, but have distinct gestures.
 
-## 7. Attività contestuali dell'app — proposta
+## 7. Contextual app activities: proposal
 
-Il focus rende eleggibile una superficie dichiarata dall'integrazione:
-Photoshop può offrire strumenti rapidi, un player i comandi del contenuto in uso.
-La sola presenza di un'app installata o aperta in background non la attiva.
+Focus makes a surface declared by the integration eligible:
+Photoshop can offer quick tools, a player the commands for the content in use.
+The mere presence of an installed app, or of one open in the background, does not activate it.
 
-Le superfici contestuali partecipano alla stessa selezione e, come proposta,
-allo stesso limite di tre posizioni compatte. Non costituiscono una quarta bolla.
-La loro eleggibilità dipende dal contesto, mentre una chiamata o registrazione
-continua a esistere anche se l'app perde il focus.
+The contextual surfaces take part in the same selection and, as a proposal,
+in the same limit of three compact positions. They do not constitute a fourth bubble.
+Their eligibility depends on the context, while a call or recording
+keeps existing even if the app loses focus.
 
-Durante una consultazione la superficie conserva la propria app sorgente.
-Il notch non deve rubarle il focus. Se il bersaglio cambia o scompare, i comandi
-non vengono dirottati alla nuova app: restano validi soltanto se l'integrazione
-sa indirizzarli e verificarli sul bersaglio originale; altrimenti si disabilitano.
-Il contesto successivo si applica alla successiva consultazione.
+During browsing the surface keeps its own source app.
+The notch must not steal its focus. If the target changes or disappears, the commands
+are not redirected to the new app: they stay valid only if the integration
+can address them to and verify them on the original target; otherwise they are disabled.
+The next context applies to the next browsing.
 
-Le capacità di rilevamento e controllo restano verifiche separate per
-registrazione di sistema, Meet, FaceTime, Discord e ciascuna nuova integrazione.
-Uso di microfono/camera, identità della chiamata e stato mute non sono equivalenti.
+Detection and control capabilities stay separate verifications for
+system recording, Meet, FaceTime, Discord and each new integration.
+Microphone/camera use, call identity and mute state are not equivalent.
 
-## 8. Inserimento nella struttura attuale
+## 8. Integration into the current structure
 
-- `LiveActivityHost` conserva sessioni, scadenze e lifecycle. La selezione attuale
-  espone principale/secondaria e una destinazione espansa; serviranno tre
-  posizioni compatte e una scelta manuale indipendente dalla priorità.
-  Oggi viene ammessa nel compatto una sola attività per `sourceID`: la gestione
-  di due sessioni distinte della stessa app rimane da definire, senza confonderla
-  con il limite di tre posizioni visibili.
-- `WidgetHost` e `NotchScreen` contengono già disposizione e identità dei widget.
-  Servono navigazione reale, persistenza della Pagina 0 e sospensione delle sole
-  viste che escono dalla pagina, senza duplicare le istanze.
-- `NotchDisplayCoordinator` mantiene un solo notch aperto e distribuisce le
-  stesse identità sui display secondo le preferenze esistenti.
-  Attualmente `reconcilePresentations()` riallinea la vista aperta in hover alla
-  principale corrente: questo comportamento deve lasciare il posto alla
-  destinazione scelta una volta all'apertura e poi conservata fino a navigazione
-  esplicita o conclusione della sessione.
-- `NotchController`, geometrie e renderer gestiscono entrambe le bolle e il
-  riconoscimento clic/slide. La fusione durante la rotazione richiede una
-  transizione dedicata: oggi i cambi di identità passano dalla sagoma base.
-- `AddonPresentationBridge` riceve contesto e capacità validati dall'host.
-  Widget interni ed esterni continuano a usare gli stessi contratti.
-- Il monitor del focus dispone già di PID e bundle ID dell'app esterna, ma il
-  contratto della finestra pubblica solo il rettangolo. Si estende quel percorso
-  per conservare il bersaglio dei comandi, evitando un secondo monitor.
+- `LiveActivityHost` keeps sessions, expiries and lifecycle. The current selection
+  exposes primary/secondary and an expanded destination; three
+  compact positions and a manual choice independent of priority will be needed.
+  Today only one activity per `sourceID` is admitted into the compact state: handling
+  two distinct sessions of the same app remains to be defined, without confusing it
+  with the limit of three visible positions.
+- `WidgetHost` and `NotchScreen` already contain the widgets' arrangement and identity.
+  Real navigation is needed, persistence of Page 0 and suspension of only the
+  views that leave the page, without duplicating the instances.
+- `NotchDisplayCoordinator` keeps a single open notch and distributes the
+  same identities across displays according to the existing preferences.
+  Currently `reconcilePresentations()` realigns the view opened on hover to the
+  current primary: this behavior must give way to the
+  destination chosen once on opening and then kept until explicit navigation
+  or the end of the session.
+- `NotchController`, geometries and renderer handle both bubbles and the
+  click/slide recognition. The merging during rotation requires a dedicated
+  transition: today identity changes go through the base outline.
+- `AddonPresentationBridge` receives context and capabilities validated by the host.
+  Internal and external widgets keep using the same contracts.
+- The focus monitor already has the external app's PID and bundle ID, but the
+  window contract publishes only the rectangle. That path is extended
+  to keep the command target, avoiding a second monitor.
 
-La scelta si ricalcola sugli eventi rilevanti, fuori dal ciclo di animazione.
-Le viste nascoste rilasciano risorse; una pagina nascosta non conclude la sessione.
+The choice is recomputed on the relevant events, outside the animation loop.
+Hidden views release resources; a hidden page does not end the session.
 
-## 9. Sequenza proposta per il successivo piano esecutivo
+## 9. Proposed sequence for the next execution plan
 
-1. Confermare navigazione, interpretazione del limite visivo e proposta delle
-   impostazioni. D10 chiude il caso registrazione dopo Musica scelta manualmente.
-2. Definire e verificare selezione, identità delle pagine e ritorni alla chiusura.
-3. Aggiungere Pagina 0 persistente e navigazione fra superfici.
-4. Estendere il compatto a tre attività, clic delle bolle e rotazione con fusione.
-5. Collegare le attività delle app con focus e verificare gli adattatori reali.
+1. Confirm navigation, the interpretation of the visual limit and the settings
+   proposal. D10 closes the case of a recording after Music chosen manually.
+2. Define and verify selection, page identity and returns on closing.
+3. Add the persistent Page 0 and navigation between surfaces.
+4. Extend the compact state to three activities, bubble clicks and rotation with merging.
+5. Connect the activities of focused apps and verify the real adapters.
 
-Scenari di accettazione: nessuna attività; musica; registrazione più musica;
-registrazione più chiamata più musica; quarta attività; nuova sessione durante
-consultazione; scelta manuale e riapertura; visita di Pagina 0; fine della
-sessione selezionata; cambio focus; slide annullato; revoca durante animazione;
-conflitto con slider musicale; Riduci movimento; blocco, risveglio e più display.
+Acceptance scenarios: no activity; music; recording plus music;
+recording plus call plus music; a fourth activity; a new session during
+browsing; manual choice and reopening; visit to Page 0; end of the
+selected session; focus change; cancelled slide; revocation during animation;
+conflict with the music slider; Reduce Motion; lock, wake and multiple displays.
 
-## 10. Impostazioni — proposta da discutere
+## 10. Settings: proposal to discuss
 
-### Struttura
+### Structure
 
-Le impostazioni attuali usano una barra laterale con `Appearance`, `Dev` e
-`Widget`, form SwiftUI raggruppati e ricerca trasversale. Si propone una sola
-nuova destinazione e la riorganizzazione dei contenuti esistenti:
+The current settings use a sidebar with `Appearance`, `Dev` and
+`Widget`, grouped SwiftUI forms and cross-cutting search. A single
+new destination and a reorganization of the existing content are proposed:
 
-| Pagina | Contenuto |
+| Page | Content |
 | --- | --- |
-| Aspetto | Geometria, stile e schermi, aptica e privacy già esistenti. |
-| Pagine e widget | Sostituisce Widget: Pagina 0, altre pagine personali e disposizione dei widget. |
-| Attività | Priorità, attività visibili, integrazioni e comandi legati all'app con focus. |
-| Dev | Anteprime tecniche esistenti e versione. |
+| Appearance | Geometry, style and screens, haptics and privacy that already exist. |
+| Pages and widgets | Replaces Widget: Page 0, other personal pages and the widget arrangement. |
+| Activities | Priority, visible activities, integrations and commands tied to the focused app. |
+| Dev | Existing technical previews and version. |
 
-Gli avvisi Bluetooth, volume e ricarica restano in un gruppo «Avvisi» distinto
-nella pagina Attività; non entrano nella graduatoria delle Live Activities.
-Il controllo Spotlight mantiene un gruppo «Ricerca». Musica e visualizzatore
-si spostano nel dettaglio Musica. Ogni preferenza ha una sola collocazione,
-raggiungibile anche dalla ricerca.
+The Bluetooth, volume and charging notices stay in a distinct "Notices" group
+in the Activities page; they do not enter the Live Activities ranking.
+The Spotlight control keeps a "Search" group. Music and the visualizer
+move into the Music detail. Each preference has a single location,
+also reachable from search.
 
-### Pagine e widget
+### Pages and widgets
 
-Una lista di pagine affianca l'anteprima della pagina selezionata. Pagina 0 è
-sempre disponibile e non eliminabile. L'utente può aggiungere, rimuovere,
-spostare e ridimensionare i suoi widget usando le dimensioni supportate.
-L'editor permette anche di creare, rinominare e riordinare altre pagine personali;
-le superfici delle attività rimangono gestite dal loro contesto.
+A list of pages sits beside the preview of the selected page. Page 0 is
+always available and cannot be deleted. The user can add, remove,
+move and resize their widgets using the supported sizes.
+The editor also lets the user create, rename and reorder other personal pages;
+the activity surfaces stay managed by their context.
 
-«Aggiungi widget…» mostra quelli effettivamente forniti dalle integrazioni
-disponibili, con nome e app sorgente. La modifica della griglia avviene in una
-modalità esplicita «Personalizza» con pulsante «Fine»; spostamenti e dimensioni
-sono disponibili anche da tastiera. Posizioni occupate o fuori griglia non
-sovrascrivono altri widget: il rilascio non valido torna alla posizione iniziale.
+"Add widget…" shows those actually provided by the available
+integrations, with name and source app. Editing the grid happens in an
+explicit "Customize" mode with a "Done" button; moves and sizes
+are also available from the keyboard. Occupied or off-grid positions do not
+overwrite other widgets: an invalid drop returns to the initial position.
 
-Pagina vuota: anteprima con «Aggiungi il tuo primo widget». Un widget il cui
-addon è temporaneamente indisponibile conserva il posto con indicazione della
-sorgente, senza perdere la disposizione salvata.
+Empty page: preview with "Add your first widget". A widget whose
+addon is temporarily unavailable keeps its place with an indication of the
+source, without losing the saved arrangement.
 
-### Attività: comportamento e priorità
+### Activities: behavior and priority
 
-- **Attività visibili:** scelta 1, 2 o 3, predefinito 3. Riguarda il compatto;
-  le attività eccedenti restano consultabili nelle pagine. Questa opzione dipende
-  dalla conferma dell'interpretazione del limite visivo della sezione 4.
-- **Ordine di priorità:** elenco riordinabile dei tipi di attività. Proposta
-  iniziale: registrazione/condivisione, chiamate, app in uso, musica, altre
-  attività. L'ordine scelto si usa per le nuove selezioni automatiche; i nomi
-  sostituiscono punteggi numerici esposti all'utente.
-- Una descrizione stabile spiega: «L'ultima attività scelta resta principale
-  finché ne inizia una con priorità maggiore. La pagina aperta resta invariata».
-- **Ripristina priorità predefinite:** agisce solo sull'ordine, senza resettare
-  pagine, integrazioni o preferenze degli schermi.
+- **Visible activities:** choice of 1, 2 or 3, default 3. It concerns the compact state;
+  the excess activities stay viewable in the pages. This option depends
+  on the confirmation of the interpretation of the visual limit in section 4.
+- **Priority order:** reorderable list of activity types. Initial
+  proposal: recording/sharing, calls, app in use, music, other
+  activities. The chosen order is used for new automatic selections; the names
+  replace numeric scores exposed to the user.
+- A stable description explains: "The last chosen activity stays primary
+  until one with a higher priority starts. The open page stays unchanged".
+- **Restore default priorities:** acts only on the order, without resetting
+  pages, integrations or screen preferences.
 
-Il valore predefinito rispetta D10. Un riordino esplicito nelle impostazioni è
-una personalizzazione dell'ordine automatico, non una modifica involontaria
-causata da aggiornamenti degli addon. La protezione della pagina aperta resta
-una regola stabile, senza interruttore per disabilitarla.
+The default value respects D10. An explicit reordering in the settings is
+a customization of the automatic order, not an unintended change
+caused by addon updates. The protection of the open page stays
+a stable rule, with no switch to disable it.
 
-Queste personalizzazioni proposte hanno effetti espliciti: scegliendo una sola
-attività visibile, la musica passa nelle pagine anziché in una bolla; ponendo
-Musica sopra Registrazione, una nuova registrazione non la supera automaticamente.
-L'anteprima e il testo accanto ai controlli devono mostrarlo. La possibilità di
-alterare il comportamento predefinito in questo modo è parte della proposta
-delle impostazioni e non viene attribuita alla conferma di D10.
+These proposed customizations have explicit effects: choosing a single
+visible activity, the music moves into the pages instead of into a bubble; placing
+Music above Recording, a new recording does not override it automatically.
+The preview and the text next to the controls must show this. The possibility of
+altering the default behavior in this way is part of the settings
+proposal and is not attributed to the confirmation of D10.
 
-### Integrazioni e comandi delle app
+### App integrations and commands
 
-Un elenco mostra ogni integrazione con nome, interruttore e stato pertinente:
-disattivata, disponibile senza sessione corrente, attiva oppure permesso mancante.
-L'assenza di una chiamata non rende indisponibile la configurazione delle chiamate.
-Il dettaglio contiene solo le opzioni specifiche della sorgente, i permessi
-necessari e le azioni realmente supportate.
+A list shows each integration with name, switch and relevant state:
+disabled, available without a current session, active or permission missing.
+The absence of a call does not make the call configuration unavailable.
+The detail contains only the source-specific options, the permissions
+needed and the actions actually supported.
 
-Nel gruppo «App in uso» le associazioni sono righe leggibili, per esempio:
+In the "Apps in use" group the associations are readable rows, for example:
 
     Photoshop → Comandi rapidi        Attiva
     Player → Controlli riproduzione   Attiva
 
-«Attiva» è uno stato dell'associazione, non un secondo interruttore. La riga apre
-la configurazione; l'attivazione resta quella unica dell'integrazione.
+"Active" is a state of the association, not a second switch. The row opens
+the configuration; the activation stays the single one of the integration.
 
-«Aggiungi app…» permette di associare un'app a un widget contestuale compatibile.
-Il dettaglio permette di scegliere e ordinare i comandi offerti dall'integrazione.
-Il focus rende eleggibile la superficie; l'ordine di priorità decide se sarà
-principale o secondaria. Scegliere un'app non inventa un'integrazione: se non
-esiste un widget compatibile viene indicato, senza mostrare controlli fittizi.
+"Add app…" lets the user associate an app with a compatible contextual widget.
+The detail lets the user choose and order the commands offered by the integration.
+Focus makes the surface eligible; the priority order decides whether it will be
+primary or secondary. Choosing an app does not invent an integration: if no
+compatible widget exists this is indicated, without showing fake controls.
 
-Per la prima versione si propone una sola attivazione per integrazione, senza
-interruttori separati per pagina, bolla e promozione automatica. L'ordine delle
-priorità rimane comune; eventuali eccezioni per singola app richiederanno un
-caso concreto prima di introdurre un secondo livello di regole.
+For the first version a single activation per integration is proposed, without
+separate switches for page, bubble and automatic promotion. The priority
+order stays common; any per-app exceptions will require a
+concrete case before introducing a second level of rules.
 
-### Anteprima, gesti e applicazione delle modifiche
+### Preview, gestures and applying changes
 
-La pagina Attività include una piccola anteprima interattiva con dati dimostrativi:
-musica; registrazione più musica; tre attività; comandi dell'app in uso. Mostra
-come cambiano principale e bolle al riordino delle priorità. Il pulsante
-«Simula nuova registrazione» verifica anche il caso D10 senza avviare registrazioni
-reali o inviare comandi alle app.
+The Activities page includes a small interactive preview with demo data:
+music; recording plus music; three activities; commands of the app in use. It shows
+how primary and bubbles change when the priorities are reordered. The
+"Simulate new recording" button also verifies the D10 case without starting real
+recordings or sending commands to apps.
 
-Una legenda illustra hover centrale, clic sulle bolle, slide e accesso a Pagina 0.
-I gesti mantengono una mappatura unica; aptica e movimento ridotto seguono le
-preferenze già esistenti e quelle di sistema. Non si aggiungono regolazioni
-numeriche di molle o velocità nella pagina Attività.
+A legend illustrates central hover, bubble clicks, slide and access to Page 0.
+The gestures keep a single mapping; haptics and reduced motion follow the
+existing preferences and the system ones. No numeric
+spring or speed adjustments are added to the Activities page.
 
-Le impostazioni ordinarie si salvano automaticamente e aggiornano l'anteprima.
-Ordine e disposizione entrano nel notch al successivo stato compatto, mantenendo
-la protezione della pagina aperta. Disabilitare un'integrazione revoca subito
-i suoi comandi e contenuti, secondo la gestione della sessione conclusa.
-Le scelte di contenuto e priorità sono globali; stile e calibrazione rimangono
-per display, e la destinazione delle attività usa il routing già esistente.
+Ordinary settings are saved automatically and update the preview.
+Order and arrangement reach the notch at the next compact state, keeping
+the protection of the open page. Disabling an integration immediately revokes
+its commands and content, according to the handling of an ended session.
+Content and priority choices are global; style and calibration stay
+per display, and the activity destination uses the existing routing.
 
-La ricerca deve trovare anche pagine, widget, app e opzioni dei dettagli, e
-aprire il controllo pertinente. Una lista vuota di integrazioni o associazioni
-spiega come aggiungere un contenuto disponibile. Un permesso mancante propone
-l'azione specifica vicino alla sorgente interessata.
+Search must also find pages, widgets, apps and detail options, and
+open the relevant control. An empty list of integrations or associations
+explains how to add available content. A missing permission offers
+the specific action next to the affected source.

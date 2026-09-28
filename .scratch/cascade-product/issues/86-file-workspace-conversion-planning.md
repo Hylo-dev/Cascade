@@ -1,4 +1,4 @@
-# Preparare formati e avanzamento della conversione
+# Prepare conversion formats and progress
 
 ID: 86
 Parent: cascade-product
@@ -11,12 +11,12 @@ Blocked by: 76, 81
 
 ## Question
 
-Estrarre la parte pura del task 6 del [piano approvato](../../../docs/superpowers/plans/2026-09-26-file-shelf.md): parser incrementale e limitato del progresso FFmpeg, decodifica limitata dei metadati ffprobe, intersezione dei formati compatibili e preset chiusi coerenti con la build verificata. Nessun processo, accesso ai file, coordinatore, persistenza job o montaggio produttivo.
+Extract the pure part of task 6 of the [approved plan](../../../docs/superpowers/plans/2026-09-26-file-shelf.md): an incremental, bounded parser of FFmpeg progress, bounded decoding of ffprobe metadata, intersection of the compatible formats and closed presets consistent with the verified build. No process, file access, coordinator, job persistence or production mounting.
 
-Accettazione: chunk spezzati e CRLF, valori mancanti/non finiti/negativi e input eccessivi; microsecondi corretti anche per l’alias out_time_ms; progress=end non rappresenta il successo. Formati MP4/M4A/WAV/FLAC, MP3 escluso; copertine attached_pic non diventano tracce video; selezioni miste senza salto silenzioso. Argomenti controllati e nessuna opzione o percorso proveniente dal widget. Test mirati e review personale root. Il componente produce soltanto un piano: autorizzazione, confinamento, quote, uscita fisica e validazione dei risultati restano in [Eseguire conversioni file in job recuperabili](82-file-workspace-conversion-jobs.md).
+Acceptance: split chunks and CRLF, missing/non-finite/negative values and excessive input; correct microseconds also for the out_time_ms alias; progress=end does not represent success. MP4/M4A/WAV/FLAC formats, MP3 excluded; attached_pic covers do not become video tracks; mixed selections without silent skipping. Controlled arguments and no option or path coming from the widget. Targeted tests and the root's personal review. The component produces only a plan: authorization, confinement, quotas, physical exit and validation of the results remain in [Run file conversions in recoverable jobs](82-file-workspace-conversion-jobs.md).
 
 ## Answer
 
-Implementato da GPT-5.6 Sol nel commit `5c53ae5`, con review personale e verifica indipendente root. Parser incrementale con riga massima 4096 byte e osservazione coalescente; metadati ffprobe limitati a 64 KiB e 32 tracce; selezione comune MP4/M4A/WAV/FLAC. Preset chiusi con indici delle tracce esatti, nessun percorso o comando del widget. Copertine e video senza disposizione esplicita esclusi dalla capacità MP4. Durata da tracce selezionate, fallback al contenitore soltanto senza tracce estranee. `progress=end` rimane telemetria, non successo.
+Implemented by GPT-5.6 Sol in commit `5c53ae5`, with the root's personal review and independent verification. Incremental parser with a maximum line of 4096 bytes and coalescing observation; ffprobe metadata bounded to 64 KiB and 32 tracks; shared MP4/M4A/WAV/FLAC selection. Closed presets with exact track indices, no path or command from the widget. Covers and video without an explicit disposition excluded from the MP4 capability. Duration from the selected tracks, fallback to the container only when there are no extraneous tracks. `progress=end` remains telemetry, not success.
 
-Quindici test mirati con cicli RED/GREEN; filtro indipendente root FileWorkspace/FFmpeg: 64 test passati. Build firmata riuscita, collegamento Applications aggiornato e riavvio verificato PID34695. Review ha corretto la gestione delle copertine non identificate, gli argomenti audio per video muti e prove che non misuravano il comportamento. Nessun processo, coordinatore o job attivato. Il [ticket conversioni complete](82-file-workspace-conversion-jobs.md) resta aperto; [evidenze della tranche](../../../docs/superpowers/verification/2026-09-26-file-workspace-runtime.md).
+Fifteen targeted tests with RED/GREEN cycles; independent root FileWorkspace/FFmpeg filter: 64 tests passed. Signed build succeeded, Applications link updated and restart verified at PID 34695. The review fixed the handling of unidentified covers, the audio arguments for silent videos and tests that did not measure the behavior. No process, coordinator or job activated. The [full conversions ticket](82-file-workspace-conversion-jobs.md) stays open; [tranche evidence](../../../docs/superpowers/verification/2026-09-26-file-workspace-runtime.md).

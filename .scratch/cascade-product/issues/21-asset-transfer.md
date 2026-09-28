@@ -1,4 +1,4 @@
-# Scegliere il trasferimento delle immagini tra addon e host
+# Choose the image transfer between addon and host
 
 ID: 21
 Parent: cascade-product
@@ -11,14 +11,14 @@ Blocked by: none
 
 ## Question
 
-Trasferire le immagini compresse in blocchi tramite messaggi, oppure introdurre una capacità nativa separata per grandi buffer? La scelta deve conservare i limiti approvati di immagini, messaggi, memoria e privacy, riusando le librerie disponibili.
+Transfer compressed images in chunks through messages, or introduce a separate native capability for large buffers? The choice must keep the approved limits for images, messages, memory and privacy, reusing the available libraries.
 
 ## Answer
 
-Risoluzione del 14 settembre 2026, basata sulla risposta esplicita dell'utente: «vanno bene i blocchi tramite messaggi» alla proposta di blocchi da 64 KiB.
+Resolution of 14 September 2026, based on the user's explicit answer "chunks through messages are fine" to the proposal of 64 KiB chunks.
 
-Si adotta il trasferimento a blocchi da 64 KiB sul percorso dei messaggi, riusando Foundation. Restano i limiti già approvati: immagini compresse fino a 1 MiB / 1.000.000 pixel e messaggi ordinari fino a 512 KiB. L'alternativa dei grandi buffer nativi dedicati non è selezionata. Il documento di [analisi delle alternative](../../../docs/superpowers/plans/2026-09-13-addon-asset-transfer-decision.md) conserva il razionale e i vincoli da sviluppare nel piano esecutivo.
+Transfer in 64 KiB chunks over the message path is adopted, reusing Foundation. The limits already approved remain: compressed images up to 1 MiB / 1,000,000 pixels and ordinary messages up to 512 KiB. The alternative of dedicated large native buffers is not selected. The [analysis of the alternatives](../../../docs/superpowers/plans/2026-09-13-addon-asset-transfer-decision.md) document keeps the rationale and the constraints to be developed in the execution plan.
 
-La decisione riguarda il meccanismo. Sono ora implementati e revisionati i frame dedicati e la primitiva interna di assemblaggio con quote protette e scadenza; il collegamento al trasporto autenticato e al client SDK resta da eseguire. Le evidenze finali sono nel [rapporto del componente](../../../docs/superpowers/verification/2026-09-14-addon-asset-chunks.md). Non modifica la qualificazione del launcher né il gate C0d. Il prerequisito host/SDK è consegnato nella [verifica del ciclo storage SDK](../../../docs/superpowers/verification/2026-09-13-addon-sdk-storage-lifecycle.md).
+The decision concerns the mechanism. The dedicated frames and the internal assembly primitive with protected quotas and expiry are now implemented and reviewed; wiring to the authenticated transport and the SDK client is still to be done. The final evidence is in the [component report](../../../docs/superpowers/verification/2026-09-14-addon-asset-chunks.md). It does not change the launcher qualification or the C0d gate. The host/SDK prerequisite is delivered in the [SDK storage lifecycle verification](../../../docs/superpowers/verification/2026-09-13-addon-sdk-storage-lifecycle.md).
 
-Il ticket è chiuso perché la scelta dell'utente è acquisita, non perché il trasferimento sia già operativo. Nessuna nuova scelta è stata attribuita all'utente durante il riallineamento della mappa.
+The ticket is closed because the user's choice has been acquired, not because the transfer is already operational. No new choice was attributed to the user during the map realignment.

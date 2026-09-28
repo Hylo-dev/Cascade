@@ -1,4 +1,4 @@
-# Definire notifiche di altre app e avvisi dei dispositivi
+# Define notifications from other apps and device alerts
 
 ID: 11
 Parent: cascade-product
@@ -11,6 +11,6 @@ Blocked by: 02, 04, 08
 
 ## Question
 
-Con quali limiti di copertura e modalità di consenso Cascade presenta notifiche delle app non integrate, requisito confermato dall'utente? Decidere duplicazione o sostituzione dei banner di sistema, azioni e apertura dell'app sorgente, cronologia, filtri per app, contenuti sensibili, Focus e lock screen. Distinguere notifica ricevuta da un'altra app, evento Bluetooth rilevato e notifica emessa da un'estensione; scegliere un fallback esplicito dove la ricerca dimostra limiti.
+Within which coverage limits and with which consent modes does Cascade present notifications from non-integrated apps, a requirement confirmed by the user? Decide duplication or replacement of the system banners, actions and opening of the source app, history, per-app filters, sensitive content, Focus and lock screen. Distinguish a notification received from another app, a detected Bluetooth event and a notification emitted by an extension; choose an explicit fallback where the research shows limits.
 
-La ricerca ha individuato polling su un archivio privato in Sapphire: prima di adottare quel percorso, verificare copertura e permessi in un account di prova e affrontare il conflitto con il vincolo del progetto contro polling e wakeup inutili. Il requisito dell'utente non autorizza a dichiarare universale una cattura parziale, né ad allentare implicitamente il vincolo sulle risorse.
+The research found polling on a private store in Sapphire: before adopting that path, verify coverage and permissions in a test account and address the conflict with the project constraint against polling and needless wakeups. The user's requirement does not authorize declaring a partial capture universal, nor implicitly loosening the resource constraint.

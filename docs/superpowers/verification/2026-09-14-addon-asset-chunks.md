@@ -1,31 +1,31 @@
-# Trasferimento asset a blocchi — messaggi e assemblatore interno
+# Chunked asset transfer: messages and internal assembler
 
-Stato: implementazione e revisione approvate, suite finale e build firmata riuscite, riavvio della versione aggiornata verificato. [Piano](../plans/2026-09-14-addon-asset-chunks.md). Meccanismo approvato dall’utente nel [ticket Wayfinder](../../../.scratch/cascade-product/issues/21-asset-transfer.md).
+Status: implementation and review approved, final suite and signed build succeeded, relaunch of the updated version verified. [Plan](../plans/2026-09-14-addon-asset-chunks.md). Mechanism approved by the user in the [Wayfinder ticket](../../../.scratch/cascade-product/issues/21-asset-transfer.md).
 
-## Consegna
+## Delivery
 
-Nove file sorgente/test: sette nuovi e due modificati. Frame dedicati Foundation per begin/chunk/finish/abort e risposte correlate, con profilo sintattico esplicito. Blocchi fino a 65.536 byte, input compresso fino a 1.048.576 byte e frame JSON fino a 196.608 byte, verificato prima del parsing. I validatori semantici esistenti sono riusati. Nessuna nuova dipendenza o implementazione alternativa di un codec immagine.
+Nine source/test files: seven new and two modified. Dedicated Foundation frames for begin/chunk/finish/abort and correlated responses, with an explicit syntactic profile. Chunks up to 65,536 bytes, compressed input up to 1,048,576 bytes and JSON frames up to 196,608 bytes, checked before parsing. The existing semantic validators are reused. No new dependency or alternative implementation of an image codec.
 
-L’assemblatore interno mantiene una sola ricezione per istanza, con identità esatta di incarnazione, connessione, pubblicazione e assegnazione. Prenota `2 * totalBytes + 4096` byte di memoria temporanea, più i 1.024 byte di voce del governor esistente, prima del buffer a dimensione fissa. Scadenza monotona non rinnovabile di 30 secondi, ordine e lunghezza esatti dei blocchi, pulizia esclusiva. Il decoder ImageIO e i raster conservano le proprie quote indipendenti; revoca o cancellazione non rimborsano memoria ancora usata dal decoder.
+The internal assembler keeps a single reception per instance, with the exact identity of incarnation, connection, publication and assignment. It reserves `2 * totalBytes + 4096` bytes of temporary memory, plus the 1,024 bytes of the existing governor's entry, before the fixed-size buffer. Non-renewable monotonic expiry of 30 seconds, exact order and length of the chunks, exclusive cleanup. The ImageIO decoder and the rasters keep their own independent quotas; revocation or cancellation does not refund memory still used by the decoder.
 
-## Verifica finale
+## Final verification
 
-- **795 test seriali / 80 suite**, inclusi **14 nuovi metodi**; gruppo mirato finale **36 test / 5 suite**.
-- **400 input** applicativi/test identici fra originale, copia normalizzata e snapshot congelato; **55 percorsi** nel manifesto cumulativo dei sorgenti/test revisionati verificati. Checkout preesistente preservato, senza commit o staging.
-- RED iniziale compilante: due asserzioni comportamentali sulle quote e sulla protezione da releaseAll. Mutanti separati dopo l’implementazione: tre test falliti con 16 rilievi per autorità, ordine e rimborso prematuro; ripristino documentato. Non sono presentati come RED precedente all’implementazione dell’assemblatore.
-- Revisione indipendente: una race rilevata e corretta. Append/finish non validi passano ora allo stato di smaltimento sotto lo stesso lock della validazione; i controlli di autorità estranea e occupazione restano non mutanti. Nuova prova deterministica con rimborso del governor sospeso; verifica l’invariante finale, senza pretendere di riprodurre deterministicamente la precedente finestra fra lock. Revisione finale approvata, nessun rilievo residuo.
-- Una prova distinta assembla e decodifica tramite ImageIO un PNG reale su più blocchi, confronta i pixel e verifica la durata del raster. La prova esatta da 1 MiB / 16 blocchi verifica tutti i byte tramite un decoder controllato che inoltra poi un PNG valido al decoder reale. Nessun parser PNG/CRC fatto a mano.
+- **795 serial tests / 80 suites**, including **14 new methods**; final targeted group **36 tests / 5 suites**.
+- **400 inputs** for app/tests identical between the original, the normalized copy and the frozen snapshot; **55 paths** in the cumulative manifest of the reviewed sources/tests verified. Pre-existing checkout preserved, without commit or staging.
+- Initial compiling RED: two behavioral assertions on the quotas and on the protection from releaseAll. Separate mutants after the implementation: three tests failed with 16 findings for authority, order and premature refund; restoration documented. They are not presented as a RED preceding the implementation of the assembler.
+- Independent review: one race found and fixed. Invalid append/finish now move to the disposal state under the same lock as the validation; the checks for foreign authority and occupancy remain non-mutating. New deterministic test with the governor's refund suspended; it verifies the final invariant, without claiming to deterministically reproduce the earlier window between locks. Final review approved, no remaining findings.
+- A separate test assembles and decodes through ImageIO a real PNG over multiple chunks, compares the pixels and verifies the lifetime of the raster. The exact 1 MiB / 16 chunk test verifies all the bytes through a controlled decoder that then forwards a valid PNG to the real decoder. No handwritten PNG/CRC parser.
 
-La suite precedente alla correzione passava 794 test / 80 suite. Log e snapshot precedenti sono conservati separatamente; il risultato 795 / 80 riguarda il codice corretto e congelato.
+The suite before the fix passed 794 tests / 80 suites. The earlier logs and snapshots are kept separately; the 795 / 80 result concerns the corrected and frozen code.
 
-Artefatti locali con prefisso `/private/tmp/cascade-asset-chunks-`: `report.md`, `review.md`, `hashes.json`, `build-inputs.json`, `reviewed-inputs.json`, `red.log`, `mutant-red.log`, `restoration.json`, `review-green.log`, `full-tests.log`, `app-build.log`, `restart.json`; preimmagini, diff e alberi congelati conservati. Gli avvisi di compilazione sulle variabili weak e gli errori delle fixture SwiftData deliberatamente corrotte non costituiscono nuovi fallimenti.
+Local artifacts with the prefix `/private/tmp/cascade-asset-chunks-`: `report.md`, `review.md`, `hashes.json`, `build-inputs.json`, `reviewed-inputs.json`, `red.log`, `mutant-red.log`, `restoration.json`, `review-green.log`, `full-tests.log`, `app-build.log`, `restart.json`; preimages, diffs and frozen trees preserved. The compilation warnings about weak variables and the errors from the deliberately corrupted SwiftData fixtures are not new failures.
 
-## Confine residuo
+## Remaining boundary
 
-Questo incremento è una primitiva interna: non autentica da solo l’assegnazione, non negozia il canale, non prenota il workspace dell’adattatore di trasporto, non pubblica un alias canonico e non collega il client SDK. Il runtime dovrà chiamare esplicitamente scadenza e chiusura e integrare gli ingressi/risposte condivisi. Il trasferimento non è ancora un percorso operativo per addon esterni. Launcher nativo e gate C0d restano separati e non qualificati.
+This increment is an internal primitive: on its own it does not authenticate the assignment, does not negotiate the channel, does not reserve the transport adapter's workspace, does not publish a canonical alias and does not connect the SDK client. The runtime will have to call expiry and shutdown explicitly and integrate the shared inputs/responses. The transfer is not yet an operational path for external addons. The native launcher and the C0d gate remain separate and not qualified.
 
-L’utente richiede almeno il 35% della quota settimanale disponibile: tetto al 65% utilizzato. Ultima lettura ufficiale finale: 15 settembre 2026, 10:12:01 UTC, quota principale al 61% (39% disponibile). Il contatore Spark è distinto e non viene usato per questo limite.
+The user requires at least 35% of the weekly quota to remain available: ceiling at 65% used. Last official final reading: 15 September 2026, 10:12:01 UTC, main quota at 61% (39% available). The Spark counter is distinct and is not used for this limit.
 
-Build tramite `scripts/build-development.sh` riuscita, firma verificata con codesign deep/strict e `/Applications/Cascade.app` aggiornato alla build CascadeAddonDevelopment. Avvio verificato: PID **28860**, unica istanza Cascade attiva e persistente dopo l’avvio. Al controllo precedente all’avvio non risultava alcuna istanza della build; il vecchio PID 12667 non era più presente. Nessuna terminazione forzata.
+Build through `scripts/build-development.sh` succeeded, signature verified with codesign deep/strict and `/Applications/Cascade.app` updated to the CascadeAddonDevelopment build. Launch verified: PID **28860**, the only active Cascade instance, persistent after launch. At the check before launch no instance of the build was found; the old PID 12667 was no longer present. No forced termination.
 
-Riavvio normale finale, al termine dell’intervento: PID **28860 → 28937**, verificato dopo due secondi; nessuna terminazione forzata. Il file `restart.json` registra quest’ultimo passaggio. Wayfinder riallineato:22 ticket,4 risolti,18 aperti, nessuna dipendenza pendente inesistente o ciclo;215 collegamenti locali verificati, più4 nei documenti specifici del componente.
+Final normal relaunch, at the end of the work: PID **28860 → 28937**, verified after two seconds; no forced termination. The file `restart.json` records this last step. Wayfinder realigned: 22 tickets, 4 resolved, 18 open, no dangling dependency on a nonexistent ticket and no cycle; 215 local links verified, plus 4 in the component-specific documents.

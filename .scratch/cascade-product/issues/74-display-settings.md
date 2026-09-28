@@ -1,4 +1,4 @@
-# Collegare preferenze display e superfici ausiliarie
+# Connect display preferences and auxiliary surfaces
 
 ID: 74
 Parent: cascade-product
@@ -11,10 +11,10 @@ Blocked by: 73
 
 ## Question
 
-Implementare e verificare il task 6 del [piano multi-display](../../../docs/superpowers/plans/2026-09-24-multi-display-notch.md) rispettando la [specifica](../../../docs/superpowers/specs/2026-09-24-multi-display-notch-design.md). La tranche esecutiva è autorizzata dalla richiesta del 25 settembre; chiudere solo con prove e revisione.
+Implement and verify task 6 of the [multi-display plan](../../../docs/superpowers/plans/2026-09-24-multi-display-notch.md) following the [spec](../../../docs/superpowers/specs/2026-09-24-multi-display-notch-design.md). The execution tranche is authorized by the request of 25 September; close only with evidence and review.
 
 ## Answer
 
-Implementate le preferenze native per display e routing, con target offline conservato e scelte temporanee per identità non persistenti. Settings distingue ancora della finestra e riserva di focus; comandi globali e contestuali esplicitano il target. Spotlight attende la chiusura reale, conserva la riserva finché la finestra nativa è visibile e recupera aperture mai avvenute; lock e preview non lasciano riserve orfane.
+Implemented the native display and routing preferences, with the offline target preserved and temporary choices for non-persistent identities. Settings distinguishes the window anchor from the focus reserve; global and contextual commands make the target explicit. Spotlight waits for the actual closing, keeps the reserve while the native window is visible and recovers openings that never happened; lock and preview leave no orphaned reserves.
 
-Prove: 44 test coordinator, 9 routing, 68 controller nelle verifiche pertinenti; 15 Settings firmati prima dell’ultima correzione e 2 nuove regressioni firmate RED→GREEN sulla correzione finale. Script Spotlight e 7 casi droplet passano. Revisione finale scoped PASS/PASS dopo tre correzioni: [rapporto](../../../.superpowers/sdd/2026-09-24-multi-display-notch/task-6-rereview-3.md). Il nuovo run completo Settings è nella verifica di consegna: gli ultimi tentativi si sono fermati per timeout dell’approvazione prima del lancio. Nessun riavvio né qualificazione fisica multi-monitor dichiarata qui. [Evidenze](../../../.superpowers/sdd/2026-09-24-multi-display-notch/task-6-report.md).
+Evidence: 44 coordinator tests, 9 routing, 68 controller in the relevant checks; 15 signed Settings tests before the last fix and 2 new signed regressions RED→GREEN on the final fix. The Spotlight script and 7 droplet cases pass. Final scoped review PASS/PASS after three fixes: [report](../../../.superpowers/sdd/2026-09-24-multi-display-notch/task-6-rereview-3.md). The new full Settings run is in the delivery verification: the last attempts stopped because of an approval timeout before the launch. No restart and no physical multi-monitor qualification claimed here. [Evidence](../../../.superpowers/sdd/2026-09-24-multi-display-notch/task-6-report.md).

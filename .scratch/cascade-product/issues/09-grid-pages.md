@@ -1,4 +1,4 @@
-# Definire griglia, pagine e personalizzazione dei widget
+# Define the widget grid, pages and customization
 
 ID: 09
 Parent: cascade-product
@@ -11,4 +11,4 @@ Blocked by: 06, 07
 
 ## Question
 
-Come vengono create e selezionate le pagine, quali dimensioni può offrire un widget e come si adattano alla griglia e alle dimensioni del notch? Decidere ridimensionamento, collisioni, overflow, widget mancanti, layout non valido, riordino e persistenza. Distinguere istanza del widget da collocazione su una pagina e pagina da display fisico. Stabilire se le schermate contestuali siano pagine ordinarie, superfici dedicate o entrambe.
+How are pages created and selected, which sizes can a widget offer and how do they adapt to the grid and to the notch's dimensions? Decide resizing, collisions, overflow, missing widgets, invalid layout, reordering and persistence. Distinguish a widget instance from its placement on a page, and a page from a physical display. Establish whether the contextual screens are ordinary pages, dedicated surfaces or both.

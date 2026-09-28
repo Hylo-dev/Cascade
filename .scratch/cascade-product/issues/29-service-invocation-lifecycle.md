@@ -1,4 +1,4 @@
-# Gestire il ciclo SDK delle invocazioni ai servizi
+# Manage the SDK lifecycle of service invocations
 
 ID: 29
 Parent: cascade-product
@@ -11,16 +11,16 @@ Blocked by: 28
 
 ## Question
 
-Implementare il ciclo interno di correlazione, cancellazione ed esiti incerti delle invocazioni SDK e verificarlo attraverso runtime e broker reali, conservando separate le autorità delle sessioni. Nessun nuovo client pubblico, messaggio o semantica di sottoscrizione.
+Implement the internal cycle of correlation, cancellation and uncertain outcomes of SDK invocations and verify it through the real runtime and broker, keeping the session authorities separate. No new public client, message or subscription semantics.
 
 ## Context
 
-Prosecuzione autorizzata del piano C3. [Piano e limiti](../../../docs/superpowers/plans/2026-09-18-addon-service-invocation-lifecycle.md). [Disegno e contratti ancora da definire](../../codex-addon/20260918-continuation/service-client-design.md).
+Authorized continuation of the C3 plan. [Plan and limits](../../../docs/superpowers/plans/2026-09-18-addon-service-invocation-lifecycle.md). [Design and contracts still to be defined](../../codex-addon/20260918-continuation/service-client-design.md).
 
 ## Progress
 
-Disegno esaminato e tranche presa in carico con Codex; verifica e consegna ancora da eseguire.
+Design examined and tranche taken on with Codex; verification and delivery still to be done.
 
 ## Answer
 
-Componente interno e bridge canonico implementati, correzione del test di replay rivalutata PASS; 978 test / 89 suite, build firmata e riavvio verificato. [Evidenze e limiti](../../../docs/superpowers/verification/2026-09-18-addon-service-invocation-lifecycle.md). Client pubblico completo, sottoscrizioni e prove native restano aperti.
+Internal component and canonical bridge implemented, fix of the replay test re-evaluated PASS; 978 tests / 89 suites, signed build and restart verified. [Evidence and limits](../../../docs/superpowers/verification/2026-09-18-addon-service-invocation-lifecycle.md). Complete public client, subscriptions and native tests remain open.

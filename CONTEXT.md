@@ -1,38 +1,38 @@
 # Cascade
 
-Cascade è un notch per macOS che raccoglie widget, attività in corso e strumenti contestuali. La modularità permette ad altre app di contribuire all'esperienza.
+Cascade is a macOS notch that gathers widgets, ongoing activities and contextual tools. Its modularity lets other apps contribute to the experience.
 
 ## Language
 
-**Widget**: Un contenuto o controllo fornito da un modulo e disposto nella griglia di una pagina del notch.
+**Widget**: A piece of content or a control provided by a module and laid out in the grid of a notch page.
 
-**Live Activity**: La rappresentazione di un'attività in corso, visibile in forma compatta ai lati del notch e consultabile in forma espansa.
+**Live Activity**: The representation of an ongoing activity, visible in compact form at the sides of the notch and viewable in expanded form.
 
-**Pagina**: Una destinazione nella superficie aperta del notch, che può ospitare una disposizione di widget oppure i contenuti e i controlli di un'attività.
-_Avoid_: Schermo, quando si intende la pagina anziché il display fisico.
+**Page**: A destination in the notch's open surface, which can host an arrangement of widgets or the content and controls of an activity.
+_Avoid_: Screen, when you mean the page rather than the physical display.
 
-**Pagina 0**: La pagina di base del notch, composta da widget personalizzabili e disponibile anche quando sono presenti attività.
+**Page 0**: The notch's base page, made of customizable widgets and available even when activities are present.
 
-**Attività principale**: L'attività che occupa il corpo compatto del notch e viene aperta entrando con il puntatore nella zona centrale.
+**Primary activity**: The activity that occupies the notch's compact body and opens when the pointer enters the central zone.
 
-**Bolla**: La presentazione compatta separata di un'attività secondaria, ai lati del corpo principale del notch.
+**Bubble**: The separate compact presentation of a secondary activity, at the sides of the notch's main body.
 
-**Attività contestuale dell'app**: Una superficie di controlli pertinente all'app che ha il focus, come i comandi di Photoshop o di un player.
+**App contextual activity**: A surface of controls relevant to the app that has focus, such as the commands of Photoshop or of a player.
 
-**Schermata contestuale**: Una superficie del notch pertinente a ciò che l'utente sta facendo, come il ripiano durante un trascinamento o il gestore audio.
-_Avoid_: Smart screen non qualificato, se si può confondere con un display.
+**Contextual screen**: A notch surface relevant to what the user is doing, such as the shelf during a drag or the audio manager.
+_Avoid_: Unqualified smart screen, where it can be confused with a display.
 
-**Ripiano file**: Lo spazio del notch nel quale tenere temporaneamente file a disposizione per azioni successive. La durata e le modalità di acquisizione sono oggetto della mappa.
+**File shelf**: The notch space in which files are kept temporarily at hand for later actions. Their lifetime and the ways they are captured are the subject of the map.
 
-**Display**: Uno schermo fisico su cui Cascade può apparire.
+**Display**: A physical screen on which Cascade can appear.
 
-**App sorgente**: L'applicazione dalla quale provengono un widget, un'attività, un media o una notifica.
+**Source app**: The application a widget, an activity, a media item or a notification comes from.
 
-**Estensione**: Un modulo che aggiunge contenuti o capacità a Cascade senza richiedere una modifica del prodotto host. Il formato di distribuzione resta oggetto della mappa.
+**Extension**: A module that adds content or capabilities to Cascade without requiring a change to the host product. The distribution format remains the subject of the map.
 
 
-**Sagoma di riposo**: La piccola presenza chiusa di Cascade sul bordo superiore di ciascun display, visibile anche senza attività.
+**Resting silhouette**: Cascade's small closed presence on the top edge of each display, visible even when there are no activities.
 
-**Display attivo**: Il display della finestra attiva; quando questa non è disponibile, quello indicato dal puntatore. Determina la destinazione delle Live Activities nella modalità che segue il focus.
+**Active display**: The display of the active window; when that is not available, the one indicated by the pointer. It determines where Live Activities go in the mode that follows focus.
 
-**Display aperto**: L’unico display sul quale una superficie Cascade è espansa in quel momento. Può differire dal display attivo.
+**Open display**: The only display on which a Cascade surface is expanded at that moment. It can differ from the active display.

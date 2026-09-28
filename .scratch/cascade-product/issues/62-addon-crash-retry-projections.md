@@ -1,4 +1,4 @@
-# Preparare domanda e ticket per i retry dopo crash
+# Prepare the demand and tickets for crash retries
 
 ID: 62
 Parent: cascade-product
@@ -11,8 +11,8 @@ Blocked by: 60
 
 ## Question
 
-Esporre proiezioni interne limitate dei retry già emessi da AddonHealthStore e della domanda canonica non scaduta del broker. Aggiungere cancellazione dei soli retry preservando sessioni e storia. Sono supporti alla policy già approvata 1/5/30 secondi, senza timer, rilanci o nuova policy. Terra medium implementa; root e revisore verificano.
+Expose bounded internal projections of the retries already emitted by AddonHealthStore and of the broker's unexpired canonical demand. Add cancellation of the retries only, preserving sessions and history. These support the already approved 1/5/30 seconds policy, without timers, relaunches or a new policy. Terra medium implements; the root and a reviewer verify.
 
 ## Answer
 
-Proiezioni interne implementate da Terra medium, revisioni root e Sol indipendente PASS. Quattro test mirati passati nella compilazione comune: ticket ordinati e limitati, cancellazione dei soli retry senza perdere sessioni/storia, domanda canonica non scaduta per provider verificato. Nessun rilancio o timer aggiunto. [Rapporto](../../codex-addon/20260922-transitive-cpu/task-62-report.md). L’esito meccanico del giro comune non approva il distinto task runtime61, ancora in revisione sul protocollo v1.4.
+Internal projections implemented by Terra medium, root and independent Sol reviews PASS. Four targeted tests passed in the shared build: ordered and bounded tickets, cancellation of the retries only without losing sessions/history, unexpired canonical demand for a verified provider. No relaunch or timer added. [Report](../../codex-addon/20260922-transitive-cpu/task-62-report.md). The mechanical outcome of the shared round does not approve the separate runtime task 61, still under review on the v1.4 protocol.

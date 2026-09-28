@@ -2,31 +2,31 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Rendere manifest, contenuti, dipendenze e API Swift indipendenti dall'esecuzione del provider, con limiti verificabili.
+**Goal:** Make manifests, content, dependencies and Swift APIs independent of the provider's execution, with verifiable limits.
 
-**Architecture:** Valori serializzabili in Contracts, composizione dichiarativa in Presentation e renderer SwiftUI condiviso. Il resolver e la conservazione dei contenuti sono logica dell'host separata dalla UI.
+**Architecture:** Serializable values in Contracts, declarative composition in Presentation and a shared SwiftUI renderer. The resolver and content retention are host logic separate from the UI.
 
-**Tech Stack:** Swift tools 6.2, Foundation, SwiftUI, Swift Testing; nessuna libreria esterna.
+**Tech Stack:** Swift tools 6.2, Foundation, SwiftUI, Swift Testing; no external library.
 
-**Spec:** [specifica](../specs/2026-09-09-addon-runtime-design.md), [piano principale](2026-09-09-addon-runtime.md).
+**Spec:** [specification](../specs/2026-09-09-addon-runtime-design.md), [main plan](2026-09-09-addon-runtime.md).
 
-## Stato di esecuzione
+## Execution status
 
-Implementati i quattro blocchi P1; test automatici e revisioni completati per il codice implementato; 230 test del package passano con --no-parallel, come registrato nel [rapporto P1](../verification/2026-09-09-addon-runtime-P1.md). Rimangono da qualificare VoiceOver, impostazioni di accessibilità del sistema, comportamento energetico nel desktop e collegamento allo scheduler P2/P3. I test unitari e la preview non sono una prova della scena SwiftUI remota. Nessun commit del lavoro pregresso è incluso.
+The four P1 blocks are implemented; automated tests and reviews completed for the implemented code; 230 package tests pass with --no-parallel, as recorded in the [P1 report](../verification/2026-09-09-addon-runtime-P1.md). VoiceOver, the system accessibility settings, energy behavior on the desktop and the link to the P2/P3 scheduler remain to be qualified. The unit tests and the preview are not a proof of the remote SwiftUI scene. No commit of the earlier work is included.
 
 ## Global Constraints
 
-- macOS 14 come minimo dell'app. Non si alza implicitamente il deployment target.
-- Stesso SDK e controlli per tutti i futuri widget del team e per addon esterni.
-- Nessuna serializzazione automatica di AnyView o closure; nessuna dipendenza dai nomi dei widget concreti nel renderer.
-- Nessun codice del provider nel MainActor o nel callback di animazione dell'host.
-- Tutti i nuovi tipi wire sono Codable e Sendable con schema/versioni espliciti; i tipi del dominio non ereditano l'isolamento globale MainActor.
+- macOS 14 as the app's minimum. The deployment target is not raised implicitly.
+- Same SDK and controls for all future team widgets and for external addons.
+- No automatic serialization of AnyView or closures; no dependency on the names of concrete widgets in the renderer.
+- No provider code on the MainActor or in the host's animation callback.
+- All new wire types are Codable and Sendable with explicit schema/versions; the domain types do not inherit the global MainActor isolation.
 
-## Task 01.1 — Package, identità, schema e messaggi
+## Task 01.1: Package, identity, schema and messages
 
-**Files:** modificare CascadeKit/Package.swift; creare Sources/CascadeContracts/AddonIdentity.swift, AddonManifest.swift, AddonRequirement.swift, AddonPermission.swift, AddonResourceRequest.swift, Publication.swift, ProviderMessage.swift, AddonFailure.swift sotto CascadeKit; creare Tests/CascadeContractsTests/ManifestTests.swift, MessageTests.swift, FixtureData.swift, Fixtures/focus.json, Fixtures/requires-cycle-a.json, Fixtures/requires-cycle-b.json, Fixtures/incompatible.json.
+**Files:** modify CascadeKit/Package.swift; create Sources/CascadeContracts/AddonIdentity.swift, AddonManifest.swift, AddonRequirement.swift, AddonPermission.swift, AddonResourceRequest.swift, Publication.swift, ProviderMessage.swift, AddonFailure.swift under CascadeKit; create Tests/CascadeContractsTests/ManifestTests.swift, MessageTests.swift, FixtureData.swift, Fixtures/focus.json, Fixtures/requires-cycle-a.json, Fixtures/requires-cycle-b.json, Fixtures/incompatible.json.
 
-**Interfaces:** definire tutti i valori della tabella "Vocabolario di interfaccia comune" del piano principale, mantenendo le forme JSON della specifica. API pure:
+**Interfaces:** define all the values of the "Common interface vocabulary" table of the main plan, keeping the JSON shapes of the specification. Pure APIs:
 
 ```swift
 public struct AddonID: RawRepresentable, Codable, Hashable, Sendable {
@@ -45,10 +45,10 @@ public struct ProviderOutput: Codable, Sendable {
 }
 ```
 
-OperationRequest è un enum con casi requestService(requirementID, scope), schedule(deadline, eventID), releaseLease(leaseID), endPublication(PublicationID); identificatori come stringhe validate, scope come oggetto chiuso di campi consentiti, nessun dizionario di oggetti Foundation arbitrari. Publication include content oppure timeline, mai entrambe; date finite e revisioni UInt64 non riciclate nella stessa sessione. InvocationCompletion associa requestID a risultato di azione oppure risposta di servizio: pubblicare uno snapshot non prova il completamento del comando. AddonFailure contiene i casi espliciti della specifica e motivi leggibili.
+OperationRequest is an enum with the cases requestService(requirementID, scope), schedule(deadline, eventID), releaseLease(leaseID), endPublication(PublicationID); identifiers as validated strings, scope as a closed object of allowed fields, no dictionary of arbitrary Foundation objects. Publication includes content or timeline, never both; finite dates and UInt64 revisions not recycled within the same session. InvocationCompletion associates requestID with an action result or a service response: publishing a snapshot does not prove the command's completion. AddonFailure contains the explicit cases of the specification and readable reasons.
 
-- [x] Aggiungere target Contracts e relativi test al package con risorse di fixture processate, mantenendo il prodotto CascadeKit attuale. Limitare dipendenze del target a Foundation; aggiungere controlli di concorrenza sui nuovi target senza migrare globalmente il language mode.
-- [x] Copiare focus.json dall'esempio della specifica e aggiungere un loader di fixture nel target test:
+- [x] Add the Contracts target and its tests to the package with processed fixture resources, keeping the current CascadeKit product. Limit the target's dependencies to Foundation; add concurrency checks on the new targets without migrating the language mode globally.
+- [x] Copy focus.json from the specification's example and add a fixture loader in the test target:
 
 ```swift
 func fixtureData(_ name: String) throws -> Data {
@@ -63,17 +63,17 @@ func fixtureData(_ name: String) throws -> Data {
 }
 ```
 
-- [x] Implementare limite manifest 64 KiB prima del JSONDecoder, rifiuto di major sconosciuta, ID invalidi, range SemVer malformati, risorse negative/NaN e capability sconosciute obbligatorie. Campi opzionali sconosciuti possono essere ignorati solo se non cambiano semantica di sicurezza; discriminanti sconosciuti vengono rifiutati.
-- [x] Definire limiti distinti per contenuto ed envelope: 64 KiB per documento, 256 KiB per piano temporale, 512 KiB totali per envelope; massimo 16 pubblicazioni e 16 operazioni per risposta, input azione 4 KiB, checkpoint 64 KiB. Valgono sia i massimi dei campi sia quello totale. Gli asset usano trasferimento separato limitato, non aumentano questi massimi. Testare risultato di azione con requestID errato, risposta di servizio alla richiesta sbagliata e lista che supera il limite pur restando sotto i byte massimi.
-- [x] Definire PresentationSet come mappa delle sole rappresentazioni widget, compactLeading, compactTrailing, minimal, expanded. Publication.content contiene un set; ogni ScheduledEntry ne contiene uno. Tutte le rappresentazioni condividono PublicationID e revisione; nessuna attività duplicata per lato o espansione. Il set corrente completo rispetta 64 KiB complessivi, e un piano temporale 256 KiB complessivi. Validare le rappresentazioni obbligatorie per widget/activity/notice e assenza di expanded negli avvisi.
-- [x] Aggiungere test di round-trip dei messaggi, duplicati di feature/service/action, `sourceApp.required == false`, requirements per feature e impossibilità di usare bundleID come identità autenticata. Definire le fixture di conflitto modificando ID/REQUIRES e PROVIDES quando necessario per rappresentare un ciclo reale rispetto a focus; non usare fixture risolte in rete.
-- [x] Eseguire ManifestTests e MessageTests; revisionare compatibilità dei nomi fra documenti e codice, aggiornare lo schema pubblico in docs/addons/manifest.schema.json e il registro errori in docs/addons/protocol.md. La consegna dei file è registrata nel rapporto P1; nessun commit del lavoro pregresso.
+- [x] Implement the 64 KiB manifest limit before the JSONDecoder, rejection of an unknown major, invalid IDs, malformed SemVer ranges, negative/NaN resources and unknown required capabilities. Unknown optional fields may be ignored only if they do not change security semantics; unknown discriminants are rejected.
+- [x] Define distinct limits for content and envelope: 64 KiB per document, 256 KiB per timeline, 512 KiB total per envelope; at most 16 publications and 16 operations per response, action input 4 KiB, checkpoint 64 KiB. Both the per-field maximums and the total one apply. Assets use a separate bounded transfer and do not raise these maximums. Test an action result with a wrong requestID, a service response to the wrong request and a list that exceeds the limit while staying under the maximum bytes.
+- [x] Define PresentationSet as a map of only the widget, compactLeading, compactTrailing, minimal, expanded representations. Publication.content contains a set; each ScheduledEntry contains one. All representations share PublicationID and revision; no duplicated activity per side or expansion. The complete current set respects 64 KiB overall, and a timeline 256 KiB overall. Validate the required representations for widget/activity/notice and the absence of expanded in notices.
+- [x] Add round-trip tests of the messages, duplicates of feature/service/action, `sourceApp.required == false`, requirements per feature and the impossibility of using bundleID as an authenticated identity. Define the conflict fixtures by changing ID/REQUIRES and PROVIDES when necessary to represent a real cycle with respect to focus; do not use fixtures resolved over the network.
+- [x] Run ManifestTests and MessageTests; review name compatibility between documents and code, update the public schema in docs/addons/manifest.schema.json and the error registry in docs/addons/protocol.md. The delivery of the files is recorded in the P1 report; no commit of the earlier work.
 
-## Task 01.2 — Builder Swift e renderer delle stesse descrizioni
+## Task 01.2: Swift builder and renderer of the same descriptions
 
-**Files:** creare Sources/CascadeContracts/ContentDocument.swift, ContentNode.swift, ActionDescriptor.swift; Sources/CascadePresentation/CascadeContent.swift, CascadeContentBuilder.swift, CascadeComponents.swift, ContentRenderer.swift, ContentPreview.swift; Sources/CascadeAddonSDK/AddonProvider.swift, AddonContext.swift; Tests/CascadePresentationTests/ContentArchiveTests.swift, ContentValidationTests.swift sotto CascadeKit. Aggiornare Package.swift con prodotti pubblici Contracts, Presentation e AddonSDK.
+**Files:** create Sources/CascadeContracts/ContentDocument.swift, ContentNode.swift, ActionDescriptor.swift; Sources/CascadePresentation/CascadeContent.swift, CascadeContentBuilder.swift, CascadeComponents.swift, ContentRenderer.swift, ContentPreview.swift; Sources/CascadeAddonSDK/AddonProvider.swift, AddonContext.swift; Tests/CascadePresentationTests/ContentArchiveTests.swift, ContentValidationTests.swift under CascadeKit. Update Package.swift with the public products Contracts, Presentation and AddonSDK.
 
-**Interfaces:** ContentDocument ha schemaVersion Int, root ContentNode, privacy enum, accessibilityLabel String e assetIDs [String]. `encode() throws -> Data`, `static decode(_:) throws -> ContentDocument`, `validate() throws`. ContentNode è uno struct validato con discriminante Kind e factory throwing per text(String), symbol(String), image(assetID), row([ContentNode]), column([ContentNode]), progress(value: Double), countdown(until: Date), clock(format: ClockFormat), action(ActionDescriptor). ClockFormat enum chiuso per ora/minuti/secondi, rispettando locale e accessibilità.
+**Interfaces:** ContentDocument has schemaVersion Int, root ContentNode, privacy enum, accessibilityLabel String and assetIDs [String]. `encode() throws -> Data`, `static decode(_:) throws -> ContentDocument`, `validate() throws`. ContentNode is a validated struct with a Kind discriminant and throwing factories for text(String), symbol(String), image(assetID), row([ContentNode]), column([ContentNode]), progress(value: Double), countdown(until: Date), clock(format: ClockFormat), action(ActionDescriptor). ClockFormat is a closed enum for hours/minutes/seconds, respecting locale and accessibility.
 
 ```swift
 public protocol CascadeContent {
@@ -85,9 +85,9 @@ public protocol AddonProvider: Sendable {
 }
 ```
 
-AddonEvent enum: refresh(PublicationID), scheduled(eventID: String), action(ActionRequest), serviceChanged(ServiceEvent), serviceRequest(ServiceInvocation), stop(StopReason). ServiceEvent contiene subscriptionID, token valido della nuova connessione e payload di servizio validato. ServiceInvocation contiene requestID, servizio/operazione, input e deadline; il broker autentica il chiamante prima dell'invio. AddonContext espone soltanto client di servizi/storage, generazione e concessioni correnti; nessun NotchEngine, NSApp, factory dell'host o collegamento al catalogo.
+AddonEvent enum: refresh(PublicationID), scheduled(eventID: String), action(ActionRequest), serviceChanged(ServiceEvent), serviceRequest(ServiceInvocation), stop(StopReason). ServiceEvent contains subscriptionID, the new connection's valid token and a validated service payload. ServiceInvocation contains requestID, service/operation, input and deadline; the broker authenticates the caller before sending. AddonContext exposes only service/storage clients, the current generation and grants; no NotchEngine, NSApp, host factory or link to the catalog.
 
-- [x] Scrivere il test di archiviazione di un documento costruito soltanto con valori:
+- [x] Write the archiving test of a document built only from values:
 
 ```swift
 @Test func keepsCountdownWithoutProviderObjects() throws {
@@ -95,7 +95,7 @@ AddonEvent enum: refresh(PublicationID), scheduled(eventID: String), action(Acti
         schemaVersion: 1,
         root: try .countdown(until: Date(timeIntervalSince1970: 2_000_000_000)),
         privacy: .publicContent,
-        accessibilityLabel: "Tempo rimanente",
+        accessibilityLabel: "Time remaining",
         assetIDs: []
     )
     let decoded = try ContentDocument.decode(document.encode())
@@ -103,21 +103,21 @@ AddonEvent enum: refresh(PublicationID), scheduled(eventID: String), action(Acti
 }
 ```
 
-- [x] Implementare i tipi come valori Equatable oltre a Codable/Sendable dove pertinente; la privacy wire usa publicContent/sensitive e viene adattata alla privacy esistente solo al confine del motore.
-- [x] Implementare CascadeRow, CascadeColumn, CascadeText, CascadeSymbol, CascadeImage, CascadeProgress, CascadeCountdown, CascadeClock e CascadeButton come componenti CascadeContent. Il result builder converte componenti in nodi. CascadeButton accetta ActionDescriptor (ID e payload), non una closure eseguibile dall'host. Documentare che questi non sono sostituti trasparenti di ogni SwiftUI.View.
-- [x] Implementare ContentRenderer come SwiftUI.View con input ContentDocument e callback host per ActionDescriptor. La preview usa esattamente quel renderer, con un dispatcher di anteprima esplicito. Niente JSON costruito manualmente dallo sviluppatore e niente introspezione di una vista arbitraria.
-- [x] Verificare 64 KiB wire, profondità 8, 128 nodi, stringhe 4 KiB, valori progress finite/clamped, simboli/URL consentiti, conteggio asset e azioni univoche. Provare immagini e pulsanti senza label accessibile, schema ignoto e profondità 9; devono essere rifiutati prima della costruzione delle viste.
-- [ ] Eseguire ContentArchiveTests e ContentValidationTests; renderizzare le componenti con movimento/trasparenza ridotti e VoiceOver. Aggiungere docs/addons/content.md con componenti ammessi e differenza fra descrizione durevole e scena remota; commit.
+- [x] Implement the types as Equatable values in addition to Codable/Sendable where relevant; the wire privacy uses publicContent/sensitive and is adapted to the existing privacy only at the engine boundary.
+- [x] Implement CascadeRow, CascadeColumn, CascadeText, CascadeSymbol, CascadeImage, CascadeProgress, CascadeCountdown, CascadeClock and CascadeButton as CascadeContent components. The result builder converts components into nodes. CascadeButton accepts an ActionDescriptor (ID and payload), not a closure executable by the host. Document that these are not transparent substitutes for every SwiftUI.View.
+- [x] Implement ContentRenderer as a SwiftUI.View with a ContentDocument input and a host callback for ActionDescriptor. The preview uses exactly that renderer, with an explicit preview dispatcher. No JSON built by hand by the developer and no introspection of an arbitrary view.
+- [x] Verify 64 KiB wire, depth 8, 128 nodes, 4 KiB strings, finite/clamped progress values, allowed symbols/URLs, asset count and unique actions. Try images and buttons without an accessible label, an unknown schema and depth 9; they must be rejected before the views are built.
+- [ ] Run ContentArchiveTests and ContentValidationTests; render the components with reduced motion/transparency and VoiceOver. Add docs/addons/content.md with the allowed components and the difference between a durable description and a remote scene; commit.
 
-## Task 01.3 — Resolver deterministico per addon e feature
+## Task 01.3: Deterministic resolver for addons and features
 
-**Files:** creare Sources/CascadeRuntime/Resolution/ResolutionPlanner.swift, ResolutionModels.swift, SemanticVersionRange.swift; Tests/CascadeRuntimeTests/ResolutionPlannerTests.swift, ResolutionFixtures.swift sotto CascadeKit; aggiornare Package.swift con Runtime e test. Il target Runtime dipende da Contracts e, da P2, Transport; non da CascadeKit o dalle Features.
+**Files:** create Sources/CascadeRuntime/Resolution/ResolutionPlanner.swift, ResolutionModels.swift, SemanticVersionRange.swift; Tests/CascadeRuntimeTests/ResolutionPlannerTests.swift, ResolutionFixtures.swift under CascadeKit; update Package.swift with Runtime and tests. The Runtime target depends on Contracts and, from P2, Transport; not on CascadeKit or on the Features.
 
-**Interfaces:** `ResolutionPlanner.resolve(catalog: [InstalledAddon], environment: HostEnvironment, prior: [ServiceBinding]) throws -> Resolution`. InstalledAddon contiene manifest, identità firmatario verificata, digest e stato enabled. HostEnvironment contiene versione OS, capacità host, app installed/running e grants, tutti valori. Resolution contiene addon ammessi, feature bloccate con motivo, ordine di avvio, binding e dipendenti inversi. ServiceBinding identifica requirementID, consumer, provider, providerIdentity verificata, contractVersion, digest e featureID opzionale. Il valore nil indica lo scope radice; due feature possono avere binding diversi, mentre tutte le condizioni congiunte nello stesso scope devono soddisfare un unico binding.
+**Interfaces:** `ResolutionPlanner.resolve(catalog: [InstalledAddon], environment: HostEnvironment, prior: [ServiceBinding]) throws -> Resolution`. InstalledAddon contains manifest, verified signer identity, digest and enabled state. HostEnvironment contains OS version, host capabilities, installed/running apps and grants, all values. Resolution contains admitted addons, blocked features with a reason, launch order, bindings and reverse dependents. ServiceBinding identifies requirementID, consumer, provider, verified providerIdentity, contractVersion, digest and optional featureID. The nil value indicates the root scope; two features can have different bindings, while all the conjoined conditions in the same scope must satisfy a single binding.
 
-- [x] Preparare nel target test fixture JSON con tre addon: Focus fornisce sessions 1.0; Consumer richiede >=1 <2; OptionalConsumer richiede l'app sorgente solo per openInSourceApp. Il parser di fixture produce i valori InstalledAddon con firma marcata test-only; nessun fake viene importato in produzione.
-- [x] Verificare assenza dell'app: localTimer ammesso e openInSourceApp bloccata. Aggiungere ciclo A→B→A, conflitto major, due provider equivalenti, disabilitazione, vecchio binding valido e permesso mancante. Ogni caso deve avere output deterministico a parità di input, anche dopo permutazione del catalogo.
-- [x] Implementare l'algoritmo, fuori dal MainActor:
+- [x] Prepare JSON fixtures with three addons in the test target: Focus provides sessions 1.0; Consumer requires >=1 <2; OptionalConsumer requires the source app only for openInSourceApp. The fixture parser produces the InstalledAddon values with a signature marked test-only; no fake is imported into production.
+- [x] Verify the app's absence: localTimer admitted and openInSourceApp blocked. Add cycle A→B→A, major conflict, two equivalent providers, disabling, old valid binding and missing permission. Each case must have deterministic output for the same input, even after permutation of the catalog.
+- [x] Implement the algorithm, off the MainActor:
 
 ```text
 validate bounded catalog
@@ -129,18 +129,18 @@ topologically order accepted dependencies and build reverse edges
 return a plan with blocked reasons; perform no install, launch or permission request
 ```
 
-- [x] Applicare un budget monotono di 256 passi alle alternative anyOf e ai tentativi di provider, senza restituire i passi durante il rollback; interrompere con resolutionTooComplex se il numero di esplorazioni supera il massimo della policy. Aggiungere tale errore al registro di 01.1. Nessuna ricerca combinatoria illimitata e nessun provider scelto perché ha risposto per primo.
-- [x] Eseguire ResolutionPlannerTests e test generativi con seed registrato per ordine/cicli. Salvare docs/addons/requires.md con installato versus aperto, versioni di servizio versus pacchetto e limiti. Revisionate anche riproduzioni esterne e rollback, grafi già ammessi e vincoli congiunti per scope.
+- [x] Apply a monotonic budget of 256 steps to the anyOf alternatives and to the provider attempts, without giving steps back during rollback; abort with resolutionTooComplex if the number of explorations exceeds the policy's maximum. Add that error to the 01.1 registry. No unbounded combinatorial search and no provider chosen because it answered first.
+- [x] Run ResolutionPlannerTests and generative tests with a recorded seed for order/cycles. Save docs/addons/requires.md with installed versus open, service versions versus package, and limits. External reproductions and rollback, already admitted graphs and conjoined constraints per scope were also reviewed.
 
-## Task 01.4 — Contenuti posseduti dall'host e adattamento del notch
+## Task 01.4: Host-owned content and notch adaptation
 
-**Files:** creare Sources/CascadeRuntime/Publications/PublicationStore.swift, PublicationTimeline.swift; Sources/CascadeKit/Core/AddonPresentation/AddonPresentationBridge.swift, SnapshotWidget.swift, SnapshotActivity.swift, SnapshotNotice.swift; Tests/CascadeRuntimeTests/PublicationStoreTests.swift e Tests/CascadeKitTests/AddonPresentationTests.swift sotto CascadeKit. Modificare Core/Widgets/WidgetContext.swift, WidgetHost.swift e Core/Activities/LiveActivityHost.swift solo per revoca/identità e bridge necessari.
+**Files:** create Sources/CascadeRuntime/Publications/PublicationStore.swift, PublicationTimeline.swift; Sources/CascadeKit/Core/AddonPresentation/AddonPresentationBridge.swift, SnapshotWidget.swift, SnapshotActivity.swift, SnapshotNotice.swift; Tests/CascadeRuntimeTests/PublicationStoreTests.swift and Tests/CascadeKitTests/AddonPresentationTests.swift under CascadeKit. Modify Core/Widgets/WidgetContext.swift, WidgetHost.swift and Core/Activities/LiveActivityHost.swift only for revocation/identity and the necessary bridges.
 
-**Interfaces:** `actor PublicationStore` espone `accept(_ publication: Publication, owner: AddonID) throws`, `snapshot(at: Date) -> [Publication]`, `remove(owner: AddonID)`, `expire(at: Date)`. Nessuno di questi metodi conserva AddonProvider. `@MainActor AddonPresentationBridge.apply(_ publications: [Publication])` riceve solo valori e usa il motore; non importa Runtime. L'app collegherà i due in P3.
+**Interfaces:** `actor PublicationStore` exposes `accept(_ publication: Publication, owner: AddonID) throws`, `snapshot(at: Date) -> [Publication]`, `remove(owner: AddonID)`, `expire(at: Date)`. None of these methods retains AddonProvider. `@MainActor AddonPresentationBridge.apply(_ publications: [Publication])` receives only values and uses the engine; it does not import Runtime. The app will connect the two in P3.
 
-- [x] Scrivere PublicationStoreTests per accettare una pubblicazione, distruggere il produttore di test, leggere la stessa pubblicazione; revisione inferiore rifiutata, altro owner rifiutato, scadenza finita, rimozione di tutte le voci future al disable.
-- [x] Implementare snapshot/piani temporali con date ordinate, 32 voci e 256 KiB per istanza; budget iniziale di stato host conservato 8 MiB globale, separato da 32 MiB di asset e dallo storage su disco. Non preallocare 8 MiB per ogni addon. Countdown/clock sono regole temporali, non liste di tick.
-- [x] Adattare documenti a NotchWidget/NotchLiveActivity/NotchTransientNotice solo dentro il bridge. Namespacing runtime prima del motore. Preservare sessioni 8 ore ancorate, avvisi 10 s/backlog 8, privacy prima del rendering, priorità e comportamento delle due attività. Non sostituire l'arbitraggio esistente con le priorità del provider.
-- [x] Rendere revocabile WidgetContext e verificare che una copia trattenuta non invalidi dopo suspend. Invalidare solo l'istanza/revisione interessata nel bridge, senza ricreare tutta la pagina per un valore identico. Aggiungere test a AddonPresentationTests per rilascio della vista clock nascosta dalle cache (la misura energetica resta da qualificare), snapshot visibile senza provider e contenuto sensibile redatto anche nell'accessibilità.
-- [x] Gestire asset tramite riferimenti: il bridge accetta solo asset già validati dal servizio P2, con segnaposto in caso assente. Nessuna lettura di percorso o decodifica sincrona nelle factory; decoder e quota saranno introdotti in 02.5.
-- [x] Eseguire PublicationStoreTests, AddonPresentationTests, LiveActivityHostTests e NotchActivityLifetimeTests; eseguire la build e il riavvio prescritti se si è modificato il codice app/engine integrato. Registrare esiti P1 e reintegrare solo i file pertinenti con controllo dei conflitti. Il commit è differito perché il checkout contiene lavoro pregresso non committato.
+- [x] Write PublicationStoreTests to accept a publication, destroy the test producer, read the same publication; lower revision rejected, other owner rejected, finite expiry, removal of all future entries on disable.
+- [x] Implement snapshots/timelines with ordered dates, 32 entries and 256 KiB per instance; initial budget for retained host state 8 MiB global, separate from 32 MiB of assets and from the on-disk storage. Do not preallocate 8 MiB for each addon. Countdown/clock are time rules, not lists of ticks.
+- [x] Adapt documents to NotchWidget/NotchLiveActivity/NotchTransientNotice only inside the bridge. Runtime namespacing before the engine. Preserve anchored 8-hour sessions, notices 10 s/backlog 8, privacy before rendering, priorities and the behavior of the two activities. Do not replace the existing arbitration with the provider's priorities.
+- [x] Make WidgetContext revocable and verify that a retained copy does not invalidate after suspend. Invalidate only the affected instance/revision in the bridge, without recreating the whole page for an identical value. Add tests to AddonPresentationTests for the release of the hidden clock view from the caches (the energy measurement remains to be qualified), a visible snapshot without a provider and sensitive content redacted in accessibility too.
+- [x] Handle assets through references: the bridge accepts only assets already validated by the P2 service, with a placeholder when one is missing. No path reading or synchronous decoding in the factories; decoder and quota will be introduced in 02.5.
+- [x] Run PublicationStoreTests, AddonPresentationTests, LiveActivityHostTests and NotchActivityLifetimeTests; run the prescribed build and relaunch if the integrated app/engine code was modified. Record the P1 outcomes and reintegrate only the relevant files with a conflict check. The commit is deferred because the checkout contains earlier uncommitted work.

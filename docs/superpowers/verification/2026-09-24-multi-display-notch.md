@@ -1,20 +1,20 @@
-# Verifica del notch multi-display
+# Multi-display notch verification
 
-Esecuzione: 25–26 settembre 2026. Ambito: [specifica](../specs/2026-09-24-multi-display-notch-design.md), [piano](../plans/2026-09-24-multi-display-notch.md) e [contratti attuali](../../architecture/live-activity-contracts.md).
+Run: 25–26 September 2026. Scope: [specification](../specs/2026-09-24-multi-display-notch-design.md), [plan](../plans/2026-09-24-multi-display-notch.md) and [current contracts](../../architecture/live-activity-contracts.md).
 
-## Ambiente e confini
+## Environment and boundaries
 
-Host osservato: macOS 27.0, build 26A5425a; Xcode 27.0, build 27A5252f, selezionato tramite `/Applications/Xcode-beta.app/Contents/Developer`. Il deployment target macOS 14 non dimostra compatibilità runtime su macOS 14, non disponibile in questa sessione. Inventario fisico: solo Color LCD integrato, principale e online, mirroring disattivato. Nessun display esterno disponibile.
+Observed host: macOS 27.0, build 26A5425a; Xcode 27.0, build 27A5252f, selected through `/Applications/Xcode-beta.app/Contents/Developer`. The macOS 14 deployment target does not demonstrate runtime compatibility on macOS 14, which is not available in this session. Physical inventory: only the built-in Color LCD, main and online, mirroring disabled. No external display available.
 
-I test Swift Package usano `/private/tmp/cascade-multidisplay-build`, cache `/private/tmp/cascade-clang-cache` e `/private/tmp/cascade-swiftpm-cache`. La prima build baseline in `.build` dentro iCloud era bloccata dalla firma/resource fork; lo scratch esterno evita quella condizione. Il working tree `codex/interactive-notch` resta senza commit e conserva le modifiche Addon concorrenti. Le snapshot per task, anziché HEAD, definiscono i diff revisionati.
+The Swift Package tests use `/private/tmp/cascade-multidisplay-build`, caches `/private/tmp/cascade-clang-cache` and `/private/tmp/cascade-swiftpm-cache`. The first baseline build in `.build` inside iCloud was blocked by signing/resource fork; the external scratch avoids that condition. The `codex/interactive-notch` working tree remains uncommitted and keeps the concurrent Addon changes. The per-task snapshots, rather than HEAD, define the reviewed diffs.
 
-Il probe AppKit pubblico eseguito dal controller vede `screens=0 main=nil` nel sandbox e `screens=1 main=Built-in Retina Display` nella sessione grafica con escalation. Questo giustifica l'ambiente dei test nativi, senza qualificare il comportamento multi-monitor.
+The public AppKit probe run by the controller sees `screens=0 main=nil` in the sandbox and `screens=1 main=Built-in Retina Display` in the graphical session with escalation. This justifies the environment of the native tests, without qualifying the multi-monitor behavior.
 
-## Test automatici
+## Automated tests
 
-### Lifecycle e scadenza su tre display
+### Lifecycle and expiry on three displays
 
-`NotchDisplayCoordinatorTests.threeDisplayCopiesShareOneLifecycleAndExpiry` usa tre superfici finte, l'host reale condiviso e il suo clock iniettato. Verifica tre factory dopo una sola attivazione, tutte le copie della stessa istanza, passaggi tutti → focus → tutti senza nuove superfici né sospensione intermedia, quindi una riconciliazione di scadenza che svuota ogni copia con una sola sospensione. Una seconda riconciliazione non cambia proiezioni o conteggi.
+`NotchDisplayCoordinatorTests.threeDisplayCopiesShareOneLifecycleAndExpiry` uses three fake surfaces, the real shared host and its injected clock. It verifies three factories after a single activation, all copies of the same instance, all → focus → all switches with no new surfaces and no intermediate suspension, then an expiry reconciliation that empties every copy with a single suspension. A second reconciliation does not change projections or counts.
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer \
@@ -25,28 +25,28 @@ swift test --disable-sandbox --package-path CascadeKit \
   --filter 'NotchDisplayCoordinatorTests|LiveActivityHostTests'
 ```
 
-Risultato: **exit 0, 82 test in 2 suite passati**. Log: `/private/tmp/task-7-covering-tests.log`. È una verifica del comportamento già implementato: nessun RED artificiale e nessuna modifica al codice di produzione.
+Result: **exit 0, 82 tests in 2 suites passed**. Log: `/private/tmp/task-7-covering-tests.log`. It is a verification of already implemented behavior: no artificial RED and no change to production code.
 
-La lettura di `Core/Activities/LiveActivityHost.swift` conferma un unico campo `deadlineTask`: `scheduleExpiration()` sceglie la prossima scadenza/stale date, cancella il task precedente quando cambia il termine e richiama `expireNotices()`. Il test invoca direttamente la riconciliazione col clock avanzato: non conta risvegli reali del sistema né dimostra un profilo energetico.
+Reading `Core/Activities/LiveActivityHost.swift` confirms a single `deadlineTask` field: `scheduleExpiration()` picks the next expiry/stale date, cancels the previous task when the deadline changes and calls `expireNotices()`. The test invokes the reconciliation directly with the advanced clock: it does not count real system wakeups, nor does it demonstrate an energy profile.
 
-### Integrazione finale
+### Final integration
 
-La baseline precedente alle modifiche, fuori iCloud, è **exit 1**: 1.222 test, 16 issue runtime Addon e un timeout/assertion `controlDragKeepsExpandedContentAliveUntilMouseUp` nel controller. Log completo: `/private/tmp/cascade-multidisplay-baseline-clean.log`; elenco esatto conservato in `baseline-test-issues.txt` nel dossier SDD. I conteggi delle issue non equivalgono al numero di test falliti.
+The baseline before the changes, outside iCloud, is **exit 1**: 1,222 tests, 16 Addon runtime issues and one timeout/assertion `controlDragKeepsExpandedContentAliveUntilMouseUp` in the controller. Full log: `/private/tmp/cascade-multidisplay-baseline-clean.log`; the exact list is preserved in `baseline-test-issues.txt` in the SDD dossier. The issue counts are not equivalent to the number of failed tests.
 
-**Full-package finale dopo la correzione della revisione complessiva: exit 1, 1.325 test su cinque target**, log `/private/tmp/cascade-multidisplay-final-package-after-review.log`. Eseguito dal controller nella sessione grafica: nessun crash da `NSScreen` assente. I rerun diagnostici isolati descritti sotto non cambiano questo esito del run completo. Il precedente run integrato, prima di questa correzione, aveva 1.323 test e sette issue totali (`/private/tmp/cascade-multidisplay-final-package.log`); resta evidenza storica separata.
+**Final full-package after the fix from the overall review: exit 1, 1,325 tests across five targets**, log `/private/tmp/cascade-multidisplay-final-package-after-review.log`. Run by the controller in the graphical session: no crash from a missing `NSScreen`. The isolated diagnostic reruns described below do not change this outcome of the full run. The previous integrated run, before this fix, had 1,323 tests and seven issues in total (`/private/tmp/cascade-multidisplay-final-package.log`); it remains separate historical evidence.
 
-| Target/gruppo | Esito finale | Confronto con la baseline |
+| Target/group | Final outcome | Comparison with the baseline |
 | --- | --- | --- |
-| Runtime Addon | 832 test; 19 issue | 13 issue ripetono casi della baseline; altre 6 appartengono a `brokerPublicationWaitsForTheBlockedPhysicalObservation`, che passava nella baseline. Questo secondo caso passa isolato; causa esatta non dimostrata. |
-| Addon | 112 test passati | Nessun fallimento |
-| CascadeKit | 272/273 passati; un'issue in `controlDragKeepsExpandedContentAliveUntilMouseUp` | Stessa assertion `fixture.controller.state == .closed` della baseline (ora riga 1385, prima 1012). Ricorrenza dello stesso sintomo; non rende verde la suite. |
-| Altri target | 91 + 17 test passati | Nessun fallimento |
+| Runtime Addon | 832 tests; 19 issues | 13 issues repeat baseline cases; another 6 belong to `brokerPublicationWaitsForTheBlockedPhysicalObservation`, which passed in the baseline. This second case passes in isolation; exact cause not demonstrated. |
+| Addon | 112 tests passed | No failures |
+| CascadeKit | 272/273 passed; one issue in `controlDragKeepsExpandedContentAliveUntilMouseUp` | Same assertion `fixture.controller.state == .closed` as the baseline (now line 1385, previously 1012). Recurrence of the same symptom; it does not make the suite green. |
+| Other targets | 91 + 17 tests passed | No failures |
 
-Le sei issue del caso broker sono registrate in `ServiceBrokerCPUAttributionTests.swift` alle righe 314 e 286: un `Acquisition task did not start` e cinque `Observation release timed out`. Non sono sei test distinti. Il test usa `DispatchSemaphore` con timeout di due secondi dentro lavoro asincrono. La suite isolata `ServiceBrokerCPUAttributionTests` passa **8/8, exit 0, 0,032 s**, log `/private/tmp/cascade-multidisplay-final-runtime-isolation.log`. Anche il controller isolato passa **1/1, exit 0, suite 0,344 s**, log `/private/tmp/cascade-multidisplay-final-drag-isolation.log`.
+The six issues of the broker case are recorded in `ServiceBrokerCPUAttributionTests.swift` at lines 314 and 286: one `Acquisition task did not start` and five `Observation release timed out`. They are not six distinct tests. The test uses `DispatchSemaphore` with a two-second timeout inside asynchronous work. The isolated suite `ServiceBrokerCPUAttributionTests` passes **8/8, exit 0, 0.032 s**, log `/private/tmp/cascade-multidisplay-final-runtime-isolation.log`. The isolated controller also passes **1/1, exit 0, suite 0.344 s**, log `/private/tmp/cascade-multidisplay-final-drag-isolation.log`.
 
-Il controller ha confrontato byte per byte con la snapshot baseline `Package.swift`, il test ServiceBroker e i quattro moduli runtime (61 file), contracts (58), presentation (6), SDK (14): identici, senza file aggiunti/rimossi. Il target runtime non dipende da CascadeKit/app. Il fallimento runtime è quindi **nuovo nel run, in moduli immutati, non riprodotto isolatamente**. Contesa/scheduling è una spiegazione plausibile, non una causalità dimostrata. Non sono stati modificati quei moduli/test né indebolite asserzioni per ottenere il verde. Il run completo resta exit 1.
+The controller compared byte for byte against the baseline snapshot `Package.swift`, the ServiceBroker test and the four modules runtime (61 files), contracts (58), presentation (6), SDK (14): identical, with no added/removed files. The runtime target does not depend on CascadeKit/app. The runtime failure is therefore **new in the run, in unchanged modules, not reproduced in isolation**. Contention/scheduling is a plausible explanation, not a demonstrated causality. Those modules/tests were not modified, nor were assertions weakened, to get green. The full run remains exit 1.
 
-**Settings finali: 17/17 passati, exit 0, TEST EXECUTE SUCCEEDED**, log `/private/tmp/cascade-multidisplay-final-settings-prebuilt.log`. Il controller ha eseguito nella sessione grafica il bundle finale già compilato e firmato Apple Development durante le due regressioni del fix round 3:
+**Final Settings: 17/17 passed, exit 0, TEST EXECUTE SUCCEEDED**, log `/private/tmp/cascade-multidisplay-final-settings-prebuilt.log`. In the graphical session, the controller ran the final bundle already built and signed with Apple Development during the two regressions of fix round 3:
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer \
@@ -56,53 +56,53 @@ xcodebuild -project Cascade.xcodeproj -scheme Cascade \
   test-without-building -only-testing:CascadeTests/SettingsTests
 ```
 
-Questo test runtime finale sostituisce l'evidenza parziale precedente di 15 test pre-fix e due regressioni finali. Non ricompila il bundle e non costituisce la build finale di consegna. I timeout di approvazione dei tentativi precedenti impedivano il lancio dei comandi: non erano rifiuti di sicurezza né errori di compilazione/firma.
+This final runtime test replaces the earlier partial evidence of 15 pre-fix tests and two final regressions. It does not rebuild the bundle and does not constitute the final delivery build. The approval timeouts of the earlier attempts prevented the commands from launching: they were neither security rejections nor build/signing errors.
 
-Le verifiche precedenti costituiscono evidenza circoscritta: Task 5, 103 test/6 suite di geometria e transizioni; Task 6, 44 test del coordinatore e copertura Spotlight riportata nel dossier. Non si sommano questi conteggi alle suite finali, perché si sovrappongono. La revisione finale Task 6 è PASS/PASS dopo tre correzioni scoped.
+The earlier verifications constitute bounded evidence: Task 5, 103 tests/6 suites of geometry and transitions; Task 6, 44 coordinator tests and the Spotlight coverage reported in the dossier. These counts are not added to the final suites, because they overlap. The final Task 6 review is PASS/PASS after three scoped fixes.
 
-### Correzione conclusiva della transizione fra istanze
+### Final fix of the transition between instances
 
-La revisione complessiva ha riprodotto una sostituzione della stessa attività A→B nella quale A era ancora montata ma non ancora registrata come uscente. La union precedente poteva sospenderla e revocarne l’eligibilità troppo presto. Ora il controller espone le radici correnti e uscenti; il coordinatore riconcilia il lifecycle prima delle factory e nuovamente dopo l’applicazione. L’applicazione identica durante il ritorno alla sagoma compatta è idempotente.
+The overall review reproduced an A→B replacement of the same activity in which A was still mounted but not yet recorded as outgoing. The previous union could suspend it and revoke its eligibility too early. Now the controller exposes the current and outgoing roots; the coordinator reconciles the lifecycle before the factories and again after the application. The identical application during the return to the compact shape is idempotent.
 
-Le due regressioni col controller reale partono da A effettivamente montata, senza predisporre artificialmente la retention: animazione e Riduci movimento passano 2/2 dopo il RED registrato. La prova aggiornata del coordinatore passa 1/1 e controlla attivazione prima della factory e un solo rilascio finale. Log: `/private/tmp/final-fix-red-mounted-handoff.log`, `/private/tmp/final-fix-green-mounted-handoff.log`, `/private/tmp/final-fix-green-coordinator-handoff.log`. Il run pertinente di 172 test ha unicamente la stessa failure di trascinamento documentata (`/private/tmp/final-fix-covering-tests.log`); il successivo full-package sopra verifica il sorgente integrato corretto. Nessuna asserzione è stata indebolita.
+The two regressions with the real controller start from an A that is actually mounted, without artificially arranging the retention: animation and Reduce Motion pass 2/2 after the recorded RED. The updated coordinator test passes 1/1 and checks activation before the factory and a single final release. Logs: `/private/tmp/final-fix-red-mounted-handoff.log`, `/private/tmp/final-fix-green-mounted-handoff.log`, `/private/tmp/final-fix-green-coordinator-handoff.log`. The relevant run of 172 tests has only the same documented drag failure (`/private/tmp/final-fix-covering-tests.log`); the subsequent full-package above verifies the corrected integrated source. No assertion was weakened.
 
-I 17 Settings test verificano il sorgente finale di impostazioni/Spotlight, rimasto invariato durante questa correzione al controller/coordinatore; la correzione al nucleo è coperta dai nuovi test e dal nuovo run completo. La revisione scoped conclusiva è **PASS/PASS**, con finding I1 risolto e nessuna regressione causata dal fix rilevata (`final-rereview-1.md`). La build aggiornata è riuscita e la verifica nativa disponibile è riportata sotto.
+The 17 Settings tests verify the final settings/Spotlight source, which remained unchanged during this controller/coordinator fix; the core fix is covered by the new tests and by the new full run. The final scoped review is **PASS/PASS**, with finding I1 resolved and no regression caused by the fix detected (`final-rereview-1.md`). The updated build succeeded and the available native verification is reported below.
 
-## Matrice di verifica fisica
+## Physical verification matrix
 
-I fake provano routing, selezione, ownership e lifecycle; non provano stacking di finestre AppKit, desktop effettivamente visibile o comportamento hardware. Il PNG prodotto dal percorso reale di rendering `software-notch-comparison.png` è stato ispezionato con esito PASS per entrambi gli stili a riposo, metà e piena apertura, con/senza attività. Rimane evidenza geometrica sintetica.
+The fakes prove routing, selection, ownership and lifecycle; they do not prove AppKit window stacking, the desktop actually visible or hardware behavior. The PNG produced by the real rendering path, `software-notch-comparison.png`, was inspected with outcome PASS for both styles at rest, half and full opening, with/without activity. It remains synthetic geometric evidence.
 
-| Prova richiesta | Evidenza disponibile | Stato nativo |
+| Required test | Available evidence | Native status |
 | --- | --- | --- |
-| Hardware + esterno, nessuna attività, due stili | Inventari finti e PNG del renderer | Non verificato: esterno assente |
-| Due schermi senza taglio fisico, stili indipendenti | Routing/stili e geometria sintetici | Non verificato: hardware assente |
-| Tutti, due attività, apertura su A e copie su B | Test coordinatore/host, selezione compatta separata | Non verificato su display fisici multipli |
-| Focus finestra A, mouse B, apertura locale widget | Resolver e routing con input iniettati | Non verificato su display fisici multipli |
-| Movimento/cambio finestra nella stessa app | Monitor/resolver e pannelli finti stabili | Non verificato su display fisici multipli |
-| Specifico B, disconnessione/riconnessione UUID | Test inventario/routing | Non verificato: esterno assente |
-| A aperto, richiesta B poi C, annullamento hover | Test di handoff/generazioni/richiesta ancora valida | Non verificato su tre display fisici |
-| Arrivo/scadenza durante morph | Test transizioni e nuovo test expiry condivisa | Non verificato durante morph nativo |
-| Lock/unlock e stop/start | Test di lifecycle, invalidazione e ordine di cleanup; quit/relaunch reale completato | Riavvio verificato; lock/unlock nativo non esercitato |
-| Coperchio chiuso | Nessuna prova fisica | Non verificato |
-| Fullscreen, Spaces, Mission Control | Nessuna sessione nativa esercitata | Non verificato |
-| Mirroring | Topologia sintetica normalizzata | Non verificato: mirroring fisico assente |
-| Riduci movimento/trasparenza, VoiceOver | Test geometria; path condiviso per fallback visivo | Funzionamento nativo/accessibilità non verificato |
-| Impostazioni, popover, Spotlight | Test ownership/ancora; Settings firmati; UI Impostazioni provata sul display integrato | Multi-display non verificato; Spotlight nativo non qualificato per impedimento dello strumento |
+| Hardware + external, no activity, two styles | Fake inventories and renderer PNG | Not verified: external display absent |
+| Two screens without a physical cut-out, independent styles | Synthetic routing/styles and geometry | Not verified: hardware absent |
+| All, two activities, opening on A and copies on B | Coordinator/host tests, separate compact selection | Not verified on multiple physical displays |
+| Window focus A, mouse B, local widget opening | Resolver and routing with injected input | Not verified on multiple physical displays |
+| Window movement/change within the same app | Monitor/resolver and stable fake panels | Not verified on multiple physical displays |
+| Specific B, UUID disconnection/reconnection | Inventory/routing tests | Not verified: external display absent |
+| A open, request B then C, hover cancellation | Handoff/generations/still-valid request tests | Not verified on three physical displays |
+| Arrival/expiry during morph | Transition tests and new shared expiry test | Not verified during native morph |
+| Lock/unlock and stop/start | Lifecycle, invalidation and cleanup-order tests; real quit/relaunch completed | Relaunch verified; native lock/unlock not exercised |
+| Lid closed | No physical evidence | Not verified |
+| Fullscreen, Spaces, Mission Control | No native session exercised | Not verified |
+| Mirroring | Normalized synthetic topology | Not verified: physical mirroring absent |
+| Reduce Motion/Transparency, VoiceOver | Geometry tests; shared path for visual fallback | Native operation/accessibility not verified |
+| Settings, popover, Spotlight | Ownership/anchor tests; signed Settings; Settings UI tested on the built-in display | Multi-display not verified; native Spotlight not qualified because of a tool impediment |
 
-## Risorse a riposo e consegna dell'app
+## Resources at rest and app delivery
 
-Il test a tre display dimostra una sola attivazione e sospensione del provider, senza riallocazione delle superfici al cambio del focus. Il sorgente del controller arresta il morph e l'host possiede uno scheduler condiviso. Il progresso musicale usa `TimelineView` nella vista estesa durante playback non stale; la validità delle radici è coperta dai test host/controller. **Profiling nativo non eseguito**: non è stato misurato il numero di display link o TimelineView attivi a riposo, né CPU, memoria o wakeup. La lettura del sorgente non sostituisce questa misura.
+The three-display test demonstrates a single activation and suspension of the provider, with no reallocation of surfaces when the focus changes. The controller source stops the morph and the host owns a shared scheduler. Music progress uses `TimelineView` in the expanded view during non-stale playback; the validity of the roots is covered by the host/controller tests. **Native profiling not performed**: the number of display links or TimelineViews active at rest was not measured, nor CPU, memory or wakeups. Reading the source does not replace this measurement.
 
-**Build finale e riavvio: completati il 26 settembre.** `scripts/build-development.sh` sul sorgente corretto ha terminato con exit 0 e `BUILD SUCCEEDED`; log `/private/tmp/cascade-multidisplay-final-build-after-review.log`. Il controllo dei confini Addon e la firma deep/strict sono riusciti. Firma Apple Development, team `A6A5HQL6K4`, bundle `hylo.Cascade`. Il collegamento `/Applications/Cascade.app` punta alla build canonica `/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeDevelopment/Build/Products/Debug/Cascade.app`.
+**Final build and relaunch: completed on 26 September.** `scripts/build-development.sh` on the corrected source finished with exit 0 and `BUILD SUCCEEDED`; log `/private/tmp/cascade-multidisplay-final-build-after-review.log`. The Addon boundary check and the deep/strict signing succeeded. Apple Development signing, team `A6A5HQL6K4`, bundle `hylo.Cascade`. The link `/Applications/Cascade.app` points to the canonical build `/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeDevelopment/Build/Products/Debug/Cascade.app`.
 
-L’istanza osservata prima del riavvio aveva PID `14174`. Cascade è stata chiusa, riaperta e infine avviata con la propria opzione `--open-settings` per la prova UI. Il processo finale verificato ha PID **39220** e usa esattamente `CascadeDevelopment/Build/Products/Debug/Cascade.app/Contents/MacOS/Cascade`; una lettura finale del collegamento conferma la stessa destinazione. Nessun codice dell’app è cambiato dopo questa build.
+The instance observed before the relaunch had PID `14174`. Cascade was quit, reopened and finally launched with its own `--open-settings` option for the UI test. The final verified process has PID **39220** and uses exactly `CascadeDevelopment/Build/Products/Debug/Cascade.app/Contents/MacOS/Cascade`; a final read of the link confirms the same destination. No app code changed after this build.
 
-Sul display integrato la sagoma hardware chiusa è visibile. Nella finestra nativa Appearance sono presenti la riga Built-in Retina Display con stato “Notch hardware” e i tre controlli Live Activities. Sono stati selezionati “Tutti gli schermi” e “Schermo specifico”; quest’ultimo mostra il selettore con nome e UUID del display integrato. È stata ripristinata e verificata la preferenza iniziale **Segui il focus**. Le ricerche “Dynamic Island” e “activity” restituiscono i controlli pertinenti. Impostazioni resta utilizzabile e si chiude regolarmente. Queste osservazioni qualificano solo il display disponibile, non routing o stacking fisico multi-monitor.
+On the built-in display the closed hardware shape is visible. The native Appearance window shows the Built-in Retina Display row with status “Notch hardware” and the three Live Activities controls. “Tutti gli schermi” and “Schermo specifico” were selected; the latter shows the picker with the name and UUID of the built-in display. The initial preference **Segui il focus** was restored and verified. The searches “Dynamic Island” and “activity” return the relevant controls. Settings remains usable and closes normally. These observations qualify only the available display, not physical multi-monitor routing or stacking.
 
-La prova nativa Spotlight non è stata completata. Dopo il comando di apertura, CUA non ha potuto aprire/osservare `com.apple.Spotlight`: LaunchServices/RBS ha restituito `Launch failed` (RBS code 5, errore POSIX 162); l’inventario disponibile allo strumento non esponeva Spotlight/Campo. Non sono stati osservati apertura, digitazione e chiusura del campo nativo, quindi non se ne dichiara il successo né si attribuisce l’impedimento al codice Cascade. I test di stato e integrazione restano l’evidenza disponibile.
+The native Spotlight test was not completed. After the open command, CUA could not open/observe `com.apple.Spotlight`: LaunchServices/RBS returned `Launch failed` (RBS code 5, POSIX error 162); the inventory available to the tool did not expose Spotlight/field. Opening, typing into and closing the native field were not observed, so no success is claimed and the impediment is not attributed to Cascade code. The state and integration tests remain the available evidence.
 
-La build e il riavvio riusciti non qualificano da soli il multi-monitor. Profiling, VoiceOver, preferenze di accessibilità native, lock/unlock, Spaces/fullscreen e runtime macOS 14 rimangono nei limiti dichiarati sopra.
+The successful build and relaunch do not by themselves qualify multi-monitor. Profiling, VoiceOver, native accessibility preferences, lock/unlock, Spaces/fullscreen and the macOS 14 runtime remain within the limits stated above.
 
-## Evidenze conservate
+## Preserved evidence
 
-Il dossier locale `.superpowers/sdd/2026-09-24-multi-display-notch/` contiene `final-verification-results.md`, `progress.md` con i rulings, report/review per task, snapshot sorgente e `software-notch-comparison.png`. I percorsi `/private/tmp` identificano i log effettivamente prodotti su questo host e non sono artefatti portabili garantiti. Le osservazioni finali del controller sono integrate sopra; le combinazioni non eseguite restano esplicitamente non qualificate.
+The local dossier `.superpowers/sdd/2026-09-24-multi-display-notch/` contains `final-verification-results.md`, `progress.md` with the rulings, per-task reports/reviews, source snapshots and `software-notch-comparison.png`. The `/private/tmp` paths identify the logs actually produced on this host and are not guaranteed portable artifacts. The controller's final observations are integrated above; the combinations not run remain explicitly unqualified.

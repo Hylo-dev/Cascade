@@ -1,4 +1,4 @@
-# Applicare la CPU delegata alle ammissioni e alla salute addon
+# Apply delegated CPU to addon admissions and health
 
 ID: 61
 Parent: cascade-product
@@ -11,8 +11,8 @@ Blocked by: 59, 60
 
 ## Question
 
-Comporre registro, broker e coordinatore nel runtime interno. Validare provenienza delle letture e autorità del consumatore anche senza processo, registrare salute senza cancellare storia, applicare pausa ai nuovi lavori del consumatore e preservare lavori già ammessi. Gestire stale/wake/disable/exit e completezza, con test end-to-end e consegna firmata. Nessuna attivazione nativa.
+Compose the ledger, the broker and the coordinator in the internal runtime. Validate the provenance of the readings and the consumer's authority even without a process, record health without erasing history, apply the pause to the consumer's new work and preserve work already admitted. Handle stale/wake/disable/exit and completeness, with end-to-end tests and a signed delivery. No native activation.
 
 ## Answer
 
-Composizione interna implementata e revisionata da root e Sol indipendente: provenienza dei contributori, consumatori senza processo, pausa delle nuove ammissioni e conservazione del lavoro accettato. Corretto l’ordine di acquisizione prima del lancio e mantenuto l’ack v1.4 dopo commit seguito da esito indeterminato. 152 test mirati/15 suite e suite completa **1.195 test/112 suite PASS**. Il controllo completo ha richiesto soltanto aggiornare tre valori esatti per la riserva aggiuntiva di4KiB, conservando la verifica del rimborso. [Report](../../codex-addon/20260922-transitive-cpu/task-61-report.md), [revisione indipendente](../../codex-addon/20260922-transitive-cpu/task-61-independent-review.md), [suite completa](../../codex-addon/20260922-transitive-cpu/package-tests-before-retry-fixed.log). Build firmata e avvio aggiornato sono verificati nella [consegna finale](../../../docs/superpowers/verification/2026-09-22-addon-transitive-cpu.md); launcher nativo invariato.
+Internal composition implemented and reviewed by the root and an independent Sol: provenance of the contributors, consumers without a process, pausing of new admissions and preservation of accepted work. Fixed the acquisition order before the launch and kept the v1.4 ack after a commit followed by an indeterminate outcome. 152 targeted tests/15 suites and full suite **1,195 tests/112 suites PASS**. The complete check only required updating three exact values for the additional 4 KiB reserve, keeping the refund verification. [Report](../../codex-addon/20260922-transitive-cpu/task-61-report.md), [independent review](../../codex-addon/20260922-transitive-cpu/task-61-independent-review.md), [full suite](../../codex-addon/20260922-transitive-cpu/package-tests-before-retry-fixed.log). Signed build and updated launch are verified in the [final delivery](../../../docs/superpowers/verification/2026-09-22-addon-transitive-cpu.md); native launcher unchanged.

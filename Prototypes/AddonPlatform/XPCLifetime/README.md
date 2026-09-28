@@ -1,37 +1,37 @@
-# Prova isolata della durata di un servizio XPC
+# Isolated test of an XPC service's lifetime
 
-Fixture fissa, separata da Cascade. Non carica addon e non abilita il launcher.
-Misura quattro casi: uscita cooperativa, cancellazione della connessione con client vivo,
-uscita ordinaria del client e morte del client tramite SIGKILL.
+Fixed fixture, separate from Cascade. It does not load addons and does not enable the launcher.
+It measures four cases: cooperative exit, cancellation of the connection with the client alive,
+ordinary client exit, and client death via SIGKILL.
 
-Il servizio Application è incluso nel bundle del client, firmato con Hardened Runtime
-e App Sandbox. Il client verifica i messaggi ricevuti mediante requisito di firma e
-`SecCodeCreateWithXPCMessage`. Il protocollo contiene soltanto dati sintetici.
-Il caso non cooperativo trattiene il callback in `pause()`, senza consumo attivo di CPU.
+The Application service is embedded in the client's bundle, signed with Hardened Runtime
+and App Sandbox. The client verifies received messages through a signing requirement and
+`SecCodeCreateWithXPCMessage`. The protocol contains only synthetic data.
+The noncooperative case holds the callback in `pause()`, without active CPU consumption.
 
-L'osservatore registra `EVFILT_PROC/NOTE_EXIT/NOTE_EXITSTATUS` dopo un primo messaggio
-autenticato e conferma l'incarnazione con un secondo messaggio. Non manda segnali al
-PID del servizio. La finestra misurata dura due secondi; un allarme autonomo nel servizio
-limita l'esperimento a otto secondi da main. Questo allarme è solo una guardia della
-fixture: non prova alcuna garanzia prima di main o con codice addon arbitrario.
-L'uscita durante la pulizia resta separata dal risultato misurato.
+The observer registers `EVFILT_PROC/NOTE_EXIT/NOTE_EXITSTATUS` after a first authenticated
+message and confirms the incarnation with a second message. It sends no signals to the
+service's PID. The measured window lasts two seconds; an autonomous alarm in the service
+limits the experiment to eight seconds from main. This alarm is only a fixture
+guard: it proves no guarantee before main or with arbitrary addon code.
+An exit during cleanup remains separate from the measured result.
 
-## Riproduzione locale
+## Local reproduction
 
-Richiede macOS, Xcode-beta e l'identità Apple Development indicata in `run_probe.py`.
-Le build vengono create in una cartella univoca sotto DerivedData, senza registrare
-LaunchAgent o modificare `/Applications/Cascade.app`.
+Requires macOS, Xcode-beta and the Apple Development identity specified in `run_probe.py`.
+Builds are created in a unique folder under DerivedData, without registering a
+LaunchAgent or modifying `/Applications/Cascade.app`.
 
 ```sh
 python3 -m unittest discover -s Prototypes/AddonPlatform/XPCLifetime -p 'test_*.py'
 python3 Prototypes/AddonPlatform/XPCLifetime/run_probe.py --build-only
-python3 Prototypes/AddonPlatform/XPCLifetime/run_probe.py --run /percorso/products/stampato
+python3 Prototypes/AddonPlatform/XPCLifetime/run_probe.py --run /path/products/printed
 ```
 
-Codici del runner: 0 tutti PASS; 1 almeno un risultato negativo valido; 2 osservazione
-incompleta/UNKNOWN o pulizia non confermata. Un FAIL non è una prova di impossibilità
-generale di XPC. Tutti i risultati conservano `launcherAdmitted: false`.
+Runner codes: 0 all PASS; 1 at least one valid negative result; 2 incomplete/UNKNOWN
+observation or unconfirmed cleanup. A FAIL is not proof of a general impossibility
+of XPC. All results retain `launcherAdmitted: false`.
 
-La [prima misurazione](../../../docs/superpowers/verification/2026-09-24-addon-xpc-lifetime.md)
-registra tre PASS e un FAIL: la cancellazione della connessione non ha fermato il
-servizio durante la finestra osservata; la successiva uscita del client lo ha fermato.
+The [first measurement](../../../docs/superpowers/verification/2026-09-24-addon-xpc-lifetime.md)
+records three PASS and one FAIL: cancellation of the connection did not stop the
+service during the observed window; the subsequent client exit stopped it.

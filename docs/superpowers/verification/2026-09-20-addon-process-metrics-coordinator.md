@@ -1,34 +1,34 @@
-# Coordinatore delle osservazioni addon — consegna del 20 settembre 2026
+# Addon observation coordinator: delivery of 20 September 2026
 
-**Esito: PASS per la componente interna**, dopo revisione root e revisione indipendente Sol medium con un giro di correzioni. Il [ticket Wayfinder](../../../.scratch/cascade-product/issues/45-process-metrics-coordinator.md) è concluso; C4 nel suo complesso e il launcher restano aperti/bloccati.
+**Outcome: PASS for the internal component**, after root review and Sol medium independent review with one round of fixes. The [Wayfinder ticket](../../../.scratch/cascade-product/issues/45-process-metrics-coordinator.md) is closed; C4 as a whole and the launcher stay open/blocked.
 
-## Incremento consegnato
+## Delivered increment
 
-`ProcessMetricsCoordinator` raggruppa registrazioni osservative esplicite e riusa `ProcessMetricsReader`/`ProcessMetricsReducer`. Un solo deadline periodico, inizialmente 1 Hz e mai più frequente, nessun recupero di tick persi e disarmo a insieme vuoto. Campioni su confini dei job o pressione non rinviano il deadline periodico. Identità e token conflittuali sono rifiutati; registrazioni duplicate conservano la baseline; rimozione esatta non tocca una sostituzione. Una lettura mancante non equivale a zero e non blocca le altre.
+`ProcessMetricsCoordinator` groups explicit observation registrations and reuses `ProcessMetricsReader`/`ProcessMetricsReducer`. A single periodic deadline, initially 1 Hz and never more frequent, no catch-up of missed ticks and disarming on an empty set. Samples at job boundaries or under pressure do not postpone the periodic deadline. Conflicting identities and tokens are rejected; duplicate registrations keep the baseline; exact removal does not touch a replacement. A missing read is not equivalent to zero and does not block the others.
 
-Il componente serializza le letture nel proprio actor ma non installa timer/task né viene collegato all’app o all’autorità dei processi. Capacità osservativa massima 1.024 registrazioni, default 4: non è ammissione di nuovi processi né una quota aggiuntiva del governor. Identità discordante/uscita osservativa ritirano soltanto la registrazione, senza liberare riserve o dimostrare uscita fisica.
+The component serializes the reads in its own actor but installs no timer/task and is not connected to the app or to the process authority. Maximum observation capacity 1,024 registrations, default 4: it is not admission of new processes nor an additional governor quota. A mismatched identity/observed exit withdraws only the registration, without freeing reservations or proving physical exit.
 
-## Verifica
+## Verification
 
-- Terra medium: ricognizione circoscritta della frontiera. Sol medium: implementazione; un secondo Sol medium: revisione indipendente; root: lettura del codice, confronto requisiti, correzioni richieste e replay dell’intera suite.
-- 47 test metriche in 2 suite PASS, inclusi 14 nuovi test del coordinatore. Prima il normale scaffold compilabile falliva comportamentalmente; la regressione frazioni di nanosecondo ha fallito con 5 aspettative prima della correzione.
-- **1.098 test package in 97 suite PASS**, comando `swift test --disable-sandbox --package-path CascadeKit --scratch-path /private/tmp/cascade-addon-tests --skip-build --no-parallel`, toolchain Xcode-beta, nella sessione desktop. Gli stessi target sono stati compilati dal comando mirato prima del replay.
-- La baseline era 1.084 test. Due aspettative AppKit `NSScreen.main` non passavano nella sandbox; gli stessi binari sono passati nella sessione desktop, senza modifiche a quei test.
-- La revisione ha corretto l’avanzamento del clock nelle registrazioni duplicate, i valori temporali estremi, la perdita di precisione sub-nanosecondo e un ciclo di ritenzione nella fixture. Il codice finale conserva `Duration` direttamente con aritmetica limitata. Nessun rilievo importante residuo.
-- Lettore esistente byte-identico; hash finali dei tre file revisionati conservati. Nessun’altra sorgente preesistente tra i 388 input iniziali è stata modificata.
+- Terra medium: bounded survey of the frontier. Sol medium: implementation; a second Sol medium: independent review; root: code reading, requirements comparison, requested fixes and replay of the whole suite.
+- 47 metrics tests in 2 suites PASS, including 14 new coordinator tests. First, the normal compilable scaffold failed behaviorally; the nanosecond-fractions regression failed with 5 expectations before the fix.
+- **1,098 package tests in 97 suites PASS**, command `swift test --disable-sandbox --package-path CascadeKit --scratch-path /private/tmp/cascade-addon-tests --skip-build --no-parallel`, Xcode-beta toolchain, in the desktop session. The same targets were compiled by the focused command before the replay.
+- The baseline was 1,084 tests. Two AppKit `NSScreen.main` expectations did not pass in the sandbox; the same binaries passed in the desktop session, with no changes to those tests.
+- The review fixed the clock advancing on duplicate registrations, the extreme time values, the loss of sub-nanosecond precision and a retain cycle in the fixture. The final code keeps `Duration` directly with bounded arithmetic. No important finding remains.
+- Existing reader byte-identical; final hashes of the three reviewed files preserved. No other pre-existing source among the 388 initial inputs was modified.
 
-## Build e avvio
+## Build and launch
 
-La prima build ufficiale è rimasta prima della compilazione in `NSFileCoordinator`, durante la lettura del progetto iCloud. Un campione di un secondo documenta l’attesa; è stato interrotto soltanto il relativo `xcodebuild`.
+The first official build stayed stuck before compilation in `NSFileCoordinator`, while reading the iCloud project. A one-second sample documents the wait; only the related `xcodebuild` was interrupted.
 
-La stessa build ufficiale è poi riuscita su una copia locale con **479 input verificati identici prima e dopo la build**. Controllo SDK: 4 package, 11 target, 90 sorgenti Swift, 140 import PASS. `scripts/build-development.sh`, firma Apple Development e `codesign --verify --deep --strict` PASS. Lo script ha aggiornato `/Applications/Cascade.app` alla build in `CascadeDevelopment/Build/Products/Debug/Cascade.app`.
+The same official build then succeeded on a local copy with **479 inputs verified identical before and after the build**. SDK check: 4 packages, 11 targets, 90 Swift sources, 140 imports PASS. `scripts/build-development.sh`, Apple Development signature and `codesign --verify --deep --strict` PASS. The script updated `/Applications/Cascade.app` to the build in `CascadeDevelopment/Build/Products/Debug/Cascade.app`.
 
-Chiusura normale e riavvio verificati: PID 10620 → **18882**, eseguibile corrispondente al link Applications e stabilità per 5 secondi. Nessun nuovo processo addon o prototipo nativo è stato attivato.
+Normal close and relaunch verified: PID 10620 → **18882**, executable matching the Applications link and stable for 5 seconds. No new addon process or native prototype was activated.
 
-[Evidenze, log e hash](../../../.scratch/codex-addon/20260920-wayfinder-continuation/root-review.md); [revisione indipendente finale](../../../.scratch/codex-addon/20260920-wayfinder-continuation/task-45-rereview.md); [risultato avvio](../../../.scratch/codex-addon/20260920-wayfinder-continuation/delivery.json).
+[Evidence, logs and hashes](../../../.scratch/codex-addon/20260920-wayfinder-continuation/root-review.md); [final independent review](../../../.scratch/codex-addon/20260920-wayfinder-continuation/task-45-rereview.md); [launch result](../../../.scratch/codex-addon/20260920-wayfinder-continuation/delivery.json).
 
-## Confine e punto di arresto
+## Boundary and stopping point
 
-Rimangono binding nativo canonico, azionamento dal wakeup comune, integrazione del governor/salute, enforcement e prova reale dei processi. Non sono qualificati macOS14/Intel, consumo del supervisore o profili continui.
+Remaining: canonical native binding, driving from the shared wakeup, governor/health integration, enforcement and real process testing. macOS14/Intel, supervisor consumption and continuous profiles are not qualified.
 
-L’utente richiede arresto a una scelta progettuale oppure sotto il 75% di budget residuo. Residuo osservato alla consegna: **93%** (7% consumato). L’arresto riguarda la [semantica del burst CPU](../../../.scratch/cascade-product/issues/46-addon-cpu-burst-policy.md): la specifica non definisce come 100ms/job convivano con 50ms/10s. Nessuna politica è stata selezionata o implementata. Il launcher resta bloccato per la decisione già acquisita, senza riproporla.
+The user requires a stop at a design choice or below 75% remaining budget. Remaining budget observed at delivery: **93%** (7% consumed). The stop concerns the [CPU burst semantics](../../../.scratch/cascade-product/issues/46-addon-cpu-burst-policy.md): the specification does not define how 100ms/job coexists with 50ms/10s. No policy was selected or implemented. The launcher stays blocked by the decision already made, without proposing it again.

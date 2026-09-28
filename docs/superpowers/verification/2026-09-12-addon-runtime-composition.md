@@ -1,105 +1,105 @@
-# Coordinatore degli addon — verifica del 12 settembre 2026
+# Addon coordinator verification: 12 September 2026
 
-Il task C2b2 è implementato e approvato nella copia di lavoro isolata. Il package
-supera **436 test**, con revisione indipendente conclusa senza rilievi richiesti.
-Questo risultato qualifica la composizione interna del runtime; il launcher nativo,
-l'integrazione nell'app e la feature completa rimangono da qualificare.
+Task C2b2 is implemented and approved in the isolated working copy. The package
+passes **436 tests**, with an independent review concluded without required findings.
+This result qualifies the internal composition of the runtime; the native launcher,
+the integration into the app and the complete feature remain to be qualified.
 
-## Comportamento verificato
+## Verified behavior
 
-`AddonRuntime` coordina catalogo e dipendenze risolte, assegnazioni delle pubblicazioni,
-avvio e collegamento dei provider, azioni e servizi usando lo stesso
-`ResourceGovernor` del broker privato. Il contenuto, la cronologia dei risultati,
-gli interessi dei servizi e il processo hanno durate distinte. L'uscita prevista di
-un provider conserva le pubblicazioni e gli interessi ancora validi; la nuova
-generazione deve ottenere autorizzazioni nuove.
+`AddonRuntime` coordinates catalog and resolved dependencies, publication assignments,
+launching and connecting providers, actions and services using the same
+`ResourceGovernor` as the private broker. The content, the history of results,
+the service interests and the process have distinct lifetimes. The expected exit of
+a provider preserves the publications and the interests that are still valid; the new
+generation must obtain new authorizations.
 
-Le ammissioni e la restituzione delle risorse condividono un solo proprietario
-dell'operazione. Le sospensioni verso gli actor del broker e delle risorse sono
-seguite da controlli dell'autorità corrente. Disattivazione e scadenza di un lavoro
-possono richiedere subito l'arresto del provider anche mentre un'altra ammissione
-è sospesa. I permessi del lavoro incerto rimangono conteggiati fino all'uscita
-esatta osservata; una richiesta di arresto non equivale a quell'uscita.
+Admissions and the return of resources share a single owner
+of the operation. Suspensions toward the broker and resource actors are
+followed by checks of the current authority. Disabling and expiry of a job
+can request the stop of the provider immediately even while another admission
+is suspended. The permits of uncertain work remain counted until the exact exit
+is observed; a stop request is not equivalent to that exit.
 
-Il trasporto interno distingue il messaggio ancora in ricezione da quello già
-trasferito all'operazione che lo elabora. Il limite viene comunicato prima della
-conservazione; il trasferimento mantiene occupato il posto. Ripetere una ricezione
-non permette di scartare il messaggio che un'altra operazione sta elaborando.
+The internal transport distinguishes the message still being received from the one already
+transferred to the operation that processes it. The limit is reported before
+retention; the transfer keeps the slot occupied. Repeating a receive
+does not allow discarding the message that another operation is processing.
 
-Un completamento di servizio in attesa non conferisce un esito recuperabile,
-un aggiornamento della sequenza o una restituzione dei permessi. Il broker rimane
-l'unico registro dei risultati. La ricezione conserva l'istante campionato
-dall'host senza ripristinare autorizzazioni revocate. L'esito immediato deriva
-dalla conferma effettiva; la rimozione di una voce durante l'uscita del processo
-non viene interpretata come successo.
+A pending service completion does not confer a recoverable outcome,
+a sequence update or a return of the permits. The broker remains
+the only registry of the results. The receipt keeps the instant sampled
+by the host without restoring revoked authorizations. The immediate outcome derives
+from the effective confirmation; the removal of an entry during the exit of the process
+is not interpreted as success.
 
-I completamenti senza modifica del contenuto convalidano la propria sessione e
-sequenza. Due provider indipendenti non si invalidano a vicenda tramite la revisione
-globale delle pubblicazioni. I normali batch di contenuti conservano i controlli
-atomici già presenti. Rimangono i controlli di replay, revoca e vecchia generazione.
+Completions without a change to the content validate their own session and
+sequence. Two independent providers do not invalidate each other through the global
+revision of the publications. Normal content batches keep the atomic checks
+already present. The replay, revocation and old-generation checks remain.
 
-Le proiezioni dei dati di configurazione e della risoluzione vengono limitate
-prima della codifica e della conservazione, comprese le stringhe annidate nelle
-versioni. I test verificano anche quote ristrette, esiti conservati con quota piena,
-restituzioni esatte, riferimenti alle pubblicazioni e revisione di autorità esaurita.
+The projections of the configuration data and of the resolution are bounded
+before encoding and retention, including the strings nested in the
+versions. The tests also verify restricted quotas, outcomes retained at full quota,
+exact returns, references to the publications and revision of exhausted authority.
 
-## Prove e revisione
+## Evidence and review
 
-Ambiente: Xcode beta, cache dei moduli in
-`/private/tmp/cascade-addon-clang-cache`, scratch SwiftPM
-`/private/tmp/cascade-addon-swift-build`. Dalla directory `CascadeKit`:
+Environment: Xcode beta, module cache in
+`/private/tmp/cascade-addon-clang-cache`, SwiftPM scratch
+`/private/tmp/cascade-addon-swift-build`. From the `CascadeKit` directory:
 
 ```sh
 swift test --no-parallel --scratch-path /private/tmp/cascade-addon-swift-build
 ```
 
-Risultato: exit 0, **436 test**: Runtime205, Presentation20, motore169,
-Contracts38, tool4. Log `/private/tmp/cascade-c2b2-fix3-full-package.log`,
+Result: exit 0, **436 tests**: Runtime 205, Presentation 20, engine 169,
+Contracts 38, tool 4. Log `/private/tmp/cascade-c2b2-fix3-full-package.log`,
 SHA-256 `3349e5e5d969f80613945a5c068912f8d54f918188c81a33ce34d08fc337fee0`.
 
-La verifica mirata delle otto suite interessate passa104 test. Non va sommata alla
-suite completa, che la comprende. Tutti i14 hash dei file della correzione sono
-stati confrontati con il rapporto e ricontrollati dopo la verifica completa.
+The targeted check of the eight affected suites passes 104 tests. It must not be added to the
+full suite, which includes it. All 14 hashes of the fix files were
+compared with the report and rechecked after the full check.
 
-La revisione iniziale e le tre successive revisioni delle correzioni hanno chiuso
-i rilievi sulla proprietà delle risorse, le autorità e i completamenti concorrenti.
-Il verdetto finale è Spec compliance PASS e Code quality APPROVED, senza rilievi
-richiesti o nuovi difetti importanti nell'ultima modifica. I rapporti, i diff
-immutabili e le prove RED/GREEN sono conservati nella directory del piano
+The initial review and the three subsequent reviews of the fixes closed
+the findings on resource ownership, authorities and concurrent completions.
+The final verdict is Spec compliance PASS and Code quality APPROVED, without required
+findings or new important defects in the last change. The reports, the immutable
+diffs and the RED/GREEN evidence are kept in the plan directory
 `.superpowers/sdd/2026-09-10-addon-runtime-completion/continuation-production/`.
-Gli errori della preparazione dei test e l'errore di spazio disco sono registrati
-separatamente dai fallimenti comportamentali.
+The errors in the test preparation and the disk space error are recorded
+separately from the behavioral failures.
 
-## Limiti attuali
+## Current limits
 
-L'adapter usato dalle prove è interno ai test. Non sono ancora qualificati trasporto
-IPC produttivo, decodifica nativa, arresto del worker alla morte del supervisore,
-scene remote, altri editori o versioni macOS non eseguite. La prova seriale usa la
-modalità già adottata dal progetto; il precedente problema del test AppKit eseguito
-concorrenzialmente rimane documentato separatamente e non viene dichiarato risolto.
+The adapter used by the tests is internal to the tests. Not yet qualified: production
+IPC transport, native decoding, stopping the worker on the death of the supervisor,
+remote scenes, other publishers or macOS versions that were not run. The serial test uses the
+mode already adopted by the project; the earlier problem of the AppKit test run
+concurrently remains documented separately and is not declared resolved.
 
-Questa continuazione non è ancora integrata nel checkout originale e non ha ancora
-prodotto build, aggiornamento del collegamento Applications o riavvio dell'app.
-Il successivo task C0o è un esperimento limitato su identità e dati di due owner,
-non l'ammissione automatica del launcher. Il [piano di completamento](../plans/2026-09-10-addon-runtime-completion.md)
-mantiene separati i prerequisiti nativi e le altre consegne.
+This continuation is not yet integrated into the original checkout and has not yet
+produced a build, an update of the Applications link or a relaunch of the app.
+The next task C0o is a limited experiment on the identity and data of two owners,
+not the automatic admission of the launcher. The [completion plan](../plans/2026-09-10-addon-runtime-completion.md)
+keeps the native prerequisites and the other deliveries separate.
 
-Verifica aggiuntiva prima dell’integrazione: l’asserzione di `ActionDispatcherTests` sul riferimento alla pubblicazione dopo la scadenza della cronologia è stata controllata separatamente, perché non figurava nei14 hash finali. Revisione approvata e singolo test passato sulla versione corrente; questa prova non sostituisce una sequenza completa di pruning nel runtime.
+Additional check before integration: the `ActionDispatcherTests` assertion on the reference to the publication after the history expires was checked separately, because it did not appear among the 14 final hashes. Review approved and single test passed on the current version; this evidence does not replace a complete pruning sequence in the runtime.
 
-## Integrazione e build del 12 settembre
+## Integration and build of 12 September
 
-43 file approvati sono stati integrati nel progetto principale;332 input di build
-sono stati confrontati e risultano identici alla copia verificata. La build dal percorso
-del progetto è stata interrotta dopo aver osservato Xcode in attesa di NSFileCoordinator
-nella lettura ricorsiva del progetto. Il solo processo della build è stato interrotto,
-con uscita effettiva osservata; nessuna impostazione iCloud o app Xcode è stata cambiata.
+43 approved files were integrated into the main project; 332 build inputs
+were compared and are identical to the verified copy. The build from the path
+of the project was interrupted after observing Xcode waiting on NSFileCoordinator
+in the recursive read of the project. Only the build process was interrupted,
+with its effective exit observed; no iCloud setting or Xcode app was changed.
 
-Lo stesso script ufficiale ha poi compilato con successo dalla copia locale identica,
-con firma verificata e collegamento `/Applications/Cascade.app` aggiornato. Cascade è
-stata chiusa normalmente (PID8956) e riaperta dalla build nuova: PID47210, percorso
-atteso e stabilità verificati. Log `/private/tmp/cascade-production-20260912-local-app-build.log`;
+The same official script then compiled successfully from the identical local copy,
+with signature verified and the `/Applications/Cascade.app` link updated. Cascade was
+closed normally (PID 8956) and reopened from the new build: PID 47210, expected
+path and stability verified. Log `/private/tmp/cascade-production-20260912-local-app-build.log`;
 record `/private/tmp/cascade-production-20260912-restart.json`.
 
-Questa consegna integra le basi del runtime e il prototipo verificato nel progetto.
-Non abilita ancora gli addon nel prodotto né conclude le migrazioni dei widget.
-Prosegue l’implementazione dello storage condiviso e del percorso nativo completo.
+This delivery integrates the runtime foundations and the verified prototype into the project.
+It does not yet enable addons in the product nor conclude the widget migrations.
+The implementation of the shared storage and of the complete native path continues.

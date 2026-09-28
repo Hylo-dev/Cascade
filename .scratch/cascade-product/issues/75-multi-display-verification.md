@@ -1,4 +1,4 @@
-# Verificare e consegnare il notch multi-display
+# Verify and deliver the multi-display notch
 
 ID: 75
 Parent: cascade-product
@@ -11,12 +11,12 @@ Blocked by: 74
 
 ## Question
 
-Implementare e verificare il task 7 del [piano multi-display](../../../docs/superpowers/plans/2026-09-24-multi-display-notch.md) rispettando la [specifica](../../../docs/superpowers/specs/2026-09-24-multi-display-notch-design.md). La tranche esecutiva è autorizzata dalla richiesta del 25 settembre; chiudere solo con prove e revisione.
+Implement and verify task 7 of the [multi-display plan](../../../docs/superpowers/plans/2026-09-24-multi-display-notch.md) following the [spec](../../../docs/superpowers/specs/2026-09-24-multi-display-notch-design.md). The execution tranche is authorized by the request of 25 September; close only with evidence and review.
 
 ## Answer
 
-Implementazione consegnata il 26 settembre 2026. Aggiunta la verifica di lifecycle/scadenza condivisa su tre display, aggiornati i contratti e completata la revisione trasversale. L’unico finding finale, perdita anticipata dell’istanza ancora montata durante sostituzione, è stato riprodotto con il controller reale e corretto tramite union delle radici correnti/uscenti e riconciliazione prima/dopo l’applicazione. [Revisione conclusiva](../../../.superpowers/sdd/2026-09-24-multi-display-notch/final-rereview-1.md): PASS/PASS.
+Implementation delivered on 26 September 2026. Added the verification of the shared lifecycle/deadline across three displays, updated the contracts and completed the cross-cutting review. The only final finding, early loss of the still-mounted instance during a replacement, was reproduced with the real controller and fixed through a union of the current/outgoing roots and a reconciliation before/after the application. [Final review](../../../.superpowers/sdd/2026-09-24-multi-display-notch/final-rereview-1.md): PASS/PASS.
 
-Build ufficiale Apple Development riuscita, firma verificata e `/Applications/Cascade.app` aggiornato alla build canonica. Riavvio reale verificato: processo finale 39220 usa l’eseguibile CascadeDevelopment aggiornato. UI Appearance, tre modalità, target specifico e ricerca verificati sul display integrato; preferenza iniziale Segui il focus ripristinata.
+Official Apple Development build succeeded, signature verified and `/Applications/Cascade.app` updated to the canonical build. Real restart verified: final process 39220 uses the updated CascadeDevelopment executable. Appearance UI, three modes, specific target and search verified on the built-in display; initial Follow focus preference restored.
 
-Settings 17/17; nuove regressioni lifecycle passano. Il full package finale (1.325 test) resta exit 1: timeout/assertion confrontati puntualmente con la baseline e moduli runtime indipendenti immutati. Non si dichiara una suite integralmente verde. Hardware esterno/mirroring e altre condizioni native non disponibili, Spotlight end-to-end non osservabile tramite CUA e profiling non eseguito restano limiti espliciti della qualificazione, non prove riuscite. [Verbale completo](../../../docs/superpowers/verification/2026-09-24-multi-display-notch.md), [piano](../../../docs/superpowers/plans/2026-09-24-multi-display-notch.md). Nessun commit o merge; snapshot e prove conservate per la consegna in-place autorizzata.
+Settings 17/17; new lifecycle regressions pass. The final full package (1,325 tests) is still exit 1: timeouts/assertions compared point by point with the baseline, and independent runtime modules unchanged. A fully green suite is not claimed. External hardware/mirroring and other unavailable native conditions, Spotlight end-to-end not observable through CUA and profiling not run remain explicit limits of the qualification, not successful tests. [Full record](../../../docs/superpowers/verification/2026-09-24-multi-display-notch.md), [plan](../../../docs/superpowers/plans/2026-09-24-multi-display-notch.md). No commit or merge; snapshot and evidence kept for the authorized in-place delivery.

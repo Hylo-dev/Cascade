@@ -1,4 +1,4 @@
-# Collegare il contatore remoto al canale autenticato del prototipo
+# Connect the remote counter to the prototype's authenticated channel
 
 ID: 41
 Parent: cascade-product
@@ -11,23 +11,23 @@ Blocked by: none
 
 ## Question
 
-Eseguire il primo incremento sorgente C8 già previsto: il pulsante della scena deve notificare il contatore all'host tramite il canale autenticato esistente, con correlazione della sessione, ordine verificabile, memoria limitata e nessun polling. Completare un check locale della logica e compilare i target separati; non attivare ExtensionKit né dichiarare una prova di click reale.
+Carry out the first C8 source increment already foreseen: the scene's button must notify the counter to the host through the existing authenticated channel, with session correlation, verifiable ordering, bounded memory and no polling. Complete a local check of the logic and build the separate targets; do not activate ExtensionKit or declare a real click test.
 
 ## Scope
 
-Tre sorgenti del prototipo RemoteUI, un unico check Swift eseguibile e documentazione. Nessuna API SDK produttiva, modifica al launcher/C0d, nuovo entitlement o dipendenza. Protocollo e fixture limitati a echo e osservazione del contatore; un solo evento in volo, budget finito e rifiuto degli eventi incoerenti. Sol medium implementa; il root revisiona, corregge se necessario e verifica prima di proseguire. La distinta qualifica della scena reale resta nel [ticket UI remota](19-extension-host-probe.md).
+Three sources of the RemoteUI prototype, a single executable Swift check and documentation. No production SDK API, change to the launcher/C0d, new entitlement or dependency. Protocol and fixture limited to echo and observation of the counter; a single event in flight, a finite budget and rejection of inconsistent events. Sol medium implements; the root reviews, fixes if necessary and verifies before proceeding. The separate qualification of the real scene stays in the [remote UI ticket](19-extension-host-probe.md).
 
-## Piano operativo
+## Operating plan
 
-1. Rendere osservabile un evento iniziale e increment/reset, con sessione fresca assegnata dall'host e sequenza verificata.
-2. Collegare la UI e il ricevitore XPC, invalidando lo stato su perdita del canale e impedendo code illimitate.
-3. Check Swift locale (include rifiuti e terminalità), build dei target separati, revisione root; nessuna attivazione della fixture.
-4. Registrare esiti distinti da qualifica nativa, conservare il launcher bloccato e riprendere la frontiera.
+1. Make an initial event and increment/reset observable, with a fresh session assigned by the host and a verified sequence.
+2. Connect the UI and the XPC receiver, invalidating the state on channel loss and preventing unbounded queues.
+3. Local Swift check (including rejections and terminality), build of the separate targets, root review; no activation of the fixture.
+4. Record outcomes kept distinct from native qualification, keep the launcher blocked and resume the frontier.
 
 ## Answer
 
-Implementato il percorso sorgente contatore UI → canale autenticato → riduttore host → acknowledgement. Sessione fresca assegnata dall'host, sequenze e transizioni controllate, un evento in volo, deadline2s, massimo1000 azioni e payload applicativi1024byte. L'host emette osservazioni counterChanged; timeout, perdita del canale e disattivazione rendono terminale la sessione. Nessun polling né nuova dipendenza.
+Implemented the source path counter UI → authenticated channel → host reducer → acknowledgement. Fresh session assigned by the host, checked sequences and transitions, one event in flight, 2 s deadline, at most 1000 actions and application payloads of 1024 bytes. The host emits counterChanged observations; timeout, channel loss and deactivation make the session terminal. No polling and no new dependency.
 
-Sol medium ha implementato; il root ha revisionato e corretto logging, dimensione delle risposte, completamenti tardivi durante la disattivazione e ammissione monouso. [Revisione ed evidenze](../../codex-addon/20260920-remote-counter/root-review.md). [Check riproducibile](../../../Prototypes/AddonPlatform/RemoteUI/README.md): compilazione Swift con warnings-as-errors e assert PASS; build Release host/provider/container e verifica deep/strict delle tre firme PASS. Configurazione Xcode e gate C0d invariati.
+Sol medium implemented; the root reviewed and fixed logging, response size, late completions during deactivation and single-use admission. [Review and evidence](../../codex-addon/20260920-remote-counter/root-review.md). [Reproducible check](../../../Prototypes/AddonPlatform/RemoteUI/README.md): Swift compilation with warnings-as-errors and assert PASS; Release build of host/provider/container and deep/strict verification of the three signatures PASS. Xcode configuration and C0d gate unchanged.
 
-Il check esegue il vero riduttore in memoria. Trasporto XPC, attivazione della scena, click reali, comportamento delle callback a runtime, accessibilità, uscita del provider e matrice macOS/editori non sono verificati. Nessun prodotto del prototipo avviato o registrato. Il ticket UI remota e il launcher restano aperti/bloccati nei rispettivi ambiti.
+The check runs the real reducer in memory. XPC transport, scene activation, real clicks, runtime behavior of the callbacks, accessibility, provider exit and the macOS/publisher matrix are not verified. No prototype product launched or registered. The remote UI ticket and the launcher remain open/blocked in their respective scopes.

@@ -1,4 +1,4 @@
-# Persistenza dei display e modalità delle Live Activities
+# Display persistence and Live Activity modes
 
 ID: 69
 Parent: cascade-product
@@ -11,8 +11,8 @@ Blocked by: 14
 
 ## Question
 
-Implementare e verificare il task 1 del [piano multi-display](../../../docs/superpowers/plans/2026-09-24-multi-display-notch.md) rispettando la [specifica](../../../docs/superpowers/specs/2026-09-24-multi-display-notch-design.md). La tranche esecutiva è autorizzata dalla richiesta del 25 settembre; chiudere solo con prove e revisione.
+Implement and verify task 1 of the [multi-display plan](../../../docs/superpowers/plans/2026-09-24-multi-display-notch.md) following the [spec](../../../docs/superpowers/specs/2026-09-24-multi-display-notch-design.md). The execution tranche is authorized by the request of 25 September; close only with evidence and review.
 
 ## Answer
 
-Preferenze Codable, UUID condiviso con calibrazione, routing puro e inventario logico implementati. Revisione indipendente e correzione di mirroring/test del resolver concluse: 9 test routing/inventario e 4 calibrazione passano, rilievi risolti. Collegamento all’engine nei ticket successivi; nessuna qualifica fisica multi-monitor dichiarata. Evidenza nel workspace SDD del piano multi-display.
+Codable preferences, UUID shared with calibration, pure routing and logical inventory implemented. Independent review and the fix of mirroring/resolver tests concluded: 9 routing/inventory tests and 4 calibration tests pass, findings resolved. Connection to the engine in the following tickets; no physical multi-monitor qualification claimed. Evidence in the multi-display plan's SDD workspace.

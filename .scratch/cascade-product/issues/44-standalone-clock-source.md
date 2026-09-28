@@ -1,4 +1,4 @@
-# Preparare il provider Clock con il solo SDK pubblico
+# Prepare the Clock provider with the public SDK only
 
 ID: 44
 Parent: cascade-product
@@ -11,14 +11,14 @@ Blocked by: 24
 
 ## Question
 
-Preparare la sorgente Clock prevista da C6 come libreria di esempio indipendente, prima del contenitore nativo: pubblicazione dichiarativa clock hourMinute, identità assegnata dall'host, nessun tick o loop del provider. Riutilizzare SDK, contratti e convenzioni degli esempi esistenti; non collegare il provider al processo grafico né sostituire il widget corrente.
+Prepare the Clock source foreseen by C6 as an independent example library, before the native container: declarative clock hourMinute publication, identity assigned by the host, no tick or loop in the provider. Reuse the SDK, the contracts and the conventions of the existing examples; do not connect the provider to the graphics process or replace the current widget.
 
 ## Scope
 
-Package sorgente StandaloneClock con dipendenza SDK esplicita, manifest validabile, provider finito e check comportamentali. Build indipendente e controllo dei confini aggiornato per includerlo. Nessuna firma/identità inventata, nessun processo addon avviato, nessuna qualifica bundled/native o migrazione Clock dichiarata. Sol medium implementa l'esempio; root cura integrazione dei controlli, revisione e consegna.
+StandaloneClock source package with an explicit SDK dependency, a validatable manifest, a finite provider and behavioral checks. Independent build and the boundary check updated to include it. No invented signing/identity, no addon process launched, no bundled/native qualification or Clock migration declared. Sol medium implements the example; the root takes care of integrating the checks, the review and the delivery.
 
-## Answer — 20 settembre 2026
+## Answer: 20 September 2026
 
-Consegna sorgente completata e revisionata dal root dopo implementazione Sol medium: [provider, manifest e guida](../../../Examples/StandaloneClock/README.md). Build indipendente e3 test Swift PASS,21 test del checker senza skip e5 fixture dello script build PASS. Il controllo obbligatorio include Clock: audit corrente4 package/11 target/90 sorgenti/140 import. La copia SDK contiene78 sorgenti pubblici identici agli input verificati.
+Source delivery completed and reviewed by the root after the Sol medium implementation: [provider, manifest and guide](../../../Examples/StandaloneClock/README.md). Independent build and 3 Swift tests PASS, 21 checker tests with no skips and 5 build-script fixtures PASS. The mandatory check includes Clock: current audit 4 packages/11 targets/90 sources/140 imports. The SDK copy contains 78 public sources identical to the verified inputs.
 
-[Verifica e limiti](../../../docs/superpowers/verification/2026-09-20-standalone-clock-source.md), [revisione root](../../codex-addon/20260920-clock-source/root-review.md), [esiti](../../codex-addon/20260920-clock-source/results.json). Nessuna integrazione nell'app, migrazione ClockWidget o qualifica nativa; C6 e launcher rimangono bloccati. Nessun nuovo binario app necessario: normale riavvio della build firmata esistente verificato, PID90193→34140 e stabilità5s. Budget settimanale osservato3%, tetto20%; nessun agente residuo.
+[Verification and limits](../../../docs/superpowers/verification/2026-09-20-standalone-clock-source.md), [root review](../../codex-addon/20260920-clock-source/root-review.md), [outcomes](../../codex-addon/20260920-clock-source/results.json). No integration into the app, ClockWidget migration or native qualification; C6 and the launcher remain blocked. No new app binary needed: normal restart of the existing signed build verified, PID 90193→34140 and 5 s stability. Weekly budget observed at 3%, cap 20%; no agent left over.

@@ -1,4 +1,4 @@
-# Disegnare Notch software e Dynamic Island a goccia
+# Design the software Notch and the droplet Dynamic Island
 
 ID: 73
 Parent: cascade-product
@@ -11,10 +11,10 @@ Blocked by: 72
 
 ## Question
 
-Implementare e verificare il task 5 del [piano multi-display](../../../docs/superpowers/plans/2026-09-24-multi-display-notch.md) rispettando la [specifica](../../../docs/superpowers/specs/2026-09-24-multi-display-notch-design.md). La tranche esecutiva è autorizzata dalla richiesta del 25 settembre; chiudere solo con prove e revisione.
+Implement and verify task 5 of the [multi-display plan](../../../docs/superpowers/plans/2026-09-24-multi-display-notch.md) following the [spec](../../../docs/superpowers/specs/2026-09-24-multi-display-notch-design.md). The execution tranche is authorized by the request of 25 September; close only with evidence and review.
 
 ## Answer
 
-Implementati sporgenza software, misure indipendenti delle attività e contorno a goccia. Le transizioni mantengono forma, maschera e hit test coerenti; il cambio stile richiude prima la superficie. Compatibilità del contesto pubblico preservata.
+Implemented the software protrusion, independent activity measurements and the droplet outline. Transitions keep shape, mask and hit test consistent; a style change closes the surface first. Compatibility of the public context preserved.
 
-Prove: 103 test in sei suite, 30 test del coordinatore e confronto PNG del renderer. Revisione indipendente PASS/PASS dopo un giro correttivo: [rapporto](../../../.superpowers/sdd/2026-09-24-multi-display-notch/task-5-rereview-1.md). Il confronto geometrico sintetico non qualifica un monitor esterno fisico; il collegamento di Impostazioni e Spotlight è nel ticket successivo.
+Evidence: 103 tests in six suites, 30 coordinator tests and a PNG comparison of the renderer. Independent review PASS/PASS after one corrective round: [report](../../../.superpowers/sdd/2026-09-24-multi-display-notch/task-5-rereview-1.md). The synthetic geometric comparison does not qualify a physical external monitor; the connection of Settings and Spotlight is in the next ticket.

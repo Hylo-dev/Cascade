@@ -1,52 +1,52 @@
-# Modello offline del bootstrap
+# Offline bootstrap model
 
-`bootstrap_abort_model.py` verifica la logica di un bootstrap fidato prima del tracing. Consuma byte e osservazioni sintetiche e restituisce previsioni immutabili. Non crea processi, non apre pipe, non invia segnali e non osserva il kernel. Non importa i driver operativi della directory.
+`bootstrap_abort_model.py` checks the logic of a trusted bootstrap before tracing. It consumes synthetic bytes and observations and returns immutable predictions. It creates no processes, opens no pipes, sends no signals and does not observe the kernel. It does not import the directory's operational drivers.
 
-Dal checkout eseguire soltanto la suite dedicata:
+From the checkout, run only the dedicated suite:
 
 ```sh
 python3 -B -m unittest discover -s Prototypes/AddonPlatform/Tracing -p test_bootstrap_abort_model.py -v
 ```
 
-Questo comando non esegue il driver nativo `scripts/test-addon-managed-death.sh`, che mantiene il proprio gate. L’ambiente della verifica è quello documentato nel rapporto; la suite non qualifica sistemi o processi reali.
+This command does not run the native driver `scripts/test-addon-managed-death.sh`, which keeps its own gate. The verification environment is the one documented in the report; the suite does not qualify real systems or processes.
 
-## Protocollo modellato
+## Modeled protocol
 
-Creare lo stato con `BootstrapAbortModel.begin(nonce, start_ns)` e conservare il valore restituito da ogni `observe(...)`. Non usare la costruzione diretta dei valori per simulare una transizione: non è un confine di autenticazione.
+Create the state with `BootstrapAbortModel.begin(nonce, start_ns)` and keep the value returned by each `observe(...)`. Do not use direct construction of the values to simulate a transition: it is not an authentication boundary.
 
-Un record contiene una lunghezza unsigned big-endian di due byte e uno dei seguenti payload ASCII esatti:
+A record contains a two-byte unsigned big-endian length and one of the following exact ASCII payloads:
 
 ```text
-1|<nonce di 32 caratteri esadecimali minuscoli>|bootstrap|1|advance
-1|<stesso nonce>|bootstrap|2|complete
+1|<nonce of 32 lowercase hex characters>|bootstrap|1|advance
+1|<same nonce>|bootstrap|2|complete
 ```
 
-`complete` è ammesso solo dopo `advance`. Il nonce è un valore sintetico, non una credenziale. Attach, tracing, exec e comandi ulteriori sono rifiutati. Sono ammessi al massimo96 byte per payload,196 byte complessivi e due frame; rimangono al massimo97 byte parziali fra chiamate. Questi limiti riguardano lo stato del modello, senza misurare allocazioni Python o RSS.
+`complete` is accepted only after `advance`. The nonce is a synthetic value, not a credential. Attach, tracing, exec and further commands are rejected. At most 96 bytes per payload, 196 bytes in total and two frames are accepted; at most 97 partial bytes remain between calls. These limits concern the model's state, without measuring Python allocations or RSS.
 
-Il tempo è un intero in nanosecondi fornito dal chiamante. La scadenza è sempre start+2secondi; frammenti, EINTR e avanzamenti validi non la rinnovano. La scadenza è terminale anche all’uguaglianza. Valori booleani al posto di interi, clock regressivo e input malformati sono rifiutati.
+Time is an integer in nanoseconds supplied by the caller. The deadline is always start + 2 seconds; fragments, EINTR and valid advances do not renew it. The deadline is terminal even at equality. Boolean values in place of integers, a regressing clock and malformed input are rejected.
 
-| Codice previsto | Causa modellata |
+| Expected code | Modeled cause |
 | --- | --- |
-| 70 | EOF esplicito al confine fra frame |
-| 71 | Protocollo, campo, ordine o frame troncato non valido |
-| 72 | Scadenza assoluta raggiunta |
-| 73 | Errore locale di setup o lettura |
-| 0 | Completamento normale della baseline |
+| 70 | Explicit EOF at the boundary between frames |
+| 71 | Invalid protocol, field, order, or truncated frame |
+| 72 | Absolute deadline reached |
+| 73 | Local setup or read error |
+| 0 | Normal completion of the baseline |
 
-Una notifica HUP, EINTR o un batch senza dati non equivale a una lettura di zero byte: EOF va indicato esplicitamente. Il modello considera tutti i byte del batch prima di concludere con successo; dati avversi nello stesso batch prevalgono. Uno stato già terminale restituisce sé stesso nelle chiamate successive. Un token non dimostra che il suo mittente sia ancora vivo.
+A HUP notification, EINTR or a batch without data is not equivalent to a zero-byte read: EOF must be indicated explicitly. The model considers all bytes of the batch before concluding successfully; adverse data in the same batch prevails. An already terminal state returns itself on subsequent calls. A token does not prove that its sender is still alive.
 
-## Coerenza delle osservazioni sintetiche
+## Consistency of the synthetic observations
 
-`evaluate_synthetic_fixture` accetta soltanto lo schema chiuso `cascade.bootstrap-abort.synthetic.v1`, etichettato `simulated`. La funzione `fixture()` nei test mostra il record completo; non è un formato compatibile con i rapporti nativi storici.
+`evaluate_synthetic_fixture` accepts only the closed schema `cascade.bootstrap-abort.synthetic.v1`, labeled `simulated`. The `fixture()` function in the tests shows the complete record; it is not a format compatible with the historical native reports.
 
-Sono richiesti identità sintetiche distinte e conservate prima dell’iniezione, ricevute corrispondenti per observer/supervisor/child, una decisione EOF70 internamente possibile e otto osservazioni obbligatorie senza duplicati. Il caso modellato descrive un’iniezione signal9 e richiede entrambi gli esiti del supervisore signal9 concordi; una normale uscita0 non la sostituisce. Il codice9 è solo un dato confrontato, mai un’operazione eseguita. L’esito del child deve essere70; una concessione di completamento normale invalida questo caso.
+It requires distinct synthetic identities retained before the injection, matching receipts for observer/supervisor/child, an internally possible EOF 70 decision, and eight mandatory observations without duplicates. The modeled case describes a signal 9 injection and requires both of the supervisor's outcomes to be signal 9 and to agree; a normal exit 0 does not substitute for it. Code 9 is only a compared value, never an executed operation. The child's outcome must be 70; a normal-completion grant invalidates this case.
 
-Tutte le ricevute usano un solo dominio temporale dell’osservatore e rimangono nell’intervallo strettamente inferiore a1,5secondi. Non si sottraggono timestamp del modello da quelli dell’osservatore. Uscita mancante, log senza ricevuta, stato invalido, identità diversa, clock estraneo, timeout, guard, fallback, cleanup o altra contraddizione rendono il caso incoerente. L’input può contenere al massimo16 record; il chiamante ha già allocato i propri dati prima della valutazione.
+All receipts use a single time domain of the observer and stay within the interval strictly below 1.5 seconds. Model timestamps are not subtracted from the observer's. A missing exit, a log without a receipt, an invalid state, a different identity, a foreign clock, a timeout, guard, fallback, cleanup or any other contradiction makes the case inconsistent. The input can contain at most 16 records; the caller has already allocated its own data before the evaluation.
 
-Un esito positivo significa esclusivamente `modelAbortEvidenceConsistent`. I campi `trustedBootstrapAbortObserved`, `supervisorDeathStopsWorker`, `nativeLauncherAdmitted` e `nativeSuccess` rimangono false. Anche un record coerente e un oggetto del modello possono essere costruiti dal chiamante: non sono prove autenticate.
+A positive outcome means exclusively `modelAbortEvidenceConsistent`. The fields `trustedBootstrapAbortObserved`, `supervisorDeathStopsWorker`, `nativeLauncherAdmitted` and `nativeSuccess` remain false. Even a consistent record and a model object can be constructed by the caller: they are not authenticated proofs.
 
-## Limite della prova
+## Limit of the proof
 
-La previsione di un abort non dimostra l’uscita fisica del bootstrap, la sua esecuzione prima di main, l’assenza di orfani o la sicurezza dell’attach. Il requisito completo dalla creazione fino a exec e alla perdita del supervisore resta aperto. Le guardie del supervisore e dell’osservatore, le identità firmate e la matrice dei sistemi richiedono qualifiche separate.
+Predicting an abort does not demonstrate the physical exit of the bootstrap, its execution before main, the absence of orphans or the safety of the attach. The complete requirement from creation through exec and the loss of the supervisor remains open. The supervisor and observer guards, the signed identities and the system matrix require separate qualifications.
 
-La [verifica del modello](../../../docs/superpowers/verification/2026-09-18-addon-bootstrap-abort-offline.md) conserva test, revisione e limiti. Il [ticket sui processi gestiti](../../../.scratch/cascade-product/issues/22-managed-process-exit-proof.md) resta distinto da questo incremento offline.
+The [model verification](../../../docs/superpowers/verification/2026-09-18-addon-bootstrap-abort-offline.md) retains tests, review and limits. The [ticket on managed processes](../../../.scratch/cascade-product/issues/22-managed-process-exit-proof.md) remains separate from this offline increment.

@@ -1,85 +1,85 @@
-# Passaggio audio AirPods e avviso essenziale
+# AirPods audio handoff and essential notice
 
-## Problema riprodotto dai dati
+## Problem reproduced from the data
 
-Il caso segnalato è il ritorno automatico delle AirPods dall'iPhone al Mac,
-non necessariamente una nuova connessione ACL. Il monitor precedente deduplicava
-correttamente la connessione già presente, ma perdeva il nuovo instradamento audio.
-I log locali di ControlCenter confermano `SmartRoutingSystemBannerContent` con
-evento `connected`, presentato tramite `MBSystemBannerAssertion` e MenuBarAgent.
-La successiva ripetizione del popup non è riuscita all'utente durante l'indagine.
+The reported case is the AirPods automatically returning from the iPhone to the
+Mac, not necessarily a new ACL connection. The previous monitor correctly
+deduplicated the connection already present, but lost the new audio routing.
+The local ControlCenter logs confirm `SmartRoutingSystemBannerContent` with
+event `connected`, presented through `MBSystemBannerAssertion` and MenuBarAgent.
+The user could not trigger the popup again during the investigation.
 
-## Modifica
+## Change
 
-Un listener CoreAudio sull'uscita predefinita rileva i passaggi verso un dispositivo
-Bluetooth identificato dal suo UID reale. La notifica Darwin
-`com.apple.BluetoothServices.AudioRoutingChanged` è soltanto un segnale aggiuntivo
-per rileggere tale uscita: non genera da sola un avviso. Nessun polling, discovery,
-lettura continua dei log o modifica dell'uscita audio.
+A CoreAudio listener on the default output detects handoffs to a Bluetooth
+device identified by its real UID. The Darwin notification
+`com.apple.BluetoothServices.AudioRoutingChanged` is only an additional signal
+to reread that output: on its own it generates no notice. No polling, discovery,
+continuous log reading or change to the audio output.
 
-La sequenza AirPods → uscita integrata → AirPods emette un nuovo avviso anche se
-la connessione ACL permane. Startup e ripresa creano baseline silenziose. Gli
-errori temporanei HAL preservano la baseline; solo l'assenza confermata di uscita
-la azzera. Il primo cambio audio entro due secondi da una nuova connessione fisica
-si accorpa al suo avviso, poi i successivi ritorni sono eventi autonomi. I metadati
-mantengono identità/revisione e significato del cambio audio, scartando risultati
-appartenenti a eventi precedenti.
+The sequence AirPods → built-in output → AirPods emits a new notice even if
+the ACL connection persists. Startup and resume create silent baselines.
+Temporary HAL errors preserve the baseline; only a confirmed absence of output
+resets it. The first audio change within two seconds of a new physical
+connection is merged into its notice; after that, later returns are standalone
+events. The metadata keeps identity/revision and the meaning of the audio
+change, discarding results that belong to earlier events.
 
-Il cambio di baseline sostituisce anche task e stream audio, così gli elementi
-accodati prima del risveglio non assumono l'identità della nuova sessione.
-Una nuova route conserva il modello, ma attende misure fresche della batteria:
-valori dei singoli auricolari appartenenti alla route precedente non possono
-sovrascrivere una nuova percentuale aggregata.
+The baseline change also replaces the audio task and stream, so elements
+queued before the wake do not take on the identity of the new session.
+A new route keeps the model, but waits for fresh battery measurements:
+individual earbud values belonging to the previous route cannot
+overwrite a new aggregate percentage.
 
-Limite esplicito: se il passaggio automatico mantiene invariato l'UID dell'uscita
-audio predefinita, il semplice hint Darwin non genera un evento. Il monitor
-richiede una transizione verificabile dell'uscita, non presume una nuova route.
+Explicit limit: if the automatic handoff leaves the UID of the default audio
+output unchanged, the Darwin hint alone does not generate an event. The monitor
+requires a verifiable transition of the output; it does not assume a new route.
 
-La presentazione Bluetooth contiene soltanto modello/simbolo e anello: nessun
-nome, stato o numero visibile. La traccia residua è verde al 28% di opacità con
-spessore pari al 60% dell'arco carico; le ali preferite passano da 116 a 40 punti.
-I testi per accessibilità e help usano un catalogo EN/IT che segue la lingua
-selezionata dal sistema per l'app, con fallback inglese.
+The Bluetooth presentation contains only model/symbol and ring: no visible
+name, state or number. The remaining track is green at 28% opacity with a
+thickness equal to 60% of the charged arc; the preferred wings go from 116 to
+40 points. The accessibility and help texts use an EN/IT catalog that follows
+the language the system selected for the app, with an English fallback.
 
-## Avviso nativo
+## Native notice
 
-Il riconoscimento include lo schema SystemBannerUI con identificatori esatti
-`smart-routing-system-banner` e `com.apple.controlcenter.dismiss`. Gli
-identificatori provengono dalle implementazioni del framework Apple installato.
-Su macOS 27 l'host aggiuntivo è `com.apple.MenuBarAgent` (maiuscole significative).
-La chiusura resta selettiva, subordinata a un evento recente, nome esatto e testo
-di connessione fornito dalle risorse di sistema; pairing, cambio inverso verso
-l'iPhone e controlli interattivi restano esclusi. Non viene chiusa la finestra
-condivisa di MenuBarAgent.
+The recognition includes the SystemBannerUI schema with the exact identifiers
+`smart-routing-system-banner` and `com.apple.controlcenter.dismiss`. The
+identifiers come from the implementations in the installed Apple framework.
+On macOS 27 the additional host is `com.apple.MenuBarAgent` (case significant).
+Dismissal stays selective, conditional on a recent event, the exact name and the
+connection text supplied by the system resources; pairing, the reverse handoff
+to the iPhone and interactive controls stay excluded. The shared MenuBarAgent
+window is not closed.
 
-Questa via AX interviene dopo la presentazione: non garantisce l'assenza di un
-primo fotogramma del popup. Il funzionamento sul popup reale resta da verificare
-quando torna riproducibile. Non equiparare l'osservazione attiva alla soppressione
-confermata.
+This AX path acts after the presentation: it does not guarantee the absence of
+a first frame of the popup. Behavior on the real popup remains to be verified
+when it becomes reproducible again. Do not equate active observation with
+confirmed suppression.
 
-Sono state escluse le API private protette da entitlement Apple: il probe
-AASystemStateMonitor/AADeviceManager riceve `kMissingEntitlementErr`; il listener
-SystemBanner controlla esplicitamente il proprio entitlement. La preferenza
-legacy `srConnectionAlert` non ha mostrato un utilizzo nella presentazione del
-banner di questa versione. Nessuna di queste autorizzazioni o preferenze è stata
-alterata.
+Private APIs protected by Apple entitlements were ruled out: the
+AASystemStateMonitor/AADeviceManager probe receives `kMissingEntitlementErr`;
+the SystemBanner listener explicitly checks its own entitlement. The legacy
+preference `srConnectionAlert` showed no use in the presentation of the banner
+in this version. None of these authorizations or preferences was
+altered.
 
-## Verifiche
+## Checks
 
-- Regressione sul ritorno audio a link già presente: fallimento osservato prima
-  della correzione in `/private/tmp/cascade-smart-route-integration-red.log`.
-- Suite reducer/metadata/lifecycle Bluetooth e policy AX:
+- Regression on the audio return with the link already present: failure observed
+  before the fix in `/private/tmp/cascade-smart-route-integration-red.log`.
+- Bluetooth reducer/metadata/lifecycle suite and AX policy:
   `/private/tmp/cascade-smart-route-bluetooth-tests.log`.
-- Harness CoreAudio/route: `scripts/test-bluetooth-audio-route.sh`.
-- Harness grafico: dodici PID Apple, semantica batteria e lifecycle animazione;
-  anteprima in `/private/tmp/cascade-bluetooth-presentation/notices.png`.
-- Regressione batteria precedente: fallimento osservato in
-  `/private/tmp/cascade-route-battery-red.log`, poi suite Bluetooth passata.
-- Build Debug e verifica della firma stabile riuscite:
-  `/private/tmp/cascade-smart-route-build.log`. Risorse EN/IT compilate nel bundle.
-- 42 controlli volume superati: `/private/tmp/cascade-smart-route-volume-tests.log`.
-- `git diff --check` passato.
-- Riavvio completato dopo lo sblocco, il 2026-09-08 alle 12:42:39: PID 74601,
-  percorso `/private/tmp/cascade-development-derived/Build/Products/Debug/Cascade.app`.
-  Alle 12:42:40 il controllo volume risulta nuovamente `active`, senza nuova
-  richiesta di permesso. La chiusura del popup Smart Routing resta da verificare.
+- CoreAudio/route harness: `scripts/test-bluetooth-audio-route.sh`.
+- Graphics harness: twelve Apple PIDs, battery semantics and animation
+  lifecycle; preview in `/private/tmp/cascade-bluetooth-presentation/notices.png`.
+- Earlier battery regression: failure observed in
+  `/private/tmp/cascade-route-battery-red.log`, then the Bluetooth suite passed.
+- Debug build and stable signature check succeeded:
+  `/private/tmp/cascade-smart-route-build.log`. EN/IT resources compiled into the bundle.
+- 42 volume checks passed: `/private/tmp/cascade-smart-route-volume-tests.log`.
+- `git diff --check` passed.
+- Relaunch completed after the unlock, on 2026-09-08 at 12:42:39: PID 74601,
+  path `/private/tmp/cascade-development-derived/Build/Products/Debug/Cascade.app`.
+  At 12:42:40 the volume control is `active` again, with no new
+  permission request. Dismissal of the Smart Routing popup remains to be verified.

@@ -1,4 +1,4 @@
-# Verificare e completare il ciclo del contatore nel provider
+# Verify and complete the counter lifecycle in the provider
 
 ID: 42
 Parent: cascade-product
@@ -11,16 +11,16 @@ Blocked by: 41
 
 ## Question
 
-Modello reale del provider: ack, timeout, invalidazione e risposte tardive; test in memoria senza avviare ExtensionKit. Completare la copertura del codice di callback effettivo consegnato nel contatore remoto, oltre al solo riduttore. Correggere difetti riprodotti e compilare il prototipo separato.
+Real model of the provider: ack, timeout, invalidation and late responses; tests in memory without launching ExtensionKit. Complete the coverage of the actual callback code delivered in the remote counter, beyond the reducer alone. Fix reproduced defects and build the separate prototype.
 
 ## Scope
 
-Incremento C8 già approvato, con Ponytail: riuso delle classi reali, callback controllate, nessun modello duplicato. Nessuna attivazione della scena, processo addon, nuovo entitlement, modifica al launcher/C0d o qualifica nativa dedotta. Il root verifica i risultati prima del seguito; più ticket possono essere completati nella stessa prosecuzione.
+C8 increment already approved, with Ponytail: reuse of the real classes, controlled callbacks, no duplicated model. No scene activation, addon process, new entitlement, change to the launcher/C0d or inferred native qualification. The root verifies the results before any follow-up; several tickets can be completed in the same continuation.
 
 ## Answer
 
-Riprodotto e corretto il completamento perso durante invalidazione iniziale: il modello reale conserva e ritira una sola callback, completata su ack, timeout o perdita del canale. Sol medium ha implementato; il root ha revisionato e reso deterministica la consegna controllata degli ack nel check, senza affidarsi a Task.yield. Coperti ack invalidi/tardivi, un solo evento in volo, inizializzazione ripetuta e timeout reale2s.
+Reproduced and fixed the completion lost during initial invalidation: the real model keeps and takes back a single callback, completed on ack, timeout or channel loss. Sol medium implemented; the root reviewed and made the controlled delivery of the acks in the check deterministic, without relying on Task.yield. Covered: invalid/late acks, a single event in flight, repeated initialization and the real 2 s timeout.
 
-Tre check locali (riduttore, host e provider), compilati con warnings-as-errors, PASS. Build Release con firma Apple Development dei tre target e verifica deep/strict PASS. [Revisione root ed evidenze](../../codex-addon/20260920-counter-lifecycle/root-review.md), [comandi riproducibili](../../../Prototypes/AddonPlatform/RemoteUI/README.md).
+Three local checks (reducer, host and provider), compiled with warnings-as-errors, PASS. Release build with Apple Development signing of the three targets and deep/strict verification PASS. [Root review and evidence](../../codex-addon/20260920-counter-lifecycle/root-review.md), [reproducible commands](../../../Prototypes/AddonPlatform/RemoteUI/README.md).
 
-Esecuzione in memoria delle classi effettive, con callback controllate: nessuna connessione OS o scena attivata. XPC autentico, interazione UI, uscita fisica, macOS14 e Intel restano non qualificati. Launcher e gate C0d invariati; nessuna nuova build di Cascade dichiarata.
+In-memory execution of the actual classes, with controlled callbacks: no OS connection or activated scene. Authentic XPC, UI interaction, physical exit, macOS 14 and Intel remain unqualified. Launcher and C0d gate unchanged; no new Cascade build declared.

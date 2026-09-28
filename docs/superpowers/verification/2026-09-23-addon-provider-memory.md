@@ -1,38 +1,38 @@
-# RAM dei provider — 23 settembre 2026
+# Provider RAM: 23 September 2026
 
-Stato: implementazione interna verificata, build firmata e avvio aggiornato riusciti.
+Status: internal implementation verified, signed build and updated launch succeeded.
 
-La scelta «1» approva il [profilo progressivo64/96MiB](../../../.scratch/cascade-product/issues/65-addon-provider-memory-policy.md), limitato al proprietario fisico già deciso. Wayfinder è usato soltanto per gli addon. Terra medium implementa il [classificatore](../../../.scratch/cascade-product/issues/66-provider-memory-episodes.md); Sol medium implementa la [composizione nel runtime](../../../.scratch/cascade-product/issues/67-runtime-provider-memory.md). Root e un Sol indipendente revisionano i risultati.
+Choice "1" approves the [progressive 64/96 MiB profile](../../../.scratch/cascade-product/issues/65-addon-provider-memory-policy.md), limited to the physical owner already decided. Wayfinder is used only for the addons. Terra medium implements the [classifier](../../../.scratch/cascade-product/issues/66-provider-memory-episodes.md); Sol medium implements the [composition in the runtime](../../../.scratch/cascade-product/issues/67-runtime-provider-memory.md). Root and an independent Sol review the results.
 
-## Contratto
+## Contract
 
-Il moderato RAM apre un episodio oltre64MiB e fino96MiB inclusi, senza moltiplicare incidenti durante la permanenza. Il recupero richiede una misura propria corrente a64MiB o meno. Oltre96MiB prevale la richiesta di stop atteso; nessun retry crash e nessuna liberazione fisica anticipata. Una misura mancante o obsoleta non vale zero. Wake e nuova registrazione non azzerano l’episodio della stessa incarnazione; una nuova incarnazione non rimuove da sola la pausa per owner.
+The moderate RAM incident opens an episode above 64 MiB and up to 96 MiB inclusive, without multiplying incidents while it persists. Recovery requires a current measurement of its own at 64 MiB or less. Above 96 MiB the expected-stop request prevails; no crash retry and no early physical release. A missing or stale measurement does not count as zero. Wake and a new registration do not reset the episode of the same incarnation; a new incarnation does not by itself remove the per-owner pause.
 
-CPU e RAM hanno pause indipendenti e condividono lo storico: un solo moderato per owner/giro, quarantena per versione conservata. La RAM non è propagata ai consumer. Nuove ammissioni e nuovi interessi rispettano entrambe le pause; lavoro già ammesso e riuso canonico conservano i contratti precedenti.
+CPU and RAM have independent pauses and share the history: a single moderate incident per owner/round, per-version quarantine preserved. RAM is not propagated to the consumers. New admissions and new interests respect both pauses; work already admitted and canonical reuse keep the earlier contracts.
 
-## Evidenze
+## Evidence
 
-- [Baseline e ledger](../../../.scratch/codex-addon/20260923-provider-memory/ledger.md):497 input iniziali,1.209 test/113 suite della precedente consegna.
-- [Classificatore: implementazione e test](../../../.scratch/codex-addon/20260923-provider-memory/task-66-report.md),3 test PASS.
-- [Revisione root66](../../../.scratch/codex-addon/20260923-provider-memory/task-66-root-review.md) e [revisione indipendente66](../../../.scratch/codex-addon/20260923-provider-memory/task-66-independent-review.md): PASS.
-- [Disegno runtime](../../../.scratch/codex-addon/20260923-provider-memory/task-67-design.md) e [brief esecutivo](../../../.scratch/codex-addon/20260923-provider-memory/task-67-brief.md).
+- [Baseline and ledger](../../../.scratch/codex-addon/20260923-provider-memory/ledger.md): 497 initial inputs, 1,209 tests/113 suites of the previous delivery.
+- [Classifier: implementation and tests](../../../.scratch/codex-addon/20260923-provider-memory/task-66-report.md), 3 tests PASS.
+- [Root review 66](../../../.scratch/codex-addon/20260923-provider-memory/task-66-root-review.md) and [independent review 66](../../../.scratch/codex-addon/20260923-provider-memory/task-66-independent-review.md): PASS.
+- [Runtime design](../../../.scratch/codex-addon/20260923-provider-memory/task-67-design.md) and [execution brief](../../../.scratch/codex-addon/20260923-provider-memory/task-67-brief.md).
 
-## Verifica finale e consegna
+## Final verification and delivery
 
-[Report runtime67](../../../.scratch/codex-addon/20260923-provider-memory/task-67-report.md):10 test RAM e176 test mirati PASS. La revisione ha corretto test di lifecycle che usavano il punto d’ingresso sbagliato, attivato interessi reali nella catena e limitato la memoria dei registratori di stop dei test. Non è stata modificata la policy per soddisfare i test. Il report distingue il classificatore test-first dall’integrazione testata dopo l’implementazione e conserva il fallimento intermedio della fixture.
+[Runtime report 67](../../../.scratch/codex-addon/20260923-provider-memory/task-67-report.md): 10 RAM tests and 176 targeted tests PASS. The review corrected lifecycle tests that used the wrong entry point, activated real interests in the chain and bounded the memory of the tests' stop recorders. The policy was not modified to satisfy the tests. The report distinguishes the test-first classifier from the integration tested after the implementation and preserves the fixture's intermediate failure.
 
-[Revisione root67](../../../.scratch/codex-addon/20260923-provider-memory/task-67-root-review.md) e [revisione indipendente67](../../../.scratch/codex-addon/20260923-provider-memory/task-67-independent-review.md) documentano i controlli del contratto. La [suite completa finale](../../../.scratch/codex-addon/20260923-provider-memory/full-package-summary.json) passa con1.222 test in115 suite: Runtime832/73, Contracts112/11, Kit170/19, SDK91/10, Tools17/2.
+[Root review 67](../../../.scratch/codex-addon/20260923-provider-memory/task-67-root-review.md) and [independent review 67](../../../.scratch/codex-addon/20260923-provider-memory/task-67-independent-review.md) document the checks of the contract. The [final full suite](../../../.scratch/codex-addon/20260923-provider-memory/full-package-summary.json) passes with 1,222 tests in 115 suites: Runtime 832/73, Contracts 112/11, Kit 170/19, SDK 91/10, Tools 17/2.
 
-Comando finale con Xcode-beta: `xcrun swift test --disable-sandbox --skip-build --package-path CascadeKit --scratch-path /private/tmp/cascade-addon-tests --no-parallel`, dopo la compilazione mirata dei file definitivi. Le cache esplicite e gli esiti sono conservati nell’evidenza della tranche.
+Final command with Xcode-beta: `xcrun swift test --disable-sandbox --skip-build --package-path CascadeKit --scratch-path /private/tmp/cascade-addon-tests --no-parallel`, after the targeted compilation of the final files. The explicit caches and the outcomes are preserved in the tranche's evidence.
 
-La [verifica degli input](../../../.scratch/codex-addon/20260923-provider-memory/build-input-verification.json) confronta500 file della copia di build con il checkout: tre file modificati, tre aggiunti e nessuno rimosso rispetto alla baseline. `scripts/build-development.sh` ha completato la build ufficiale firmata e aggiornato `/Applications/Cascade.app`.
+The [input verification](../../../.scratch/codex-addon/20260923-provider-memory/build-input-verification.json) compares 500 files of the build copy with the checkout: three files modified, three added and none removed relative to the baseline. `scripts/build-development.sh` completed the official signed build and updated `/Applications/Cascade.app`.
 
-[Avvio verificato](../../../.scratch/codex-addon/20260923-provider-memory/delivery.json): Cascade era già chiusa; avviata la build aggiornata con PID21839, firma e percorso eseguibile verificati, processo stabile dopo5secondi. Quota settimanale residua77%; nessun credito reset consumato.
+[Launch verified](../../../.scratch/codex-addon/20260923-provider-memory/delivery.json): Cascade was already closed; the updated build launched with PID 21839, signature and executable path verified, process stable after 5 seconds. Remaining weekly quota 77%; no reset credit consumed.
 
-## Frontiera
+## Frontier
 
-L’[audit successivo](../../../.scratch/codex-addon/20260923-provider-memory/post-67-frontier-audit.md), inclusa la sua correzione sulla baseline UI, non individua un altro incremento di codice addon già deciso e indipendente. I passaggi residui dipendono dalle prove di piattaforma dei ticket19/22, ancora sospese. Il blocco del launcher approvato resta valido; non si riapre la stessa scelta né si inventa un classificatore UI prima delle misure richieste.
+The [later audit](../../../.scratch/codex-addon/20260923-provider-memory/post-67-frontier-audit.md), including its correction on the UI baseline, finds no other increment of addon code that is already decided and independent. The remaining steps depend on the platform tests of tickets 19/22, still on hold. The approved launcher block remains valid; the same choice is not reopened and no UI classifier is invented before the required measurements.
 
-## Limiti
+## Limits
 
-Nessun launcher, nuovo protocollo, profilo UI/audio o controllo nativo abilitato. I test con adapter controllati non qualificano identità OS, footprint di un addon reale o arresto fisico. Il budget UI resta condiviso con il provider; la calibrazione e le semantiche del profilo continuo attendono le misure previste. Nessun commit, reset, cancellazione del checkout o consumo di crediti reset.
+No launcher, new protocol, UI/audio profile or native control enabled. The tests with controlled adapters do not qualify OS identity, the footprint of a real addon or physical stop. The UI budget remains shared with the provider; the calibration and the semantics of the continuous profile await the planned measurements. No commit, reset, deletion of the checkout or consumption of reset credits.

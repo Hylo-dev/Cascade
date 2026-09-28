@@ -1,4 +1,4 @@
-# Definire compatibilità macOS e integrazioni ammesse
+# Define macOS compatibility and allowed integrations
 
 ID: 04
 Parent: cascade-product
@@ -11,31 +11,31 @@ Blocked by: 01, 02, 03
 
 ## Question
 
-Qual è il minimo macOS del prodotto e quali funzionalità possono essere disponibili solo su versioni più recenti? Il codice parte da macOS 14 e usa già SkyLight privato; la distribuzione diretta con Homebrew è confermata. Alla luce delle ricerche, quali API private o tecniche fragili sono ammesse, con quali fallback e impegni di compatibilità? Decidere per singola capacità, includendo glass, media, notifiche, ricerca, caricamento moduli e audio, senza assumere che fuori dallo Store tutto sia automaticamente fattibile.
+What is the product's minimum macOS, and which features may be available only on newer versions? The code starts from macOS 14 and already uses private SkyLight; direct distribution with Homebrew is confirmed. In light of the research, which private APIs or fragile techniques are allowed, with which fallbacks and compatibility commitments? Decide per capability, including glass, media, notifications, search, module loading and audio, without assuming that outside the Store everything is automatically feasible.
 
-## Riallineamento del 14 settembre 2026
+## Realignment of 14 September 2026
 
-Per il sottosistema addon il piano corrente conserva macOS 14 come minimo e API native pubbliche, senza caricare codice addon nel processo grafico. È un vincolo di progetto, non una qualificazione su macOS 14. Le decisioni globali sulle altre integrazioni e la matrice effettivamente verificata rimangono aperte. Riferimento: [vincoli e stato del piano addon](../../../docs/superpowers/plans/2026-09-10-addon-runtime-completion.md).
+For the addon subsystem the current plan keeps macOS 14 as the minimum and native public APIs, without loading addon code into the graphics process. It is a project constraint, not a qualification on macOS 14. The global decisions on the other integrations and the actually verified matrix remain open. Reference: [addon plan constraints and status](../../../docs/superpowers/plans/2026-09-10-addon-runtime-completion.md).
 
-## Scelta presentata — 20 settembre 2026
+## Choice presented: 20 September 2026
 
-Il minimo macOS14 e le API pubbliche per il sottosistema addon sono già vincoli approvati; il launcher resta bloccato per decisione esplicita. Non vanno richiesti nuovamente.
+The macOS 14 minimum and the public APIs for the addon subsystem are already approved constraints; the launcher stays blocked by explicit decision. They must not be requested again.
 
-Per le nuove integrazioni generali del prodotto resta da scegliere se ammettere soltanto percorsi pubblici (accettando copertura funzionale ridotta dove necessario), oppure valutare singolarmente anche tecniche private con fallback e compatibilità da verificare. Il codice privato già presente non costituisce un'autorizzazione generale ad aggiungerne altro. La scelta non autorizza letture di dati personali, nuovi permessi macOS o deroghe al lifecycle degli addon.
+For the product's new general integrations, it remains to choose whether to allow only public paths (accepting reduced functional coverage where necessary), or to also evaluate private techniques one by one, with fallbacks and compatibility to be verified. The private code already present does not constitute a general authorization to add more. The choice does not authorize reads of personal data, new macOS permissions or exceptions to the addon lifecycle.
 
-La raccomandazione è usare API pubbliche come percorso predefinito e sottoporre ogni eventuale eccezione privata come decisione circoscritta, con beneficio, fallback e costo di manutenzione espliciti. Questo conserva la possibilità di valutare le capacità richieste senza approvare in blocco tecniche fragili. Il ticket resta aperto e non attribuisce questa preferenza all'utente.
+The recommendation is to use public APIs as the default path and to submit each possible private exception as a scoped decision, with explicit benefit, fallback and maintenance cost. This keeps the ability to evaluate the requested capabilities without approving fragile techniques wholesale. The ticket stays open and does not attribute this preference to the user.
 
-## Answer — 20 settembre 2026
+## Answer: 20 September 2026
 
-L'utente approva la raccomandazione: API pubbliche per impostazione predefinita; ogni nuova eccezione privata richiede una decisione circoscritta con beneficio, fallback, compatibilità e costo di manutenzione. Nessuna autorizzazione generale a nuove API private. Le integrazioni esistenti e già approvate rimangono tali; questa scelta non le riscrive né le estende implicitamente.
+The user approves the recommendation: public APIs by default; each new private exception requires a scoped decision with benefit, fallback, compatibility and maintenance cost. No general authorization for new private APIs. The existing, already approved integrations remain as they are; this choice neither rewrites nor implicitly extends them.
 
-Si conserva macOS14 come minimo di progetto già confermato nella [specifica interattiva approvata](../../../docs/superpowers/specs/2026-09-04-interactive-notch-design.md), senza dichiarare una qualificazione su tutte le versioni/hardware. Le capacità più recenti devono avere disponibilità esplicita e un percorso di fallback; assenza o permesso negato non diventano successo simulato.
+macOS 14 is kept as the project minimum already confirmed in the [approved interactive spec](../../../docs/superpowers/specs/2026-09-04-interactive-notch-design.md), without declaring a qualification on all versions/hardware. Newer capabilities must have explicit availability and a fallback path; absence or a denied permission does not become simulated success.
 
-| Capacità | Regola per i prossimi incrementi |
+| Capability | Rule for the next increments |
 | --- | --- |
-| Glass e presentazione | Conservare motore e contratti approvati; nuove integrazioni pubbliche e fallback coerente con le preferenze di accessibilità. |
-| Media, notifiche, ricerca | Conservare le integrazioni già approvate. Valutare separatamente qualsiasi nuovo accesso privato; nessuna lettura universale o parità Spotlight dedotta. |
-| Audio e dispositivi | Privilegiare percorsi pubblici; disponibilità, consenso, hardware e qualità richiedono le prove dei ticket dedicati. |
-| Moduli addon | Confine di processo già approvato; nessun codice esterno nel processo grafico. Launcher bloccato finché manca la prova conforme di uscita. |
+| Glass and presentation | Keep the approved engine and contracts; new public integrations and a fallback consistent with the accessibility preferences. |
+| Media, notifications, search | Keep the already approved integrations. Evaluate any new private access separately; no universal reading or Spotlight parity inferred. |
+| Audio and devices | Favor public paths; availability, consent, hardware and quality require the tests of the dedicated tickets. |
+| Addon modules | Process boundary already approved; no external code in the graphics process. Launcher blocked as long as the compliant exit proof is missing. |
 
-Questa è una policy di progetto risolta, non il superamento delle prove native. Le scelte delle singole esperienze restano nei ticket dedicati; nessun accesso a dati personali o cambiamento dei permessi è implicito.
+This is a resolved project policy, not the passing of the native tests. The choices for the individual experiences remain in the dedicated tickets; no access to personal data or change of permissions is implied.

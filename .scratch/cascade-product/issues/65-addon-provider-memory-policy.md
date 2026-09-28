@@ -1,4 +1,4 @@
-# Definire soglie e incidenti RAM dei provider
+# Define provider RAM thresholds and incidents
 
 ID: 65
 Parent: cascade-product
@@ -11,28 +11,28 @@ Blocked by: 64
 
 ## Question
 
-Quale profilo iniziale deve trasformare il footprint valido di un provider in riduzione delle ammissioni, incidente di salute o richiesta di stop? La proposta riguarda soltanto i provider event-driven, non scene UI o audio continuo.
+Which initial profile should turn a provider's valid footprint into a reduction of admissions, a health incident or a stop request? The proposal concerns only event-driven providers, not UI scenes or continuous audio.
 
-## Contesto
+## Context
 
-[Attribuzione al solo proprietario](64-addon-memory-attribution.md) approvata. La specifica contiene un obiettivo64MiB e una soglia candidata96MiB, ma non dice se64MiB sia già un incidente, come distinguere episodi ripetuti, o quando riaprire le ammissioni. Le riserve preventive di ResourcePolicy sono un altro meccanismo. Il footprint è già disponibile nel batch fisico; aggiungere un classificatore senza queste regole inventerebbe comportamento. [Ricognizione e proposta](../../codex-addon/20260922-memory-owner/task64-report.md).
+[Attribution to the owner only](64-addon-memory-attribution.md) approved. The spec contains a 64 MiB target and a 96 MiB candidate threshold, but it does not say whether 64 MiB is already an incident, how to distinguish repeated episodes, or when to reopen admissions. ResourcePolicy's preventive reserves are a different mechanism. The footprint is already available in the physical batch; adding a classifier without these rules would invent behavior. [Survey and proposal](../../codex-addon/20260922-memory-owner/task64-report.md).
 
-## Alternative
+## Alternatives
 
-1. **Riduzione progressiva con episodi distinti (consigliata).** Adottare64/96MiB come parametri del primo profilo interno dei provider: oltre64MiB e fino a96MiB inclusi, un nuovo episodio moderato chiude le sole nuove ammissioni; un campione corrente valido a64MiB o meno chiude l’episodio e rimuove il solo blocco RAM. Una permanenza continua sopra64MiB conta una volta, non a ogni campione. Un nuovo processo verificato può produrre un nuovo episodio; wake, misure mancanti e nuova registrazione dello stesso processo non azzerano il blocco né moltiplicano incidenti. Oltre96MiB, richiesta di stop immediata al primo campione valido, senza grazia aggiuntiva; non una prova di uscita avvenuta. Il caso severo prevale e non conta anche come moderato nello stesso giro.
-2. **Solo soglia severa.**64MiB resta un obiettivo informativo senza pausa o incidenti moderati RAM. Oltre96MiB un campione valido richiede lo stop. Più semplice e tollerante ai picchi, ma rinuncia all’intervento progressivo e alla quarantena da episodi RAM moderati.
+1. **Progressive reduction with distinct episodes (recommended).** Adopt 64/96 MiB as the parameters of the first internal provider profile: above 64 MiB and up to 96 MiB inclusive, a new moderate episode closes only new admissions; a valid current sample at 64 MiB or less closes the episode and removes only the RAM block. A continuous stay above 64 MiB counts once, not at every sample. A new verified process can produce a new episode; wake, missing measurements and a new registration of the same process neither reset the block nor multiply incidents. Above 96 MiB, an immediate stop request at the first valid sample, with no additional grace; not a proof that the exit happened. The severe case prevails and does not also count as moderate in the same round.
+2. **Severe threshold only.** 64 MiB stays an informational target with no pause and no moderate RAM incidents. Above 96 MiB a valid sample requests the stop. Simpler and tolerant of spikes, but it gives up the progressive intervention and the quarantine from moderate RAM episodes.
 
-## Contratto della prima alternativa
+## Contract of the first alternative
 
-- Unità MiB=1.048.576byte; valore mancante/obsoleto/identità errata non è zero, non apre nuovi episodi né riapre ammissioni. Il footprint può essere valido anche alla prima osservazione o con errore del solo calcolo CPU.
-- CPU e RAM conservano blocchi indipendenti: si ammette nuovo lavoro soltanto quando nessuno dei due lo vieta e la versione non è in quarantena. Lavori già ammessi mantengono le scadenze; nessuna nuova coda, replay o cancellazione automatica dei loro dati.
-- Usare la storia comune per versione: tre incidenti moderati nella finestra già scelta di300secondi producono quarantena. Se nello stesso giro CPU e RAM provano entrambe un nuovo moderato, registrare al massimo un incidente per owner, aggiornando comunque lo stato di entrambe. Il recupero RAM non azzera la storia o una quarantena.
-- Lo stop per RAM è atteso e non genera un retry crash. Le riserve fisiche restano trattenute fino all’uscita realmente osservata. Un eventuale avvio host per tornare a misurare non cancella blocco o storia; il lavoro ordinario non aggira la pausa.
-- Nessuna attribuzione RAM ai consumatori del servizio. Non si approvano somma provider+scena o soglie128/192MiB della UI.
-- Per questo primo profilo interno, la riduzione consiste nel rifiuto dei nuovi lavori, senza nuovo messaggio al provider o promessa di liberarne la cache. La frase precedente “prima rilascio cache” resta una possibile integrazione futura da specificare, non un’azione simulata o un prerequisito indefinito dello stop.
+- Unit MiB = 1,048,576 bytes; a missing/stale value or a wrong identity is not zero, and it neither opens new episodes nor reopens admissions. The footprint can be valid even at the first observation or when only the CPU computation fails.
+- CPU and RAM keep independent blocks: new work is admitted only when neither of the two forbids it and the version is not in quarantine. Work already admitted keeps its deadlines; no new queue, replay or automatic deletion of its data.
+- Use the shared per-version history: three moderate incidents in the already chosen 300-second window produce quarantine. If in the same round CPU and RAM both prove a new moderate, record at most one incident per owner, while still updating the state of both. RAM recovery does not reset the history or a quarantine.
+- The RAM stop is expected and does not generate a crash retry. The physical reserves stay held until the exit is actually observed. A possible host launch to resume measuring does not clear the block or the history; ordinary work does not bypass the pause.
+- No RAM attribution to the service's consumers. Neither the provider+scene sum nor the UI's 128/192 MiB thresholds are approved.
+- For this first internal profile, the reduction consists of refusing new work, with no new message to the provider and no promise to free its cache. The earlier phrase "cache release first" remains a possible future addition to be specified, not a simulated action or an undefined prerequisite of the stop.
 
-Entrambe le alternative restano verificabili soltanto con adapter controllati finché identità, misura e arresto nativi non sono qualificati. Il launcher resta bloccato. Nessuna delle alternative è implementata prima della scelta.
+Both alternatives remain verifiable only with controlled adapters until native identity, measurement and stop are qualified. The launcher stays blocked. Neither alternative is implemented before the choice.
 
 ## Answer
 
-Il23settembre2026 l’utente sceglie1, il profilo progressivo descritto sopra: oltre64MiB pausa nuove ammissioni e un moderato per episodio; recupero a64MiB o meno; oltre96MiB stop atteso. Storia comune e deduplica per owner/giro come nel contratto; nessuna attribuzione ai consumatori. Parametri del profilo interno provider, nessuna abilitazione o qualifica nativa.
+On 23 September 2026 the user chooses 1, the progressive profile described above: above 64 MiB, new admissions paused and one moderate per episode; recovery at 64 MiB or less; above 96 MiB, expected stop. Shared history and deduplication per owner/round as in the contract; no attribution to consumers. Parameters of the internal provider profile, no native enabling or qualification.

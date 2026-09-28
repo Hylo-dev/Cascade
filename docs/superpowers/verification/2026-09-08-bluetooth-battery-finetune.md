@@ -1,90 +1,90 @@
-# Batteria Bluetooth, AirPods e diagnosi volume
+# Bluetooth battery, AirPods and volume diagnosis
 
-8 settembre 2026. Richiesta: carica circolare sul lato destro dell'avviso,
-AirPods rotanti e verifica dell'override volume confrontando FineTune.
+8 September 2026. Request: circular charge on the right side of the notice,
+rotating AirPods and a check of the volume override by comparison with FineTune.
 
-## Diagnosi riprodotta
+## Reproduced diagnosis
 
-FineTune 1.9.0 (38) è in esecuzione con `mediaKeyControlEnabled: true` e HUD
-Tahoe. L'elenco pubblico `CGGetEventTapList` mostra il suo tap HID abilitato
-per i soli eventi systemDefined. Non mostra un tap volume di Cascade.
+FineTune 1.9.0 (38) is running with `mediaKeyControlEnabled: true` and the Tahoe
+HUD. The public list `CGGetEventTapList` shows its HID tap enabled
+for systemDefined events only. It shows no Cascade volume tap.
 
-I log TCC del processo Cascade 61596 riportano `result: false` per
-`kTCCServiceAccessibility`. Dopo build e riavvio, il processo 65586 conferma
-`Volume routing status: permissionRequired`. La causa accertata dell'assenza
-del filtro è il permesso negato alla build attuale; non è dimostrato che
-FineTune stia sottraendo eventi a un tap Cascade già autorizzato.
+The TCC logs of Cascade process 61596 report `result: false` for
+`kTCCServiceAccessibility`. After build and relaunch, process 65586 confirms
+`Volume routing status: permissionRequired`. The established cause of the missing
+filter is the permission denied to the current build; it is not shown that
+FineTune is taking events away from an already authorized Cascade tap.
 
-Il codice FineTune esaminato è il commit
+The FineTune code examined is commit
 `2285279d36d3f8115c1c2d4aecd904f1bdf96a51`:
 [MediaKeyMonitor](https://github.com/ronitsingh10/FineTune/blob/2285279d36d3f8115c1c2d4aecd904f1bdf96a51/FineTune/Audio/Keys/MediaKeyMonitor.swift).
-Consuma i tasti con un tap HID e modifica il volume tramite il proprio
-backend, poi presenta il suo HUD. Non disabilita globalmente l'OSD macOS.
-Cascade conserva la propria implementazione CoreAudio e la propria coda;
-non sono state copiate sorgenti GPL né modificate preferenze FineTune.
+It consumes the keys with an HID tap and changes the volume through its own
+backend, then presents its HUD. It does not globally disable the macOS OSD.
+Cascade keeps its own CoreAudio implementation and its own queue;
+no GPL sources were copied and no FineTune preferences were modified.
 
-## Implementazione
+## Implementation
 
-- Batteria privata IOBluetooth con firme runtime verificate, fallback IORegistry
-  attribuito tramite indirizzo esatto. I dati non disponibili restano ignoti;
-  la cache persistente fornisce solo identità del modello, mai carica storica.
-- Lettura alla connessione fuori dal main actor, con al massimo un retry.
-  Cancellazione e identità dell'evento impediscono aggiornamenti obsoleti.
-- Carica circolare con valore e label accessibile; minimo degli auricolari noti,
-  custodia separata. Gli zero ambigui delle API private sono ignoti; gli zero
-  espliciti del registry sono conservati.
-- AirPods e Pro: geometria 3D originale, atlanti precalcolati, un giro di tre
-  secondi nel compositor. Movimento ridotto statico, teardown e cancellazione
-  del caricamento quando la vista si nasconde. AirPods Max usa il simbolo.
-- `updateNotice` aggiorna solo un avviso esistente con identità/sorgente uguali
-  e revisione maggiore, senza prolungare la scadenza o modificarne la priorità.
-  L'integrazione arma l'override Bluetooth soltanto per l'evento iniziale.
-- Corretto il crash `addressString` IUO in disconnessione, riprodotto prima
-  della correzione. I callback nil sono protetti e il token conserva l'identità
-  quando il framework ha già eliminato i dati del dispositivo.
-- Volume: recupero limitato del tap dopo disabilitazione del sistema, rinnovo
-  dopo sleep/sessione, nuova verifica del permesso al ritorno nell'app/menu.
-  I repeat di mute non ripetono scritture, letture o avvisi.
+- Private IOBluetooth battery with verified runtime signatures, IORegistry fallback
+  attributed through the exact address. Unavailable data remain unknown;
+  the persistent cache provides only the model identity, never historical charge.
+- Read on connection off the main actor, with at most one retry.
+  Cancellation and event identity prevent stale updates.
+- Circular charge with an accessible value and label; minimum of the known earbuds,
+  case separate. The ambiguous zeros of the private APIs are unknown; the explicit
+  zeros of the registry are preserved.
+- AirPods and Pro: original 3D geometry, precomputed atlases, one three-second
+  turn in the compositor. Static under Reduce Motion, teardown and cancellation
+  of loading when the view hides. AirPods Max uses the symbol.
+- `updateNotice` updates only an existing notice with the same identity/source
+  and a higher revision, without extending the expiry or changing its priority.
+  The integration arms the Bluetooth override only for the initial event.
+- Fixed the `addressString` IUO crash on disconnection, reproduced before
+  the fix. Nil callbacks are guarded and the token keeps the identity
+  when the framework has already discarded the device data.
+- Volume: bounded recovery of the tap after the system disables it, renewal
+  after sleep/session, new permission check on return to the app/menu.
+  Mute repeats do not repeat writes, reads or notices.
 
-## Verifiche eseguite
+## Checks run
 
-- 85 test CascadeKit, 12 suite: `/private/tmp/cascade-airpods-kit-tests.log`.
-- 37 controlli volume Swift 6 con warning come errori:
-  `/private/tmp/cascade-airpods-volume-tests.log`. La regressione del mute
-  tenuto premuto falliva prima del fix (`cascade-volume-red.log`).
-- Harness Bluetooth e 13 controlli policy legacy passati:
+- 85 CascadeKit tests, 12 suites: `/private/tmp/cascade-airpods-kit-tests.log`.
+- 37 Swift 6 volume checks with warnings as errors:
+  `/private/tmp/cascade-airpods-volume-tests.log`. The regression for mute
+  held down failed before the fix (`cascade-volume-red.log`).
+- Bluetooth harness and 13 legacy policy checks passed:
   `/private/tmp/cascade-airpods-bluetooth-tests.log`.
-- Build Debug completa e `codesign --verify --deep --strict` riusciti:
-  `/private/tmp/cascade-airpods-app-build.log`. Unico warning della build:
-  estrazione metadata AppIntents saltata perché non usati.
-- App aggiornata avviata tramite CUA dal percorso
+- Full Debug build and `codesign --verify --deep --strict` succeeded:
+  `/private/tmp/cascade-airpods-app-build.log`. The only build warning:
+  AppIntents metadata extraction skipped because they are not used.
+- Updated app launched through CUA from the path
   `/private/tmp/cascade-airpods-derived/Build/Products/Debug/Cascade.app`.
 
-- Test grafico delle factory e del ciclo animazione superato:
+- Graphical test of the factories and the animation cycle passed:
   `zsh scripts/test-bluetooth-presentation.sh /private/tmp/cascade-airpods-derived/Build/Products/Debug`.
-  Controllati durata di tre secondi, nessun riavvio all’arricchimento, Movimento
-  ridotto, cancellazione rapida e rilascio delle risorse. Render reale delle
-  factory: `/private/tmp/cascade-bluetooth-presentation/notices.png`.
-  Il render verifica i contenuti, non una nuova connessione Bluetooth reale.
+  Checked: three-second duration, no restart on enrichment, Reduce
+  Motion, fast cancellation and release of resources. Real render of the
+  factories: `/private/tmp/cascade-bluetooth-presentation/notices.png`.
+  The render verifies the contents, not a new real Bluetooth connection.
 
-## Confini della verifica
+## Verification boundaries
 
-Il probe Bluetooth non aveva dispositivi connessi; batteria e riconoscimento
-sono verificati tramite runtime, parser e fixture, non attraverso una nuova
-connessione hardware. L'anteprima nel menu usa valori dichiaratamente sintetici.
+The Bluetooth probe had no connected devices; battery and recognition
+are verified through runtime, parser and fixtures, not through a new
+hardware connection. The preview in the menu uses explicitly synthetic values.
 
-L'override effettivo del volume richiede ancora di concedere Accessibilità a
-questa build dal sistema e provare tasti reali. Il test in un processo CLI già
-autorizzato non dimostra il permesso dell'app. Nessun certificato di sviluppo
-valido è disponibile: la build è firmata ad hoc e una ricompilazione può
-richiedere una nuova autorizzazione macOS.
+The actual volume override still requires granting Accessibility to
+this build from the system and trying real keys. The test in an already
+authorized CLI process does not prove the app's permission. No valid development
+certificate is available: the build is ad hoc signed and a recompilation may
+require a new macOS authorization.
 
-Non sono state chiuse app audio né cambiati volume, impostazioni FineTune o
-permessi di sistema. Se FineTune reinstalla un proprio tap prima di Cascade,
-la priorità fra le due app va verificata sul gesto reale; non viene introdotto
-un ciclo di reinstallazione dei tap in competizione.
+No audio apps were closed and no volume, FineTune settings or
+system permissions were changed. If FineTune reinstalls its own tap before Cascade,
+the priority between the two apps must be verified on the real gesture; no
+loop of competing tap reinstallation is introduced.
 
-Fonti per i metadati: runtime Apple installato e
+Sources for the metadata: installed Apple runtime and
 `IOBluetoothUI.framework/Resources/AssetPaths.plist`,
 [Hammerspoon battery](https://github.com/Hammerspoon/hammerspoon/blob/master/extensions/battery/libbattery.m),
-[implementazione ESPHome AirPods](https://github.com/myhomeiot/esphome-components/blob/main/examples/ble_gateway/airpods.yaml).
+[ESPHome AirPods implementation](https://github.com/myhomeiot/esphome-components/blob/main/examples/ble_gateway/airpods.yaml).

@@ -1,6 +1,6 @@
 # Asset transfer: design decision before compressed ingress
 
-Status updated 2026-09-14: the user resolved the architectural choice in [Scegliere il trasferimento delle immagini tra addon e host](../../../.scratch/cascade-product/issues/21-asset-transfer.md). The host/SDK prerequisite is delivered. The text below is the original 2026-09-13 analysis of alternatives, preserved as decision evidence; its open-choice wording is historical. No asset-transfer code or C0d gate change is delivered by this document.
+Status updated 2026-09-14: the user resolved the architectural choice in [Choose the image transfer between addons and host](../../../.scratch/cascade-product/issues/21-asset-transfer.md). The host/SDK prerequisite is delivered. The text below is the original 2026-09-13 analysis of alternatives, preserved as decision evidence; its open-choice wording is historical. No asset-transfer code or C0d gate change is delivered by this document.
 
 **Decision:** selecting the asset-transfer ownership mechanism is an architectural choice still open in the inspected sources. The high-level policy is already settled: keep images up to1MiB compressed/1,000,000 pixels and transfer assets separately from ordinary envelopes, whose total remains512KiB. The open choice is bounded multi-message assembly versus a separate native bulk-buffer capability. It changes the wire state machine, credit accounting and the lifetime of untrusted memory; it is not simply a choice of encoder or chunk size.
 

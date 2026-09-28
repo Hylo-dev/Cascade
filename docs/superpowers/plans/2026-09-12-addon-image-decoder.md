@@ -1,7 +1,7 @@
 # Addon image decoder — C5 continuation
 
 This bounded increment implements the decoder requirement in the approved
-[completion plan](2026-09-10-addon-runtime-completion.md#c5--stato-su-disco-e-asset-con-durata-indipendente-dal-processo).
+[completion plan](2026-09-10-addon-runtime-completion.md#c5-on-disk-state-and-assets-with-a-lifetime-independent-of-the-process).
 The user requested continuation on 12 September, with existing libraries preferred
 and a stop before 60% of the weekly Codex allowance is consumed.
 

@@ -1,4 +1,4 @@
-# Conservare i destinatari CPU delle catene attive
+# Retain the CPU recipients of active chains
 
 ID: 58
 Parent: cascade-product
@@ -11,8 +11,8 @@ Blocked by: 57
 
 ## Question
 
-Implementare un registro interno limitato di interessi canonici e destinatari transitivi per binding fisico. Conservare le catene esistite fra letture, evitando catene fantasma create da archi non contemporanei; deduplicare interessi e percorsi multipli. Linearizzare osservazioni e cambi di interesse senza confrontare clock diversi. Nessun timer, coda eventi illimitata o attivazione nativa. Sol medium implementa; root e revisione indipendente verificano prima del collegamento a broker/coordinatore/runtime.
+Implement a bounded internal ledger of canonical interests and transitive recipients per physical binding. Keep the chains that existed between readings, avoiding phantom chains created by non-simultaneous edges; deduplicate interests and multiple paths. Linearize observations and interest changes without comparing different clocks. No timer, unbounded event queue or native activation. Sol medium implements; the root and an independent review verify before the wiring to broker/coordinator/runtime.
 
 ## Answer
 
-Registro limitato implementato da Sol medium, revisioni root e Sol indipendente PASS. Chiusure istantanee accumulate per binding, nessuna catena fantasma, osservazione sincronizzata e reset senza conti CPU. Nove test nuovi,29 test mirati/3 suite PASS; prova comportamentale negativa su catene ripristinata. [Evidenze](../../codex-addon/20260922-transitive-cpu/task-58-report.md). Collegamento a coordinatore e broker nei task dipendenti.
+Bounded ledger implemented by Sol medium, root and independent Sol reviews PASS. Instantaneous closures accumulated per binding, no phantom chains, synchronized observation and reset without CPU accounts. Nine new tests, 29 targeted tests/3 suites PASS; negative behavioral test on chains restored. [Evidence](../../codex-addon/20260922-transitive-cpu/task-58-report.md). Wiring to the coordinator and the broker in the dependent tasks.

@@ -1,14 +1,14 @@
-# ExtensionFoundation lifetime: bozza di domanda per Apple
+# ExtensionFoundation lifetime: draft question for Apple
 
-24 settembre 2026. **Bozza locale archiviata, non inviata e non destinata all'invio.**
-L'utente ha chiarito: «Cerchiamo nella doc. non scrivero a apple per questo».
-Il contatto con Apple non è un passo del lavoro: si prosegue con documentazione
-pubblica, SDK e prove locali. Le domande sotto restano soltanto una lista storica
-dei dubbi da verificare. Vedi la [nuova ricerca documentale](2026-09-24-extension-startup-documentation.md).
+24 September 2026. **Archived local draft, not sent and not intended to be sent.**
+The user clarified: "Let's search the docs. I won't write to Apple about this."
+Contacting Apple is not a step of the work: the work continues with public
+documentation, the SDK and local probes. The questions below remain only a historical
+list of doubts to verify. See the [new documentation research](2026-09-24-extension-startup-documentation.md).
 
-La bozza aggiornava la domanda precedente con
-la composizione broker → estensione esterna ora eseguita. Non richiede un cambio
-di policy né assume che esista una garanzia non documentata.
+The draft updated the previous question with
+the broker → external extension composition, now run. It does not request a change
+of policy nor assume that an undocumented guarantee exists.
 
 ## Draft
 
@@ -46,10 +46,10 @@ If these guarantees are unavailable, which supported architecture or API is
 recommended? We do not equate connection invalidation or interruption callbacks
 with independently verified process exit, and do not use PID-discovery-based kills.
 
-## Materiale locale disponibile
+## Available local material
 
-[Rapporto](../../superpowers/verification/2026-09-24-addon-global-recovery.md),
+The [report](../../superpowers/verification/2026-09-24-addon-global-recovery.md),
 [fixture](../../../Prototypes/AddonPlatform/BrokerRecovery/README.md), manifest,
-sorgenti firmati e osservazioni del kernel sono conservati nel repository.
-Prima di condividere un pacchetto, selezionare soltanto i file necessari alla
-riproduzione e rimuovere percorsi locali personali dai log destinati all'esterno.
+signed sources and kernel observations are kept in the repository.
+Before sharing a package, select only the files needed for
+reproduction and remove personal local paths from logs intended for outside parties.

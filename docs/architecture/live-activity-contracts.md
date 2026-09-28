@@ -1,254 +1,254 @@
-# Contratti per attività e avvisi del notch
+# Contracts for notch activities and notices
 
-Riferimento di design: [Apple HIG — Live Activities](https://developer.apple.com/design/human-interface-guidelines/live-activities), consultato l'8 settembre 2026.
+Design reference: [Apple HIG: Live Activities](https://developer.apple.com/design/human-interface-guidelines/live-activities), consulted on 8 September 2026.
 
-Le indicazioni pertinenti sono presentazioni compatta/minima/estesa coerenti,
-leggibilità, contenuti essenziali, privacy, interazioni dirette, aggiornamenti
-discreti e conclusione del task. Cascade applica questi principi al proprio
-overlay macOS. Le Live Activities native descritte da Apple su Mac provengono
-da iPhone; questi protocolli non conformano ad ActivityKit.
+The relevant guidelines are consistent compact/minimal/expanded presentations,
+legibility, essential content, privacy, direct interactions, discreet
+updates and task completion. Cascade applies these principles to its own
+macOS overlay. The native Live Activities that Apple describes on Mac come
+from iPhone; these protocols do not conform to ActivityKit.
 
-## Evoluzione verso il sistema addon
+## Evolution toward the addon system
 
-Dal 9 settembre 2026 la destinazione approvata è il [sistema addon comune](../superpowers/specs/2026-09-09-addon-runtime-design.md), con [piano esecutivo e migrazione](../superpowers/plans/2026-09-09-addon-runtime.md). Tutti i futuri widget, avvisi e attività del team usano lo stesso SDK, manifest, servizi autorizzati, processi e budget degli addon esterni.
+Since 9 September 2026 the approved destination is the [common addon system](../superpowers/specs/2026-09-09-addon-runtime-design.md), with an [execution plan and migration](../superpowers/plans/2026-09-09-addon-runtime.md). All future team widgets, notices and activities use the same SDK, manifest, authorized services, processes and budgets as external addons.
 
-I protocolli descritti sotto documentano il motore e il comportamento attuali. Nella nuova architettura vengono implementati dal bridge generico dell'host, mentre gli addon pubblicano descrizioni e azioni attraverso l'SDK. Una pubblicazione valida può rimanere senza processo provider; la vista remota avanzata e i servizi hanno concessioni distinte. La migrazione preserva le regole visive, temporali, di privacy e accessibilità descritte qui. Questa nota non dichiara la migrazione già eseguita.
+The protocols described below document the current engine and behavior. In the new architecture they are implemented by the host's generic bridge, while addons publish descriptions and actions through the SDK. A valid publication can remain without a provider process; the advanced remote view and the services have distinct grants. The migration preserves the visual, timing, privacy and accessibility rules described here. This note does not claim that the migration has already been carried out.
 
-## Scelte del contratto Cascade
+## Cascade contract choices
 
-| Contratto | Responsabilità |
+| Contract | Responsibility |
 | --- | --- |
-| `NotchActivity` | Identità della sessione/sorgente, revisione, etichetta accessibile, privacy, destinazione, dimensioni desiderate e factory compatte/minima. |
-| `NotchLiveActivity` | Task in corso, `lifetime` finita, rilevanza relativa e factory estesa riservata alle attività. Pubblicazione con `present(_:)`, conclusione con `endActivity(id:)`. |
-| `NotchTransientNotice` | Singolo cambio di stato; durata esplicita e pubblicazione con `showNotice(_:)`. Non può diventare persistente per un parametro dimenticato. |
-| `NotchActivityViewContext` | Famiglia scelta, spazio utilizzabile in punti del Mac, indicazione di contenuto non aggiornato. |
-| `LiveActivityContext` | Invalidazione della sola presentazione visibile. Il provider resta indipendente dalla vista. |
+| `NotchActivity` | Session/source identity, revision, accessible label, privacy, destination, preferred sizes and compact/minimal factories. |
+| `NotchLiveActivity` | Ongoing task, finite `lifetime`, relative relevance and an expanded factory reserved for activities. Published with `present(_:)`, ended with `endActivity(id:)`. |
+| `NotchTransientNotice` | A single state change; explicit duration and publication with `showNotice(_:)`. It cannot become persistent because of a forgotten parameter. |
+| `NotchActivityViewContext` | Chosen family, usable space in Mac points, indication of content that is not up to date. |
+| `LiveActivityContext` | Invalidation of the visible presentation only. The provider stays independent of the view. |
 
-Le Live Activities implementano tutte le factory, compresa `makeMinimalView`.
-Gli avvisi non espongono `makeExpandedView`: il protocollo riserva questa factory
-alle attività in corso. Un avviso usa entrambe le ali compatte, temporaneamente
-al posto delle Live Activities, e il più recente ha precedenza.
-`sourceID` raggruppa una stessa integrazione. Con due sorgenti distinte e nessun
-avviso, la principale mantiene il contenuto compatto sinistro e chiude l'ala destra.
-La seconda usa la propria factory `makeCompactLeadingView` in un cerchio separato
-a destra, con diametro pari all'altezza del notch e inset simmetrici. L'hover apre
-la principale; il clic sul cerchio apre la seconda con un aggancio a goccia alla
-sagoma. L'attivazione accessibile usa lo stesso percorso del clic. La factory
-minima resta parte del contratto per le altre presentazioni.
+Live Activities implement every factory, including `makeMinimalView`.
+Notices do not expose `makeExpandedView`: the protocol reserves this factory
+for ongoing activities. A notice uses both compact wings, temporarily
+in place of the Live Activities, and the most recent one takes precedence.
+`sourceID` groups what belongs to the same integration. With two distinct sources and no
+notice, the primary one keeps the left compact content and closes the right wing.
+The second one uses its own `makeCompactLeadingView` factory in a separate circle
+on the right, with a diameter equal to the notch height and symmetric insets. Hover opens
+the primary one; a click on the circle opens the second one with a droplet attachment to the
+outline. Accessible activation uses the same path as the click. The minimal
+factory remains part of the contract for the other presentations.
 
-Una revisione cambia soltanto con i dati visualizzati. Il coordinatore filtra le
-ripubblicazioni della stessa istanza/revisione. Metadati e scadenze modificati
-mentre la vista è sospesa devono comunque essere ripubblicati attraverso il motore.
-Le invalidazioni provenienti da un vecchio contesto diventano inerti.
+A revision changes only with the displayed data. The coordinator filters out
+republications of the same instance/revision. Metadata and deadlines changed
+while the view is suspended must still be republished through the engine.
+Invalidations coming from an old context become inert.
 
-La durata massima di una sessione è otto ore e quella di un avviso dieci secondi:
-sono politiche locali di Cascade. L'avviso Bluetooth usa quattro secondi.
-Il limite della sessione si ancora alla prima ammissione/inizio, quello precedente:
-aggiornare `startedAt` o la stima di fine non sposta il limite. Un task nuovo va
-pubblicato come nuova sessione; non si rinnova automaticamente un task scaduto.
-La sessione può diventare obsoleta prima della scadenza tramite `staleDate`; il
-renderer lo segnala. Una sola scadenza cancellabile gestisce l'intera raccolta.
-Il task concluso scompare subito anche se esteso. Un avviso scompare quando si
-entra in hover: l'apertura mostra una Live Activity disponibile oppure i widget.
-Gli avvisi ricevuti durante l'espansione o il blocco dello schermo vengono
-scartati e non vengono riproposti alla chiusura o allo sblocco.
+The maximum duration of a session is eight hours and that of a notice ten seconds:
+these are local Cascade policies. The Bluetooth notice uses four seconds.
+The session limit is anchored to the first admission/start, whichever is earlier:
+updating `startedAt` or the estimated end does not move the limit. A new task must be
+published as a new session; an expired task is not renewed automatically.
+The session can become stale before its expiry through `staleDate`; the
+renderer signals it. A single cancellable deadline handles the whole collection.
+A completed task disappears immediately even if expanded. A notice disappears when
+hover begins: opening shows an available Live Activity or the widgets.
+Notices received during expansion or while the screen is locked are
+discarded and are not offered again on close or unlock.
 
-La chiusura di un pannello rilascia le sue viste estese e raggiunge esattamente
-la sagoma base; non sospende da sola il provider condiviso. `LiveActivityHost`
-attiva ciascuna istanza prima delle factory locali e la mantiene attiva finché
-esiste almeno una presentazione valida, comprese le radici trattenute durante una
-transizione. La sospensione avviene dopo l'ultima presentazione; conclusione,
-scadenza o revoca invalidano anche le radici uscenti, senza risuscitare la sessione.
-Al primo attraversamento della misura base, il frame successivo avvia le ali
-compatte. Le molle superano leggermente la misura finale in apertura; il canvas
-fisso riserva spazio al rimbalzo. Il display link si ferma dopo la transizione.
-Un nuovo hover può interrompere una normale chiusura.
+Closing a panel releases its expanded views and reaches exactly
+the base outline; on its own it does not suspend the shared provider. `LiveActivityHost`
+activates each instance before the local factories and keeps it active as long as
+at least one valid presentation exists, including the roots retained during a
+transition. Suspension happens after the last presentation; completion,
+expiry or revocation also invalidate the outgoing roots, without resurrecting the session.
+On the first crossing of the base size, the next frame starts the compact
+wings. The springs slightly overshoot the final size when opening; the fixed
+canvas reserves space for the bounce. The display link stops after the transition.
+A new hover can interrupt a normal close.
 
-La sostituzione dell'identità principale o secondaria passa sempre dalla sagoma
-base prima di costruire le nuove viste. Eventi e hover durante la chiusura
-aggiornano la destinazione della successiva apertura senza anticiparla. Le
-revisioni della stessa sessione non ripetono questa sequenza. Movimento ridotto
-raggiunge direttamente lo stato finale e rilascia anche la vista della goccia.
+Replacing the primary or secondary identity always goes through the base outline
+before building the new views. Events and hover during the close
+update the destination of the next opening without bringing it forward. Revisions
+of the same session do not repeat this sequence. Reduced motion
+goes straight to the final state and also releases the droplet view.
 
-Dopo un clic, l'area di permanenza cresce e tollera una breve uscita del puntatore.
-I controlli che aprono un menu esterno usano `NotchPopoverPresenter`, registrando
-l'interazione prima delle richieste asincrone e chiudendola in `dismantleNSView`.
-Il popover conserva le dimensioni intrinseche; notch, finestra del popover e un
-corridoio stretto fra i due mantengono aperta l'interazione. L'uscita completa
-chiude il menu dopo una breve tolleranza cancellabile, anche a puntatore fermo.
-Non sono necessari polling o ricerche globali delle finestre.
+After a click, the dwell area grows and tolerates a brief exit of the pointer.
+Controls that open an external menu use `NotchPopoverPresenter`, registering
+the interaction before the asynchronous requests and closing it in `dismantleNSView`.
+The popover keeps its intrinsic size; the notch, the popover window and a
+narrow corridor between the two keep the interaction open. Leaving completely
+closes the menu after a short cancellable grace period, even with the pointer at rest.
+No polling or global window searches are needed.
 
-`privacy` va dichiarata esplicitamente. Se è `.sensitive`, il renderer usa un
-contenuto innocuo prima ancora di invocare le factory, salvo consenso nelle
-preferenze. Anche etichette accessibili e destinazioni devono rispettare questa
-scelta. Il provider rimane responsabile della corretta classificazione dei dati.
+`privacy` must be declared explicitly. If it is `.sensitive`, the renderer uses
+harmless content before even invoking the factories, unless consent is given in
+the preferences. Accessible labels and destinations must respect this
+choice too. The provider remains responsible for classifying the data correctly.
 
-`contentURL`, quando disponibile, porta ai dettagli reali della sessione ed è
-unica per entrambi i lati compatti. L'anteprima musicale non inventa una
-destinazione verso un player. L'altezza estesa deriva dal contenuto dichiarato e
-viene limitata dal renderer; le viste rispettano `availableSize` e gli inset.
-Le dimensioni predefinite e il fondo scuro appartengono al motore, non ai provider.
-La larghezza estesa predefinita è 408 punti, con margini rispetto al display;
-l'altezza include spazio per il taglio fisico e inset, fino a 180 punti. Il motore
-applica il tema scuro anche quando macOS usa il tema chiaro.
-La curvatura della sagoma deriva dal path Apple `RoundedRectangle(.continuous)`,
-normalizzato e memorizzato una volta. Gli stessi segmenti governano disegno,
-maschera e hit testing, con riflessione per gli attacchi concavi superiori.
+`contentURL`, when available, leads to the real details of the session and is
+one and the same for both compact sides. The music preview does not invent a
+destination to a player. The expanded height derives from the declared content and
+is capped by the renderer; views respect `availableSize` and the insets.
+The default sizes and the dark background belong to the engine, not to the providers.
+The default expanded width is 408 points, with margins relative to the display;
+the height includes space for the physical cut-out and the insets, up to 180 points. The engine
+applies the dark theme even when macOS uses the light theme.
+The curvature of the outline derives from Apple's `RoundedRectangle(.continuous)` path,
+normalized and stored once. The same segments govern drawing,
+mask and hit testing, with reflection for the upper concave attachments.
 
-`compactPreferredSideWidth` permette a un avviso di richiedere ali più larghe
-(116 punti per volume e Bluetooth); il renderer normalizza e limita la richiesta
-al display. La larghezza viene animata in punti e i getter del provider non
-vengono chiamati a ogni frame. I contenuti sensibili nascosti non influenzano
-neppure questa dimensione.
+`compactPreferredSideWidth` lets a notice request wider wings
+(116 points for volume and Bluetooth); the renderer normalizes the request and limits it
+to the display. The width is animated in points and the provider's getters are not
+called on every frame. Hidden sensitive content does not affect
+this dimension either.
 
-## Presentazione su più display
+## Multi-display presentation
 
-`NotchEngine` espone la facciata del `NotchDisplayCoordinator`: un inventario,
-un monitor degli eventi, un monitor della finestra attiva, un `LiveActivityHost`
-e un `WidgetHost` condivisi. Ogni desktop logico ha un controller e un pannello
-stabili; il cambio del focus aggiorna le proiezioni senza ricreare i pannelli.
-La sagoma compatta esiste anche senza attività. Il mirroring viene normalizzato
-tramite la topologia CoreGraphics, senza dedurre l'identità dal nome o dal frame.
+`NotchEngine` exposes the facade of `NotchDisplayCoordinator`: a shared inventory,
+event monitor, active-window monitor, `LiveActivityHost`
+and `WidgetHost`. Each logical desktop has a stable controller and panel;
+a focus change updates the projections without recreating the panels.
+The compact outline exists even without activities. Mirroring is normalized
+through the CoreGraphics topology, without inferring identity from the name or the frame.
 
-La selezione compatta principale/secondaria è indipendente dall'attività estesa:
-aprire su A non elimina le copie compatte o il satellite su B. Le preferenze
-permettono tutti i display, la finestra attiva (default) oppure un display fisso.
-Il focus usa la finestra attiva, poi il puntatore e infine il display principale;
-un cambio di finestra nella stessa app è un evento utile. Le coordinate AX sono
-convertite prima del routing, fuori dal ciclo di animazione. Una destinazione
-fissa scollegata non viene sostituita: al ritorno dello stesso UUID riappare solo
-la pubblicazione ancora valida. Senza UUID il display partecipa a tutti/focus,
-ma non diventa una destinazione fissa persistente.
+The primary/secondary compact selection is independent of the expanded activity:
+opening on A does not remove the compact copies or the satellite on B. The preferences
+allow all displays, the active window (default) or a fixed display.
+Focus uses the active window, then the pointer and finally the main display;
+a window change within the same app is a useful event. AX coordinates are
+converted before routing, outside the animation loop. A disconnected fixed
+destination is not replaced: when the same UUID returns, only the publication
+that is still valid reappears. Without a UUID the display takes part in all/focus,
+but does not become a persistent fixed destination.
 
-Una sola superficie ottiene l'apertura. Il coordinatore aspetta il completamento
-reale della chiusura precedente e verifica generazione, trigger e presenza del
-display prima di concedere la richiesta valida più recente. L'uscita del mouse
-può annullare un hover in attesa senza cancellare una precedente richiesta
-esplicita valida. Fuori dal routing si aprono i widget. Un'attività già aperta
-resta sul suo display se si sposta soltanto il focus; un cambio esplicito della
-preferenza che esclude quel display la richiude.
+Only one surface gets the opening. The coordinator waits for the actual completion
+of the previous close and verifies generation, trigger and presence of the
+display before granting the most recent valid request. The mouse leaving
+can cancel a pending hover without cancelling an earlier valid explicit
+request. Outside routing, the widgets open. An activity that is already open
+stays on its display if only the focus moves; an explicit change of the
+preference that excludes that display closes it again.
 
-Gli avvisi sono cambi di stato brevi, non copie delle Live Activities: seguono
-solo il display attivo, conservando la scadenza originale. Espansione, blocco e
-prenotazione di Spotlight ne impediscono l'accodamento per una riproduzione
-successiva. Impostazioni e superfici ausiliarie mantengono l'ancora di invocazione;
-una finestra Impostazioni visibile ma non attiva non riserva da sola l'apertura.
-Popover, trascinamento e prenotazioni delle superfici native partecipano alla
-stessa esclusività. Il blocco invalida richieste pendenti prima della pulizia
-applicativa; stop rilascia monitor, pannelli e presentazioni condivise.
+Notices are brief state changes, not copies of Live Activities: they follow
+only the active display, keeping the original expiry. Expansion, lock and
+a Spotlight reservation prevent them from being queued for later
+replay. Settings and auxiliary surfaces keep the invocation anchor;
+a Settings window that is visible but not active does not by itself reserve the opening.
+Popovers, dragging and native-surface reservations take part in the
+same exclusivity. Locking invalidates pending requests before the application
+cleanup; stop releases monitors, panels and shared presentations.
 
-Sui display senza taglio fisico, `SoftwareNotchMetrics` separa la sporgenza di
-riposo **96 × 8 pt**, l'altezza compatta **32 pt** e lo spazio centrale **24 pt**.
-Gli stili Notch e Dynamic Island sono selezionabili per display; il secondo
-collega il corpo alla sporgenza con collo di **12 pt** e offset di **8 pt**.
-Il corpo include lo spazio dell'offset senza sottrarlo ai contenuti. Lo spazio di esclusione
-del taglio hardware è zero su questi display.
-La scelta persistente usa UUID; senza UUID dura solo fino a disconnessione/stop.
-Il cambio stile aspetta la chiusura. Le calibrazioni hardware restano in uso,
-mentre le vecchie misure software non ingrandiscono la sporgenza; la calibrazione
-è disponibile solo per un bersaglio hardware. Disegno, maschera e hit testing
-usano lo stesso path, anche nella variante Riduci trasparenza.
+On displays without a physical cut-out, `SoftwareNotchMetrics` separates the resting
+protrusion **96 × 8 pt**, the compact height **32 pt** and the central space **24 pt**.
+The Notch and Dynamic Island styles can be selected per display; the second one
+connects the body to the protrusion with a neck of **12 pt** and an offset of **8 pt**.
+The body includes the offset's space without taking it away from the content. The exclusion space
+of the hardware cut-out is zero on these displays.
+The persistent choice uses the UUID; without a UUID it lasts only until disconnection/stop.
+A style change waits for the close. Hardware calibrations stay in use,
+while the old software measurements do not enlarge the protrusion; calibration
+is available only for a hardware target. Drawing, mask and hit testing
+use the same path, including in the Reduce Transparency variant.
 
-Il lifecycle conta istanze e presentazioni effettive, non una sottoscrizione per
-monitor. La scadenza appartiene all'host comune: `scheduleExpiration()` sceglie
-il prossimo termine fra stale/expiry e mantiene un solo `deadlineTask`
-cancellabile. È una proprietà del sorgente, non una misura di scheduling nativo.
-Il [verbale di verifica](../superpowers/verification/2026-09-24-multi-display-notch.md)
-distingue i test con inventari sintetici dalle prove fisiche e dal profiling
-ancora non eseguito.
+The lifecycle counts actual instances and presentations, not one subscription per
+monitor. The expiry belongs to the common host: `scheduleExpiration()` picks
+the next deadline among stale/expiry and keeps a single cancellable `deadlineTask`.
+This is a property of the source code, not a measurement of native scheduling.
+The [verification record](../superpowers/verification/2026-09-24-multi-display-notch.md)
+distinguishes the tests with synthetic inventories from the physical evidence and from the profiling
+that has not been performed yet.
 
-## Regole per chi implementa un modulo
+## Rules for module implementers
 
-- Aggregare aggiornamenti della stessa sessione. Non generare un oggetto nuovo
-  per ogni frame, tick o identico callback del sistema.
-- Tenere scansioni, richieste di rete, decodifica e callback di framework fuori
-  dalle factory e dal percorso di animazione; attraversare esplicitamente gli actor.
-- Rilasciare le risorse della vista in `suspend()`. Il progresso visivo musicale
-  può aggiornarsi soltanto mentre la relativa vista estesa è visibile e in play.
-- Esporre un comando per disattivare l'integrazione. La rimozione per `sourceID`
-  deve eliminare sia la presentazione attiva sia gli elementi in attesa.
-- Riservare i controlli estesi alle azioni essenziali. La musica espone play/pausa;
-  il contratto del provider conserva i comandi aggiuntivi per altre superfici.
-- Usare simboli e testo leggibili, etichette accessibili e informazioni coerenti
-  tra famiglie. Bluetooth mostra modello/nome a sinistra e stato con carica circolare a destra,
-  con troncamento del nome e testo accessibile completo. La carica ignota resta
-  indisponibile; il minimo dei due auricolari non viene sostituito dalla custodia.
-- Non aggiungere suoni o aptica alle normali revisioni, né duplicare l'evento
-  tramite una seconda notifica applicativa.
+- Aggregate updates of the same session. Do not generate a new object
+  for every frame, tick or identical system callback.
+- Keep scans, network requests, decoding and framework callbacks out
+  of the factories and the animation path; cross actors explicitly.
+- Release the view's resources in `suspend()`. The visual music progress
+  may update only while its expanded view is visible and playing.
+- Expose a command to disable the integration. Removal by `sourceID`
+  must delete both the active presentation and the pending items.
+- Reserve the expanded controls for essential actions. Music exposes play/pause;
+  the provider contract keeps the additional commands for other surfaces.
+- Use legible symbols and text, accessible labels and information consistent
+  across families. Bluetooth shows model/name on the left and status with a circular charge on the right,
+  with truncation of the name and complete accessible text. An unknown charge stays
+  unavailable; the minimum of the two earbuds is not replaced by the case.
+- Do not add sounds or haptics to ordinary revisions, and do not duplicate the event
+  through a second application notification.
 
-## Confini dell'adattamento
+## Adaptation boundaries
 
-Il notch locale non implementa Lock Screen, StandBy, CarPlay, Apple Watch,
-iPhone Mirroring o push ActivityKit. A schermo bloccato l'overlay si nasconde.
-La seconda attività può occupare un cerchio separato dalla sagoma, con la stessa
-maschera e gli stessi limiti di interazione del renderer. Le interazioni usano
-hover, clic, attivazione accessibile e link espliciti macOS. La conformità estetica dei futuri contenuti richiede comunque
-revisione visiva; nessun protocollo può impedire da solo testo promozionale o una
-classificazione errata dei dati.
+The local notch does not implement Lock Screen, StandBy, CarPlay, Apple Watch,
+iPhone Mirroring or ActivityKit push. With the screen locked, the overlay hides.
+The second activity can occupy a circle separate from the outline, with the same
+mask and the same interaction limits as the renderer. Interactions use
+hover, click, accessible activation and explicit macOS links. The aesthetic conformance of future content still requires
+visual review; no protocol can by itself prevent promotional text or an
+incorrect classification of the data.
 
-L'override dei banner Bluetooth rimane un servizio separato e selettivo. Questi
-contratti non ne dimostrano la compatibilità con l'albero Accessibilità del sistema.
-Il ritorno dell'uscita audio alle AirPods è distinto da una nuova connessione
-ACL: il listener CoreAudio genera un avviso anche se il link è rimasto collegato,
-con baseline silenziosa all'avvio e dopo il risveglio. Gli avvisi Bluetooth
-mostrano solo modello/simbolo e anello, mentre nome e stato restano disponibili
-tramite accessibilità e help localizzati. La parte residua dell'anello è verde
-attenuata con tratto più sottile dell'arco carico.
+The Bluetooth banner override remains a separate, selective service. These
+contracts do not demonstrate its compatibility with the system Accessibility tree.
+The return of the audio output to AirPods is distinct from a new ACL
+connection: the CoreAudio listener generates a notice even if the link stayed connected,
+with a silent baseline at launch and after wake. Bluetooth notices
+show only model/symbol and ring, while name and status remain available
+through accessibility and localized help. The remaining part of the ring is a dimmed
+green with a thinner stroke than the charged arc.
 
-Il volume usa un avviso di 1,8 secondi: icona e testo a sinistra, indicatore di
-livello e percentuale a destra. La barra è un indicatore, come nell'HUD di
-riferimento, non un controllo trascinabile. CoreAudio osserva l'uscita predefinita
-senza polling; un event tap selettivo sostituisce i tasti volume solo quando può
-gestirli. Accessibilità mancante o dispositivi a livello fisso mantengono il
-comportamento nativo. Non vengono disattivati globalmente gli altri HUD macOS.
+Volume uses a 1.8-second notice: icon and text on the left, level indicator
+and percentage on the right. The bar is an indicator, as in the reference
+HUD, not a draggable control. CoreAudio observes the default output
+without polling; a selective event tap replaces the volume keys only when it can
+handle them. Missing Accessibility or fixed-level devices keep the
+native behavior. The other macOS HUDs are not disabled globally.
 
 
-Gli aggiornamenti asincroni di un avviso già presentato usano `updateNotice`,
-con la stessa identità/sorgente e una revisione strettamente crescente. Conservano
-scadenza e priorità; non reinseriscono contenuti dopo hover, scadenza o chiusura.
-`showNotice` resta riservato a un nuovo evento reale (per esempio un altro passo
-volume). Bluetooth verifica anche l'identità del singolo evento di connessione
-prima di aggiornare e arma l'override nativo una sola volta.
+Asynchronous updates of a notice already presented use `updateNotice`,
+with the same identity/source and a strictly increasing revision. They keep
+expiry and priority; they do not reinsert content after hover, expiry or close.
+`showNotice` stays reserved for a new real event (for example another volume
+step). Bluetooth also verifies the identity of the individual connection event
+before updating, and arms the native override only once.
 
-Gli avvisi AirPods usano i video originali dei banner Apple installati in macOS.
-Il catalogo CoreBluetoothUI associa PID e colore alle immagini e agli alias;
-BluetoothUIService fornisce il filmato corrispondente. Cascade legge le risorse
-a runtime, senza copiarle nel bundle. Un worker decodifica al massimo 48 immagini
-da 96 pixel per un giro di tre secondi. Movimento ridotto usa un fotogramma
-statico; non rimangono player o timer dopo la chiusura della vista.
-La lettura dei metadati avviene fuori dal main actor alla connessione, con un solo
-retry, e i risultati cancellati o appartenenti a connessioni precedenti si scartano.
+AirPods notices use the original videos of the Apple banners installed in macOS.
+The CoreBluetoothUI catalog maps PID and color to the images and aliases;
+BluetoothUIService provides the corresponding movie. Cascade reads the resources
+at runtime, without copying them into the bundle. A worker decodes at most 48 images
+of 96 pixels for a three-second loop. Reduced motion uses a static
+frame; no player or timer remains after the view closes.
+Metadata is read off the main actor on connection, with a single
+retry, and results that were cancelled or belong to earlier connections are discarded.
 
-Il filtro volume si ricrea al risveglio e al ritorno della sessione. Un tap
-disabilitato dal sistema può tentare un solo ripristino ogni cinque secondi,
-solo su evento e con Accessibilità valida. I repeat di mute sono assorbiti senza
-nuove scritture o feedback. Il ritorno all'app/menu riprova un permesso appena
-concesso; non si modificano le impostazioni di FineTune né i permessi macOS.
+The volume filter is recreated on wake and when the session returns. A tap
+disabled by the system can attempt only one restore every five seconds,
+only on an event and with valid Accessibility. Mute repeats are absorbed without
+new writes or feedback. Returning to the app/menu retries a permission that was just
+granted; neither FineTune's settings nor the macOS permissions are modified.
 
-Le variazioni di Accessibilità vengono osservate anche a menu chiuso; il
-segnale di sistema viene accorpato e seguito da una verifica reale del permesso.
-Il ritorno dalle Impostazioni costituisce un percorso aggiuntivo, senza polling.
-La build Debug usa Apple Development: una firma ad hoc diversa a ogni build
-non offre un’identità stabile a cui macOS possa associare il consenso.
+Accessibility changes are observed even with the menu closed; the
+system signal is coalesced and followed by a real check of the permission.
+Returning from Settings is an additional path, without polling.
+The Debug build uses Apple Development: an ad hoc signature that differs on every build
+offers no stable identity to which macOS can bind the consent.
 
-La ricarica usa un avviso di quattro secondi al passaggio da batteria ad
-alimentatore. IOKit osserva la sola batteria interna; percentuale e modalità di
-risparmio energetico aggiornano l'avviso esistente senza prolungarlo. Avvio e
-risveglio stabiliscono una baseline silenziosa. Il distacco chiude l'avviso.
-Testo e batteria piena arrotondata rispettano il riferimento: verde in modalità
-normale, giallo con risparmio energetico, compresa la sfumatura sotto il bordo.
-La sfumatura si disattiva con Riduci trasparenza. Ricarica sospesa e completa
-hanno etichette distinte; una percentuale sconosciuta non diventa uno zero.
-Il menu permette di disattivare l'integrazione e vedere entrambe le anteprime.
+Charging uses a four-second notice when switching from battery to the
+power adapter. IOKit observes only the internal battery; percentage and Low Power
+Mode update the existing notice without extending it. Launch and
+wake establish a silent baseline. Unplugging closes the notice.
+The text and the rounded full battery follow the reference: green in normal
+mode, yellow with Low Power Mode, including the gradient under the edge.
+The gradient is turned off with Reduce Transparency. Paused and completed charging
+have distinct labels; an unknown percentage does not become a zero.
+The menu lets you disable the integration and see both previews.
 
-La modalità compatta usa SF nello stile macOS Callout (12 pt, regular), come
-definito nelle [HIG Typography](https://developer.apple.com/design/human-interface-guidelines/typography).
-Le [HIG Live Activities](https://developer.apple.com/design/human-interface-guidelines/live-activities)
-richiedono margini concentrici alla sagoma, senza fissare un padding numerico
-universale per un notch macOS personalizzato. Cascade li adatta alla propria
-geometria: 12 pt verso il bordo esterno, 8 pt verso il taglio e 6 pt verticali.
-Le presentazioni minime usano 12 pt su entrambi i lati. Il motore sottrae gli
-inset prima di passare lo spazio ai provider; icone e immagini rispettano anche
-la larghezza residua. La batteria usa 12 pt di altezza, i simboli 14 pt e gli
-anelli Bluetooth al massimo 18 pt. La tipografia non cambia con l'altezza del
-notch e l'eventuale riduzione dei testi non scende sotto i 10 pt.
+Compact mode uses SF in the macOS Callout style (12 pt, regular), as
+defined in the [HIG Typography](https://developer.apple.com/design/human-interface-guidelines/typography).
+The [HIG Live Activities](https://developer.apple.com/design/human-interface-guidelines/live-activities)
+call for margins concentric with the outline, without fixing a universal numeric padding
+for a custom macOS notch. Cascade adapts them to its own
+geometry: 12 pt toward the outer edge, 8 pt toward the cut-out and 6 pt vertically.
+Minimal presentations use 12 pt on both sides. The engine subtracts the
+insets before passing the space to the providers; icons and images also respect
+the remaining width. The battery uses a height of 12 pt, symbols 14 pt and
+Bluetooth rings at most 18 pt. Typography does not change with the notch height,
+and any text reduction does not go below 10 pt.

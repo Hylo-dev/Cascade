@@ -1,231 +1,231 @@
-# Ripiano file persistente e conversione
+# Persistent file shelf and conversion
 
-Data: 26 settembre 2026.
+Date: 26 September 2026.
 
-Stato: specifica approvata dall'utente con «esatto, continua» dopo la revisione
-del documento. Le decisioni della sezione 2 e il completamento proposto nelle
-sezioni successive costituiscono la base del piano esecutivo. Le altre azioni
-della sezione 8 restano successive. Nessun codice applicativo è stato modificato.
+Status: specification approved by the user with "exactly, continue" after reviewing
+the document. The decisions in section 2 and the completion proposed in the
+following sections form the basis of the execution plan. The other actions
+in section 8 stay for later. No application code has been changed.
 
-## 1. Obiettivo
+## 1. Goal
 
-Raccogliere file nel notch, conservarli fra riavvii, convertirli e consegnarne
-copie ad altre destinazioni. L'esperienza collega visivamente trascinamento,
-mazzo di carte, elenco e conversione. Gli originali rimangono nella loro posizione.
+Collect files in the notch, keep them across relaunches, convert them and deliver
+copies of them to other destinations. The experience visually links dragging,
+the deck of cards, the list and conversion. The originals stay in their location.
 
-## 2. Decisioni confermate
+## 2. Confirmed decisions
 
-| ID | Decisione | Vincolo |
+| ID | Decision | Constraint |
 | --- | --- | --- |
-| F1 | Un trascinamento di file richiama il notch chiuso con un battito elastico. | Il feedback precede l'ingresso nel bersaglio; nessuna acquisizione prima del rilascio. |
-| F2 | Passando sopra il notch appare il ripiano animato. | Le carte emergono dal centro e si dispongono a sinistra. |
-| F3 | I file sono rappresentati come una mano di carte. | Prima carta leggermente ruotata a destra; successive aperte progressivamente verso sinistra. |
-| F4 | Il ripiano è la pagina principale finché contiene file. | L'occupazione sopravvive alla chiusura del notch e al riavvio dell'app. |
-| F5 | Il clic sul mazzo apre l'elenco dei file con un'animazione. | L'apertura dell'elenco deve essere animata, come il resto del ripiano. |
-| F6 | Converti propone destinazioni adatte ai file selezionati. | Ingressi a sinistra, selettore e freccia nella zona centrale, risultati a destra. |
-| F7 | La freccia collega ingressi e risultati al centro della composizione. | Non va collocata sotto il flusso come elemento a fondo pagina. Questa decisione sostituisce la collocazione iniziale. |
-| F8 | Dopo la scelta del formato compare Avvia e la conversione mostra avanzamento animato. | I risultati diventano utilizzabili solo dopo il completamento effettivo. |
-| F9 | Si procede con FFmpeg. | Le scelte tecniche complementari e il perimetro proposto sono precisati sotto. |
-| F10 | Il trascinamento in uscita consegna copie e svuota il ripiano per i file consegnati. | Gli originali sono conservati; rifiuto, annullamento o errore non rimuovono il file. |
-| F11 | Il ripiano conserva i file dopo il riavvio di Cascade. | Riferimenti persistenti per gli originali; conservazione dei risultati prodotti e ancora presenti nel ripiano. |
+| F1 | A file drag calls up the closed notch with an elastic heartbeat. | The feedback comes before entering the target; nothing is acquired before the drop. |
+| F2 | Moving over the notch reveals the animated shelf. | The cards emerge from the center and settle to the left. |
+| F3 | Files are represented as a hand of cards. | First card slightly rotated to the right; the following ones fanned out progressively toward the left. |
+| F4 | The shelf is the main page while it contains files. | The occupancy survives the notch closing and the app relaunching. |
+| F5 | Clicking the deck opens the file list with an animation. | Opening the list must be animated, like the rest of the shelf. |
+| F6 | Convert offers destinations suited to the selected files. | Inputs on the left, selector and arrow in the central area, results on the right. |
+| F7 | The arrow links inputs and results at the center of the composition. | It must not be placed below the flow as an element at the bottom of the page. This decision replaces the initial placement. |
+| F8 | After the format is chosen, Start appears and the conversion shows animated progress. | Results become usable only after actual completion. |
+| F9 | Work proceeds with FFmpeg. | The complementary technical choices and the proposed scope are detailed below. |
+| F10 | The outbound drag delivers copies and empties the shelf of the delivered files. | The originals are kept; refusal, cancellation or error do not remove the file. |
+| F11 | The shelf keeps the files after Cascade relaunches. | Persistent references for the originals; retention of the results produced and still present in the shelf. |
 
-Fonti delle decisioni: richiesta iniziale del ripiano; scelta esplicita
-«Copia alla destinazione e svuota il ripiano; originali conservati»;
-seguito «continuiamo con FFMPEG e la conservazione dei file nel ripiano»,
-con elenco animato e freccia al centro.
+Sources of the decisions: initial request for the shelf; explicit choice
+"Copy to the destination and empty the shelf; originals kept";
+follow-up "let's continue with FFMPEG and keeping the files in the shelf",
+with an animated list and the arrow at the center.
 
-## 3. Acquisizione, mazzo e navigazione — proposta
+## 3. Acquisition, deck and navigation: proposal
 
-All'inizio di un trascinamento riconosciuto come file, il notch esegue un doppio
-impulso elastico breve. Il feedback non viene ripetuto a ogni movimento del mouse.
-Il rilevamento globale è indicativo: ingresso e rilascio nel bersaglio verificano
-effettivamente i tipi offerti. Un trascinamento di testo o di una finestra non
-deve essere trattato come acquisizione di file.
+At the start of a drag recognized as files, the notch performs a short double
+elastic pulse. The feedback is not repeated on every mouse movement.
+Global detection is indicative: entering and dropping on the target actually
+verify the offered types. A drag of text or of a window must not
+be treated as a file acquisition.
 
-All'ingresso appare l'anteprima del ripiano: le carte nascono nella zona centrale
-utile e raggiungono il lato sinistro. L'eventuale taglio hardware resta escluso
-dai contenuti e dai bersagli. Un'uscita senza rilascio ripristina la pagina
-precedente; un rilascio valido conferma gli elementi e mantiene il ripiano.
+On entry the shelf preview appears: the cards are born in the usable central
+area and reach the left side. Any hardware cut-out stays excluded
+from content and targets. An exit without a drop restores the previous
+page; a valid drop confirms the items and keeps the shelf.
 
-Il limite proposto è di quattro carte visibili, con contatore +N oltre la quarta.
-Non è un limite di quattro file acquisibili. I nuovi file si aggiungono in ordine;
-un originale già presente non genera una seconda voce. File diversi con lo stesso
-nome restano distinti. Le cartelle sono escluse dalla prima versione, con feedback
-esplicito; un lotto misto rende visibili eventuali elementi non acquisiti.
+The proposed limit is four visible cards, with a +N counter beyond the fourth.
+It is not a limit of four acquirable files. New files are appended in order;
+an original already present does not create a second entry. Different files with the same
+name stay distinct. Folders are excluded from the first version, with explicit
+feedback; a mixed batch makes any items that were not acquired visible.
 
-Il clic sul mazzo trasforma le carte nelle righe dell'elenco dentro la stessa
-superficie del notch. Le miniature conservano la loro identità e posizione di
-partenza; le righe successive entrano con un breve sfalsamento. Indietro ricompone
-il mazzo. Non si apre una finestra separata. L'elenco contiene nome, tipo, stato,
-selezione multipla e azione di rimozione; scorre quando supera l'altezza disponibile.
-Il clic seleziona, mentre il movimento oltre la soglia del drag avvia la consegna.
+Clicking the deck turns the cards into the rows of the list inside the same
+notch surface. The thumbnails keep their identity and starting
+position; the following rows enter with a short stagger. Back reassembles
+the deck. No separate window opens. The list contains name, type, status,
+multiple selection and a remove action; it scrolls when it exceeds the available height.
+A click selects, while movement beyond the drag threshold starts the delivery.
 
-Finché occupato, il ripiano è la destinazione predefinita all'apertura. La
-navigazione manuale verso altre pagine resta possibile e non viene annullata
-da aggiornamenti del ripiano. Il notch può richiudersi. Quando l'ultimo elemento
-esce con successo, torna alla selezione ordinaria delle pagine e attività.
-Un drag che entra esplicitamente nel notch può mostrare il bersaglio temporaneo;
-gli eventi automatici non sostituiscono una pagina che l'utente sta consultando.
-La compatibilità con la ricerca Spotlight nativa va verificata senza perdere
-il testo o il focus della ricerca in caso di drag annullato.
+While occupied, the shelf is the default destination on opening. Manual
+navigation to other pages stays possible and is not undone
+by shelf updates. The notch can close again. When the last item
+leaves successfully, it returns to the ordinary selection of pages and activities.
+A drag that explicitly enters the notch can show the temporary target;
+automatic events do not replace a page the user is looking at.
+Compatibility with the native Spotlight search must be verified without losing
+the search text or focus if the drag is cancelled.
 
-## 4. Conversione — proposta
+## 4. Conversion: proposal
 
-La composizione usa tre zone orizzontali: ingressi, trasformazione, risultati.
-La freccia occupa il centro verticale e orizzontale dello spazio fra i due gruppi
-di carte. Il selettore sta sopra la freccia nella medesima zona centrale; Avvia
-compare sotto il selettore nel layout disponibile senza spostare la freccia
-al fondo della pagina. Il layout deve essere verificato sul notch hardware e
-su quello software, evitando sovrapposizioni fra comandi, freccia e taglio fisico.
+The composition uses three horizontal zones: inputs, transformation, results.
+The arrow occupies the vertical and horizontal center of the space between the two groups
+of cards. The selector sits above the arrow in the same central zone; Start
+appears below the selector in the available layout without moving the arrow
+to the bottom of the page. The layout must be verified on the hardware notch and
+on the software one, avoiding overlaps between controls, arrow and physical cut-out.
 
-Aprire Converti conserva le carte di ingresso a sinistra. A destra compare una
-previsione identificata come tale soltanto dopo la selezione di un formato.
-Avvia è disponibile quando la combinazione è valida. Per una selezione mista,
-il selettore propone solo formati comuni a tutti i file selezionati; in assenza
-di destinazioni comuni, l'elenco permette di scegliere un gruppo compatibile.
-Nessun file viene saltato silenziosamente.
+Opening Convert keeps the input cards on the left. On the right, a
+forecast identified as such appears only after a format is selected.
+Start is available when the combination is valid. For a mixed selection,
+the selector offers only formats common to all the selected files; when there are
+no common destinations, the list lets the user choose a compatible group.
+No file is skipped silently.
 
-Durante l'elaborazione, il moto lungo la freccia comunica la direzione e un
-indicatore mostra l'avanzamento reale. Il lavoro senza durata nota mostra uno
-stato indeterminato. La UI offre Annulla e lo stato dei singoli file. I risultati
-completi compaiono a destra e sono trascinabili; quelli falliti restano distinguibili
-e ripetibili. La conversione non sostituisce o rimuove gli ingressi.
+During processing, motion along the arrow communicates the direction and an
+indicator shows the real progress. Work with no known duration shows an
+indeterminate state. The UI offers Cancel and the status of each file. Complete
+results appear on the right and can be dragged; failed ones stay distinguishable
+and can be retried. Conversion neither replaces nor removes the inputs.
 
-Il batch iniziale elabora un file alla volta in background, senza bloccare la UI.
-Una pagina nascosta non annulla il lavoro. Nessuna animazione rimane attiva quando
-non serve; Riduci movimento conserva stato e avanzamento con transizioni minime.
+The initial batch processes one file at a time in the background, without blocking the UI.
+A hidden page does not cancel the work. No animation stays active when
+it is not needed; Reduce Motion keeps state and progress with minimal transitions.
 
-## 5. Motori e perimetro — proposta
+## 5. Engines and scope: proposal
 
-| Ambito | Motore | Destinazioni iniziali |
+| Area | Engine | Initial destinations |
 | --- | --- | --- |
-| Audio/video | FFmpeg e ffprobe distribuiti con Cascade | MP4, estrazione audio, MP3, M4A/AAC, WAV, FLAC, subordinati alle capacità della build e del singolo ingresso. |
-| Immagini | ImageIO di macOS | JPEG, PNG, TIFF, HEIC quando supportato dal sistema. |
-| PDF | PDFKit e ImageIO | Immagini in PDF; pagine PDF in immagini raster. |
+| Audio/video | FFmpeg and ffprobe distributed with Cascade | MP4, audio extraction, MP3, M4A/AAC, WAV, FLAC, subject to the capabilities of the build and of the single input. |
+| Images | macOS ImageIO | JPEG, PNG, TIFF, HEIC when supported by the system. |
+| PDF | PDFKit and ImageIO | Images to PDF; PDF pages to raster images. |
 
-FFmpeg viene invocato con argomenti separati e preset controllati. ffprobe legge
-tracce e durata; il formato selezionabile dipende dalle capacità reali, non dalla
-sola estensione. La build inclusa deve avere codec, architetture, firma e obblighi
-di redistribuzione verificati. Non si dipende da Homebrew installato dall'utente.
-Si evita un secondo motore audio/video AVFoundation nella prima versione.
-Documenti Office, OCR, animazioni e conversioni vettoriali restano fuori perimetro.
+FFmpeg is invoked with separate arguments and controlled presets. ffprobe reads
+tracks and duration; the selectable format depends on the real capabilities, not on the
+extension alone. The bundled build must have its codecs, architectures, signing and
+redistribution obligations verified. It does not depend on a user-installed Homebrew.
+A second AVFoundation audio/video engine is avoided in the first version.
+Office documents, OCR, animations and vector conversions stay out of scope.
 
-Ogni risultato nasce in un file provvisorio gestito da Cascade. Diventa definitivo
-solo dopo la chiusura riuscita del processo e la verifica del risultato, con nome
-senza collisioni. L'annullamento attende l'arresto del processo prima della pulizia.
-Originali e risultati già completi non vengono rimossi dall'annullamento del batch.
+Each result is born in a temporary file managed by Cascade. It becomes final
+only after the process has exited successfully and the result has been verified, with a name
+free of collisions. Cancellation waits for the process to stop before cleanup.
+Originals and results that are already complete are not removed by cancelling the batch.
 
-## 6. Conservazione e recupero — proposta
+## 6. Retention and recovery: proposal
 
-Il ripiano salva identità, ordine, riferimento al file e stato necessario al
-recupero. Per gli originali locali conserva riferimenti persistenti, senza
-duplicarne subito il contenuto. La persistenza del ripiano non è un backup:
-un originale eliminato, un volume scollegato o un permesso perso produce una
-voce non disponibile, che l'utente può ricollegare o rimuovere.
+The shelf saves identity, order, file reference and the state needed for
+recovery. For local originals it keeps persistent references, without
+duplicating their content right away. Shelf persistence is not a backup:
+a deleted original, a disconnected volume or a lost permission produces an
+unavailable entry, which the user can relink or remove.
 
-File promessi in ingresso e risultati di conversione vengono materializzati
-nello spazio dati persistente dell'app. Non vanno affidati a una cartella
-temporanea eliminabile al riavvio. Una promessa è acquisita solo dopo la sua
-scrittura riuscita; gli elementi cloud non ancora disponibili mostrano il loro
-stato, senza fingere che la conversione possa iniziare.
+Incoming promised files and conversion results are materialized
+in the app's persistent data space. They must not be entrusted to a temporary
+folder that can be deleted on relaunch. A promise is acquired only after it has been
+written successfully; cloud items not yet available show their
+state, without pretending that the conversion can start.
 
-Al riavvio, un lavoro incompleto è indicato come interrotto e ripetibile, senza
-conversioni riavviate automaticamente. Ingressi e risultati completi restano.
-I provvisori incompleti sono ripuliti solo dopo avere escluso un processo ancora
-attivo. Un export senza conferma persistita lascia l'elemento nel ripiano: il
-recupero non deduce il successo dal solo avvio del trascinamento.
+On relaunch, incomplete work is marked as interrupted and retryable, with no
+conversions restarted automatically. Complete inputs and results stay.
+Incomplete temporary files are cleaned up only after ruling out a process that is still
+active. An export without a persisted confirmation leaves the item in the shelf: the
+recovery does not infer success from the mere start of the drag.
 
-## 7. Consegna e rimozione — proposta
+## 7. Delivery and removal: proposal
 
-L'uscita usa operazioni di copia e una file promise per elemento, quando accettate
-dalla destinazione. La carta viene rimossa soltanto dopo la scrittura riuscita
-del relativo file. In un drop parziale escono solo le carte effettivamente
-consegnate; le altre mantengono posizione e possibilità di riprovare.
+Output uses copy operations and one file promise per item, when accepted
+by the destination. The card is removed only after its file has been
+written successfully. In a partial drop only the cards actually
+delivered leave; the others keep their position and the option to retry.
 
-Il completamento della sessione di drag non prova la scrittura della promessa,
-che può avvenire successivamente. La scrittura riuscita prova la consegna all'URL
-richiesto, non un successivo upload o salvataggio interno dell'app destinataria.
-Per gli originali esterni, un percorso di compatibilità basato solo su URL,
-privo di conferma individuale, mantiene gli elementi nel ripiano e non dichiara
-la consegna verificata. Nella prima versione i risultati posseduti da Cascade
-vengono offerti tramite file promises: una destinazione che accetta solo URL
-non può riceverli da questo percorso e non provoca alcuna rimozione. Un futuro
-supporto URL per i risultati richiede una politica di conservazione distinta,
-poiché la fine del drag non prova che il destinatario abbia terminato la lettura.
+The completion of the drag session does not prove that the promise was written,
+which can happen later. A successful write proves delivery to the requested
+URL, not a later upload or internal save by the receiving app.
+For external originals, a compatibility path based only on URLs,
+without individual confirmation, keeps the items in the shelf and does not declare
+the delivery verified. In the first version the results owned by Cascade
+are offered through file promises: a destination that accepts only URLs
+cannot receive them through this path and causes no removal. Future
+URL support for results requires a distinct retention policy,
+since the end of the drag does not prove that the recipient has finished reading.
 
-La rimozione della voce e la pulizia del file posseduto da Cascade sono separate.
-Si persiste prima la rimozione della voce; soltanto dopo si può ripulire il file,
-escludendo conversioni o consegne che lo stanno usando. Un crash fra questi due
-passaggi può lasciare un file da ripulire, mai una voce ripristinata senza il suo
-risultato. Gli originali esterni non vengono mai eliminati da queste operazioni.
-La rimozione manuale di
-un risultato gestito è distinta dalla rimozione di un riferimento all'originale
-e deve renderne chiaro l'effetto prima di eliminare l'unica copia del risultato.
+Removing the entry and cleaning up the file owned by Cascade are separate.
+The removal of the entry is persisted first; only afterwards can the file be cleaned up,
+excluding conversions or deliveries that are using it. A crash between these two
+steps can leave a file to clean up, never an entry restored without its
+result. External originals are never deleted by these operations.
+The manual removal of
+a managed result is distinct from the removal of a reference to the original
+and must make its effect clear before deleting the only copy of the result.
 
-## 8. Altre azioni — proposta successiva
+## 8. Other actions: later proposal
 
-Converti è l'azione richiesta. Condividi (incluso AirDrop) e Crea ZIP restano
-proposte da valutare separatamente, senza farle diventare implicitamente
-requisiti del primo incremento. Anteprima, Mostra nel Finder e Rimuovi dal
-ripiano completano il menu contestuale. La condivisione non viene equiparata a
-un export verificato per svuotare automaticamente il ripiano.
+Convert is the requested action. Share (including AirDrop) and Create ZIP remain
+proposals to evaluate separately, without implicitly turning them into
+requirements of the first increment. Preview, Show in Finder and Remove from
+Shelf complete the context menu. Sharing is not treated as equivalent to
+a verified export that automatically empties the shelf.
 
-## 9. Inserimento in Cascade
+## 9. Integration into Cascade
 
-Il percorso esistente del puntatore e il coordinatore dei display devono essere
-riusati per routing e proprietà del notch aperto. Il modello persistente del
-ripiano è condiviso fra display e indipendente dalle viste. Acquisizione AppKit,
-conversione in background e presentazione animata mantengono responsabilità
-distinte, senza duplicare lo stato dei file nelle singole superfici.
+The existing pointer path and the display coordinator must be
+reused for routing and ownership of the open notch. The persistent shelf
+model is shared across displays and independent of the views. AppKit acquisition,
+background conversion and animated presentation keep distinct
+responsibilities, without duplicating the file state in the individual surfaces.
 
-La composizione rispetta i contratti di prodotto per widget interni ed esterni.
-L'accesso ai file e l'esecuzione del convertitore richiedono capacità esplicite:
-il piano dovrà collocarli nei confini esistenti, senza introdurre un percorso
-privilegiato del widget o dichiarare già risolti i vincoli del runtime addon.
-La pagina persistente si coordina con la specifica delle pagine contestuali,
-che è ancora in discussione; non si assume che quella navigazione sia già attiva.
+The composition follows the product contracts for internal and external widgets.
+File access and running the converter require explicit capabilities:
+the plan will have to place them within the existing boundaries, without introducing a
+privileged widget path or declaring the addon runtime constraints already resolved.
+The persistent page is coordinated with the contextual pages specification,
+which is still under discussion; it is not assumed that that navigation is already active.
 
-**Eccezione locale approvata il 26 settembre 2026.** In attesa del gate nativo,
-il ripiano può essere integrato direttamente in Cascade come la pagina Musica,
-senza attivare il launcher degli addon esterni. Il primo incremento include
-battito al drag-in, mazzo animato con quattro carte e contatore +N, elenco animato,
-persistenza fra riavvii e copia in uscita con rimozione della sola voce consegnata
-con successo. Gli originali restano intatti. Il ripiano occupato è la pagina
-predefinita all'apertura; la navigazione manuale resta possibile e gli
-aggiornamenti automatici non la sovrascrivono. La conversione rimane differita
-finché supervisione, annullamento e recupero non sono pronti; l'interfaccia non
-deve presentarla come disponibile prima di allora. L'eccezione è limitata a
-questa pagina: nessun codice addon esterno viene caricato nel processo host e
-non cambiano grant, quote o requisiti del launcher.
+**Local exception approved on 26 September 2026.** Pending the native gate,
+the shelf can be integrated directly into Cascade like the Music page,
+without enabling the external addon launcher. The first increment includes
+a heartbeat on drag-in, an animated deck with four cards and a +N counter, an animated list,
+persistence across relaunches and outbound copying with removal of only the entry delivered
+successfully. The originals stay intact. The occupied shelf is the default
+page on opening; manual navigation stays possible and
+automatic updates do not overwrite it. Conversion stays deferred
+until supervision, cancellation and recovery are ready; the interface must
+not present it as available before then. The exception is limited to
+this page: no external addon code is loaded into the host process and
+grants, quotas and launcher requirements do not change.
 
-## 10. Verifica prevista
+## 10. Planned verification
 
-- Drag di file, testo e finestre; ingresso, uscita, annullamento e rilascio valido.
-- Uno, quattro e più file; omonimi, duplicati e drop parzialmente valido.
-- Apertura e chiusura animate dell'elenco, drag distinto dal clic, tastiera e Riduci movimento.
-- Freccia centrale senza sovrapposizioni su notch hardware/software e display diversi.
-- Riavvio con originali, risultati completi, file irreperibili e lavori interrotti.
-- Conversioni reali, selezioni miste, formato non supportato, annullamento ed errore.
-- Export singolo, multiplo e parziale; destinazione rifiutata, copia fallita e crash prima della conferma persistita.
-- Pagina principale finché occupata, navigazione manuale, ritorno quando vuota e drag durante ricerca.
-- Build, aggiornamento del collegamento /Applications/Cascade.app e riavvio verificato prima di dichiarare conclusa l'implementazione.
+- Drags of files, text and windows; entry, exit, cancellation and valid drop.
+- One, four and more files; same-name files, duplicates and partially valid drop.
+- Animated opening and closing of the list, drag distinct from click, keyboard and Reduce Motion.
+- Central arrow without overlaps on hardware/software notch and different displays.
+- Relaunch with originals, complete results, missing files and interrupted work.
+- Real conversions, mixed selections, unsupported format, cancellation and error.
+- Single, multiple and partial export; refused destination, failed copy and crash before the persisted confirmation.
+- Main page while occupied, manual navigation, return when empty and drag during search.
+- Build, update of the /Applications/Cascade.app link and verified relaunch before declaring the implementation finished.
 
-## 11. Riferimenti
+## 11. References
 
-- [Pagine e selezione contestuale](2026-09-26-contextual-pages-design.md).
-- [Raccolta e durata del ripiano](../../../.scratch/cascade-product/issues/10-file-shelf.md).
-- [FFmpeg: conversione e progress](https://ffmpeg.org/ffmpeg.html).
-- [ffprobe: analisi dei media](https://ffmpeg.org/ffprobe.html).
-- [FFmpeg: redistribuzione](https://ffmpeg.org/legal.html).
-- [Apple: formati scrivibili di ImageIO](https://developer.apple.com/documentation/imageio/cgimagedestinationcopytypeidentifiers()).
+- [Pages and contextual selection](2026-09-26-contextual-pages-design.md).
+- [Shelf collection and lifetime](../../../.scratch/cascade-product/issues/10-file-shelf.md).
+- [FFmpeg: conversion and progress](https://ffmpeg.org/ffmpeg.html).
+- [ffprobe: media analysis](https://ffmpeg.org/ffprobe.html).
+- [FFmpeg: redistribution](https://ffmpeg.org/legal.html).
+- [Apple: ImageIO writable formats](https://developer.apple.com/documentation/imageio/cgimagedestinationcopytypeidentifiers()).
 - [Apple: PDFPage](https://developer.apple.com/documentation/pdfkit/pdfpage).
-- [Apple: scrittura delle file promises](https://developer.apple.com/documentation/appkit/nsfilepromiseproviderdelegate/filepromiseprovider(_:writepromiseto:completionhandler:)).
-- [Apple: drop parziali](https://developer.apple.com/documentation/appkit/nsdragginginfo/numberofvaliditemsfordrop).
+- [Apple: writing file promises](https://developer.apple.com/documentation/appkit/nsfilepromiseproviderdelegate/filepromiseprovider(_:writepromiseto:completionhandler:)).
+- [Apple: partial drops](https://developer.apple.com/documentation/appkit/nsdragginginfo/numberofvaliditemsfordrop).
 
-## 12. Revisione UI/UX del 27 settembre 2026
+## 12. UI/UX review of 27 September 2026
 
-La richiesta esplicita aggiorna il primo incremento locale: priorità del ripiano finché occupato, **senza mantenere il notch sempre aperto**. Il riferimento è Musica per misura standard, luce diffusa, colore e comportamento. La fascia superiore resta utilizzabile ai lati del taglio fisico; il centro deve rimanere libero. Il flusso non può ingrandire il notch oltre la misura standard. Impeccable e Taste sono le guide di lavoro, adattate alla UI nativa e ai [principi Apple](https://developer.apple.com/videos/play/wwdc2023/10194/).
+The explicit request updates the first local increment: shelf priority while occupied, **without keeping the notch always open**. The reference is Music for standard size, diffuse light, color and behavior. The top band stays usable on both sides of the physical cut-out; the center must stay free. The flow cannot enlarge the notch beyond the standard size. Impeccable and Taste are the working guides, adapted to the native UI and to the [Apple principles](https://developer.apple.com/videos/play/wwdc2023/10194/).
 
-La destinazione di drop usa icona grande e titolo centrati. L'ammissione deve essere pronta prima dell'animazione, anche nei trascinamenti veloci. Solo dopo una consegna accettata, il primo file compare al centro, si sposta a sinistra e apre il ventaglio. Click o scroll a due dita distendono i file in una fila orizzontale: i controlli di azione scompaiono e una freccia riporta alla vista con Converti/Svuota. I file mantengono icona e nome senza contenitore. Movimento ridotto evita traslazioni e ventaglio animato; Riduci trasparenza elimina i bagliori.
+The drop destination uses a large centered icon and title. Admission must be ready before the animation, even for fast drags. Only after an accepted delivery does the first file appear at the center, move to the left and open the fan. A click or a two-finger scroll spreads the files out in a horizontal row: the action controls disappear and an arrow leads back to the view with Convert/Clear. The files keep icon and name without a container. Reduced motion avoids translations and the animated fan; Reduce Transparency removes the glows.
 
-Queste decisioni sostituiscono l'apertura permanente e i pulsanti nell'elenco della build del 26 settembre. Persistenza, sicurezza degli originali e disponibilità reale della conversione restano invariate.
+These decisions replace the permanent opening and the buttons in the list of the 26 September build. Persistence, safety of the originals and real availability of the conversion stay unchanged.

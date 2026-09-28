@@ -1,4 +1,4 @@
-# Eseguire conversioni file in job recuperabili
+# Run file conversions in recoverable jobs
 
 ID: 82
 Parent: cascade-product
@@ -11,8 +11,8 @@ Blocked by: 77, 78, 81, 86
 
 ## Question
 
-Implementare il task 6 del [piano del ripiano file](../../../docs/superpowers/plans/2026-09-26-file-shelf.md): conversione reale fuori dal main actor con input autorizzati, formati chiusi, processo FFmpeg confinato/supervisionato, documenti nativi, progresso e job persistenti recuperabili. Accettazione: avvio ritorna job ID senza attendere conversione; input rinominati/sostituiti o non materializzati non diventano bersagli nuovi; nessuna interpolazione shell né accesso a file/URL referenziati dal media fuori grant; cancel/revoca/riavvio/quota gestiti; risultato atomico e cleanup dopo persistenza. Test mirati e prove di processo native, review root, commit. Dipende da percorso nativo, store e helper verificati; una simulazione di processo non soddisfa l'accettazione.
+Implement task 6 of the [file shelf plan](../../../docs/superpowers/plans/2026-09-26-file-shelf.md): real conversion off the main actor with authorized inputs, closed formats, a confined/supervised FFmpeg process, native documents, progress and recoverable persistent jobs. Acceptance: start returns a job ID without waiting for the conversion; renamed/replaced or non-materialized inputs do not become new targets; no shell interpolation and no access to files/URLs referenced by the media outside the grant; cancel/revocation/restart/quota handled; atomic result and cleanup after persistence. Targeted tests and native process tests, root review, commit. Depends on the verified native path, store and helper; a process simulation does not satisfy the acceptance.
 
-## Scomposizione esecutiva — 26 settembre 2026
+## Execution breakdown: 26 September 2026
 
-[Preparare formati e avanzamento della conversione](86-file-workspace-conversion-planning.md) può avanzare senza il percorso nativo perché elabora solo valori in memoria. Questo ticket conserva l’accettazione completa e il blocco nativo; completare il sottocomponente non qualifica processi o conversioni produttive.
+[Prepare conversion formats and progress](86-file-workspace-conversion-planning.md) can advance without the native path because it processes only in-memory values. This ticket keeps the full acceptance and the native block; completing the subcomponent does not qualify production processes or conversions.

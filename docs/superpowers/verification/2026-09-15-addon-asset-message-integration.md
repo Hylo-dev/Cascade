@@ -1,13 +1,13 @@
-> Prosecuzione corrente: [verifica Codex del 18 settembre](2026-09-18-addon-asset-message-integration.md). I vincoli di routing e budget riportati qui sotto sono storici.
+> Current continuation: [Codex verification of 18 September](2026-09-18-addon-asset-message-integration.md). The routing and budget constraints reported below are historical.
 
-# Collegamento messaggi asset e client SDK
+# Asset message wiring and SDK client
 
-Stato storico al 15 settembre: implementazione in corso, nessuna consegna allora verificata. [Piano](../plans/2026-09-15-addon-asset-message-integration.md).
+Historical status as of 15 September: implementation in progress, no delivery verified at that time. [Plan](../plans/2026-09-15-addon-asset-message-integration.md).
 
-Baseline verificata prima dell’intervento:795 test/80 suite,400 input applicativi/test identici,55 percorsi nel manifesto cumulativo revisionato. L’ultima build firmata e il riavvio PID28937 riguardano il componente precedente. La quota principale ufficiale è61% utilizzata al15 settembre2026,10:31:09UTC; tetto65% per conservare almeno35%.
+Baseline verified before the change:795 tests/80 suites,400 identical app/test inputs,55 paths in the reviewed cumulative manifest. The last signed build and the relaunch PID28937 concern the previous component. The official main quota is61% used as of15 September2026,10:31:09UTC; ceiling65% to keep at least35%.
 
-L’incremento collega i frame al runtime autenticato, ai suoi slot condivisi, alle quote e agli alias canonici, e aggiunge un client SDK concreto per importare/condividere/rilasciare immagini tramite un canale a messaggi iniettato. La negoziazione1.2 è cumulativa: l’host la abilita solo con supporto storage e asset; le operazioni asset non richiedono il permesso storage.own.
+The increment connects the frames to the authenticated runtime, to its shared slots, to the quotas and to the canonical aliases, and adds a concrete SDK client to import/share/release images through an injected message channel. Negotiation1.2 is cumulative: the host enables it only with storage and asset support; the asset operations do not require the storage.own permission.
 
-La prova end-to-end userà un bridge soltanto nei test verso runtime, codec, assemblatore, ImageIO e AssetState reali. Non costituisce un adattatore IPC di produzione o una qualifica del launcher nativo. Nessun gate C0d viene aperto.
+The end-to-end test will use a test-only bridge to the real runtime, codec, assembler, ImageIO and AssetState. It does not constitute a production IPC adapter or a qualification of the native launcher. No C0d gate is opened.
 
-Pendenti al 15 settembre (ora completati nella verifica del 18 settembre): implementazione, RED/GREEN mirati, revisione indipendente, suite completa sul codice congelato, build firmata, aggiornamento Applications e riavvio verificato.
+Pending as of 15 September (now completed in the verification of 18 September): implementation, targeted RED/GREEN, independent review, full suite on the frozen code, signed build, Applications update and verified relaunch.

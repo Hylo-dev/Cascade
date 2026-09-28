@@ -1,4 +1,4 @@
-# Collegare il registro delle catene alle misure CPU
+# Connect the chain ledger to the CPU measurements
 
 ID: 59
 Parent: cascade-product
@@ -11,8 +11,8 @@ Blocked by: 58
 
 ## Question
 
-Collegare lo stesso registro verificato al coordinatore, linearizzando ogni lettura/riduzione con i destinatari esatti e restituendone la provenienza. Preflight dei conti prima delle letture, registrazione e disarmo atomici, reset wake senza azzerare debito. Sol medium implementa; root e revisore verificano.
+Connect the same verified ledger to the coordinator, linearizing every reading/reduction with the exact recipients and returning their provenance. Preflight of the accounts before the readings, atomic registration and disarming, wake reset without zeroing the debt. Sol medium implements; the root and a reviewer verify.
 
 ## Answer
 
-Collegamento implementato da Sol medium; root e revisore indipendente senza rilievi sul codice congelato.49 test mirati/5 suite PASS. Il coordinatore preammette il dominio limitato, legge/riduce sotto il lock della singola osservazione, conserva destinatari esatti anche sui dati mancanti e mantiene aritmetica/debito precedenti. Lifecycle binding e wake sincronizzati con il registro; input manuale separato dalla modalità canonica. [Rapporto](../../codex-addon/20260922-transitive-cpu/task-59-report.md).
+Wiring implemented by Sol medium; the root and the independent reviewer had no findings on the frozen code. 49 targeted tests/5 suites PASS. The coordinator pre-admits the bounded domain, reads/reduces under the lock of the single observation, keeps exact recipients even on missing data and maintains the previous arithmetic/debt. Binding lifecycle and wake synchronized with the ledger; manual input separate from the canonical mode. [Report](../../codex-addon/20260922-transitive-cpu/task-59-report.md).

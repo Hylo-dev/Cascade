@@ -1,139 +1,139 @@
-# P0 — esito della prova nativa del 9 settembre 2026
+# P0: outcome of the native test of 9 September 2026
 
-**Gate del launcher: NON SUPERATO.** Il prototipo è separato dal prodotto e non è
-un esecutore utilizzabile dai widget Cascade. P1 può avanzare; P2/P3 non incorporano
-questo launcher finché arresto e controllo delle risorse non sono dimostrati.
+**Launcher gate: NOT PASSED.** The prototype is separate from the product and is not
+an executor usable by Cascade widgets. P1 may proceed; P2/P3 do not incorporate
+this launcher until termination and resource control are demonstrated.
 
-## Ambiente e percorso verificato
+## Environment and verified path
 
-macOS 27 beta (26A5425a), Apple Silicon, Xcode beta / Swift 6.4. Target minimo compilato:
-macOS 14. Le macchine 14/15/26 e una seconda identità di editore non sono disponibili;
-quei casi sono **non verificati**, non implicitamente compatibili.
+macOS 27 beta (26A5425a), Apple Silicon, Xcode beta / Swift 6.4. Minimum compiled target:
+macOS 14. The 14/15/26 machines and a second publisher identity are not available;
+those cases are **unverified**, not implicitly compatible.
 
-Tre target Xcode distinti: host `hylo.Cascade.AddonProbe`, contenitore standalone
-`hylo.Cascade.AddonProbeContainer`, estensione
-`hylo.Cascade.AddonProbeContainer.Provider`. Firma Apple Development del team di
-sviluppo del progetto. Il contenitore include l'estensione e tutto il suo codice;
-nessuna app sorgente completa, framework di tale app o servizio omonimo è richiesto.
+Three distinct Xcode targets: host `hylo.Cascade.AddonProbe`, standalone container
+`hylo.Cascade.AddonProbeContainer`, extension
+`hylo.Cascade.AddonProbeContainer.Provider`. Apple Development signing from the
+project's development team. The container includes the extension and all its code;
+no complete source app, framework of that app or same-named service is required.
 
-Il target ExtensionKit genera il punto di ingresso corretto. Discovery attraverso
-`AppExtensionIdentity.matching`, attivazione attraverso il browser Apple, avvio con
-`AppExtensionProcess`. Un primo canale passa esclusivamente un endpoint anonimo;
-il canale applicativo ordinario verifica team e signing identifier in entrambe le
-direzioni con i requisiti di firma Foundation. Il PID dichiarato nella risposta deve
-corrispondere al PID del peer fornito da Foundation ed essere diverso dall'host.
+The ExtensionKit target generates the correct entry point. Discovery through
+`AppExtensionIdentity.matching`, activation through the Apple browser, launch with
+`AppExtensionProcess`. A first channel passes only an anonymous endpoint;
+the ordinary application channel verifies team and signing identifier in both
+directions with the Foundation code-signing requirements. The PID declared in the
+response must match the peer PID provided by Foundation and differ from the host.
 
-Le prove usano solo file sentinel creati dal harness, localhost e `/usr/bin/true`.
-Nessun file o credenziale dell'utente viene letto. Il processo di prova non è un
-worker registrato o avviato da Cascade.
+The tests use only sentinel files created by the harness, localhost and `/usr/bin/true`.
+No user file or credential is read. The test process is not a
+worker registered or launched by Cascade.
 
-## Risultati osservati
+## Observed results
 
-| Prova | Esito | Evidenza / limite |
+| Test | Outcome | Evidence / limit |
 | --- | --- | --- |
-| Build reale ExtensionKit | PASS | Debug e Release firmate, prodotti in DerivedData |
-| Echo autenticato standalone | PASS | Release: host 43206, provider 43209, UUID correlato, 165,41 ms complessivi; deadline esterna 2 s |
-| Chiusura normale dell'host | PASS nella fixture | `NSApplication.terminate`: host 43401, provider 43403, uscita osservata in 318,72 ms dalla partenza della prova |
-| Crash/kill dell'host con worker non cooperativo | PASS nella fixture | SIGKILL del solo host 43410; provider 43412 uscito, 154,12 ms dalla partenza della prova |
-| Arresto esplicito mentre l'host vive | FAIL ripetuto | `AppExtensionProcess.invalidate`, invalidazione di entrambi i canali, listener e rilascio di tutti i riferimenti: worker spin ancora presente dopo 2 s, in Debug e Release |
-| Lettura del sentinel di un'altra cartella addon | Accesso negato | Sandbox senza entitlement di file esterni; fixture realmente esistente |
-| Connessione diretta di rete | Accesso negato | `connect` a localhost restituisce errore di permesso |
-| Creazione di sottoprocesso | Consentita | `/usr/bin/true` viene avviato: App Sandbox da sola non garantisce assenza di processi aggiuntivi |
-| Host con bundle/signing identity diversa | Discovery negata | Nessuna identità trovata; **non** equivale a una prova completa di rifiuto sul canale autenticato |
-| CPU e physical footprint, aggregazione sottoprocessi | Non qualificato | Nessuna misura di RSS viene presentata come physical footprint; manca un adapter di supervisione ammesso |
-| Messaggio JSON corrotto | PASS | Rifiuto intercettato senza crash dell’host, 150,22 ms complessivi |
-| Riuso PID e arresto atomico sicuro | Non qualificato | Il cleanup del harness verifica fixture e start time, ma non è una soluzione produttiva al riuso PID |
-| UI SwiftUI remota / focus / VoiceOver | Non implementata nella prova | La preview del renderer ordinario P1 non vale come prova ExtensionKit remota |
-| Altro editore / altro OS | Non verificato | Firma locale e compilazione con target 14 non bastano |
+| Real ExtensionKit build | PASS | Signed Debug and Release, products in DerivedData |
+| Standalone authenticated echo | PASS | Release: host 43206, provider 43209, correlated UUID, 165.41 ms overall; external deadline 2 s |
+| Normal host shutdown | PASS in the fixture | `NSApplication.terminate`: host 43401, provider 43403, exit observed 318.72 ms after the start of the test |
+| Host crash/kill with an uncooperative worker | PASS in the fixture | SIGKILL of host 43410 only; provider 43412 exited, 154.12 ms after the start of the test |
+| Explicit stop while the host is alive | repeated FAIL | `AppExtensionProcess.invalidate`, invalidation of both channels, listener and release of all references: spin worker still present after 2 s, in Debug and Release |
+| Reading the sentinel of another addon folder | Access denied | Sandbox without external-file entitlements; the fixture really exists |
+| Direct network connection | Access denied | `connect` to localhost returns a permission error |
+| Subprocess creation | Allowed | `/usr/bin/true` is launched: App Sandbox alone does not guarantee the absence of additional processes |
+| Host with a different bundle/signing identity | Discovery denied | No identity found; this is **not** equivalent to a complete proof of rejection on the authenticated channel |
+| CPU and physical footprint, subprocess aggregation | Not qualified | No RSS measurement is presented as physical footprint; an admitted supervision adapter is missing |
+| Corrupted JSON message | PASS | Rejection caught without a host crash, 150.22 ms overall |
+| PID reuse and safe atomic stop | Not qualified | The harness cleanup verifies fixture and start time, but it is not a production solution to PID reuse |
+| Remote SwiftUI UI / focus / VoiceOver | Not implemented in the test | The preview of the ordinary P1 renderer does not count as remote ExtensionKit evidence |
+| Other publisher / other OS | Unverified | Local signing and compilation with target 14 are not enough |
 
-Le latenze singole sono osservazioni diagnostiche, non p95, benchmark o budget
-energetici qualificati. Il caso spin dura pochi secondi; il harness chiude prima
-il proprio host e pulisce soltanto il PID autenticato della fixture, verificandone
-percorso e istante di avvio. L'host ha anche un guardrail di cinque secondi.
+The individual latencies are diagnostic observations, not qualified p95s, benchmarks or
+energy budgets. The spin case lasts a few seconds; the harness first closes
+its own host and cleans up only the fixture's authenticated PID, verifying its
+path and launch time. The host also has a five-second guardrail.
 
-## Problemi riprodotti e decisione
+## Reproduced problems and decision
 
-1. Sul sistema beta in uso, chiamare `setCodeSigningRequirement` direttamente sul
-   `NSXPCConnection` gestito da ExtensionFoundation causa SIGSEGV in libxpc. Il
-   bootstrap pubblico con listener ordinario risolve lo scambio autenticato; nessuna
-   API privata viene utilizzata per aggirarlo.
-2. L'invalidazione non ha fermato il worker bloccato mentre l'host è rimasto aperto.
-   Eliminare la precedente finestra browser, rilasciare tutti i riferimenti e passare
-   alla build Release non ha risolto la prova. La chiusura della connessione non viene
-   quindi trattata come arresto del processo.
-3. La sandbox consente sottoprocessi. Prima dell'ammissione pubblica serve una prova
-   che il loro costo e la loro uscita siano governati con l'addon, oppure un profilo
-   che ne vieti davvero l'esecuzione. Una dichiarazione nel manifest non lo risolve.
+1. On the beta system in use, calling `setCodeSigningRequirement` directly on the
+   `NSXPCConnection` managed by ExtensionFoundation causes SIGSEGV in libxpc. The
+   public bootstrap with an ordinary listener resolves the authenticated exchange; no
+   private API is used to work around it.
+2. Invalidation did not stop the blocked worker while the host stayed open.
+   Removing the earlier browser window, releasing all references and switching
+   to the Release build did not resolve the test. Closing the connection is
+   therefore not treated as terminating the process.
+3. The sandbox allows subprocesses. Before public admission, evidence is needed
+   that their cost and their exit are governed together with the addon, or a profile
+   that actually forbids their execution. A declaration in the manifest does not solve it.
 
-Il gate resta chiuso perché questi punti incidono direttamente sulla promessa di
-risorse controllate. Non è stato introdotto un esecutore in-process, neppure per
-widget del team, e non sono state ridotte silenziosamente le garanzie approvate.
-Il prossimo lavoro produttivo dipende da una strategia di arresto e osservazione
-verificata; una diversa soluzione di lancio richiede nuove prove P0 prima del trasporto
-P2. La scena remota e la migrazione dei widget restano task aperti nel piano.
+The gate remains closed because these points directly affect the promise of
+controlled resources. No in-process executor was introduced, not even for
+team widgets, and the approved guarantees were not silently reduced.
+The next production work depends on a verified termination and observation
+strategy; a different launch solution requires new P0 tests before the P2
+transport. The remote scene and the widget migration remain open tasks in the plan.
 
-## Riproduzione e fonti
+## Reproduction and sources
 
-[README e comandi del prototipo](../../../Prototypes/AddonPlatform/README.md).
-Gli output grezzi rigenerabili sono in `Prototypes/AddonPlatform/Results/` (ignorati
-in git). I JSON registrano PID, requestID, percorso della fixture, tempi ed esito;
-`lifecycle` e `sandbox` restituiscono errore finché le rispettive condizioni falliscono.
+[Prototype README and commands](../../../Prototypes/AddonPlatform/README.md).
+The regenerable raw outputs are in `Prototypes/AddonPlatform/Results/` (ignored
+in git). The JSON files record PID, requestID, fixture path, timings and outcome;
+`lifecycle` and `sandbox` return an error as long as their respective conditions fail.
 
-API confrontate con gli header pubblici nell'SDK locale e con la documentazione Apple:
-[host di app extension](https://developer.apple.com/documentation/extensionfoundation/adding-support-for-app-extensions-to-your-app),
-[estensione per un host](https://developer.apple.com/documentation/extensionfoundation/building-an-app-extension-to-support-a-host-app),
+APIs compared against the public headers in the local SDK and the Apple documentation:
+[app extension host](https://developer.apple.com/documentation/extensionfoundation/adding-support-for-app-extensions-to-your-app),
+[extension for a host](https://developer.apple.com/documentation/extensionfoundation/building-an-app-extension-to-support-a-host-app),
 [discovery](https://developer.apple.com/documentation/extensionfoundation/discovering-app-extensions-from-your-app),
 [invalidate](https://developer.apple.com/documentation/extensionfoundation/appextensionprocess/invalidate()).
-Il fatto che un simbolo sia presente nell'SDK non è stato usato come prova della
-relativa garanzia di esecuzione.
+The fact that a symbol is present in the SDK was not used as proof of the
+corresponding runtime guarantee.
 
-## Alternative verificate il 9–10 settembre
+## Alternatives verified on 9–10 September
 
-È stata implementata e ripetuta anche l'alternativa del processo figlio diretto
-prevista dalla specifica. Il [prototipo DirectChild](../../../Prototypes/AddonPlatform/DirectChild/README.md)
-usa un supervisore nativo distinto che conserva l'identità del figlio non ancora
-raccolto, impone `RLIMIT_NPROC` soft/hard 0 prima di exec e reagisce alla chiusura della
-pipe dell'host. Host e supervisore conservano i loro limiti originari.
+The direct child process alternative foreseen by the specification was also
+implemented and repeated. The [DirectChild prototype](../../../Prototypes/AddonPlatform/DirectChild/README.md)
+uses a separate native supervisor that preserves the identity of the not-yet-reaped
+child, imposes `RLIMIT_NPROC` soft/hard 0 before exec and reacts to the closing of the
+host's pipe. Host and supervisor keep their original limits.
 
-Le prove reali mostrano arresto del figlio non cooperativo con host ancora vivo e
-dopo uscita/crash dell'host; creazione diretta di figli e rialzo del limite negati;
-letture di CPU/footprint riuscite e CPU confrontata con wait4. Questi risultati
-risolvono la primitiva di controllo del figlio, **non l'intero profilo**.
+The real tests show termination of the uncooperative child with the host still alive and
+after host exit/crash; direct child creation and raising the limit denied;
+successful CPU/footprint reads and CPU compared with wait4. These results
+solve the child-control primitive, **not the whole profile**.
 
-Un controesempio impedisce il passaggio in produzione: il worker può chiedere a
-Launch Services di aprire una app innocua firmata e leggibile dentro il proprio
-bundle. Il limite dei figli diretti rimane 0, ma il processo avviato ha padre PID 1 e
-non appartiene al supervisore. La prova controlla il percorso esatto del bundle e
-il marker prodotto dall'app; non avvia applicazioni dell'utente. Le tre esecuzioni
-falliscono esplicitamente `delegatedLaunchDenied`, con gli altri 15 controlli passati.
-Il comando riproducibile è `/bin/zsh scripts/test-addon-direct-child.sh`; esce 1 per
-questa ragione. Revisione indipendente conferma la coerenza di fonte, evidenze e cleanup.
+A counterexample prevents the move to production: the worker can ask
+Launch Services to open a harmless, signed, readable app inside its own
+bundle. The direct-child limit remains 0, but the launched process has parent PID 1 and
+does not belong to the supervisor. The test checks the exact bundle path and
+the marker produced by the app; it does not launch user applications. The three runs
+explicitly fail `delegatedLaunchDenied`, with the other 15 checks passed.
+The reproducible command is `/bin/zsh scripts/test-addon-direct-child.sh`; it exits 1 for
+this reason. Independent review confirms the consistency of source, evidence and cleanup.
 
-Per ExtensionKit è stata provata anche la ricerca di un handle NSRunningApplication
-sul peer già autenticato. Il provider headless restituisce **nessun handle**:
-`forceTerminate()` non viene quindi chiamato. Non si tratta di una richiesta di
-terminazione rifiutata. Comando: `CASCADE_PROBE_CONFIGURATION=Release /bin/zsh
-scripts/test-addon-platform.sh --case application-stop`; esitoFAIL osservato con
-host PID 50118/provider PID 50120. Il log completo conserva l'evento diagnostico.
-La [documentazione Apple](https://developer.apple.com/documentation/appkit/nsrunningapplication)
-limita questa API alle applicazioni tracciate, non a ogni processo.
+For ExtensionKit, looking up an NSRunningApplication handle on the already
+authenticated peer was also tested. The headless provider returns **no handle**:
+`forceTerminate()` is therefore not called. This is not a rejected termination
+request. Command: `CASCADE_PROBE_CONFIGURATION=Release /bin/zsh
+scripts/test-addon-platform.sh --case application-stop`; outcome FAIL observed with
+host PID 50118/provider PID 50120. The full log preserves the diagnostic event.
+The [Apple documentation](https://developer.apple.com/documentation/appkit/nsrunningapplication)
+limits this API to tracked applications, not to every process.
 
-Il [prototipo della scena SwiftUI remota](../../../Prototypes/AddonPlatform/RemoteUI/README.md)
-compila, ma il controllo grafico del selettore è rimasto bloccato per circa 10,5 ore.
-La scena non è stata abilitata né eseguita: nessuna prova di interazione o di
-lifecycle remoto è dichiarata superata. È un impedimento dello strumento di prova,
-non un difetto dimostrato di ExtensionKit.
+The [remote SwiftUI scene prototype](../../../Prototypes/AddonPlatform/RemoteUI/README.md)
+compiles, but the graphical check of the selector stayed blocked for about 10.5 hours.
+The scene was neither enabled nor run: no interaction or remote lifecycle
+test is declared passed. It is an impediment of the test tool,
+not a demonstrated defect of ExtensionKit.
 
-**Decisione:** entrambi i percorsi di esecuzione rimangono sperimentali. Prima di P2
-occorre dimostrare il controllo del lavoro delegato a macOS, oppure rivedere
-esplicitamente il requisito di contenimento totale per il codice nativo. Vietare
-soltanto la specifica app annidata di questa fixture non dimostrerebbe la garanzia.
-Il sistema a componenti posseduti dall'host e i contratti P1 restano validi; nessun
-bypass è stato introdotto per far avanzare i widget del team.
+**Decision:** both execution paths remain experimental. Before P2,
+control of work delegated to macOS must be demonstrated, or the total-containment
+requirement for native code must be explicitly revisited. Forbidding
+only this fixture's specific nested app would not demonstrate the guarantee.
+The system of host-owned components and the P1 contracts remain valid; no
+bypass was introduced to move the team widgets forward.
 
-Ripetizione indipendente del 10 settembre: `/private/tmp/cascade-direct-child-root-verified.log`,
-esito 1 con il solo controllo degli avvii delegati fallito in tutti e tre i casi.
-Le app innocue osservate hanno PID 56745/56749/56753 e padre PID 1. Build finale
-RemoteUI riuscita in `/private/tmp/cascade-remote-scene-final-build.log`; nessun
-avvio della scena. Diagnostica finale ExtensionKit in
-`/private/tmp/cascade-application-stop-final.log` con motivo specifico corretto.
+Independent repetition on 10 September: `/private/tmp/cascade-direct-child-root-verified.log`,
+outcome 1 with only the delegated-launch check failing in all three cases.
+The observed harmless apps have PIDs 56745/56749/56753 and parent PID 1. Final
+RemoteUI build succeeded in `/private/tmp/cascade-remote-scene-final-build.log`; no
+launch of the scene. Final ExtensionKit diagnostics in
+`/private/tmp/cascade-application-stop-final.log` with the correct specific reason.

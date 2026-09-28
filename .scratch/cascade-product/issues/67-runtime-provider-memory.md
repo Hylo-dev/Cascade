@@ -1,4 +1,4 @@
-# Collegare memoria, salute e ammissioni dei provider
+# Connect provider memory, health and admissions
 
 ID: 67
 Parent: cascade-product
@@ -11,8 +11,8 @@ Blocked by: 66
 
 ## Question
 
-Comporre nel runtime la RAM fisica del solo owner, episodi per incarnazione, blocchi CPU/RAM indipendenti e un solo incidente moderato per owner/giro. Stop severo atteso senza retry, riserve trattenute fino a uscita. Campioni obsoleti e wake non azzerano episodi; recovery valido soltanto sul proprio processo. Sol medium implementa dopo66, root e revisore verificano.
+Compose into the runtime the physical RAM of the owner only, episodes per incarnation, independent CPU/RAM blocks and a single moderate incident per owner/round. Expected severe stop with no retry, reserves held until exit. Stale samples and wake do not reset episodes; recovery valid only on the owner's own process. Sol medium implements after 66, the root and the reviewer verify.
 
 ## Answer
 
-Sol medium ha implementato il profilo provider owner-only con episodi per incarnazione, pause indipendenti CPU/RAM e moderati deduplicati; severo atteso senza retry e riserve fino a uscita. Revisioni root e Sol indipendente PASS.10 test RAM,176 mirati e1.222 completi/115 suite PASS; build ufficiale firmata da500 input e avvio aggiornato PID21839 verificati. [Verifica e limiti](../../../docs/superpowers/verification/2026-09-23-addon-provider-memory.md). Launcher bloccato; seguito dipendente da prove native già sospese, quota residua77%.
+Sol medium implemented the owner-only provider profile with episodes per incarnation, independent CPU/RAM pauses and deduplicated moderates; expected severe stop with no retry and reserves until exit. Root and independent Sol reviews PASS. 10 RAM tests, 176 targeted and 1,222 full/115 suites PASS; official signed build from 500 inputs and updated launch at PID 21839 verified. [Verification and limits](../../../docs/superpowers/verification/2026-09-23-addon-provider-memory.md). Launcher blocked; follow-up dependent on native tests already suspended, remaining quota 77%.

@@ -1,31 +1,31 @@
-# Spotlight nativo e impostazioni — verifica locale
+# Native Spotlight and settings: local verification
 
-20 settembre 2026. Prosecuzione autorizzata con Ponytail e strumenti CLI/AppleScript. Nessuna modifica al codice dell’app, nessuna attivazione del launcher addon, nessun permesso modificato. L’integrazione Spotlight è stata attivata temporaneamente e riportata al valore iniziale disattivato.
+20 September 2026. Continuation authorized with Ponytail and CLI/AppleScript tools. No change to the app's code, no activation of the addon launcher, no permission changed. The Spotlight integration was enabled temporarily and returned to its initial disabled value.
 
-## Build e condizioni
+## Build and conditions
 
-La build firmata Apple Development è stata completata dallo script ufficiale su una copia locale di451 input identici al checkout, dopo la disponibilità del plist iCloud. Il collegamento Applications punta a CascadeAddonDevelopment. [Consegna della build](../../../.scratch/codex-addon/20260920-spotlight-native/delivery-resumed.json).
+The signed Apple Development build was completed by the official script on a local copy of451 inputs identical to the checkout, after the iCloud plist became available. The Applications link points to CascadeAddonDevelopment. [Build delivery](../../../.scratch/codex-addon/20260920-spotlight-native/delivery-resumed.json).
 
-Prova limitata al sistema locale macOS27 e a un display1470×956. Le osservazioni usano il proprietario com.apple.campo e il discendente SpotlightSearchField: la finestra delle conversazioni Siri è distinta e non costituisce una prova della ricerca.
+Evidence limited to the local macOS27 system and to a display1470×956. The observations use the owner com.apple.campo and the SpotlightSearchField descendant: the Siri conversations window is distinct and does not constitute evidence of the search.
 
-## Esiti osservati
+## Observed outcomes
 
-| Controllo | Esito locale |
+| Check | Local outcome |
 | --- | --- |
-| Apertura dal comando «Apri Spotlight dal notch» | Campo nativo osservato; capsula assestata520×87. |
-| Focus del campo | AXFocused=true sul campo identificato. |
-| Calcolo sintetico | Inserimento AX di2+2 riuscito; risultato nativo4 osservato e catturato. Nessun risultato lanciato. Query cancellata. |
-| Disattivazione con campo aperto | Ritorno da(475,64) alla posizione iniziale(475,65), con dimensioni native conservate. |
-| Disattivazione dopo chiusura e riapertura | Misurato prima lo spostamento della capsula assestata; campo poi assente; riapertura con integrazione spenta a(475,65), uguale alla baseline. |
-| Impostazioni | Finestra cascade.settings760×570 a(355,152), sidebar e controlli visibili; focus sul controllo settings.size. |
-| Preferenze | spotlightEnabled ripristinato a0. |
+| Opening from the «Apri Spotlight dal notch» command | Native field observed; settled capsule520×87. |
+| Field focus | AXFocused=true on the identified field. |
+| Synthetic calculation | AX insertion of2+2 succeeded; native result4 observed and captured. No result launched. Query cleared. |
+| Disabling with the field open | Return from(475,64) to the initial position(475,65), with native dimensions preserved. |
+| Disabling after close and reopen | The settled capsule's movement measured first; field then absent; reopening with the integration off at(475,65), equal to the baseline. |
+| Settings | Window cascade.settings760×570 at(355,152), sidebar and controls visible; focus on the settings.size control. |
+| Preferences | spotlightEnabled restored to0. |
 
-[Evidenza strutturata](../../../.scratch/codex-addon/20260920-spotlight-native/native-qualification-result.json), [ciclo con chiusura](../../../.scratch/codex-addon/20260920-spotlight-native/closed-cycle.json), [risultato del calcolo](../../../.scratch/codex-addon/20260920-spotlight-native/native-calculation.png), [riavvio conclusivo](../../../.scratch/codex-addon/20260920-spotlight-native/restart-evidence.json).
+[Structured evidence](../../../.scratch/codex-addon/20260920-spotlight-native/native-qualification-result.json), [cycle with close](../../../.scratch/codex-addon/20260920-spotlight-native/closed-cycle.json), [calculation result](../../../.scratch/codex-addon/20260920-spotlight-native/native-calculation.png), [final relaunch](../../../.scratch/codex-addon/20260920-spotlight-native/restart-evidence.json).
 
-La simulazione dei tasti non ha prodotto testo e non è dichiarata superata; il calcolo è una prova dell’inserimento AX. Il focus globale ha richiesto selezione esplicita del processo nativo per la chiusura. Un primo ciclo ha campionato la finestra transitoria grande quanto il display: è stato sostituito da una prova che attende e verifica uno spostamento della capsula assestata prima di chiuderla.
+The key simulation produced no text and is not declared passed; the calculation is evidence of the AX insertion. Global focus required explicit selection of the native process for the close. A first cycle sampled the transient window as large as the display: it was replaced by a test that waits for and verifies a movement of the settled capsule before closing it.
 
-## Limiti e revisione
+## Limits and review
 
-Il ripristino osservato dopo chiusura non dimostra che il monitor riesca a muovere una finestra inesistente: il codice conserva il limite già descritto nella revisione, e macOS può ripristinare la propria posizione alla riapertura. Non è stato riprodotto l’effetto utente ipotizzato; non si applica la proposta di ripristino generalizzato in clearTarget, che può interferire con la pulizia della query dopo Escape.
+The restoration observed after close does not prove that the monitor manages to move a nonexistent window: the code keeps the limit already described in the review, and macOS may restore its own position on reopening. The hypothesized user-facing effect was not reproduced; the proposal of a generalized restoration in clearTarget is not applied, since it may interfere with clearing the query after Escape.
 
-Restano separati tastiera/IME, VoiceOver, trascinamento continuo, combinazioni display/OS e misure prestazionali. I check handoff/scorciatoia/cancellazione AX e i6 comportamenti droplet erano già passati sullo stesso codice; non sono stati ripetuti per aumentare il numero di prove. Questa verifica non qualifica trasporto, processi o addon esterni.
+Keyboard/IME, VoiceOver, continuous dragging, display/OS combinations and performance measurements remain separate. The handoff/shortcut/AX clearing checks and the6 droplet behaviors had already passed on the same code; they were not repeated to increase the number of tests. This verification does not qualify transport, processes or external addons.

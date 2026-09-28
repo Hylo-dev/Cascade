@@ -1,81 +1,81 @@
-# Cascade — base per la mappa applicativa
+# Cascade: baseline for the application map
 
-Ricognizione del 4 settembre 2026. Questo documento raccoglie requisiti ricevuti e riscontri sul codice; non è ancora la mappa Wayfinder né una specifica approvata.
+Survey of 4 September 2026. This document collects the requirements received and the findings on the code; it is not yet the Wayfinder map nor an approved specification.
 
-## Destinazione richiesta
+## Requested destination
 
-Definire il piano globale di Cascade: un notch modulare per macOS, estendibile da altre app mediante un protocollo/SDK. La mappa dovrà chiarire prodotto, architettura, contratti, fattibilità delle integrazioni, dipendenze e ordine delle successive specifiche di implementazione.
+Define Cascade's global plan: a modular notch for macOS, extensible by other apps through a protocol/SDK. The map will have to clarify product, architecture, contracts, feasibility of the integrations, dependencies and the order of the subsequent implementation specifications.
 
-## Requisiti espressi dall'utente
+## Requirements stated by the user
 
-- Apertura in hover, con feedback aptico sul trackpad una volta aperto.
-- Presentazione compatta estesa ai lati per attività in corso, ispirata alla Dynamic Island; anche le attività devono essere estendibili tramite protocollo.
-- Allineamento al notch fisico; sui display senza notch deve sporgere leggermente.
-- Due stili: nero e glass ispirato alla nuova Siri e a Sapphire.
-- Prime integrazioni: musica e media del browser, notifiche e connessioni Bluetooth, ricerca dal notch, raccolta temporanea di file trascinati, gestione audio contestuale ispirata a FineTune.
-- Pagine con widget di dimensioni differenti su una griglia; selezione anche in base al contesto.
-- Impostazioni sotto il notch, con linguaggio visivo dei settings di macOS: aspetto, dimensioni anche per singolo display, attività attive e schermate contestuali.
-- Sapphire è anche un riferimento funzionale; le sue altre funzioni non diventano automaticamente requisiti di Cascade.
-- L'allegato è un riferimento visivo per la ricerca: campo superiore arrotondato e superficie dei risultati separata, scura e traslucida. Le voci e il microfono nell'immagine non sono da soli requisiti funzionali.
-- Chiedere all'utente quando manca una scelta di prodotto; non sostituire le preferenze mancanti con assunzioni definitive.
+- Opening on hover, with haptic feedback on the trackpad once open.
+- Compact presentation extended to the sides for ongoing activities, inspired by the Dynamic Island; the activities too must be extensible through the protocol.
+- Alignment to the physical notch; on displays without a notch it must protrude slightly.
+- Two styles: black, and glass inspired by the new Siri and by Sapphire.
+- First integrations: music and browser media, notifications and Bluetooth connections, search from the notch, temporary collection of dragged files, contextual audio management inspired by FineTune.
+- Pages with widgets of different sizes on a grid; selection also based on context.
+- Settings under the notch, with the visual language of the macOS settings: appearance, sizes including per individual display, active activities and contextual screens.
+- Sapphire is also a functional reference; its other features do not automatically become Cascade requirements.
+- The attachment is a visual reference for search: a rounded upper field and a separate, dark and translucent results surface. The entries and the microphone in the image are not, on their own, functional requirements.
+- Ask the user when a product choice is missing; do not replace missing preferences with final assumptions.
 
-## Stato del progetto riscontrato
+## Observed project state
 
-| Area | Evidenza nel codice | Conseguenza per il piano |
+| Area | Evidence in the code | Consequence for the plan |
 | --- | --- | --- |
-| Separazione app/motore | `Cascade` usa il package locale `CascadeKit` attraverso `NotchEngine`. | Conservare il confine pubblico esistente e valutare dove debba vivere l'SDK per app esterne. |
-| Overlay e animazione | `NotchPanel`, `NotchController`, `DisplayLinkMorphEngine`, `NotchHostView`; geometria con molle e `CAShapeLayer`. | Esiste un motore da evolvere, non serve presumere una riscrittura. |
-| Widget | `NotchWidget` espone identità, tipo, dimensione, `AnyView`, attivazione e sospensione; registrazione diretta di oggetti nel processo dell'host. | La modularità interna esiste; discovery, comunicazione tra processi e contratto per estensioni esterne non sono implementati. |
-| Griglia e pagine | `GridSpan`, `WidgetPlacement`, `NotchLayoutResolver`, `NotchScreen`; `WidgetHost` usa una pagina e un indice interno. | Esistono modelli e posizionamento; navigazione tra pagine, editor, persistenza e selezione contestuale restano da definire. |
-| Stato del notch | `NotchState` è un `OptionSet` per i lati leading/trailing; il morph interpola verso apertura/chiusura. | Non equivale ancora a un modello completo di attività compatte, espansione, notifiche e superfici che prendono il focus. |
-| Input | `NotchPanel` ignora gli eventi mouse e non può diventare key/main; l'hover arriva da monitor degli eventi. | Click dei widget, drag-and-drop e digitazione nella ricerca richiedono un progetto esplicito di input e focus. |
-| Display | Resolver basato sul puntatore; riposizionamento sul cambio di identificativo del display; configurazione unica. | Vanno decisi comportamento con più display e profili dimensionali per display. |
-| Aspetto | Riempimento del renderer con un colore; l'app avvia la configurazione rossa di debug. | Glass e impostazioni dell'aspetto non sono implementati. |
-| Impostazioni | La scena SwiftUI Settings contiene `EmptyView`. | L'interfaccia richiesta è da progettare. |
-| Integrazioni | L'app registra il widget demo orologio; non risultano servizi musica, notifiche, Bluetooth, ricerca o audio mixer nei sorgenti esaminati. | Queste aree richiedono contratti e ricerche di fattibilità prima delle specifiche esecutive. |
-| Compatibilità | Deployment target macOS 14; package con tools Swift 6.2; sandbox dell'app disabilitata. | Distinguere requisiti attuali, scelte future e disponibilità delle API per singola funzione. |
-| Spaces | `SkyLightWindowPinner` carica simboli privati di SkyLight con fallback se non disponibili. | La strategia di distribuzione e compatibilità è una decisione iniziale. |
-| Verifica | Test presenti per geometria, segmenti, molle, stato e layout; test app prevalentemente scaffold. | Non considerare già verificati lifecycle, interazioni, prestazioni o integrazioni. Nessuna build o test eseguiti in questa ricognizione. |
+| App/engine separation | `Cascade` uses the local package `CascadeKit` through `NotchEngine`. | Keep the existing public boundary and assess where the SDK for external apps should live. |
+| Overlay and animation | `NotchPanel`, `NotchController`, `DisplayLinkMorphEngine`, `NotchHostView`; geometry with springs and `CAShapeLayer`. | There is an engine to evolve; there is no need to presume a rewrite. |
+| Widgets | `NotchWidget` exposes identity, kind, size, `AnyView`, activation and suspension; direct registration of objects in the host's process. | Internal modularity exists; discovery, inter-process communication and a contract for external extensions are not implemented. |
+| Grid and pages | `GridSpan`, `WidgetPlacement`, `NotchLayoutResolver`, `NotchScreen`; `WidgetHost` uses one page and an internal index. | Models and placement exist; navigation between pages, editor, persistence and contextual selection remain to be defined. |
+| Notch state | `NotchState` is an `OptionSet` for the leading/trailing sides; the morph interpolates toward opening/closing. | It is not yet equivalent to a complete model of compact activities, expansion, notifications and surfaces that take focus. |
+| Input | `NotchPanel` ignores mouse events and cannot become key/main; hover arrives from event monitors. | Widget clicks, drag-and-drop and typing in search require an explicit input and focus design. |
+| Displays | Pointer-based resolver; repositioning on a change of the display identifier; a single configuration. | Behavior with multiple displays and per-display size profiles have to be decided. |
+| Appearance | The renderer fills with a color; the app launches the red debug configuration. | Glass and appearance settings are not implemented. |
+| Settings | The SwiftUI Settings scene contains `EmptyView`. | The requested interface has to be designed. |
+| Integrations | The app registers the demo clock widget; no music, notification, Bluetooth, search or audio mixer services appear in the sources examined. | These areas require contracts and feasibility research before the execution specifications. |
+| Compatibility | Deployment target macOS 14; package with Swift tools 6.2; app sandbox disabled. | Distinguish current requirements, future choices and API availability per individual feature. |
+| Spaces | `SkyLightWindowPinner` loads private SkyLight symbols with a fallback if they are not available. | The distribution and compatibility strategy is an initial decision. |
+| Verification | Tests exist for geometry, segments, springs, state and layout; app tests are mostly scaffold. | Do not consider lifecycle, interactions, performance or integrations already verified. No build or tests were run in this survey. |
 
-### Differenze rispetto alla documentazione precedente
+### Differences from the earlier documentation
 
-`CLAUDE.md` descrive il notch invisibile sui display senza ritaglio fisico. La richiesta attuale prevede invece una piccola sporgenza e ha precedenza. Il default del codice segue ancora la descrizione precedente; la configurazione di debug mostra già il chrome ovunque.
+`CLAUDE.md` describes the notch as invisible on displays without a physical cut-out. The current request instead calls for a small protrusion and takes precedence. The code's default still follows the earlier description; the debug configuration already shows the chrome everywhere.
 
-Le regole sulle risorse dei widget restano un vincolo da incorporare nei contratti. La sospensione della UI non va confusa con la cessazione delle sorgenti di eventi necessarie alle attività compatte. Non è stato verificato che nascondere l'hosting view interrompa da solo ogni aggiornamento della vista demo.
+The rules on widget resources remain a constraint to incorporate into the contracts. Suspending the UI must not be confused with stopping the event sources that the compact activities need. It has not been verified that hiding the hosting view by itself stops every update of the demo view.
 
-## Chiarimenti dell'utente durante la definizione iniziale
+## User clarifications during the initial definition
 
-Questi sono vincoli d'ingresso della mappa, raccolti prima di lavorare i suoi ticket decisionali.
+These are entry constraints of the map, gathered before working on its decision tickets.
 
-1. **Distribuzione**: download diretto fuori dal Mac App Store, con supporto Homebrew.
-2. **Estensioni**: preferenza per SwiftUI e moduli ottenibili tramite «import» o caricamento da cartella. Non è stata ancora scelta la forma tecnica: package compilato nell'host, bundle dinamico e sorgenti importati non sono equivalenti.
-3. **Ricerca**: esperienza identica a Spotlight di sistema; preferenza per modificare quello vero se tecnicamente fattibile. La scelta tra integrazione di Spotlight e ricerca propria è subordinata alla ricerca, non ancora chiusa. Nessun assistente AI distinto è stato richiesto.
-4. **Notifiche**: includere anche quelle delle altre app non integrate con Cascade.
-5. **Audio iniziale**: volume e mute per app, routing per app e output multipli. L'equalizzazione non è stata selezionata come requisito iniziale.
-6. **File**: presentare il ripiano durante il trascinamento e acquisire i file soltanto quando vengono rilasciati sul notch. Il tipo di conservazione e la durata rimangono da decidere.
+1. **Distribution**: direct download outside the Mac App Store, with Homebrew support.
+2. **Extensions**: preference for SwiftUI and for modules obtainable through "import" or loading from a folder. The technical form has not been chosen yet: a package compiled into the host, a dynamic bundle and imported sources are not equivalent.
+3. **Search**: an experience identical to the system Spotlight; preference for modifying the real one if technically feasible. The choice between integrating Spotlight and an own search depends on the research, which is not yet closed. No separate AI assistant was requested.
+4. **Notifications**: also include those of other apps not integrated with Cascade.
+5. **Initial audio**: per-app volume and mute, per-app routing and multiple outputs. Equalization was not selected as an initial requirement.
+6. **Files**: present the shelf during the drag and acquire the files only when they are dropped on the notch. The kind of retention and its duration remain to be decided.
 
-Questi chiarimenti non approvano automaticamente tecniche private, carico di risorse, copia di codice esterno o limiti funzionali non ancora discussi.
+These clarifications do not automatically approve private techniques, resource load, copying of external code or functional limits not yet discussed.
 
-## Altre domande già identificabili per la mappa
+## Other questions already identifiable for the map
 
-- Quali modalità compatte e quali attività sono comprese nella prima versione di «come la Dynamic Island»?
-- Come si risolvono le priorità tra attività simultanee, notifiche, ricerca, scelta manuale di pagina e suggerimenti contestuali?
-- Quando la raccolta file si presenta, quando acquisisce i file e quanto dura la conservazione? Riferimenti, copie, spostamenti e file promessi richiedono una decisione esplicita.
-- Quale parte di FineTune è richiesta all'inizio: volume per app, routing per app, output multipli, equalizzazione?
-- Come si registrano, autorizzano, aggiornano e rimuovono le estensioni, e cosa succede se l'app sorgente si chiude o smette di rispondere?
-- Come convivono griglia, dimensioni supportate dal widget, dimensioni del notch e profili per display?
-- Quali soglie misurabili di CPU, memoria, energia e latenza devono superare host, glass e moduli?
-- Quali permessi servono alle funzioni richieste e quale comportamento deve rimanere disponibile quando sono negati?
+- Which compact modes and which activities are included in the first version of "like the Dynamic Island"?
+- How are priorities resolved between simultaneous activities, notifications, search, manual page choice and contextual suggestions?
+- When does the file collection appear, when does it acquire the files and how long does retention last? References, copies, moves and promised files require an explicit decision.
+- Which part of FineTune is required at the start: per-app volume, per-app routing, multiple outputs, equalization?
+- How are extensions registered, authorized, updated and removed, and what happens if the source app quits or stops responding?
+- How do the grid, the sizes supported by the widget, the notch sizes and the per-display profiles coexist?
+- Which measurable CPU, memory, energy and latency thresholds must the host, glass and modules meet?
+- Which permissions do the requested features need, and which behavior must remain available when they are denied?
 
-## Riferimenti esterni consultati
+## External references consulted
 
-- [Sapphire](https://github.com/cshariq/Sapphire): il README descrive Now Playing, audio per app, file shelf e avvisi Bluetooth, tra le altre funzioni. Va ancora analizzato il codice del trattamento glass; non viene dichiarata una corrispondenza visiva verificata.
-- [FineTune](https://github.com/ronitsingh10/FineTune): il README descrive volume per app, routing, output multipli ed EQ e indica macOS 15 come minimo. Non implica che tutte queste funzioni debbano entrare nel primo rilascio di Cascade o che abbiano lo stesso requisito minimo se implementate separatamente.
+- [Sapphire](https://github.com/cshariq/Sapphire): the README describes Now Playing, per-app audio, file shelf and Bluetooth notices, among other features. The code of the glass treatment still has to be analyzed; no verified visual match is claimed.
+- [FineTune](https://github.com/ronitsingh10/FineTune): the README describes per-app volume, routing, multiple outputs and EQ and states macOS 15 as the minimum. This does not imply that all these features must go into Cascade's first release or that they have the same minimum requirement if implemented separately.
 
-## Stato degli strumenti di pianificazione
+## State of the planning tools
 
-- Skill `wayfinder` letta da `/Users/c4v4h/.codex/skills/wayfinder/SKILL.md`.
-- Nessun tracker specifico o documento delle operazioni Wayfinding trovato nel repository; la skill prevede il fallback local-markdown e indica `/setup-matt-pocock-skills` per il setup.
-- Le skill complementari `grilling`, `domain-modeling`, `research` e il template local-markdown non erano installati: sono stati successivamente letti dal repository originale `mattpocock/skills`. Le fonti sono nella guida alla mappa; non è stata effettuata un'installazione globale.
-- Il grafo MCP non contiene un indice di Cascade: dopo la risposta di progetto assente è stata usata la lettura diretta dei file, come consentito dalle istruzioni del repository.
-- Modifica preesistente in `Cascade.xcodeproj/project.pbxproj` rilevata e lasciata intatta. Nessuna modifica al codice applicativo.
+- Skill `wayfinder` read from `/Users/c4v4h/.codex/skills/wayfinder/SKILL.md`.
+- No specific tracker or Wayfinding operations document found in the repository; the skill provides the local-markdown fallback and points to `/setup-matt-pocock-skills` for the setup.
+- The companion skills `grilling`, `domain-modeling`, `research` and the local-markdown template were not installed: they were later read from the original repository `mattpocock/skills`. The sources are in the map guide; no global installation was performed.
+- The MCP graph does not contain an index of Cascade: after the missing-project response, the files were read directly, as the repository instructions allow.
+- Pre-existing change in `Cascade.xcodeproj/project.pbxproj` detected and left intact. No change to the application code.

@@ -1,141 +1,141 @@
-# Intermediario XPC dedicato — 24 settembre 2026
+# Dedicated XPC intermediary: 24 September 2026
 
-**La catena XPC annidata funziona nei quattro scenari misurati. Il launcher resta non ammesso.**
-L'utente ha autorizzato «esplora e fai test per questa strada», riferendosi a un intermediario
-dedicato da terminare per fermare l'addon mentre Cascade resta aperta.
+**The nested XPC chain works in the four measured scenarios. The launcher remains not admitted.**
+The user authorized "explore and run tests down this path", referring to a dedicated intermediary
+to be terminated in order to stop the addon while Cascade stays open.
 
-## Disegno provato
+## Tested design
 
-Una piccola app di prova ospita due servizi, BrokerA e BrokerB. Ciascun broker include
-nel proprio `Contents/XPCServices` il rispettivo worker ed è l'unico client di quel worker.
-Anche il broker è un servizio XPC Application, anziché un processo avviato direttamente
-con spawn. La discovery annidata ha funzionato. I cinque binari hanno firma Apple
-Development e Hardened Runtime; i quattro servizi hanno soltanto App Sandbox.
+A small test app hosts two services, BrokerA and BrokerB. Each broker includes
+its own worker in its own `Contents/XPCServices` and is the only client of that worker.
+The broker is also an XPC Application service, rather than a process launched directly
+with spawn. Nested discovery worked. The five binaries have Apple Development signing
+and Hardened Runtime; the four services have only App Sandbox.
 
-L'app simula Cascade senza modificarla. A e B hanno identificatori di bundle distinti
-fissati in compilazione; ogni scenario crea processi nuovi. Il worker trattiene il callback
-in `pause()`, mentre il broker continua a gestire i comandi di controllo.
+The app simulates Cascade without modifying it. A and B have distinct bundle identifiers
+fixed at compile time; every scenario creates new processes. The worker holds the callback
+in `pause()`, while the broker keeps handling the control commands.
 
-Lo stop è una richiesta al broker fidato di eseguire `_exit(0)`. La variante di morte
-forzata chiede al broker di segnalare se stesso con SIGKILL. L'osservatore non segnala PID
-di servizi, non termina gruppi e non dipende da un attach di tracing.
+The stop is a request to the trusted broker to execute `_exit(0)`. The forced-death variant
+asks the broker to signal itself with SIGKILL. The observer does not signal service
+PIDs, does not terminate groups and does not depend on a tracing attach.
 
-## Esito nativo
+## Native outcome
 
-Build finale `nested-pu8j8qxj`, macOS 27.0 (26A5425a), arm64, SDK 27.0, clang 21.0.0.
-Un ciclo completo finale, finestra di osservazione di due secondi per caso:
+Final build `nested-pu8j8qxj`, macOS 27.0 (26A5425a), arm64, SDK 27.0, clang 21.0.0.
+One final complete run, with an observation window of two seconds per case:
 
-| Scenario | Risultato kernel | Isolamento | Esito |
+| Scenario | Kernel result | Isolation | Outcome |
 | --- | --- | --- | --- |
-| Stop A | Broker A esce 0; worker A esce SIGKILL, osservato circa 1,40 ms dal trigger | App viva, stessa catena B risponde dopo la finestra | PASS |
-| SIGKILL del broker A | Broker A e worker A escono SIGKILL; worker osservato circa 1,40 ms dal trigger | App viva, stessa catena B risponde dopo la finestra | PASS |
-| Uscita ordinaria dell'app | Entrambi i broker ed entrambi i worker escono SIGKILL, osservati entro circa 1,95 ms | App esce 0 | PASS |
-| SIGKILL dell'app | Entrambi i broker ed entrambi i worker escono SIGKILL, osservati entro circa 2,31 ms | App esce SIGKILL | PASS |
+| Stop A | Broker A exits 0; worker A exits SIGKILL, observed about 1.40 ms after the trigger | App alive, the same chain B responds after the window | PASS |
+| SIGKILL of broker A | Broker A and worker A exit SIGKILL; worker observed about 1.40 ms after the trigger | App alive, the same chain B responds after the window | PASS |
+| Ordinary app exit | Both brokers and both workers exit SIGKILL, observed within about 1.95 ms | App exits 0 | PASS |
+| SIGKILL of the app | Both brokers and both workers exit SIGKILL, observed within about 2.31 ms | App exits SIGKILL | PASS |
 
-I tempi indicano la ricezione dell'evento kernel rispetto al trigger, non la latenza
-interna precisa né una garanzia temporale di macOS. Nei casi di morte dell'app entrambi
-i worker trattengono il callback. Nei casi A, B rimane responsivo: non è soltanto un PID
-ancora presente, perché il ping conferma la stessa incarnazione di broker e worker.
+The times indicate receipt of the kernel event relative to the trigger, not the precise
+internal latency nor a timing guarantee from macOS. In the app-death cases both
+workers hold the callback. In the A cases, B stays responsive: it is not just a PID
+still present, because the ping confirms the same incarnation of broker and worker.
 
-La pulizia successiva termina il client di prova e registra separatamente l'uscita
-della catena B. Tutti i processi noti sono usciti; i quattro servizi sono stati
-registrati e osservati in ciascun caso. Nessun PASS dipende dalla guardia SIGALRM.
+The subsequent cleanup terminates the test client and separately records the exit
+of chain B. All known processes exited; the four services were
+registered and observed in each case. No PASS depends on the SIGALRM guard.
 
-## Come vengono evitate conclusioni sbagliate
+## How wrong conclusions are avoided
 
-I messaggi del broker sono verificati con requisito di firma e `SecCodeCreateWithXPCMessage`.
-Il broker verifica allo stesso modo il worker prima di riportarne l'identità: il root
-si fida del broker fisso, non attribuisce al messaggio inoltrato l'identità diretta del worker.
-Sono scambiati soltanto dati sintetici. Questo non qualifica l'autenticazione o la
-protezione dei messaggi in uscita del futuro protocollo addon.
+The broker's messages are verified with a code-signing requirement and `SecCodeCreateWithXPCMessage`.
+The broker verifies the worker in the same way before reporting its identity: the root
+trusts the fixed broker; it does not attribute the worker's direct identity to the forwarded message.
+Only synthetic data are exchanged. This does not qualify the authentication or the
+protection of outgoing messages of the future addon protocol.
 
-L'osservatore usa `EVFILT_PROC`, ricevuta della registrazione, `NOTE_EXIT` e
-`NOTE_EXITSTATUS`. Dopo la registrazione, una seconda risposta conferma la stessa
-incarnazione. Il classificatore rifiuta uscite antecedenti al trigger, fuori finestra,
-da errore della fixture, da crash imprevisto o dalla guardia. Per il crash del broker
-richiede precisamente SIGKILL. Richiede entrambi i processi A usciti e B ancora
-responsivo, oppure tutti e quattro usciti quando termina l'app. La pulizia non può
-convertire un risultato negativo in positivo.
+The observer uses `EVFILT_PROC`, a registration receipt, `NOTE_EXIT` and
+`NOTE_EXITSTATUS`. After registration, a second response confirms the same
+incarnation. The classifier rejects exits that precede the trigger, fall outside the window,
+or come from a fixture error, an unexpected crash or the guard. For the broker crash
+it requires precisely SIGKILL. It requires both A processes exited and B still
+responsive, or all four exited when the app terminates. The cleanup cannot
+convert a negative result into a positive one.
 
-Sei test del nuovo classificatore passano; i sette del verificatore precedente riusato
-passano. Revisione indipendente effettuata prima del test nativo e sulla correzione
-successiva della simulazione di crash. Le correzioni del verificatore includono la
-tolleranza dell'invalidazione prevista di A mentre si aspetta il ping B e il rifiuto
-di SIGTERM come surrogato della specifica simulazione SIGKILL del broker.
+Six tests of the new classifier pass; the seven of the reused earlier verifier
+pass. Independent review was carried out before the native test and on the later
+correction of the crash simulation. The verifier corrections include
+tolerating the expected invalidation of A while waiting for the B ping and rejecting
+SIGTERM as a surrogate for the specific SIGKILL simulation of the broker.
 
-## Primo ciclo e difetto della simulazione di crash
+## First run and the crash-simulation defect
 
-Il primo ciclo (`nested-0bc3kcmz`) ha dato tre PASS e broker-crash FAIL: il broker è
-uscito con codice 84, non con SIGKILL. Il worker è comunque uscito SIGKILL, ma il
-verificatore non ha promosso il caso. [Risultati originali](evidence/2026-09-24-xpc-broker/initial/results.json)
-e [sorgente precedente](evidence/2026-09-24-xpc-broker/initial/Probe.c) sono conservati.
+The first run (`nested-0bc3kcmz`) gave three PASS and broker-crash FAIL: the broker
+exited with code 84, not with SIGKILL. The worker still exited SIGKILL, but the
+verifier did not promote the case. [Original results](evidence/2026-09-24-xpc-broker/initial/results.json)
+and [earlier source](evidence/2026-09-24-xpc-broker/initial/Probe.c) are preserved.
 
-L'istruzione `raise(SIGKILL); _exit(84)` sul thread dispatch introduce una gara:
-la richiesta di segnale può tornare prima della terminazione e il ripiego può anticiparla.
-Un controllo isolato ha osservato `raise` tornare 0 prima della morte con SIGKILL
-([diagnostica iniziale](evidence/2026-09-24-xpc-broker/signal-check.json)). L'ipotesi iniziale
-che il segnale fosse semplicemente rifiutato non è stata confermata: l'assert di quella
-diagnostica è fallito. Il valore errno dopo una chiamata riuscita non è un errore valido.
+The statement `raise(SIGKILL); _exit(84)` on the dispatch thread introduces a race:
+the signal request can return before termination and the fallback can preempt it.
+An isolated check observed `raise` return 0 before death by SIGKILL
+([initial diagnostics](evidence/2026-09-24-xpc-broker/signal-check.json)). The initial hypothesis
+that the signal was simply rejected was not confirmed: the assert of that
+diagnostic failed. The errno value after a successful call is not a valid error.
 
-Un secondo [riproduttore](../../../Prototypes/AddonPlatform/XPCBroker/SignalCheck.c) confronta
-uscita immediata e attesa del segnale: tre uscite con codice 84 contro tre SIGKILL
-([dati](evidence/2026-09-24-xpc-broker/signal-race.json)). Il solo codice 84 non distingue
-il fallimento di `raise` dalla successiva `_exit`; i due controlli insieme motivano
-la correzione, senza attribuire al primo una prova che non contiene.
-La fixture ora verifica il ritorno di `raise` e, in caso di successo, aspetta il segnale
-senza anticiparlo con `_exit`. La guardia autonoma resta attiva. Il successivo ciclo
-firmato conferma SIGKILL effettivo nel caso broker-crash; tutti e quattro i casi passano.
+A second [reproducer](../../../Prototypes/AddonPlatform/XPCBroker/SignalCheck.c) compares
+immediate exit with waiting for the signal: three exits with code 84 versus three SIGKILL
+([data](evidence/2026-09-24-xpc-broker/signal-race.json)). Code 84 alone does not distinguish
+a failure of `raise` from the subsequent `_exit`; the two checks together motivate
+the correction, without attributing to the first one evidence it does not contain.
+The fixture now checks the return of `raise` and, on success, waits for the signal
+without preempting it with `_exit`. The autonomous guard remains active. The subsequent
+signed run confirms an actual SIGKILL in the broker-crash case; all four cases pass.
 
-## Cosa dimostra e cosa rimane aperto
+## What it demonstrates and what remains open
 
-Il nuovo risultato supera il limite locale della [cancellazione della connessione](2026-09-24-addon-xpc-lifetime.md):
-far uscire un intermediario XPC fidato ha terminato il suo worker bloccato lasciando
-attiva l'app e l'altra catena. Quando l'app muore, anche gli intermediari escono nelle
-esecuzioni osservate. Questa è una pista concreta da qualificare, non un launcher pronto.
+The new result overcomes the local limit of [connection cancellation](2026-09-24-addon-xpc-lifetime.md):
+making a trusted XPC intermediary exit terminated its blocked worker while leaving
+the app and the other chain active. When the app dies, the intermediaries also exit in the
+observed runs. This is a concrete lead to qualify, not a ready launcher.
 
-Restano da dimostrare:
+Still to be demonstrated:
 
-1. Copertura dell'avvio prima di main e prima del primo messaggio. Registrazione e
-   guardie di questa fixture iniziano dopo main; non provano quella finestra.
-2. Supporto pubblico del packaging annidato e della relazione di durata su tutte le
-   versioni macOS supportate. Il funzionamento su una build di macOS non basta.
-3. Installazione e isolamento di addon esterni e firmati da altri editori. Qui tutti
-   i bundle e i due identificatori sono fissi e firmati dalla stessa identità.
-4. Stop se è il broker fidato a diventare non responsivo: lo stop provato richiede che
-   il broker legga il comando. Il worker bloccato non lo impedisce in questa fixture.
-5. Ammissione, limiti, revoca e trasporto coerenti con il contratto del runtime prodotto.
+1. Coverage of launch before main and before the first message. Registration and
+   guards of this fixture start after main; they do not prove that window.
+2. Public support for the nested packaging and for the lifetime relationship on all
+   supported macOS versions. Working on one macOS build is not enough.
+3. Installation and isolation of external addons signed by other publishers. Here all
+   the bundles and the two identifiers are fixed and signed by the same identity.
+4. Stop if it is the trusted broker that becomes unresponsive: the tested stop requires
+   the broker to read the command. The blocked worker does not prevent it in this fixture.
+5. Admission, limits, revocation and transport consistent with the product runtime contract.
 
-La prossima indagine utile è qualificare il ciclo di vita del broker e del servizio
-annidato, compreso l'avvio, insieme al percorso supportato per i pacchetti esterni.
-Non serve ripetere la sola cancellazione del canale già risultata insufficiente.
+The next useful investigation is to qualify the lifecycle of the broker and of the nested
+service, including launch, together with the supported path for external packages.
+There is no need to repeat the channel cancellation alone, which already proved insufficient.
 
-## Fonti e riproducibilità
+## Sources and reproducibility
 
-La [guida Apple XPC](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingXPCServices.html)
-descrive servizi gestiti da launchd e collocati nel bundle dell'app. L'header/manuale
-pubblico `xpcservice.plist(5)` dell'SDK descrive namespace dell'app, servizi inclusi e
-servizi nei framework. Nessuna di queste formulazioni è stata usata come prova che
-tutto il disegno annidato per addon esterni sia supportato.
-Le [regole Apple di firma](https://developer.apple.com/library/archive/documentation/Security/Conceptual/CodeSigningGuide/Procedures/Procedures.html)
-prevedono firma dal componente più interno verso l'app e posizioni standard per il codice.
-La verifica strict/deep della fixture è riuscita.
+The [Apple XPC guide](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingXPCServices.html)
+describes services managed by launchd and placed in the app bundle. The SDK's public
+header/manual `xpcservice.plist(5)` describes the app namespace, included services and
+services in frameworks. None of these statements was used as proof that
+the whole nested design for external addons is supported.
+The [Apple signing rules](https://developer.apple.com/library/archive/documentation/Security/Conceptual/CodeSigningGuide/Procedures/Procedures.html)
+call for signing from the innermost component outward to the app, and standard locations for code.
+The strict/deep verification of the fixture succeeded.
 
-La [implementazione Apple di raise](https://github.com/apple-oss-distributions/Libc/blob/main/gen/raise.c)
-usa `pthread_kill` con fallback a `kill(getpid(), sig)` su ENOTSUP. I manuali pubblici
-`raise(3)` e `pthread_kill(2)` dell'SDK documentano invio al thread e il possibile ENOTSUP
-per thread non creati con pthread_create; la diagnosi qui usa anche i risultati locali.
+The [Apple implementation of raise](https://github.com/apple-oss-distributions/Libc/blob/main/gen/raise.c)
+uses `pthread_kill` with a fallback to `kill(getpid(), sig)` on ENOTSUP. The SDK's public manuals
+`raise(3)` and `pthread_kill(2)` document delivery to the thread and the possible ENOTSUP
+for threads not created with pthread_create; the diagnosis here also uses the local results.
 
-- [Fixture e comandi](../../../Prototypes/AddonPlatform/XPCBroker/README.md).
-- [Risultati finali](evidence/2026-09-24-xpc-broker/final/results.json).
-- [Manifest: comandi, hash e firma](evidence/2026-09-24-xpc-broker/final/build.json).
-- [Log della build finale](evidence/2026-09-24-xpc-broker/final/build.log).
+- [Fixture and commands](../../../Prototypes/AddonPlatform/XPCBroker/README.md).
+- [Final results](evidence/2026-09-24-xpc-broker/final/results.json).
+- [Manifest: commands, hashes and signing](evidence/2026-09-24-xpc-broker/final/build.json).
+- [Final build log](evidence/2026-09-24-xpc-broker/final/build.log).
 
-La variante siblings preparata nel builder non è stata eseguita, perché la discovery
-annidata ha funzionato. Nessun codice prodotto, entitlement di Cascade o adapter è
-cambiato. Nessuna suite prodotto rieseguita per questo esperimento indipendente.
-Gate C0d invariato: SHA-256 `687fb3086d41e821af684d49109c9c95f8d555cf88450bdcf809b2a708b1ddaa`.
+The siblings variant prepared in the builder was not run, because nested discovery
+worked. No product code, Cascade entitlement or adapter
+changed. No product suite was rerun for this independent experiment.
+C0d gate unchanged: SHA-256 `687fb3086d41e821af684d49109c9c95f8d555cf88450bdcf809b2a708b1ddaa`.
 
-Cascade è stata chiusa e riaperta ordinariamente: PID precedente 26301, nuovo PID
-28002, percorso dell'eseguibile verificato nella build esistente CascadeDevelopment
-raggiunta da `/Applications/Cascade.app`. Nessuna build dell'app necessaria per questo
-prototipo separato. [Evidenza del riavvio](evidence/2026-09-24-xpc-broker/cascade-restart.json).
+Cascade was closed and reopened normally: previous PID 26301, new PID
+28002, executable path verified in the existing CascadeDevelopment build
+reached through `/Applications/Cascade.app`. No app build was needed for this
+separate prototype. [Relaunch evidence](evidence/2026-09-24-xpc-broker/cascade-restart.json).

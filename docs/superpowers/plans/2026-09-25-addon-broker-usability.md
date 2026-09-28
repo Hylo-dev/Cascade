@@ -1,38 +1,38 @@
-# Broker addon: riavvio e isolamento verificabili
+# Addon broker: verifiable restart and isolation
 
-Prosecuzione autorizzata del piano di completamento del 10 settembre; specifica e
-policy del controllo diretto e del recupero globale restano vincolanti.
+Authorized continuation of the 10 September completion plan; the specification and
+policy for direct control and global recovery remain binding.
 
-1. Provare l'uscita della catena broker/provider e la sua ricreazione con lo stesso
-   host ancora vivo; osservazione kernel autenticata prima di ogni arresto, nessun
-   nuovo avvio con uscita precedente sconosciuta.
-2. Provare due host contemporanei dello stesso provider: identificare l'eventuale
-   riuso, fermare la prima catena e verificare l'altra. Questa prova non equivale
-   all'isolamento di due addon diversi nello stesso host.
-3. Valutare dalle fonti pubbliche un contenitore fidato che carichi il codice addon
-   dopo il bootstrap; esplicitare ogni scelta di formato/sicurezza necessaria.
-4. Conservare risultati, revisione e limiti; proseguire sulle parti dimostrate,
-   fermandosi soltanto a una decisione progettuale necessaria. Gate invariato.
+1. Prove the exit of the broker/provider chain and its re-creation with the same
+   host still alive; authenticated kernel observation before every stop, no
+   new launch while a previous exit is unknown.
+2. Prove two concurrent hosts of the same provider: identify any
+   reuse, stop the first chain and verify the other. This proof is not equivalent
+   to the isolation of two different addons in the same host.
+3. Evaluate from public sources a trusted container that loads the addon code
+   after bootstrap; make explicit every format/security choice this requires.
+4. Keep results, review and limits; continue on the parts that have been proven,
+   stopping only at a necessary design decision. Gate unchanged.
 
-## Registro
+## Log
 
-- Si lavora sul checkout corrente autorizzato, che contiene l'intera implementazione
-  non ancora committata. Nessuna pulizia o commit delle modifiche preesistenti.
-- Le nuove prove estendono la fixture BrokerRecovery, senza abilitare un launcher
-  di produzione. Le finestre pre-main e gli OS non disponibili restano aperti.
-- Classificatore: test scritto prima della logica, comprese falsa ripartenza,
-  uscita della guardia e sessione condivisa. Prove native e cleanup separati.
-- 1 e 2 completati nella fixture: ricambio del broker e due host PASS. Primo
-  tentativo RED per comando mancante; successivo UNKNOWN per finestra startup di
-  2 s, conservato con verifica cleanup incompleta. Finestra diagnostica estesa a
-  15 s dopo evidenza di richiesta ancora pendente: circa 10 s osservati, non una SLA.
-- Estensione necessaria per l'usabilità: il normale lavoro termina il solo provider;
-  due provider successivi con lo stesso broker PASS, nuova partenza circa 66 ms.
-  Nessun provider resta vivo solo per mostrare contenuto. Questo è un risultato
-  della fixture, non un'integrazione del runtime di prodotto.
-- 3 completato: il loader tardivo non chiude il pre-main del contenitore fidato e
-  aggiunge vincoli ABI/storage/firma. Non viene adottato né sottoposto come scelta
-  risolutiva: non c'è evidenza che risolva il blocco per cui cambiare architettura.
-- 4: tre nuovi casi e tre regressioni native PASS; 25 test Python PASS; revisione
-  indipendente senza P1/P2. Rimane aperta C0, secondo la decisione già presa, senza
-  riproporre l'eccezione rifiutata. Nessun commit delle modifiche preesistenti.
+- Work happens on the current authorized checkout, which contains the entire
+  implementation not yet committed. No cleanup or commit of pre-existing changes.
+- The new proofs extend the BrokerRecovery fixture, without enabling a production
+  launcher. The pre-main windows and the unavailable OSes remain open.
+- Classifier: test written before the logic, including false restart,
+  guard exit and shared session. Native proofs and cleanup kept separate.
+- 1 and 2 completed in the fixture: broker replacement and two hosts PASS. First
+  attempt RED due to a missing command; the next one UNKNOWN due to a startup window of
+  2 s, kept with an incomplete cleanup verification. Diagnostic window extended to
+  15 s after evidence of a request still pending: about 10 s observed, not an SLA.
+- Extension required for usability: normal work terminates only the provider;
+  two successive providers with the same broker PASS, new start about 66 ms.
+  No provider stays alive only to show content. This is a result
+  of the fixture, not an integration into the product runtime.
+- 3 completed: the late loader does not close the pre-main of the trusted container and
+  adds ABI/storage/signing constraints. It is not adopted nor submitted as a
+  decisive choice: there is no evidence that it resolves the blocker that would justify changing the architecture.
+- 4: three new cases and three native regressions PASS; 25 Python tests PASS; independent
+  review with no P1/P2. C0 remains open, according to the decision already taken, without
+  proposing the rejected exception again. No commit of pre-existing changes.

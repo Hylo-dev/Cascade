@@ -1,4 +1,4 @@
-# Disegnare stati e superfici del notch
+# Design the notch states and surfaces
 
 ID: 07
 Parent: cascade-product
@@ -11,66 +11,66 @@ Blocked by: 03, 04
 
 ## Question
 
-Quali presentazioni e transizioni definiscono notch a riposo, compatto sui lati, attività espansa, pagina widget, notifica, ricerca e impostazioni? Produrre un prototipo economico per concordare nero e glass, allineamento fisico, sporgenza sui display senza notch e feedback aptico dopo l'apertura. Rendere preciso il riferimento alla Dynamic Island: attività contemporanee, lati occupati e passaggio dal compatto all'espanso. Il prototipo è un supporto alla decisione, non codice di produzione.
+Which presentations and transitions define the notch at rest, compact on the sides, expanded activity, widget page, notification, search and settings? Produce a cheap prototype to agree on black and glass, physical alignment, protrusion on displays without a notch and haptic feedback after opening. Make the reference to the Dynamic Island precise: simultaneous activities, occupied sides and the passage from compact to expanded. The prototype is a decision aid, not production code.
 
-## Ricognizione e scelta residua — 20 settembre 2026
+## Survey and remaining choice: 20 September 2026
 
-La policy pubblica è risolta. Il [confronto delle superfici e della ricerca](../../../docs/wayfinder/context/2026-09-20-notch-surfaces-checkpoint.md) separa i contratti già approvati dalla scelta visibile ancora necessaria: accettare nella prima tranche il campo originale di Spotlight con dimensioni proprie, oppure richiedere subito un campo ridisegnato dentro il notch. È raccomandata la prima tranche nativa, coerente con la preferenza già espressa per il vero Spotlight. Non si chiede nuovamente la policy delle API.
+The public policy is resolved. The [comparison of the surfaces and the search](../../../docs/wayfinder/context/2026-09-20-notch-surfaces-checkpoint.md) separates the already approved contracts from the visible choice still needed: accept in the first tranche the original Spotlight field with its own dimensions, or require right away a redesigned field inside the notch. The native first tranche is recommended, consistent with the preference already expressed for the real Spotlight. The API policy is not requested again.
 
-La ricognizione corregge anche la lettura del requisito aptico storico: la specifica approvata del 4 settembre lo colloca all'inizio dell'hover. Nero/glass, attività compatte e avvisi hanno già contratti implementati e non devono essere ridisegnati da zero. Nessun prototipo nuovo o uso live di Spotlight è dichiarato; il documento è una preparazione alla decisione, e il ticket resta aperto.
+The survey also corrects the reading of the historical haptic requirement: the approved spec of 4 September places it at the start of hover. Black/glass, compact activities and alerts already have implemented contracts and must not be redesigned from scratch. No new prototype or live use of Spotlight is declared; the document is a preparation for the decision, and the ticket stays open.
 
-## Decisione dell’utente — 20 settembre 2026
+## User decision: 20 September 2026
 
-«Sì esatto»: approvata per la prima tranche la ricerca con il campo originale di Spotlight e le sue dimensioni native. La scelta sul risultato visibile è risolta. Il seguito è il prototipo di raccordo e ripristino già proposto, conservando input e risultati di sistema; nessuna nuova API privata approvata. La verifica locale e le restanti superfici mantengono aperto questo ticket.
+"Yes, exactly": the search with the original Spotlight field and its native dimensions is approved for the first tranche. The choice about the visible result is resolved. What follows is the join and restore prototype already proposed, keeping the system input and results; no new private API approved. The local verification and the remaining surfaces keep this ticket open.
 
-## Riallineamento del codice e pausa
+## Code realignment and pause
 
-La ricognizione successiva alla conferma ha trovato l’integrazione Spotlight già implementata e documentata nel [piano del9settembre](../../../docs/superpowers/plans/2026-09-09-spotlight-droplet.md): la precedente descrizione «solo prova locale» era incompleta e non va usata per duplicare il coordinatore. Riconfermati oggi i check handoff/scorciatoia/cancellazione AX e i6 comportamenti droplet. Nessuna modifica al codice app.
+The survey following the confirmation found the Spotlight integration already implemented and documented in the [9 September plan](../../../docs/superpowers/plans/2026-09-09-spotlight-droplet.md): the previous description "local test only" was incomplete and must not be used to duplicate the coordinator. The handoff/shortcut/AX cancellation checks and the 6 droplet behaviors were reconfirmed today. No change to the app code.
 
-La [revisione del ripristino](../../codex-addon/20260920-spotlight-native/restore-review.md) identifica una perdita dello stato originale quando stop non trova una finestra o il move fallisce; la frequenza e l’effetto reale richiedono una prova nativa, non superata oggi. La proposta di anticipare il restore a clearTarget deve ancora essere valutata dal root rispetto agli usi di clearTarget durante la decisione dopo Escape: non è una correzione approvata.
+The [restore review](../../codex-addon/20260920-spotlight-native/restore-review.md) identifies a loss of the original state when stop does not find a window or the move fails; the frequency and the real effect require a native test, not passed today. The proposal to move the restore earlier, into clearTarget, has yet to be evaluated by the root against the uses of clearTarget during the decision after Escape: it is not an approved fix.
 
-[Esiti e limite dello strumento UI](../../codex-addon/20260920-spotlight-native/checks.json). Nessun nuovo prototipo, build app o riavvio effettuato in questa prosecuzione; il processo locale esistente è stato verificato al PID34140. Dopo il messaggio ambiguo «sett» sono sospese ulteriori azioni UI in attesa di chiarimento. Agente chiuso, claim rilasciato, ticket aperto.
+[Outcomes and limit of the UI tool](../../codex-addon/20260920-spotlight-native/checks.json). No new prototype, app build or restart performed in this continuation; the existing local process was verified at PID 34140. After the ambiguous message "sett", further UI actions are suspended pending clarification. Agent closed, claim released, ticket open.
 
-## Ripresa dopo il refuso
+## Resumption after the typo
 
-L’utente chiarisce «un refuso, continua». Ripresa la verifica dell’integrazione esistente. La build puntata da Applications è stata trovata rimossa dal filesystem (il vecchio processo continua a esistere); è in corso la ricompilazione tramite script ufficiale prima della prova UI. La cancellazione della build non viene attribuita senza evidenze a una causa specifica. Nessun nuovo codice Spotlight ancora scritto.
+The user clarifies "a typo, go on". Verification of the existing integration resumed. The build pointed to by Applications was found removed from the filesystem (the old process still exists); recompilation through the official script is in progress before the UI test. The deletion of the build is not attributed to a specific cause without evidence. No new Spotlight code written yet.
 
-## Impedimento di consegna — 20 settembre 2026
+## Delivery impediment: 20 September 2026
 
-La ripresa incontra un input non disponibile localmente: Config/Cascade-Info.plist (378byte, SF_DATALESS) va in timeout in lettura. Il download tramite API pubblica Foundation è stato richiesto con successo, ma il contenuto non è arrivato. Xcode attendeva la lettura coordinata; il processo della build è stato fermato dal root con SIGTERM (exit143), senza modificare servizi iCloud. Nessun errore di compilazione viene dedotto dall’attesa.
+The resumption hits an input that is not available locally: Config/Cascade-Info.plist (378 bytes, SF_DATALESS) times out on read. The download through the public Foundation API was requested successfully, but the content did not arrive. Xcode was waiting on the coordinated read; the build process was stopped by the root with SIGTERM (exit 143), without modifying iCloud services. No compilation error is inferred from the wait.
 
-Preparata una copia temporanea dei sorgenti locali con hash identici; manca soltanto il plist, la cui copia vuota prodotta dal timeout è stata rimossa. [Checkpoint e istruzioni di ripresa](../../codex-addon/20260920-spotlight-native/checkpoint.json). Materializzare il file originale prima di eseguire la build; non sintetizzarlo né sostituire il checkout. La build precedente in DerivedData è stata rimossa da una causa non determinata: /Applications/Cascade.app rimane un link verso un target mancante. Nessun riavvio eseguito: si conserva il processo già attivo.
+A temporary copy of the local sources with identical hashes was prepared; only the plist is missing, and the empty copy produced by the timeout was removed. [Checkpoint and resumption instructions](../../codex-addon/20260920-spotlight-native/checkpoint.json). Materialize the original file before running the build; do not synthesize it or replace the checkout. The previous build in DerivedData was removed by an undetermined cause: /Applications/Cascade.app remains a link to a missing target. No restart performed: the already active process is kept.
 
-La [valutazione root](../../codex-addon/20260920-spotlight-native/root-restore-review.md) non adotta il restore generalizzato in clearTarget; la qualifica del ciclo nativo resta aperta. I check preesistenti passano, nessun nuovo codice app e nessun agente attivo. Claim rilasciato in attesa del file.
+The [root evaluation](../../codex-addon/20260920-spotlight-native/root-restore-review.md) does not adopt the generalized restore in clearTarget; the qualification of the native cycle stays open. The pre-existing checks pass, no new app code and no active agent. Claim released while waiting for the file.
 
-## Ripresa dopo disponibilità del file
+## Resumption after the file became available
 
-L’utente conferma il download del plist, ora leggibile e valido. La precedente copia temporanea non è più disponibile: ricreata da451 input verificati del checkout, senza modifiche al codice.
+The user confirms the download of the plist, now readable and valid. The previous temporary copy is no longer available: it was recreated from 451 verified inputs of the checkout, without code changes.
 
-Build ufficiale completata con exit0 dalla copia locale verificata; firma Apple Development valida e collegamento Applications aggiornato. Riavvio normale tramite UI verificato: PID3835→3923, nuovo processo ancora attivo al controllo successivo. I451 input sono rimasti identici al checkout. [Consegna aggiornata](../../codex-addon/20260920-spotlight-native/delivery-resumed.json).
+Official build completed with exit 0 from the verified local copy; valid Apple Development signature and Applications link updated. Normal restart through the UI verified: PID 3835→3923, new process still active at the next check. The 451 inputs remained identical to the checkout. [Updated delivery](../../codex-addon/20260920-spotlight-native/delivery-resumed.json).
 
-La ricognizione Terra e la [valutazione root](../../codex-addon/20260920-spotlight-native/root-surface-review.md) confermano l’esistenza delle impostazioni oltre all’integrazione Spotlight; corretto il contesto che chiedeva prototipi duplicati. Nessuna nuova modifica al codice app. Il controllo UI, recuperato dopo errori di avvio, espone per Campo la finestra delle conversazioni Siri e non il campo Spotlight; la scorciatoia delle impostazioni non cambia l’albero accessibile. Non è una prova negativa delle funzioni, ma impedisce di qualificarle con quel percorso. Richiesta all’utente la possibilità di usare CLI/AppleScript come metodo alternativo, imposta dalle istruzioni dello strumento UI; nessuna modifica a permessi o preferenze.
+The Terra survey and the [root evaluation](../../codex-addon/20260920-spotlight-native/root-surface-review.md) confirm that the settings exist in addition to the Spotlight integration; the context that asked for duplicate prototypes was corrected. No new change to the app code. The UI check, recovered after startup errors, exposes for Field the Siri conversations window and not the Spotlight field; the settings shortcut does not change the accessibility tree. This is not a negative proof of the features, but it prevents qualifying them through that path. The user was asked for permission to use CLI/AppleScript as an alternative method, as imposed by the UI tool's instructions; no change to permissions or preferences.
 
-Claim rilasciato in attesa della risposta sul metodo alternativo. Nessun agente o build in esecuzione.27 ticket risolti su44; nessuna nuova chiusura. Consumo settimanale osservato5%, tetto20%.
+Claim released while awaiting the answer on the alternative method. No agent or build running. 27 tickets resolved out of 44; no new closure. Observed weekly usage 5%, 20% cap.
 
-L’utente autorizza CLI e AppleScript per completare le prove. Ripreso il claim; autorizzazione persistente per questi controlli, senza cambiare preferenze o permessi.
+The user authorizes CLI and AppleScript to complete the tests. Claim resumed; persistent authorization for these checks, without changing preferences or permissions.
 
-## Prova CLI e AppleScript
+## CLI and AppleScript test
 
-Verificata la finestra impostazioni `cascade.settings`:760×570 a(355,152), sidebar e controlli visibili, focus sul controllo `settings.size`. Il campo Spotlight nativo è stato individuato con identità `SpotlightSearchField`,520×87 a(475,65). La preferenza `spotlightEnabled` letta dal dominio dell’app è0: il toggle «Spotlight dal notch» esiste, mentre il distinto comando «Apri Spotlight dal notch» non compare con integrazione disattivata. Nessuna preferenza modificata. La prova del calcolo non è qualificata: i tentativi delimitati non hanno mantenuto il campo osservabile e non hanno inserito query.
+Verified the settings window `cascade.settings`: 760×570 at (355, 152), sidebar and controls visible, focus on the `settings.size` control. The native Spotlight field was located with identity `SpotlightSearchField`, 520×87 at (475, 65). The `spotlightEnabled` preference read from the app's domain is 0: the "Spotlight from the notch" toggle exists, while the distinct "Open Spotlight from the notch" command does not appear with the integration disabled. No preference modified. The calculation test is not qualified: the bounded attempts did not keep the field observable and did not enter queries.
 
-[Evidenza parziale](../../codex-addon/20260920-spotlight-native/native-qualification-partial.json). Richiesta l’attivazione temporanea del toggle per verificare il raccordo e il ripristino, con ritorno allo stato iniziale; risposta ancora pendente. Il seguito dell’utente chiede di chiarire lo scopo del ticket: è progettazione/qualifica delle superfici, non una nuova tranche del motore addon. Nessuna chiusura globale dedotta dalla verifica delle impostazioni.
+[Partial evidence](../../codex-addon/20260920-spotlight-native/native-qualification-partial.json). Temporary activation of the toggle was requested to verify the join and the restore, with a return to the initial state; the answer is still pending. The user's follow-up asks to clarify the ticket's purpose: it is design/qualification of the surfaces, not a new tranche of the addon engine. No global closure inferred from the settings verification.
 
-Riavvio normale conclusivo verificato PID7661→8144, firma valida e stabilità5s: [evidenza](../../codex-addon/20260920-spotlight-native/restart-evidence.json). Nessun agente attivo o codice app modificato. Claim rilasciato durante il chiarimento.
+Final normal restart verified PID 7661→8144, valid signature and 5 s stability: [evidence](../../codex-addon/20260920-spotlight-native/restart-evidence.json). No active agent or modified app code. Claim released during the clarification.
 
-L’utente conferma «ok, continua» dopo il chiarimento. Ripresa la prova temporanea del toggle con ripristino dello stato iniziale, nuovamente osservato disattivato. Claim ripreso; launcher invariato.
+The user confirms "ok, go on" after the clarification. The temporary toggle test resumed with a restore of the initial state, again observed as disabled. Claim resumed; launcher unchanged.
 
 ## Answer
 
-Le superfici della prima tranche sono definite dai contratti già approvati: riposo e chrome, hover con aptica all’ingresso, attività primaria compatta e seconda nel cerchio, apertura estesa e pagina widget, avvisi sulle ali, nero/glass e Reduce Motion. Il [riferimento consolidato](../../../docs/wayfinder/context/2026-09-20-notch-surfaces-checkpoint.md) collega le fonti. La scelta residua della ricerca è risolta dalla conferma dell’utente: vero Spotlight, campo e risultati originali con dimensioni native; nessuna nuova API privata. Le impostazioni conservano il linguaggio macOS e la posizione sotto il notch richiesti. Gli inventari funzionali rimangono nei propri ticket.
+The first-tranche surfaces are defined by the already approved contracts: rest and chrome, hover with haptics on entry, compact primary activity and the second one in the circle, extended opening and widget page, alerts on the wings, black/glass and Reduce Motion. The [consolidated reference](../../../docs/wayfinder/context/2026-09-20-notch-surfaces-checkpoint.md) links the sources. The remaining search choice is resolved by the user's confirmation: real Spotlight, original field and results with native dimensions; no new private API. The settings keep the requested macOS language and position under the notch. The feature inventories remain in their own tickets.
 
-La [verifica locale](../../../docs/superpowers/verification/2026-09-20-spotlight-native-continuation.md) osserva campo520×87 con focus, calcolo nativo2+2=4 via AX, ripristino della posizione sia con campo aperto sia dopo chiusura/disattivazione/riapertura, oltre a geometria e focus delle impostazioni. Non riprodotto il difetto utente ipotizzato; nessuna modifica al codice app giustificata. Toggle ripristinato disattivato e riavvio verificato PID10620.
+The [local verification](../../../docs/superpowers/verification/2026-09-20-spotlight-native-continuation.md) observes the 520×87 field with focus, native calculation 2+2=4 via AX, restore of the position both with the field open and after closing/disabling/reopening, as well as the geometry and focus of the settings. The hypothesized user defect was not reproduced; no change to the app code is justified. Toggle restored to disabled and restart verified at PID 10620.
 
-Revisione Terra valutata dal root: [rapporto](../../codex-addon/20260920-spotlight-native/ticket-closure-review.md). Accolta la chiusura come decisione/prototipo sulla base delle approvazioni, non della sola esistenza del codice. Tastiera/IME, VoiceOver, drag continuo, matrici display/OS e prestazioni restano qualifiche distinte, conservate nel rapporto di verifica e nei ticket di ricerca/interazione; questa chiusura non ne dichiara il PASS. Launcher invariato.
+Terra review evaluated by the root: [report](../../codex-addon/20260920-spotlight-native/ticket-closure-review.md). The closure is accepted as a decision/prototype on the basis of the approvals, not of the mere existence of the code. Keyboard/IME, VoiceOver, continuous drag, display/OS matrices and performance remain distinct qualifications, kept in the verification report and in the search/interaction tickets; this closure does not declare their PASS. Launcher unchanged.
 
-La proposta del reviewer di rimettere in discussione coda/timeout degli avvisi non è adottata: i contratti correnti scartano gli avvisi ricevuti durante espansione/blocco, senza riproporli. La decisione successiva riguarda l’arbitraggio tra intenzioni manuali e schermate contestuali.
+The reviewer's proposal to reopen the alert queue/timeout is not adopted: the current contracts discard alerts received during expansion/lock, without re-proposing them. The next decision concerns arbitration between manual intentions and contextual screens.

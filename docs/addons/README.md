@@ -1,51 +1,51 @@
-# Sviluppare addon per Cascade
+# Developing addons for Cascade
 
-I contratti, i componenti dichiarativi e l'interfaccia `AddonProvider` sono disponibili nel package `CascadeKit`. Il runtime per avviare pacchetti esterni non è ancora abilitato: la [qualificazione del launcher](../superpowers/verification/2026-09-10-addon-launcher-decision.md) resta da completare per identità e arresto dei processi gestiti. Il [rischio del lavoro delegato](../superpowers/specs/2026-09-10-addon-control-policy.md) è stato accettato esplicitamente. Anche i widget del team dovranno usare questo percorso quando sarà qualificato.
+The contracts, the declarative components and the `AddonProvider` interface are available in the `CascadeKit` package. The runtime that launches external packages is not enabled yet: the [launcher qualification](../superpowers/verification/2026-09-10-addon-launcher-decision.md) still has to be completed for the identity and termination of managed processes. The [risk of delegated work](../superpowers/specs/2026-09-10-addon-control-policy.md) was explicitly accepted. Team widgets will also have to use this path once it is qualified.
 
-## Validare un manifest
+## Validating a manifest
 
-Dal checkout del progetto, con un toolchain compatibile con Swift tools 6.2:
+From the project checkout, with a toolchain compatible with Swift tools 6.2:
 
 ```sh
-swift run --package-path CascadeKit cascade-addon validate /percorso/Manifest.json
+swift run --package-path CascadeKit cascade-addon validate /path/Manifest.json
 ```
 
-Il comando usa lo stesso validatore di `CascadeContracts`, legge al massimo 64 KiB più un byte di controllo e rifiuta directory, pipe e altri file non regolari. Non esegue codice o comandi contenuti nel manifest.
+The command uses the same validator as `CascadeContracts`, reads at most 64 KiB plus one check byte, and rejects directories, pipes and other non-regular files. It does not execute code or commands contained in the manifest.
 
-L'esito `0` conferma la validità del documento secondo i contratti attuali; `1` indica un file illeggibile o non valido, `2` argomenti errati. La validazione del manifest non verifica firma, autorizzazioni dell'utente, presenza dei servizi richiesti o ammissione del pacchetto nel runtime.
+Exit status `0` confirms that the document is valid under the current contracts; `1` means an unreadable or invalid file, `2` wrong arguments. Manifest validation does not verify the signature, user authorizations, the presence of the required services, or admission of the package into the runtime.
 
-Il comando `cascade-addon init` genera un progetto sorgente con provider, manifest e test basati sui prodotti pubblici SDK: seguire la [guida iniziale](quickstart.md). Il formato distribuibile e il bootstrap nativo richiedono ancora la qualificazione del launcher.
+The `cascade-addon init` command generates a source project with a provider, a manifest and tests built on the public SDK products: follow the [getting started guide](quickstart.md). The distributable format and the native bootstrap still require launcher qualification.
 
-## Contratti disponibili
+## Available contracts
 
-- [Creare un progetto sorgente addon](quickstart.md)
-- [Verificare un provider addon](testing.md)
-- [Compatibilità del package e del protocollo](compatibility.md)
-- [Prestazioni e contabilità delle risorse](performance.md)
-- [Sviluppo sorgente e distribuzione](distribution.md)
-- [Esempi sorgente indipendenti](examples.md)
-- [Protocollo e messaggi](protocol.md)
-- [Negoziazione e ammissione delle sessioni](sessions.md)
-- [Dipendenze REQUIRES](requires.md)
-- [Contenuti dichiarativi](content.md)
-- [Luci nel vetro](../architecture/glass-lighting.md)
-- [Ciclo di vita, code e azioni](lifecycle.md)
-- [Autorizzazione e coordinamento dei comandi](actions.md)
-- [Servizi condivisi e permessi del broker](services.md)
-- [Checkpoint e migrazioni dello stato](storage.md)
-- [Immagini, trasferimenti a messaggi e client SDK](assets.md)
-- [Schema del manifest](manifest.schema.json)
-- [Piano di completamento](../superpowers/plans/2026-09-10-addon-runtime-completion.md)
+- [Creating an addon source project](quickstart.md)
+- [Verifying an addon provider](testing.md)
+- [Package and protocol compatibility](compatibility.md)
+- [Performance and resource accounting](performance.md)
+- [Source development and distribution](distribution.md)
+- [Standalone source examples](examples.md)
+- [Protocol and messages](protocol.md)
+- [Session negotiation and admission](sessions.md)
+- [REQUIRES dependencies](requires.md)
+- [Declarative content](content.md)
+- [Glass lighting](../architecture/glass-lighting.md)
+- [Lifecycle, queues and actions](lifecycle.md)
+- [Command authorization and coordination](actions.md)
+- [Shared services and broker permissions](services.md)
+- [State checkpoints and migrations](storage.md)
+- [Images, message transfers and SDK clients](assets.md)
+- [Manifest schema](manifest.schema.json)
+- [Completion plan](../superpowers/plans/2026-09-10-addon-runtime-completion.md)
 
-## Client immagini
+## Image client
 
-`MessageAddonAssetClient` implementa importazione, condivisione e rilascio tramite
-un `AddonAssetMessageChannel` iniettato. Il collegamento interno al runtime è
-verificato con un bridge di test che usa codec, ImageIO e contabilità reali. La
-negoziazione 1.2 richiede capacità host storage e asset; i messaggi asset usano schema 1.
-Il canale deve essere legato a una connessione autenticata, consumare le receipt e
-completare la pulizia fisica: il bridge di test non è un trasporto OS distribuibile né un bootstrap produttivo.
+`MessageAddonAssetClient` implements import, sharing and release through
+an injected `AddonAssetMessageChannel`. The internal connection to the runtime is
+verified with a test bridge that uses the real codec, ImageIO and accounting.
+Negotiating 1.2 requires the host storage and asset capabilities; asset messages use schema 1.
+The channel must be bound to an authenticated connection, consume the receipts and
+complete physical cleanup: the test bridge is neither a distributable OS transport nor a production bootstrap.
 
-## Client storage
+## Storage client
 
-`MessageAddonStorageClient` implementa lettura, scrittura e rimozione su un canale a messaggi iniettato. Correlazione, cancellazione ed esiti incerti sono verificati anche contro il backend reale; il canale produttivo deve fornire autenticazione e pulizia fisica. La memoria esterna va ammessa prima della costruzione e codifica dei messaggi. Vedere [contratto e limiti](storage.md#concrete-sdk-message-client).
+`MessageAddonStorageClient` implements read, write and removal over an injected message channel. Correlation, cancellation and uncertain outcomes are also verified against the real backend; the production channel must provide authentication and physical cleanup. External memory must be admitted before the messages are built and encoded. See [contract and limits](storage.md#concrete-sdk-message-client).

@@ -1,4 +1,4 @@
-# Provare una UI SwiftUI esterna dentro il notch
+# Probe an external SwiftUI UI inside the notch
 
 ID: 19
 Parent: cascade-product
@@ -11,24 +11,24 @@ Blocked by: 01
 
 ## Question
 
-Quale esperienza di installazione e quale isolamento sono ottenibili ospitando una scena SwiftUI ExtensionKit nel pannello del notch, sulle versioni macOS candidate? Creare una prova minima e separata dal prodotto con app sorgente e host distinti: discovery e abilitazione, resize, trasparenza, focus, click, drag e accessibilità. Osservare anche crash o blocco della UI remota senza attendere risposte sincrone nell'host. Verificare le firme di sviluppatori diversi solo se le identità necessarie sono disponibili; registrare esplicitamente ciò che non è stato testato. Il prototipo e le misure permettono all'utente di valutare il compromesso rispetto al caricamento di bundle da cartella, senza trasformare automaticamente l'alternativa in architettura approvata.
+Which installation experience and which isolation can be achieved by hosting an ExtensionKit SwiftUI scene in the notch panel, on the candidate macOS versions? Build a minimal test, separate from the product, with distinct source app and host: discovery and enablement, resize, transparency, focus, clicks, drag and accessibility. Also observe crashes or hangs of the remote UI without waiting for synchronous replies in the host. Verify signatures from different developers only if the necessary identities are available; explicitly record what was not tested. The prototype and the measurements let the user weigh the trade-off against loading bundles from a folder, without automatically turning the alternative into approved architecture.
 
-## Avanzamento del 9 settembre 2026
+## Progress of 9 September 2026
 
-La direzione è ora approvata: contenuti ordinari nell'host e scene remote per SwiftUI avanzato. [P0](../../../docs/superpowers/plans/2026-09-09-addon-runtime-00-platform.md) trasforma questo ticket in prove operative di packaging, peer autenticato, arresto anche dopo crash host, metriche e scena nel pannello. Il prototipo rimane separato dalla produzione.
+The direction is now approved: ordinary content in the host and remote scenes for advanced SwiftUI. [P0](../../../docs/superpowers/plans/2026-09-09-addon-runtime-00-platform.md) turns this ticket into operational tests of packaging, authenticated peer, shutdown even after a host crash, metrics and the scene in the panel. The prototype stays separate from production.
 
-Il ticket resta aperto perché le prove non sono state eseguite. Una compilazione locale non dimostra macOS diversi, isolamento effettivo o firme di editori distinti. Eventuali impedimenti devono precedere il congelamento delle API e non autorizzano un fallback a codice addon dentro l'host.
+The ticket remains open because the tests have not been run. A local build does not demonstrate different macOS versions, actual isolation or signatures from distinct publishers. Any obstacles must come before the API freeze and do not authorize a fallback to addon code inside the host.
 
-## Riallineamento del 14 settembre 2026
+## Realignment of 14 September 2026
 
-Le prove di piattaforma non sono più tutte ineseguite: il [rapporto sul launcher](../../../docs/superpowers/verification/2026-09-10-addon-launcher-decision.md) registra limiti osservati delle alternative; il piano corrente distingue il prototipo RemoteUI soltanto compilato dalla qualificazione di una scena reale nel notch. Non risultano concluse le prove di interazione, accessibilità, firme di editori diversi e matrice macOS richieste da questo ticket.
+The platform tests are no longer all unrun: the [launcher report](../../../docs/superpowers/verification/2026-09-10-addon-launcher-decision.md) records observed limits of the alternatives; the current plan distinguishes the RemoteUI prototype, which has only been compiled, from the qualification of a real scene in the notch. The interaction, accessibility, different-publisher signature and macOS matrix tests required by this ticket are not concluded.
 
-La [diagnostica C0d](../../../docs/superpowers/verification/2026-09-12-addon-managed-death.md) è verificata offline, con prova nativa sospesa. Il disegno necessario per il requisito di uscita dei processi è ora nel distinto [ticket sui processi gestiti](22-managed-process-exit-proof.md), evitando di confonderlo con l'esperienza della UI remota.
+The [C0d diagnostics](../../../docs/superpowers/verification/2026-09-12-addon-managed-death.md) are verified offline, with the native test suspended. The design needed for the process exit requirement is now in the separate [ticket on managed processes](22-managed-process-exit-proof.md), to avoid confusing it with the remote UI experience.
 
-Questo ticket rimane aperto per il prototipo UI e la valutazione con l'utente. Essere disponibile nella frontiera significa che il tema può essere affrontato: non autorizza a rimuovere il gate C0d o ad aggirarlo durante la prova.
+This ticket remains open for the UI prototype and the evaluation with the user. Being available in the frontier means the topic can be taken up: it does not authorize removing the C0d gate or getting around it during the test.
 
-## Incremento sorgente — 20 settembre 2026
+## Source increment: 20 September 2026
 
-Il [contatore del prototipo](41-remote-scene-counter.md) ora pubblica eventi correlati sul canale autenticato e riceve conferme dall'host. Check del riduttore e build firmata dei tre target PASS, con revisione/correzioni root. Nessuna attivazione nativa eseguita: questo ticket rimane aperto per la prova effettiva della scena, interazioni, accessibilità e matrice richiesta. Il blocco del launcher è confermato dall'utente.
+The [prototype's counter](41-remote-scene-counter.md) now publishes correlated events on the authenticated channel and receives acknowledgments from the host. Reducer check and signed build of the three targets PASS, with root review/fixes. No native activation performed: this ticket remains open for the actual test of the scene, interactions, accessibility and the required matrix. The launcher block is confirmed by the user.
 
-I successivi check delle callback effettive di [provider](42-counter-provider-lifecycle.md) e [host](43-counter-host-lifecycle.md) sono completati con correzioni riprodotte. Non sono prove di XPC o di scena attivata: questo ticket rimane aperto.
+The subsequent checks of the actual callbacks of the [provider](42-counter-provider-lifecycle.md) and the [host](43-counter-host-lifecycle.md) are completed with reproduced fixes. They are not proofs of XPC or of an activated scene: this ticket remains open.

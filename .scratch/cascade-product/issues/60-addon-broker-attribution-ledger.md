@@ -1,4 +1,4 @@
-# Collegare gli interessi canonici alla contabilità CPU
+# Connect the canonical interests to CPU accounting
 
 ID: 60
 Parent: cascade-product
@@ -11,8 +11,8 @@ Blocked by: 58
 
 ## Question
 
-Agganciare il registro condiviso ai commit di nuovi interessi e alle rimozioni canoniche del broker, conservando interessi oltre disconnect/exit. Validazione prima del commit, rollback senza perdite e controllo interno sui nuovi interessi dei consumatori a quota chiusa. Terra medium implementa; root e revisore verificano.
+Hook the shared ledger into the broker's commits of new interests and its canonical removals, keeping interests beyond disconnect/exit. Validation before the commit, rollback without losses and an internal check on new interests of consumers whose quota is closed. Terra medium implements; the root and a reviewer verify.
 
 ## Answer
 
-Collegamento minimale implementato da Terra medium, root e revisore indipendente senza rilievi sul codice congelato.39 test/3 suite PASS. Commit canonici e registro condividono il punto di linearizzazione senza sospensioni; rimozioni/rollback esatti, interessi preservati oltre disconnect/exit. Consumatori in pausa possono riusare interessi esistenti, ma non crearne di nuovi. Test rafforzati per distinguere storia di intervallo da interesse ancora attivo. [Rapporto](../../codex-addon/20260922-transitive-cpu/task-60-report.md).
+Minimal wiring implemented by Terra medium; the root and the independent reviewer had no findings on the frozen code. 39 tests/3 suites PASS. Canonical commits and the ledger share the linearization point without suspensions; exact removals/rollbacks, interests preserved beyond disconnect/exit. Paused consumers can reuse existing interests, but not create new ones. Tests strengthened to distinguish interval history from an interest that is still active. [Report](../../codex-addon/20260922-transitive-cpu/task-60-report.md).

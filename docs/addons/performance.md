@@ -1,23 +1,23 @@
-# Prestazioni e risorse degli addon
+# Addon performance and resources
 
-## Progettare lavoro finito
+## Designing finite work
 
-Pubblicare contenuti dichiarativi limitati e timeline finite; usare countdown e clock del [renderer](content.md) invece di mantenere un task del provider che invii aggiornamenti a ogni tick. Il modello separa durata del contenuto e durata del processo. Conservazione dei valori, scadenze e revisioni sono descritte nel [ciclo di vita](lifecycle.md); la prova completa con provider nativo assente resta distinta dal comportamento delle componenti.
+Publish bounded declarative content and finite timelines; use the countdown and clock of the [renderer](content.md) instead of keeping a provider task that sends updates on every tick. The model separates the lifetime of the content from the lifetime of the process. Retention of values, deadlines and revisions are described in the [lifecycle](lifecycle.md); the complete evidence with an absent native provider remains distinct from the behavior of the components.
 
-Gestire `resourceDenied`, `rateLimited`, scadenze e revoche esplicitamente. Un risultato incerto non autorizza una ripetizione automatica di effetti. Limitare input, risultati e stato conservato, liberando le risorse secondo il relativo contratto; non trattare una richiesta di stop o una ricevuta di trasporto come uscita osservata.
+Handle `resourceDenied`, `rateLimited`, deadlines and revocations explicitly. An uncertain result does not authorize an automatic repetition of effects. Bound inputs, results and retained state, releasing resources according to their contract; do not treat a stop request or a transport receipt as an observed exit.
 
-## Limiti applicati e contabilità
+## Enforced limits and accounting
 
-La baseline implementa validazione dei payload e ammissione tramite `ResourcePolicy`/`ResourceGovernor`. Per le richieste ordinarie il governor verifica i costi per owner e globali prima di registrare una riserva. La riconciliazione del disco registra anche dati già presenti oltre quota; quel debito impedisce nuova crescita, senza nascondere i byte esistenti. Le quote coprono quantità diverse: pubblicazioni, lavori, provider, scene, stato conservato, asset, memoria ammessa e disco. I costi includono metadati di prenotazione; una dichiarazione di risorse nel manifest non è un grant e l’origine del package non seleziona una policy privilegiata.
+The baseline implements payload validation and admission through `ResourcePolicy`/`ResourceGovernor`. For ordinary requests the governor checks the per-owner and global costs before recording a reservation. Disk reconciliation also records data that is already present beyond the quota; that debt prevents new growth without hiding the existing bytes. The quotas cover different quantities: publications, jobs, providers, scenes, retained state, assets, admitted memory and disk. The costs include reservation metadata; a resource declaration in the manifest is not a grant, and the package's origin does not select a privileged policy.
 
-Per i limiti dei documenti, alberi, timeline e frame usare il [protocollo](protocol.md); per pixel e trasferimenti gli [asset](assets.md); per stato persistente lo [storage](storage.md); per code, lavori e storia delle azioni il [lifecycle](lifecycle.md) e le [azioni](actions.md). I [servizi](services.md) precisano prenotazioni prima del dispatch, capacità condivise e lifetime degli esiti. Questi budget non vanno sommati come se costituissero un unico limite di memoria del processo.
+For the limits on documents, trees, timelines and frames, use the [protocol](protocol.md); for pixels and transfers, the [assets](assets.md); for persistent state, [storage](storage.md); for queues, jobs and action history, the [lifecycle](lifecycle.md) and the [actions](actions.md). The [services](services.md) page details reservations before dispatch, shared capacities and outcome lifetimes. These budgets must not be added up as if they formed a single process memory limit.
 
-Dimensione wire, costo prenotato e footprint osservato sono misure differenti. Un frame accettato non dimostra un limite alle allocazioni Foundation o alla RSS; un costo di provider nel governor non costituisce un sandbox di memoria. Le riserve di processo rimangono fino all’uscita osservata nel modello host: gli ingressi di uscita modellati nei test non qualificano la terminazione nativa.
+Wire size, reserved cost and observed footprint are different measures. An accepted frame does not prove a limit on Foundation allocations or on RSS; a provider cost in the governor does not constitute a memory sandbox. Process reservations remain until the observed exit in the host model: the exit inputs modeled in the tests do not qualify native termination.
 
-## Misure effettivamente disponibili
+## Measurements actually available
 
-Il lettore interno osserva risorse di processo; il riduttore calcola intervalli CPU da campioni compatibili. Dati assenti o riferiti a un’identità diversa non diventano consumo zero. Il [contratto delle osservazioni](../architecture/addon-resource-observations.md) descrive continuità, overflow e limiti dell’identità.
+The internal reader observes process resources; the reducer computes CPU intervals from compatible samples. Missing data, or data referring to a different identity, does not become zero usage. The [observations contract](../architecture/addon-resource-observations.md) describes continuity, overflow and the limits of identity.
 
-La [calibrazione indipendente](../superpowers/verification/2026-09-18-addon-process-cpu-calibration.md) confronta copie identiche di lettore e riduttore con `getrusage(RUSAGE_SELF)` su macOS 27 arm64. Qualifica scala e conversione delle unità per il processo diagnostico, senza qualificare precisione assoluta della contabilità kernel o del clock. Il footprint letto non è una misura RSS qualificata dell’addon installato.
+The [independent calibration](../superpowers/verification/2026-09-18-addon-process-cpu-calibration.md) compares identical copies of the reader and reducer with `getrusage(RUSAGE_SELF)` on macOS 27 arm64. It qualifies the scale and unit conversion for the diagnostic process, without qualifying the absolute precision of kernel accounting or of the clock. The footprint that is read is not a qualified RSS measurement of the installed addon.
 
-Restano da collegare associazione autenticata addon/processo, campionamento comune e disarmo, soglie, salute e arresto reale. Non sono consegnate garanzie di latenza, p99, risvegli, consumo continuo o prestazioni su macOS 14/Intel. Un test sorgente o una prenotazione riuscita non chiude la qualifica del controllo nativo delle risorse.
+Still to be connected: authenticated addon/process association, shared sampling and disarm, thresholds, health, and actual stop. No guarantees are delivered for latency, p99, wakeups, sustained usage or performance on macOS 14/Intel. A source test or a successful reservation does not close the qualification of native resource control.

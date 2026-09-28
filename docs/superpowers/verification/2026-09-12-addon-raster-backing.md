@@ -1,82 +1,82 @@
-# C5c1 — memoria delle immagini, 12 settembre 2026
+# C5c1: image memory, 12 September 2026
 
-Questo incremento realizza il backing raster interno del futuro sistema di asset.
-Un'immagine reale conserva la memoria e la relativa quota fino all'ultimo riferimento
-CoreGraphics; il rilascio effettivo attiva il rimborso nel governor comune. Il contratto
-host e i confini sono descritti in [assets](../../addons/assets.md).
-Non costituisce ancora un percorso SDK/pubblicazione/renderer utilizzabile dagli addon.
+This increment delivers the internal raster backing of the future asset system.
+A real image keeps its memory and the matching quota until the last CoreGraphics
+reference; the actual release triggers the refund in the shared governor. The host
+contract and the boundaries are described in [assets](../../addons/assets.md).
+It is not yet an SDK/publication/renderer path that addons can use.
 
-## Implementazione e verifiche mirate
+## Implementation and focused checks
 
-Sei file sorgente/test: estensione di ResourcePolicy e ResourceGovernor, due primitive
-Assets e due nuove suite. Ammissione prima dell'allocazione, formato RGBA8 fisso con
-massimo 1 MP, esecuzione fuori MainActor, prenotazioni protette e un solo drenaggio
-condiviso. I record di gestione individuali non conservano una tabella dimensionata
-al picco. Chiusura e cancellazione non liberano quote di immagini ancora vive.
+Six source/test files: extension of ResourcePolicy and ResourceGovernor, two Assets
+primitives and two new suites. Admission before allocation, fixed RGBA8 format with
+a maximum of 1 MP, execution off the MainActor, protected reservations and a single
+shared drain. The individual management records do not keep a table sized
+to the peak. Closing and cancellation do not free quotas of images still alive.
 
-Durante l'implementazione sono state dimostrate e corrette l'omissione dei pixel nel
-budget complessivo, la mancanza delle protezioni di durata e la confusione possibile
-fra istanze successive del governor allo stesso indirizzo. L'identità della durata
-usa ora un nonce e ogni prenotazione protetta ha il proprio segreto canonico.
-L'errore iniziale della sandbox del compilatore è un errore di avvio della verifica,
-non una prova comportamentale fallita.
+During implementation, the omission of the pixels from the overall budget, the lack
+of lifetime protections and the possible confusion between successive instances of the
+governor at the same address were demonstrated and fixed. The lifetime identity
+now uses a nonce and each protected reservation has its own canonical secret.
+The initial compiler sandbox error is a failure to start the check,
+not a failed behavioral test.
 
-37 test mirati passati, exit 0: 19 AssetRasterBackingTests, 5 RetainedAssetReservationTests,
-13 ResourceGovernorTests preesistenti. Comprendono veri CGImage, due riferimenti,
-sostituzione con la vecchia immagine ancora trattenuta, 1.638 slot reali, fallimenti di
-costruzione, cancellazione, ammissione/rimborso sospesi, chiusura, fault conservativi,
-concorrenza durante lo svuotamento e tentativi di rilascio anticipato.
-Log finale `focused-final.log`, SHA-256
+37 focused tests passed, exit 0: 19 AssetRasterBackingTests, 5 RetainedAssetReservationTests,
+13 pre-existing ResourceGovernorTests. They include real CGImages, two references,
+replacement with the old image still retained, 1,638 real slots, construction
+failures, cancellation, suspended admission/refund, closing, conservative faults,
+concurrency during draining and attempts at early release.
+Final log `focused-final.log`, SHA-256
 `d9fd8707a0ebee157dd0344a3f5b2702ebbe456023688df7573e2d6f14135611`,
-conservato nel checkpoint della consegna insieme ai nove log e agli hash dei sorgenti.
+kept in the delivery checkpoint together with the nine logs and the source hashes.
 
-## Revisione
+## Review
 
-Revisione indipendente: conformità e qualità approvate, nessun rilievo da correggere.
-Verificati i sei hash sorgente, le preimmagini, il diff e i nove log. Le prove di
-fallimento costruttivo sono indotte: non equivalgono a esaurimento reale della heap
-o a un fallimento nativo forzato di CGDataProvider. Il contratto fidato del costruttore
-esclude callback differite dopo un risultato nullo.
+Independent review: conformance and quality approved, no findings to fix.
+The six source hashes, the preimages, the diff and the nine logs were verified. The
+construction-failure tests are induced: they are not equivalent to real heap exhaustion
+or to a forced native CGDataProvider failure. The constructor's trusted contract
+excludes deferred callbacks after a null result.
 
-## Verifica completa
+## Full verification
 
-Package finale: **498 test passati**, exit 0, `--no-parallel`: Runtime 267,
-Presentation 20, Engine 169, Contracts 38, tool 4. Sessione 81680; log
+Final package: **498 tests passed**, exit 0, `--no-parallel`: Runtime 267,
+Presentation 20, Engine 169, Contracts 38, tool 4. Session 81680; log
 `/private/tmp/cascade-c5c1-final-full-package.log`, SHA-256
 `aa7859da06355d2c937a758b555d923ba350f8929366ecc0b6b0525e798bfbb4`.
-I sei hash sorgente sono invariati dopo la verifica. Il log completo finale non
-contiene warning; il precedente log mirato include il warning storico e invariato
-in PublicationStoreTests sulla variabile weakProducer. Il risultato seriale non
-qualifica la vecchia limitazione dei test UI concorrenti.
+The six source hashes are unchanged after the verification. The final full log
+contains no warnings; the earlier focused log includes the historical, unchanged
+warning in PublicationStoreTests about the weakProducer variable. The serial result
+does not qualify the old limitation of the concurrent UI tests.
 
-## Consegna e arresto richiesto
+## Delivery and requested stop
 
-Integrati 10 file (6 sorgenti/test e 4 documenti), preservando il lavoro preesistente.
-Confrontati 404 input sorgente, inclusi i prototipi, identici fra checkout originale
-e copia locale. Build ufficiale firmata riuscita, exit 0, sessione 34450. Verifica
-stretta della firma e aggiornamento di `/Applications/Cascade.app` eseguiti dallo
-script di progetto. Gli avvisi Xcode sulla selezione della destinazione e sulle due
-variabili SWIFT_DEBUG_INFORMATION sono presenti anche nella build precedente.
+10 files integrated (6 sources/tests and 4 documents), preserving the pre-existing work.
+404 source inputs compared, including the prototypes, identical between the original
+checkout and the local copy. Official signed build succeeded, exit 0, session 34450.
+Strict signature verification and the update of `/Applications/Cascade.app` performed
+by the project script. The Xcode warnings about destination selection and about the two
+SWIFT_DEBUG_INFORMATION variables are also present in the previous build.
 
-Riavvio verificato, sessione 1216 exit 0: PID 53808 chiuso regolarmente senza forzatura,
-nuova istanza PID 56048 stabile nel percorso CascadeAddonDevelopment atteso. Log
-`/private/tmp/cascade-c5c1-20260912-app-build.log` e
-`/private/tmp/cascade-c5c1-20260912-restart.json`. Nessun commit o staging.
+Relaunch verified, session 1216 exit 0: PID 53808 closed normally without forcing,
+new instance PID 56048 stable in the expected CascadeAddonDevelopment path. Logs
+`/private/tmp/cascade-c5c1-20260912-app-build.log` and
+`/private/tmp/cascade-c5c1-20260912-restart.json`. No commit or staging.
 
-Questo conclude il task C5c1. Il lavoro si ferma qui su richiesta dell'utente;
-nessun task successivo o ripresa automatica viene avviato.
+This concludes the C5c1 task. The work stops here at the user's request;
+no later task or automatic resumption is started.
 
-## Limiti e seguito
+## Limits and follow-up
 
-L'input contiene pixel già decodificati e fidati; non si prova un decoder di input
-ostile. Le quote riguardano memoria controllata e allowances, non copie interne
-CoreGraphics/GPU o footprint complessivo. Il ciclo reale delle viste SwiftUI,
-importazione SDK, trasferimento compresso, autorizzazioni private, riferimenti alle
-revisioni di asset/pubblicazioni, cache e ripristino rimangono da collegare.
-L'AssetState futuro deve entrare nella transazione canonica di AddonRuntime.
+The input contains already decoded, trusted pixels; no decoder for hostile input
+is proven. The quotas concern controlled memory and allowances, not internal
+CoreGraphics/GPU copies or the overall footprint. The real SwiftUI view cycle,
+SDK import, compressed transfer, private authorizations, references to
+asset/publication revisions, cache and restore remain to be connected.
+The future AssetState must enter AddonRuntime's canonical transaction.
 
-Il gate dei processi nativi resta HOLD per la sicurezza nel caso di perdita precoce
-del supervisore; nessuna nuova prova di tracing è stata eseguita. Il minimo macOS 14
-non è qualificato da test eseguiti su questa macchina beta. C5 e la feature completa
-restano aperti. Su richiesta dell'utente il lavoro si arresta alla consegna di C5c1,
-senza avviare C5c2.
+The native-process gate stays HOLD for safety in the case of early loss of the
+supervisor; no new tracing evidence was run. The macOS 14 floor
+is not qualified by tests run on this beta machine. C5 and the complete feature
+remain open. At the user's request the work stops at the delivery of C5c1,
+without starting C5c2.

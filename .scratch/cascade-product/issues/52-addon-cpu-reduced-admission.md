@@ -1,4 +1,4 @@
-# Definire la riduzione dei nuovi lavori dopo uno sforamento CPU
+# Define the reduction of new work after a CPU overrun
 
 ID: 52
 Parent: cascade-product
@@ -11,23 +11,23 @@ Blocked by: 51
 
 ## Question
 
-Dopo una violazione moderata e prima della quarantena, quale riduzione concreta deve applicare l’host ai nuovi lavori event-driven?
+After a moderate violation and before quarantine, which concrete reduction must the host apply to new event-driven work?
 
-## Contesto
+## Context
 
-La specifica richiede «riduzione delle concessioni e richiesta di rilascio», mentre `AddonHealthStore` conserva gli incidenti e restituisce `keep` per i primi due, `quarantine` al terzo in cinque minuti. Il valore `keep` non costituisce già un’implementazione della riduzione richiesta. La policy attuale ammette al massimo un job per addon: ridurre soltanto il parallelismo a uno non cambierebbe nulla.
+The spec requires "reduction of grants and a request to release", while `AddonHealthStore` keeps the incidents and returns `keep` for the first two, `quarantine` at the third within five minutes. The `keep` value is not already an implementation of the required reduction. The current policy admits at most one job per addon: reducing only the parallelism to one would change nothing.
 
-Il credito e il conteggio degli sforamenti sono definiti. Mancano la condizione per riaprire le ammissioni dopo una violazione e il comportamento visibile delle richieste nel frattempo. È una scelta sul funzionamento del prodotto: un’azione dell’utente può dover attendere o ricevere una risposta di risorsa temporaneamente non disponibile.
+The credit and the counting of overruns are defined. What is missing is the condition for reopening admissions after a violation and the visible behavior of requests in the meantime. This is a choice about how the product works: a user action may have to wait or receive a resource-temporarily-unavailable response.
 
-## Alternative concrete
+## Concrete alternatives
 
-1. **Rifiutare nuovo lavoro finché il debito è ripagato (raccomandazione).** Dopo una violazione, nuovi job e azioni che richiedono lavoro del provider ricevono subito un esito temporaneamente non disponibile; nessuna coda aggiuntiva o replay automatico. Lavoro già ammesso mantiene le deadline previste. Il credito deve tornare positivo prima di riaprire; non serve ricostituire tutti i 100 ms. Con 50 ms di debito e nessun altro consumo, il recupero richiede circa dieci secondi. La terza violazione mantiene la quarantena già approvata.
-2. **Attendere il ripristino dell’intero credito.** Stesso rifiuto temporaneo, ma si riapre soltanto quando sono disponibili tutti i 100 ms. Con 50 ms di debito e nessun altro consumo, il recupero richiede trenta secondi. Offre più margine al primo lavoro successivo, con attese più lunghe.
+1. **Refuse new work until the debt is repaid (recommendation).** After a violation, new jobs and actions that require work from the provider immediately receive a temporarily-unavailable outcome; no additional queue or automatic replay. Work already admitted keeps its planned deadlines. The credit must return positive before reopening; there is no need to rebuild all 100 ms. With 50 ms of debt and no other consumption, recovery takes about ten seconds. The third violation keeps the already approved quarantine.
+2. **Wait for the full credit to be restored.** Same temporary refusal, but reopening only when all 100 ms are available. With 50 ms of debt and no other consumption, recovery takes thirty seconds. It gives more margin to the first subsequent piece of work, with longer waits.
 
-Un campione sconosciuto o un errore contabile non autorizzano la riapertura; il profilo richiede comunque misure affidabili e arresto qualificato. Questa scelta non cambia quote, conteggio degli incidenti, quarantena per versione, deadline del lavoro già ammesso o blocco del launcher. Stato dichiarativo già pubblicato e riserve fisiche mantengono i propri cicli di vita.
+An unknown sample or an accounting error does not authorize reopening; the profile still requires reliable measurements and a qualified stop. This choice does not change quotas, incident counting, per-version quarantine, the deadlines of work already admitted or the launcher block. Already published declarative state and physical reserves keep their own lifecycles.
 
-Completare e verificare la composizione osservativa già autorizzata prima di presentare la scelta. Nessuna di queste politiche viene implementata prima della risposta dell’utente.
+Complete and verify the already authorized observational composition before presenting the choice. Neither of these policies is implemented before the user's answer.
 
 ## Answer
 
-Il 21 settembre 2026 l’utente sceglie **1**: rifiutare immediatamente i nuovi lavori event-driven e le nuove azioni che richiedono lavoro del provider dopo uno sforamento, finché una misura completa e attendibile dimostra credito strettamente positivo. Nessuna coda aggiuntiva o replay automatico; non occorre ricostituire tutti i 100 ms. Campioni mancanti/errori non riaprono. Il lavoro già ammesso conserva le scadenze e i propri percorsi di completamento. Quarantena per versione e launcher bloccato restano invariati. L’implementazione è affidata al ticket [Applicare il rifiuto temporaneo dei nuovi lavori addon](53-addon-cpu-admission.md).
+On 21 September 2026 the user chooses **1**: immediately refuse new event-driven work and new actions that require work from the provider after an overrun, until a complete and reliable measurement demonstrates strictly positive credit. No additional queue or automatic replay; there is no need to rebuild all 100 ms. Missing samples/errors do not reopen. Work already admitted keeps its deadlines and its own completion paths. Per-version quarantine and the blocked launcher remain unchanged. The implementation is assigned to the ticket [Apply the temporary refusal of new addon work](53-addon-cpu-admission.md).

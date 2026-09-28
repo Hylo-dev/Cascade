@@ -1,21 +1,21 @@
-# Preparare la distribuzione di un addon
+# Preparing an addon for distribution
 
-## Percorso consegnato: sviluppo sorgente locale
+## Delivered path: local source development
 
-`cascade-addon init` genera una libreria SwiftPM con provider, manifest e test. Il progetto dipende dal percorso SDK locale indicato esplicitamente; non include un eseguibile, un installer o un repository remoto dell’SDK. Se il percorso cambia, aggiornare la dipendenza in `Package.swift` e verificare di nuovo il progetto. I comandi reali di generazione e validazione sono nel [quickstart](quickstart.md); la [guida ai test](testing.md) descrive la build indipendente.
+`cascade-addon init` generates a SwiftPM library with a provider, a manifest and tests. The project depends on the explicitly given local SDK path; it does not include an executable, an installer or a remote SDK repository. If the path changes, update the dependency in `Package.swift` and verify the project again. The actual generation and validation commands are in the [quickstart](quickstart.md); the [testing guide](testing.md) describes the standalone build.
 
-`cascade-addon validate` controlla sintassi e contratti del manifest. Non autentica l’editore, verifica una firma, installa un addon o concede autorizzazioni. L’identificatore scelto dallo sviluppatore e l’entry point dichiarato non costituiscono identità verificata o bootstrap del processo. Anche la firma verificata della build di Cascade nei rapporti di consegna riguarda l’app host, non un addon distribuibile.
+`cascade-addon validate` checks the manifest's syntax and contracts. It does not authenticate the publisher, verify a signature, install an addon or grant authorizations. The identifier chosen by the developer and the declared entry point do not constitute a verified identity or a process bootstrap. The verified signature of the Cascade build in the delivery reports likewise concerns the host app, not a distributable addon.
 
-Gli esempi [StandaloneFocus](../superpowers/verification/2026-09-18-standalone-focus-source.md) e [ServiceConsumer](../superpowers/verification/2026-09-18-service-consumer-source.md) hanno prove di build e test sorgente indipendenti. Restano librerie sorgente: non sono addon installati, contenitori firmati o prove di parità nativa fra addon del team ed esterni.
+The [StandaloneFocus](../superpowers/verification/2026-09-18-standalone-focus-source.md) and [ServiceConsumer](../superpowers/verification/2026-09-18-service-consumer-source.md) examples have standalone source build and test evidence. They remain source libraries: they are not installed addons, signed containers, or proof of native parity between team and external addons.
 
-## App sorgente e dipendenze
+## Source app and dependencies
 
-`sourceApp.required: false` non introduce una dipendenza globale dall’app sorgente. Un `REQUIRES` alla radice condiziona l’intero addon; quello di una feature condiziona soltanto quella feature. Una funzione che richiede l’app sorgente può risultare indisponibile senza bloccare una funzione autonoma. Questo è comportamento del resolver; non prova da solo lo scenario nativo con app mai installata.
+`sourceApp.required: false` does not introduce a global dependency on the source app. A root-level `REQUIRES` gates the whole addon; one attached to a feature gates only that feature. A function that requires the source app can be unavailable without blocking an autonomous function. This is resolver behavior; on its own it does not prove the native scenario with an app that was never installed.
 
-Nel modello di risoluzione, `installed` richiede presenza verificabile nel catalogo host; `running` richiede anche un’app in esecuzione. La risoluzione non installa software, non apre app e non chiede permessi. `bundledLibraries` è inventario di codice incluso, mentre un servizio esterno richiede risoluzione e autorizzazione. Versione del servizio e versione del package restano distinte. Vedere [REQUIRES](requires.md), [protocollo](protocol.md) e [servizi](services.md).
+In the resolution model, `installed` requires presence that the host catalog can verify; `running` also requires a running app. Resolution does not install software, does not open apps and does not ask for permissions. `bundledLibraries` is an inventory of included code, whereas an external service requires resolution and authorization. Service version and package version stay distinct. See [REQUIRES](requires.md), [protocol](protocol.md) and [services](services.md).
 
-## Confine del rilascio nativo
+## Native release boundary
 
-Il [piano di completamento](../superpowers/plans/2026-09-10-addon-runtime-completion.md) mantiene aperti launcher qualificato, packaging e ammissione nativa, catalogo esterno con installazione/aggiornamento, parità bundled/external e qualificazione delle scene remote. Le guide sorgente non definiscono un nuovo formato di distribuzione, una policy di firma o un comando di installazione.
+The [completion plan](../superpowers/plans/2026-09-10-addon-runtime-completion.md) keeps open the qualified launcher, packaging and native admission, an external catalog with installation/update, bundled/external parity, and qualification of remote scenes. The source guides do not define a new distribution format, a signing policy or an installation command.
 
-Prima di considerare un artefatto distribuibile servono le verifiche native previste dal piano: identità e digest autorevoli, trasporto autenticato, permessi, lifecycle e risorse, aggiornamento e recupero. Non si può sostituire questo percorso copiando o spostando un bundle registrato, oppure attribuendogli credenziali di esempio. Le [compatibilità](compatibility.md) e le [prestazioni](performance.md) documentano ciò che la baseline permette di verificare oggi; C11/C12 completi restano aperti.
+Before an artifact can be considered distributable, the native verifications the plan calls for are needed: authoritative identity and digest, authenticated transport, permissions, lifecycle and resources, update and recovery. This path cannot be replaced by copying or moving a registered bundle, or by assigning it example credentials. The [compatibility](compatibility.md) and [performance](performance.md) pages document what the baseline can verify today; complete C11/C12 remain open.

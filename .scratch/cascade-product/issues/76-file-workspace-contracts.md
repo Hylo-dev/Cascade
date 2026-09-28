@@ -1,4 +1,4 @@
-# Contratti e confine autorizzato del ripiano file
+# File shelf contracts and authorized boundary
 
 ID: 76
 Parent: cascade-product
@@ -11,10 +11,10 @@ Blocked by: none
 
 ## Question
 
-Il modello del ripiano è fissato in [Definire raccolta e durata dei file nel ripiano](10-file-shelf.md).
+The shelf model is set in [Define file collection and lifetime on the shelf](10-file-shelf.md).
 
-Registrare il lavoro interno già consegnato per il task 1 del [piano del ripiano file](../../../docs/superpowers/plans/2026-09-26-file-shelf.md): contratti pubblici bounded, `FileWorkspaceClient` sul client servizi comune e autorità host su ServiceWork canonico. La chiusura riguarda soltanto questo confine e i test modellati; la qualifica nativa resta nel ticket successivo.
+Record the internal work already delivered for task 1 of the [file shelf plan](../../../docs/superpowers/plans/2026-09-26-file-shelf.md): bounded public contracts, `FileWorkspaceClient` on the shared services client and host authority over canonical ServiceWork. The closure covers only this boundary and the modeled tests; the native qualification stays in the next ticket.
 
 ## Answer
 
-I commit `eb18b8e` e `f402d8c` hanno consegnato contratti, client SDK e confine di servizio interno. La [verifica del percorso runtime](../../../docs/superpowers/verification/2026-09-26-file-workspace-runtime.md) registra 21 test FileWorkspace passati (7 contratti, 4 client, 10 autorità), 22 test ServiceBroker passati e review root con correzioni per errori di dominio stabili e testo host sanitizzato. La build di sviluppo è riuscita e Cascade è stata riavviata dalla build aggiornata. Il full package ha avuto un fallimento intermittente preesistente in NotchControllerTests, superato al rerun mirato: non è dichiarato interamente verde. Queste prove non qualificano bootstrap, trasporto nativo, provider firmato sul percorso comune o uscita fisica; il launcher resta bloccato.
+Commits `eb18b8e` and `f402d8c` delivered the contracts, the SDK client and the internal service boundary. The [runtime path verification](../../../docs/superpowers/verification/2026-09-26-file-workspace-runtime.md) records 21 FileWorkspace tests passed (7 contracts, 4 client, 10 authority), 22 ServiceBroker tests passed and a root review with fixes for stable domain errors and sanitized host text. The development build succeeded and Cascade was restarted from the updated build. The full package had a pre-existing intermittent failure in NotchControllerTests, which passed on the targeted rerun: it is not claimed as fully green. These tests do not qualify the bootstrap, the native transport, a signed provider on the shared path or the physical exit; the launcher stays blocked.
