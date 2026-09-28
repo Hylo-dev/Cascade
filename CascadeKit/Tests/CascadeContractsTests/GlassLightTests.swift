@@ -1,6 +1,6 @@
 //
 //  GlassLightTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

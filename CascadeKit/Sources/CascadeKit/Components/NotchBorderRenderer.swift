@@ -6,9 +6,10 @@
 import AppKit
 import QuartzCore
 
-/// The window compositor supplies the rim's backdrop and vibrancy. Cascade
-/// never captures or reads other windows' pixels. This is visual contrast
-/// adaptation, not a binary dark-background detector.
+/// NotchBorderRenderer builds the glass rim from a backdrop and vibrancy that
+/// the window compositor supplies. Cascade never captures or reads other
+/// windows' pixels. This is visual contrast adaptation, not a binary
+/// dark-background detector.
 @MainActor
 final class NotchBorderRenderer {
     static let visualOutset: CGFloat = 12
@@ -127,8 +128,9 @@ final class NotchBorderRenderer {
         CATransaction.commit()
     }
 
-    /// The effect view keeps a fixed canvas frame with room for the halo. Only
-    /// its mask follows the spring, reusing the fill's path without raster images.
+    /// apply keeps the effect view at a fixed canvas frame with room for the halo.
+    /// Only its mask follows the spring, reusing the fill's path without raster
+    /// images.
     ///
     /// Per frame this touches paths and one opacity, nothing else. Fading the
     /// effect view's own alphaValue made NSVisualEffectView rebuild its CoreUI
@@ -201,13 +203,15 @@ final class NotchBorderRenderer {
     }
 }
 
-/// The decorative surface must never take clicks from notch controls.
+/// PassiveBorderEffectView is the decorative surface; it must never take clicks
+/// from notch controls.
 @MainActor
 final class PassiveBorderEffectView: NSVisualEffectView {
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }
 
-/// Enable system contrast blending only for the rim's foreground tint.
+/// VibrantBorderTintView enables system contrast blending only for the rim's
+/// foreground tint.
 @MainActor
 private final class VibrantBorderTintView: NSView {
     override var allowsVibrancy: Bool { true }

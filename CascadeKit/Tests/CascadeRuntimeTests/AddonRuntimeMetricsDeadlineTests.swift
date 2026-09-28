@@ -1,6 +1,6 @@
 //
 //  AddonRuntimeMetricsDeadlineTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

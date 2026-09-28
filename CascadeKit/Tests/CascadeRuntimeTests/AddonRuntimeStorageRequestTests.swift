@@ -1,6 +1,6 @@
 //
 //  AddonRuntimeStorageRequestTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

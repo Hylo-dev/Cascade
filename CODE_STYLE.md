@@ -15,7 +15,7 @@ Cascade is a **standalone macOS app**: a high-performance Dynamic Notch built on
 
 ## File header
 
-Every file opens with the standard Xcode banner: the file name and the product name. The `Created by` line is optional — keep it if it is there, drop it if it is not; don't churn it.
+Every file opens with the standard Xcode banner: the file name and the product name. The product is `Cascade` for the app target, its checks and its test targets, `CascadeKit` for every file inside the CascadeKit package, sources and tests alike, and the package's own name for an example or prototype package. The `Created by` line is optional — keep it if it is there, drop it if it is not; don't churn it.
 
 ```swift
 //

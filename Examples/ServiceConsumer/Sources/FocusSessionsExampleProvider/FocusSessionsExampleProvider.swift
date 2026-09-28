@@ -1,9 +1,14 @@
+//
+//  FocusSessionsExampleProvider.swift
+//  ServiceConsumer
+//
+
 import Foundation
 import CascadeAddonSDK
 import CascadeContracts
 import FocusSessionsExampleContract
 
-/// Fixed synthetic count 3; this provider does not read real Focus history.
+/// FocusSessionsExampleProvider returns a fixed synthetic count of 3; it does not read real Focus history.
 public actor FocusSessionsExampleProvider: AddonProvider {
     private let clock: @Sendable () -> Date
     private var stopped = false

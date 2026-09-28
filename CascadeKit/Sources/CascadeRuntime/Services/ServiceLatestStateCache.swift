@@ -1,8 +1,13 @@
+//
+//  ServiceLatestStateCache.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 
-/// Actor-confined compact cache. Replacement is prepaid before copying; readers
-/// may borrow bytes only in a synchronous no-suspension encode/handoff scope.
+/// ServiceLatestStateCache is an actor-confined compact cache. Replacement is prepaid before
+/// copying; readers may borrow bytes only in a synchronous no-suspension encode/handoff scope.
 struct ServiceLatestStateCache: Sendable {
     struct Entry: Sendable {
         let sourceID: UUID

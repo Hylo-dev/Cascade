@@ -1,10 +1,17 @@
+//
+//  ServiceSubscriptionFrameCodec.swift
+//  CascadeKit
+//
+
 import Foundation
 
-/// Pure syntax selection neither negotiates nor authenticates a channel.
+/// ServiceSubscriptionFrameProfile is a pure syntax selection; it neither
+/// negotiates nor authenticates a channel.
 public enum ServiceSubscriptionFrameProfile: Equatable, Sendable { case v1_4 }
 
-/// Separate control/source/event bodies. Invocation P1 and generic event codecs
-/// remain unchanged. These bounds do not describe allocator workspace or RSS.
+/// ServiceSubscriptionFrameCodec encodes and decodes the separate control,
+/// source and event bodies. The invocation frame codec and the generic event
+/// codec remain unchanged. These bounds do not describe allocator workspace or RSS.
 public enum ServiceSubscriptionFrameCodec {
     /// All-slash-escaped 64 KiB base64 <=174,768 bytes plus metadata <8,192.
     /// Publisher/digest/partition total <=1,024 UTF-8 bytes, <=6,144 JSON-escaped
@@ -105,7 +112,8 @@ public enum ServiceSubscriptionFrameCodec {
     }
 }
 
-/// Shared only by the new syntax; no change to existing nested DTO decoders.
+/// SubscriptionWireValidation holds the checks shared only by the new syntax;
+/// existing nested DTO decoders are unchanged.
 enum SubscriptionWireValidation {
     static func fields(_ decoder: any Decoder, exactly allowed: Set<String>) throws {
         let fields = try decoder.container(keyedBy: WireKey.self)

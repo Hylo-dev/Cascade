@@ -6,8 +6,9 @@
 import AppKit
 import SwiftUI
 
-/// A brief press response precedes the symbol's one-shot animation. Neither
-/// feedback depends on the player reply or delays command dispatch.
+/// MusicControlButtonStyle plays a brief press response before the symbol's
+/// one-shot animation. Neither feedback depends on the player reply or delays
+/// command dispatch.
 struct MusicControlButtonStyle: ButtonStyle {
 
     @Environment(\.accessibilityReduceMotion)

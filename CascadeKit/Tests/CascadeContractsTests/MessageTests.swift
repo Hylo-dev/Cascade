@@ -1,6 +1,6 @@
 //
 //  MessageTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

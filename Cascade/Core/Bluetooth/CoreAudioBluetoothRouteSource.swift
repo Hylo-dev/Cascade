@@ -8,9 +8,10 @@ import CoreAudio
 import notify
 import Foundation
 
-/// Public HAL listener plus a read-only Smart Routing notification hint. The
-/// Darwin notification carries no identity: it can only trigger the same HAL
-/// snapshot and cannot manufacture a connection when the output is unchanged.
+/// CoreAudioBluetoothRouteSource combines the public HAL listener with a
+/// read-only Smart Routing notification hint. The Darwin notification carries
+/// no identity: it can only trigger the same HAL snapshot and cannot
+/// manufacture a connection when the output is unchanged.
 nonisolated final class CoreAudioBluetoothRouteSource: BluetoothAudioRouteSource {
 
     private let queue: DispatchQueue

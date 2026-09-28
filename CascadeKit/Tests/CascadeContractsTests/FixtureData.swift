@@ -1,6 +1,6 @@
 //
 //  FixtureData.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

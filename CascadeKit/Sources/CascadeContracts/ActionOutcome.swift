@@ -1,6 +1,6 @@
 //
 //  ActionOutcome.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

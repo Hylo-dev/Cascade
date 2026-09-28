@@ -384,7 +384,8 @@ final class SpotlightCoordinator {
         monitor?.clearTarget(generation: generation)
     }
 
-    /// Only the window teardown is deferred out of the event-tap callback.
+    /// cancelFromShortcut defers only the window teardown out of the event-tap
+    /// callback.
     /// Intent, generation and the keyboard buffer change synchronously.
     func cancelFromShortcut(
         nativeClosing     : Bool,

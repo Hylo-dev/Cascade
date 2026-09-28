@@ -1,3 +1,8 @@
+//
+//  AssetRasterBackingTests.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import CoreGraphics
 import Foundation

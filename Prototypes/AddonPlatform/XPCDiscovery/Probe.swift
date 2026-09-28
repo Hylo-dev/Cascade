@@ -1,3 +1,8 @@
+//
+//  Probe.swift
+//  Cascade Addon Platform Probe
+//
+
 // Disposable discovery-only fixture. Never creates AppExtensionProcess.
 import AppKit
 import ExtensionFoundation

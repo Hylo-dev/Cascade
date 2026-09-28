@@ -1,6 +1,6 @@
 //
 //  StorageFrameCodec.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

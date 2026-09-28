@@ -6,9 +6,10 @@
 import AppKit
 import SwiftUI
 
-/// Apple's own installed banner artwork, selected by verified product and
-/// color IDs. A bounded contents animation requires no player, display link or
-/// per-frame SwiftUI updates. Only a small poster survives the single turn.
+/// AirPodsModelView shows Apple's own installed banner artwork, selected by
+/// verified product and color IDs. A bounded contents animation requires no
+/// player, display link or per-frame SwiftUI updates. Only a small poster
+/// survives the single turn.
 struct AirPodsModelView: View {
 
     let model             : BluetoothDeviceModel

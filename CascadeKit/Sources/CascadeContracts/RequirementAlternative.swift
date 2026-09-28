@@ -1,6 +1,6 @@
 //
 //  RequirementAlternative.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

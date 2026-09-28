@@ -1,7 +1,13 @@
+//
+//  ServiceSourceStartFrame.swift
+//  CascadeKit
+//
+
 import Foundation
 
-/// Host-issued descriptor claims, not consumer-selected authority. UUID correlation
-/// does not authenticate a provider incarnation or establish source readiness.
+/// ServiceSourceStartFrame carries host-issued descriptor claims, not
+/// consumer-selected authority. UUID correlation does not authenticate a provider
+/// incarnation or establish source readiness.
 public struct ServiceSourceStartFrame: Codable, Equatable, Sendable {
     public let schemaVersion: Int
     public let sourceID: UUID

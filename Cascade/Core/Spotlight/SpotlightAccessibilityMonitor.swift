@@ -331,9 +331,9 @@ nonisolated final class SpotlightAccessibilityMonitor: SpotlightAccessibilityMon
         return gate.remaining(operation) > 0
     }
 
-    /// AX timeouts belong to each proxy, including freshly returned children.
-    /// The final budget check also prevents a cancelled inspection from moving
-    /// a window when a delayed read eventually returns.
+    /// configureTimeout sets the AX timeout on each proxy, including freshly
+    /// returned children. The final budget check also prevents a cancelled
+    /// inspection from moving a window when a delayed read eventually returns.
     private func configureTimeout(_ element: AXUIElement) -> Bool {
         guard let operation else { return false }
 

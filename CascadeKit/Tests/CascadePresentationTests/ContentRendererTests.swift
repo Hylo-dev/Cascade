@@ -1,6 +1,6 @@
 //
 //  ContentRendererTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

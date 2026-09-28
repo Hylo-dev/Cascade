@@ -1,6 +1,6 @@
 //
 //  RuntimeArchiveEnvelope.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

@@ -391,7 +391,8 @@ struct PublicationState: Sendable {
         )
     }
 
-    /// Source outputs share the canonical publication sequence, never a new replay domain.
+    /// validateServiceSourceSequence keeps source outputs on the canonical publication sequence,
+    /// never a new replay domain.
     func validateServiceSourceSequence(connection: PublicationConnection, sequence: UInt64) throws {
         guard !isRevisionExhausted, connection.negotiatedProtocol.minor >= 4 else {
             throw AddonFailure(code: .sessionRevoked, reason: "Source connection is unavailable")

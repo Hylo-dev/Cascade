@@ -1,6 +1,6 @@
 //
 //  ProviderMemoryEpisode.swift
-//  Cascade
+//  CascadeKit
 //
 
 /// ProviderMemoryEpisode classifies one physical provider incarnation's current

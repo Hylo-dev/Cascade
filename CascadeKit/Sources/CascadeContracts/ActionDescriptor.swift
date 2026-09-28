@@ -1,6 +1,6 @@
 //
 //  ActionDescriptor.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

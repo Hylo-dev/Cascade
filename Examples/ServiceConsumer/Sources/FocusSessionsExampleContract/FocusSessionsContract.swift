@@ -1,7 +1,12 @@
+//
+//  FocusSessionsContract.swift
+//  ServiceConsumer
+//
+
 import Foundation
 import CascadeContracts
 
-/// A deliberately tiny example wire grammar, independent of SDK service contracts.
+/// FocusSessionsContract is a deliberately tiny example wire grammar, independent of SDK service contracts.
 public enum FocusSessionsContract {
     public static let serviceID = "com.example.focus.sessions"
     public static let operation = "read"
@@ -12,7 +17,8 @@ public enum FocusSessionsContract {
         try ServiceScope(featureID: "summary", operation: operation)
     }
 
-    /// Accepts the two literal keys in either order with JSON whitespace and integer tokens.
+    /// decode accepts the two literal keys in either order with JSON whitespace and integer
+    /// tokens.
     /// Escaped key spellings, duplicates, fractions and exponents are intentionally unsupported.
     public static func decode(_ data: Data) throws -> Int {
         guard data.count <= maximumPayloadBytes,

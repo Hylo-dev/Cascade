@@ -1,6 +1,6 @@
 //
 //  StorageRequestLifecycle.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts
@@ -136,9 +136,11 @@ final class StorageRequestLifecycle {
         }
     }
 
-    /// consume validates caller-owned C6 values and all scalar correlation before retiring work.
+    /// consume validates the caller-owned `StorageResponse` and all scalar correlation before
+    /// retiring work.
     /// A reply is valid while attempting because it may beat the send observation to the caller.
-    /// Invalid or stale replies leave current capacity occupied; raw callers must use C6 first.
+    /// Invalid or stale replies leave current capacity occupied; raw callers must decode through
+    /// `StorageFrameCodec` first.
     func consume(
         _ response: StorageResponse,
         generation: ConnectionGeneration,

@@ -5,8 +5,8 @@
 
 import AppKit
 
-/// SafeAreaNotchDetector preserves the existing single-controller pointer
-/// fallback until the multi-display coordinator receives inventory snapshots.
+/// SafeAreaNotchDetector is the single-controller pointer fallback from before
+/// the display coordinator, which now takes its displays from `DisplayInventory`.
 ///
 /// Focused-window ownership is deliberately absent here. Keeping focus in the
 /// pure resolver prevents this legacy adapter from competing with the new AX

@@ -1,3 +1,8 @@
+//
+//  ManifestValidationCommand.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Darwin
 import Foundation
@@ -32,8 +37,9 @@ enum AddonToolCommand {
         }
     }
 
-    /// Open nonblocking before checking the same descriptor's file type, so a
-    /// FIFO/device cannot make validation wait for an unbounded input stream.
+    /// readManifest opens nonblocking before checking the same descriptor's
+    /// file type, so a FIFO/device cannot make validation wait for an unbounded
+    /// input stream.
     private static func readManifest(at path: String) throws -> Data {
         let descriptor = open(path, O_RDONLY | O_CLOEXEC | O_NONBLOCK)
         guard descriptor >= 0 else {

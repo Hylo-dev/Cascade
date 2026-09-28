@@ -1,6 +1,6 @@
 //
 //  ContentArchiveTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeAddonSDK
@@ -16,7 +16,7 @@ struct ContentArchiveTests {
         let document = try ContentDocument(
             root: .countdown(until: Date(timeIntervalSince1970: 2_000_000_000)),
             privacy: .publicContent,
-            accessibilityLabel: "Tempo rimanente"
+            accessibilityLabel: "Time remaining"
         )
         #expect(try ContentDocument.decode(document.encode()) == document)
     }

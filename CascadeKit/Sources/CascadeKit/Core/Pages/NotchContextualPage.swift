@@ -1,3 +1,8 @@
+//
+//  NotchContextualPage.swift
+//  CascadeKit
+//
+
 import CoreGraphics
 import SwiftUI
 
@@ -16,8 +21,9 @@ public nonisolated struct NotchContextualPageContext: Sendable {
     }
 }
 
-/// One app-owned page that may temporarily replace the ordinary expanded
-/// activity/widget surface. It is deliberately a single slot, not a pager.
+/// NotchContextualPage is one app-owned page that may temporarily replace the
+/// ordinary expanded activity/widget surface. It is deliberately a single slot,
+/// not a pager.
 @MainActor
 public protocol NotchContextualPage: AnyObject {
     var id: String { get }

@@ -1,6 +1,6 @@
 //
 //  Lease.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

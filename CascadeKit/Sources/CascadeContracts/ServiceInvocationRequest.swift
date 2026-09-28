@@ -1,6 +1,12 @@
+//
+//  ServiceInvocationRequest.swift
+//  CascadeKit
+//
+
 import Foundation
 
-/// Consumer syntax carries a grant reference, never provider or session authority.
+/// ServiceInvocationRequest is consumer syntax carrying a grant reference, never
+/// provider or session authority.
 public struct ServiceInvocationRequest: Codable, Equatable, Sendable {
     public let schemaVersion: Int
     public let grantID: UUID

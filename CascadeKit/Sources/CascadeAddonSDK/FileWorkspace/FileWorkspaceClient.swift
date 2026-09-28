@@ -1,6 +1,6 @@
 //
 //  FileWorkspaceClient.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

@@ -1,3 +1,8 @@
+//
+//  Probe.swift
+//  Cascade Addon Platform Probe
+//
+
 // Disposable app → sandboxed XPC broker → external ExtensionFoundation provider.
 import AppKit
 import ExtensionFoundation

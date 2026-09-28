@@ -1,10 +1,16 @@
+//
+//  ServiceInvocationExchange.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 
-/// Internal invocation executor, deliberately not a partial public service client.
-/// A caller/embedding must protect codec/source/returned buffers before allocation.
-/// One lock arbitrates logical result, close and the whole-operation slot. The slot
-/// survives ledger retirement through physical drain and final synchronous delivery.
+/// ServiceInvocationExchange is the internal invocation executor, deliberately not a
+/// partial public service client. A caller/embedding must protect
+/// codec/source/returned buffers before allocation. One lock arbitrates logical
+/// result, close and the whole-operation slot. The slot survives ledger retirement
+/// through physical drain and final synchronous delivery.
 internal final class ServiceInvocationExchange: @unchecked Sendable {
     private let channel: any AddonServiceInvocationMessageChannel
     private let generation: ConnectionGeneration
@@ -25,8 +31,9 @@ internal final class ServiceInvocationExchange: @unchecked Sendable {
     private var poisoned = false
     private var drainTask: Task<Void, Never>?
 
-    /// Sequence is descriptive wire state, never host authority. A restored/exhausted
-    /// connection must fail closed rather than wrap; there is no recovery/retry here.
+    /// init treats the starting sequence as descriptive wire state, never host
+    /// authority. A restored/exhausted connection must fail closed rather than wrap;
+    /// there is no recovery/retry here.
     init(channel: any AddonServiceInvocationMessageChannel, lastSequence: UInt64 = 0) throws {
         guard channel.profile == .v1_3 else { throw Self.failure(.versionConflict) }
         self.channel = channel
@@ -106,7 +113,7 @@ internal final class ServiceInvocationExchange: @unchecked Sendable {
             let reply: ServiceInvocationReply
             do {
                 reply = try ServiceFrameCodec.decodeInvocationReply(bytes, profile: profile)
-                // Crucial: P1 structural decode does not validate outer/nested agreement.
+                // Crucial: the frame codec's structural decode does not validate outer/nested agreement.
                 // Entire wire correlation must precede projecting the nested response.
                 try reply.validate(matching: request)
                 try lock.withLock {
@@ -125,7 +132,8 @@ internal final class ServiceInvocationExchange: @unchecked Sendable {
         }
     }
 
-    /// Only the first local outcome wins. Old callbacks have no new-operation authority.
+    /// record keeps only the first local outcome. Old callbacks have no new-operation
+    /// authority.
     private func record(_ completion: ServiceInvocationLifecycle.LocalCompletion?, id: UUID) {
         guard let completion, let op = operation, op.id == id, completion.ticket == op.ticket,
               op.local == nil, !op.consumed else { return }
@@ -177,8 +185,10 @@ internal final class ServiceInvocationExchange: @unchecked Sendable {
         if needsDrain { await drain() }
         lock.withLock { if operation?.id == id { operation = nil } }
     }
-    /// Caller holds lock. An unstructured task inherits no cancellation state from
-    /// a cancelling caller; every close/fault/cancel joins this same physical drain.
+    /// startDrainLocked starts the single physical drain, or returns the one already
+    /// running; the caller holds the lock. An unstructured task inherits no
+    /// cancellation state from a cancelling caller; every close/fault/cancel joins
+    /// this same physical drain.
     private func startDrainLocked() -> Task<Void, Never> {
         if let drainTask { return drainTask }
         let channel = self.channel

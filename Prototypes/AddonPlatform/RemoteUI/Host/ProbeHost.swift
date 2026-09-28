@@ -191,7 +191,7 @@ enum ProbeHost {
     }
 }
 
-/// Serializes delivery of the single authenticated channel from the listener.
+/// ProbeListenerDelegate serializes delivery of the single authenticated channel from the listener.
 final class ProbeListenerDelegate: NSObject, NSXPCListenerDelegate {
     private let lock = NSLock()
     private var delivered = false
@@ -285,7 +285,7 @@ final class ProbeEventReceiverService: NSObject, ProbeEventReceiver {
         invalidate?()
     }
 
-    /// Caller holds lock; retire authority before invoking the external callback.
+    /// terminateLocked retires authority before invoking the external callback; the caller holds the lock.
     private func terminateLocked() -> (() -> Void)? {
         invalidated = true
         reducer = nil
@@ -295,7 +295,7 @@ final class ProbeEventReceiverService: NSObject, ProbeEventReceiver {
     }
 }
 
-/// Error, invalidation and reply can race; deliver a continuation at most once.
+/// ProbeReply delivers a continuation at most once, because error, invalidation and reply can race.
 final class ProbeReply {
     private let lock = NSLock()
     private var continuation: CheckedContinuation<ProbeResponse, Error>?

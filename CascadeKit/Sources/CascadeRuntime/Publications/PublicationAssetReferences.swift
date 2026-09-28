@@ -1,6 +1,6 @@
 //
 //  PublicationAssetReferences.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

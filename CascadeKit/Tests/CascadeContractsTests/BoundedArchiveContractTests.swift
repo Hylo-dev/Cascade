@@ -1,6 +1,6 @@
 //
 //  BoundedArchiveContractTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

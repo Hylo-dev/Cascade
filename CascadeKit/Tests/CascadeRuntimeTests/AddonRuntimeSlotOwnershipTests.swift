@@ -1,6 +1,6 @@
 //
 //  AddonRuntimeSlotOwnershipTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

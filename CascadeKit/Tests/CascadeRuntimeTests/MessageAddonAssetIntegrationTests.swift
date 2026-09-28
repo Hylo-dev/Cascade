@@ -2667,8 +2667,9 @@ private struct AssetMessageFixture: Sendable {
     let owner       : AddonID
     let wall        : Date
 
-    /// mixedPrivacy gives the second host assignment an isolated asset privacy partition so a
-    /// cross-private sharing refusal can be exercised against the real canonical scope check.
+    /// make builds the fixture; mixedPrivacy gives the second host assignment an isolated asset
+    /// privacy partition so a cross-private sharing refusal can be exercised against the real
+    /// canonical scope check.
     static func make(mixedPrivacy: Bool = false) async throws -> Self {
         let root = URL(fileURLWithPath: "/private/tmp/cascade-message-asset-\(UUID())")
         let keyedRoot = root.appendingPathComponent("keyed")

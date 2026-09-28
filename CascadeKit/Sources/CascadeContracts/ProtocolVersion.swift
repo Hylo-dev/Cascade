@@ -1,6 +1,6 @@
 //
 //  ProtocolVersion.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

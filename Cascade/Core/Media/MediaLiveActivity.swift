@@ -7,7 +7,8 @@ import AppKit
 import CascadeKit
 import SwiftUI
 
-/// Metadata invalidates the activity; PCM frames only update the small bar view.
+/// MediaLiveActivity is invalidated by metadata changes; PCM frames only update
+/// the small bar view.
 /// Capture and artwork decoding exist only while the host presents this session.
 @MainActor
 final class MediaLiveActivity: NotchLiveActivity {
@@ -91,7 +92,8 @@ final class MediaLiveActivity: NotchLiveActivity {
 
     func retryAudioCapture() { restartSpectrum() }
 
-    /// Retain the last cover as a widget when the player ends its session.
+    /// markPlaybackStopped retains the last cover as a widget when the player ends its
+    /// session.
     /// Commands need a fresh player snapshot; old track metadata cannot authorize them.
     func markPlaybackStopped() {
         let stoppedAt = Date.now

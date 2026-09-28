@@ -1,6 +1,6 @@
 //
 //  RuntimeArchiveCodecTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

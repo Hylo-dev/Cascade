@@ -1,8 +1,14 @@
+//
+//  ServiceSubscriptionContractTests.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 import Testing
 
-/// Pure syntax only. No broker, readiness, SDK dispatch or allocator claims.
+/// ServiceSubscriptionContractTests covers pure syntax only. No broker, readiness, SDK dispatch
+/// or allocator claims.
 @Suite struct ServiceSubscriptionContractTests {
     private let id = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
     private let other = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!

@@ -1,6 +1,6 @@
 //
 //  NotchGlassLightHostTests.swift
-//  CascadeKitTests
+//  CascadeKit
 //
 
 import AppKit
@@ -25,7 +25,7 @@ struct NotchGlassLightHostTests {
         try await expectLights([light], from: host, renderer: renderer)
 
         host.setExpandedActivityContent(
-            AnyView(Text("Contenuto nascosto").privacySensitive()),
+            AnyView(Text("Hidden content").privacySensitive()),
             frame: frame
         )
 
@@ -88,7 +88,7 @@ struct NotchGlassLightHostTests {
         (host as any NotchGlassLightReceiving).setGlassLights([try makeLight()], from: emitter)
         #expect(!renderer.lights.isEmpty)
 
-        host.setExpandedActivityContent(AnyView(Text("Contenuto nascosto").privacySensitive()), frame: frame)
+        host.setExpandedActivityContent(AnyView(Text("Hidden content").privacySensitive()), frame: frame)
 
         #expect(renderer.lights.isEmpty)
     }

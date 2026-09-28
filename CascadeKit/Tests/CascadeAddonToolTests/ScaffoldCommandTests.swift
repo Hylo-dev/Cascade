@@ -1,3 +1,8 @@
+//
+//  ScaffoldCommandTests.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Darwin
 import Foundation

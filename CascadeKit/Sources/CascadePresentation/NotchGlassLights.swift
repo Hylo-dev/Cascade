@@ -1,6 +1,6 @@
 //
 //  NotchGlassLights.swift
-//  Cascade
+//  CascadeKit
 //
 
 import AppKit

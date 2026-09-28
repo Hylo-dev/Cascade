@@ -5,7 +5,8 @@
 
 import CoreGraphics
 
-/// Family and usable content bounds in this window's points, not iPhone sizes.
+/// NotchActivityViewContext carries the family and usable content bounds in
+/// this window's points, not iPhone sizes.
 public nonisolated struct NotchActivityViewContext: Sendable, Equatable {
     public let presentation: NotchActivityPresentation
     public let availableSize: CGSize

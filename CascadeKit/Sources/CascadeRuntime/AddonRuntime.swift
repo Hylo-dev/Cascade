@@ -193,8 +193,8 @@ actor AddonRuntime {
         var memoryEpisode = ProviderMemoryEpisode()
     }
 
-    /// Only a trusted host exit report may select unexpected. Ordinary callers
-    /// remain unclassified and cannot increment crash history.
+    /// PhysicalExitCause can be `unexpected` only when a trusted host exit report selects it.
+    /// Ordinary callers remain unclassified and cannot increment crash history.
     enum PhysicalExitCause: Equatable, Sendable {
         case unclassified
         case unexpected
@@ -1065,8 +1065,8 @@ actor AddonRuntime {
         return true
     }
 
-    /// Fresh work requires independent CPU and RAM gates plus durable health.
-    /// Existing work and lifecycle recovery launches deliberately skip this guard.
+    /// requireFreshAdmissionOpen admits fresh work only through independent CPU and RAM gates plus
+    /// durable health. Existing work and lifecycle recovery launches deliberately skip this guard.
     private func requireFreshAdmissionOpen(owner: AddonID) throws {
         guard let identity = catalog[owner]?.verifiedIdentity,
               isFreshAdmissionOpen(identity) else {
@@ -3847,7 +3847,7 @@ actor AddonRuntime {
         }
     }
 
-    /// Admits a scalar route and returns after short admission/raw workspace disposal.
+    /// receiveServiceRequest admits a scalar route and returns after short admission/raw workspace disposal.
     /// The adapter's single exchange slot awaits an event, never this actor's admission.
     func receiveServiceRequest(_ ingress: RuntimeServiceIngressHandle, connection: RuntimeConnection)
         async -> RuntimeServiceInvocationExchange.Admission {
@@ -4016,8 +4016,9 @@ actor AddonRuntime {
         }
     }
 
-    /// Original raw byte count is authoritative; completion-only handling claims ingress once.
-    /// No short admission is needed, so a held unrelated admission can defer the canonical commit.
+    /// receiveServiceCompletionOutput treats the original raw byte count as authoritative;
+    /// completion-only handling claims ingress once. No short admission is needed, so a held
+    /// unrelated admission can defer the canonical commit.
     func receiveServiceCompletionOutput(_ ingress: RuntimeServiceIngressHandle, connection: RuntimeConnection)
         async throws -> PublicationOutputResult {
         guard let serviceAdapter = adapter as? any AddonRuntimeServiceAdapter else { throw failure(.versionConflict) }
@@ -4062,7 +4063,8 @@ actor AddonRuntime {
                                                      connection: connection, sequence: ingress.sequence)
     }
 
-    /// Payload receipts do not retire broker work or command/job authority.
+    /// receiveServiceReceipt settles the delivery credit behind a payload receipt; payload receipts
+    /// do not retire broker work or command/job authority.
     func receiveServiceReceipt(_ receipt: RuntimeServiceReceipt, connection: RuntimeConnection) async -> Bool {
         guard let owner = try? serviceConnection(connection), receipt.incarnation == connection.incarnation,
               receipt.connectionToken == connection.token,
@@ -4083,10 +4085,10 @@ actor AddonRuntime {
         return true
     }
 
-    /// One bounded route snapshot per pass. Events arriving across its awaits are coalesced
-    /// by drainIfNoActiveAdmission and serviced after this guard and admission are released.
-    /// Canonical history is read once under current authority, then rechecked after workspace
-    /// admission/history suspension and immediately before synchronous adapter handoff.
+    /// drainInvocationRoutes takes one bounded route snapshot per pass. Events arriving across its
+    /// awaits are coalesced by drainIfNoActiveAdmission and serviced after this guard and admission
+    /// are released. Canonical history is read once under current authority, then rechecked after
+    /// workspace admission/history suspension and immediately before synchronous adapter handoff.
     private func drainInvocationRoutes() async {
         guard activeOperation == nil, !cleanupInProgress, !serviceRouteDrainInProgress,
               let serviceAdapter = adapter as? any AddonRuntimeServiceAdapter else { return }
@@ -4199,8 +4201,8 @@ actor AddonRuntime {
         serviceEventDrainRequested = true
     }
 
-    /// The source row pays the indirect delivery credit. Retire that exact credit
-    /// synchronously with its physical payload, before any refund can drop the row.
+    /// removeSubscriptionSource removes a source row, which pays the indirect delivery credit. Retire
+    /// that exact credit synchronously with its physical payload, before any refund can drop the row.
     @discardableResult
     private func removeSubscriptionSource(_ sourceID: UUID) -> RuntimeServiceSourceBinding? {
         guard let source = serviceSources.removeValue(forKey: sourceID) else { return nil }
@@ -4627,8 +4629,8 @@ actor AddonRuntime {
         }
     }
 
-    /// Retire only this abandoned intent. A live route sharing the canonical source
-    /// inherits the one pending start; otherwise the next explicit acquire rearms it.
+    /// abandonControlSourceStart retires only this abandoned intent. A live route sharing the
+    /// canonical source inherits the one pending start; otherwise the next explicit acquire rearms it.
     @discardableResult
     private func abandonControlSourceStart(_ id: UUID) async -> Bool {
         guard let route = serviceConnections.controls[id], route.needsStart else { return true }
@@ -4836,7 +4838,8 @@ actor AddonRuntime {
         serviceConnections.controls[id]?.receipt = receipt
     }
 
-    /// Borrowing the cache starts after every suspension and ends before returning.
+    /// deliverSubscriptionEvent borrows the cache only after every suspension and releases it
+    /// before returning.
     private func deliverSubscriptionEvent(_ id: UUID, operation: AdmissionOperation) async throws {
         guard let alias = serviceSubscriptions.aliases[id] else { throw failure(.permissionDenied) }
         let owner = alias.connection.identity.addonID

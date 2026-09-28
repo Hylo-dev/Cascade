@@ -1,16 +1,16 @@
 //
 //  NotchLayoutResolverTests.swift
-//  CascadeKitTests
+//  CascadeKit
 //
 
 import Testing
 import CoreGraphics
 @testable import CascadeKit
 
-/// The resolver is pure math, so it's the part we can pin down hard: cells map
-/// to the right rects, row 0 only offers the trailing side of the notch, the
-/// two main rows are fully usable, oversized placements are dropped, and a
-/// narrow notch degrades the trailing-cell count (the "does it fit" answer).
+/// NotchLayoutResolverTests pins the resolver down hard, since it is pure math:
+/// cells map to the right rects, row 0 only offers the trailing side of the
+/// notch, the two main rows are fully usable, oversized placements are dropped,
+/// and a narrow notch degrades the trailing-cell count (the "does it fit" answer).
 struct NotchLayoutResolverTests {
 
     private let resolver = NotchLayoutResolver() // .default metrics: 14 cols, gutter 6, ≤4 trailing

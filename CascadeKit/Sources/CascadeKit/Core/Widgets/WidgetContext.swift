@@ -15,7 +15,9 @@ import Foundation
 @MainActor
 public final class WidgetContext {
 
-    /// The notch's current discrete state.
+    /// state is the host's current NotchState. Widgets only read it; the host
+    /// writes it through `update(state:)`, and a revoked context stops following
+    /// transitions.
     public private(set) var state: NotchState
 
     private var requestContent: (() -> Void)?
@@ -28,20 +30,20 @@ public final class WidgetContext {
         self.requestContent = requestContent
     }
 
-    /// Ask the host to rebuild this widget's content. Call this only when a
-    /// declared input actually changed — never on a timer or per frame.
+    /// setNeedsContent asks the host to rebuild this widget's content. Call this
+    /// only when a declared input actually changed — never on a timer or per frame.
     public func setNeedsContent() {
         requestContent?()
     }
 
-    /// Keep the context's state in sync as the notch transitions. Internal: the
-    /// host calls it, widgets only ever read `state`.
+    /// update keeps the context's state in sync as the notch transitions.
+    /// Internal: the host calls it, widgets only ever read `state`.
     func update(state: NotchState) {
         guard requestContent != nil else { return }
         self.state = state
     }
 
-    /// Makes retained copies inert before the matching widget is suspended.
+    /// revoke makes retained copies inert before the matching widget is suspended.
     func revoke() {
         requestContent = nil
     }

@@ -1,3 +1,8 @@
+//
+//  ResourcePolicy.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 
@@ -13,7 +18,8 @@ public enum ResourceRequest: Sendable {
     case diskState(bytes: Int), diskCache(bytes: Int)
 }
 
-/// Host policy can tighten ceilings. Package origin and publisher do not select a policy.
+/// ResourcePolicy is host policy, which can only tighten ceilings. Package origin and publisher do
+/// not select a policy.
 public struct ResourcePolicy: Sendable {
     // Includes the reservation, bounded charge map and owner-index overhead.
     static let reservationCharge = 1_024

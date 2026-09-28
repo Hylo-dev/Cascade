@@ -1,6 +1,6 @@
 //
 //  FileConversionFormat.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

@@ -1,6 +1,6 @@
 //
 //  ContentNode+Components.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

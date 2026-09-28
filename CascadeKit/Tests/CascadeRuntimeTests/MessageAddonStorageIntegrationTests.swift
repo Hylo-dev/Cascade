@@ -9,7 +9,8 @@ import Testing
 @testable import CascadeAddonSDK
 @testable import CascadeRuntime
 
-/// These are real Swift runtime/POSIX storage tests, not authentication or OS-exit qualification.
+/// MessageAddonStorageIntegrationTests are real Swift runtime/POSIX storage tests, not
+/// authentication or OS-exit qualification.
 @Suite(.timeLimit(.minutes(1)))
 struct MessageAddonStorageIntegrationTests {
     @Test(arguments: [1, 2])
@@ -386,7 +387,8 @@ private final class StorageScopeObservation: @unchecked Sendable {
     func encoded() { lock.withLock { encodings += 1 } }
 }
 
-/// Fixture control remains paid through cleanup; SDK results never escape its nested paid scope.
+/// withStorageHost keeps fixture control paid through cleanup; SDK results never escape its
+/// nested paid scope.
 private func withStorageHost(
     minor: Int = 1, declared: Bool = true, granted: Bool = true, ready: Bool = true,
     _ body: @Sendable (StorageMessageHost) async throws -> Void
@@ -496,8 +498,9 @@ private struct StorageMessageHost: Sendable {
     }
 }
 
-/// A single current incarnation, typed ingress and delivery; all mutable access uses this lock.
-/// Capacity comes only from the real runtime's prepaid start delivery. No receipt history/queue.
+/// StorageMessageAdapter holds a single current incarnation with typed ingress and delivery;
+/// all mutable access uses this lock. Capacity comes only from the real runtime's prepaid start
+/// delivery. No receipt history/queue.
 private final class StorageMessageAdapter: AddonRuntimeStorageAdapter, AddonRuntimeAssetAdapter, @unchecked Sendable {
     private enum Handle: Equatable {
         case storage(RuntimeStorageIngressHandle)
@@ -667,7 +670,8 @@ private final class StorageMessageAdapter: AddonRuntimeStorageAdapter, AddonRunt
     }
 }
 
-/// One physical exchange task, one shared close task. The SDK owns the enclosing memory scope.
+/// StorageRuntimeByteBridge runs one physical exchange task and one shared close task. The SDK
+/// owns the enclosing memory scope.
 private final class StorageRuntimeByteBridge: AddonStorageMessageChannel, @unchecked Sendable {
     enum HoldPoint { case beforeReceive, afterHandoff }
     let generation: ConnectionGeneration

@@ -5,9 +5,10 @@
 
 import SwiftUI
 
-/// An ongoing user-relevant task with a beginning and an end. Publish at an
-/// expected time, expose an opt-out and call `NotchEngine.endActivity(id:)` when
-/// the task ends. Re-publish lifetime changes even while its views are hidden.
+/// NotchLiveActivity describes an ongoing user-relevant task with a beginning
+/// and an end. Publish at an expected time, expose an opt-out and call
+/// `NotchEngine.endActivity(id:)` when the task ends. Re-publish lifetime
+/// changes even while its views are hidden.
 @MainActor
 public protocol NotchLiveActivity: NotchActivity {
     var lifetime: NotchActivityLifetime { get }

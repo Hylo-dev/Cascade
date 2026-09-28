@@ -1,6 +1,6 @@
 //
 //  ServiceEvent.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

@@ -98,7 +98,7 @@ public nonisolated struct NotchConfiguration: Sendable {
         expandedBottomCornerRadius      : 44.0,
         expandedTopCornerRadius         : 18.0,
         spring                          : .snappy,
-        chromeColor                     : Color.red, // System-red.
+        chromeColor                     : Color.red,
         drawsChromeWithoutHardwareNotch : true
     )
 }

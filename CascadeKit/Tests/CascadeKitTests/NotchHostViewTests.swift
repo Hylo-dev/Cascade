@@ -1,6 +1,6 @@
 //
 //  NotchHostViewTests.swift
-//  CascadeKitTests
+//  CascadeKit
 //
 
 import AppKit

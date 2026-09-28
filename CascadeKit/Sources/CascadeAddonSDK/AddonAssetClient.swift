@@ -1,6 +1,6 @@
 //
 //  AddonAssetClient.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

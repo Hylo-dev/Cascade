@@ -1,3 +1,8 @@
+//
+//  TestClients.swift
+//  ServiceConsumer
+//
+
 import Foundation
 import Testing
 import CascadeAddonSDK
@@ -77,7 +82,8 @@ final class CivilClock: @unchecked Sendable {
  func advance(to date: Date) { lock.lock(); defer { lock.unlock() }; value = date }
 }
 
-/// The first signal is either a held invocation or a terminal refresh result.
+/// RefreshSignal is the first thing an observed refresh reports: either a held invocation or a
+/// terminal refresh result.
 enum RefreshSignal: Sendable {
  case invoked
  case completed(Result<ProviderOutput, any Error>)
@@ -85,7 +91,8 @@ enum RefreshSignal: Sendable {
 
 enum RefreshHarnessFailure: Error { case completedBeforeInvocation }
 
-/// Owns one refresh task, including cleanup when the test body throws.
+/// withObservedRefresh owns one refresh task, including cleanup when the test
+/// body throws.
 /// Arbitrary noncooperative work is still subject to the external test-run bound.
 func withObservedRefresh(
  client: RecordingClient,

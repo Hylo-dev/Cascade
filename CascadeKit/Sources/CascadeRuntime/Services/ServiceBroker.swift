@@ -1,3 +1,8 @@
+//
+//  ServiceBroker.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 import OSLog
@@ -58,7 +63,8 @@ public struct ServiceSourceDescriptor: Equatable, Sendable {
     public let operation: String
 }
 
-/// Value projections only. Callers must ask the broker again after suspension.
+/// ServiceSubscriptionBinding holds value projections only. Callers must ask the broker again after
+/// suspension.
 struct ServiceSubscriptionBinding: Sendable {
     let grant: Grant
     let permissionID: UUID
@@ -83,8 +89,9 @@ struct ServiceInvocationBinding: Sendable {
     let invocation: ServiceInvocation
 }
 
-/// Bounded host rules and decisions. An adapter must authenticate sessions, execute decisions,
-/// and report observed process exit separately. No addon code runs in this actor.
+/// ServiceBroker applies bounded host rules and returns decisions. An adapter must authenticate
+/// sessions, execute decisions, and report observed process exit separately. No addon code runs in
+/// this actor.
 public actor ServiceBroker {
     struct CompletionPreparation: Sendable {
         fileprivate let workID: UUID
@@ -249,7 +256,8 @@ public actor ServiceBroker {
         try await registerSession(identity: identity, generation: ConnectionGeneration())
     }
 
-    /// Trusted composition for a fresh canonical 1.3 publication connection only.
+    /// registerSession admits a session through trusted composition, for a fresh canonical 1.3
+    /// publication connection only.
     func registerSession(identity: VerifiedAddonIdentity, generation: ConnectionGeneration) async throws -> ServiceSession {
         try ServiceRegistry.validateIdentity(identity)
         guard !registry.sessions.values.contains(where: { $0.identity == identity }) else {
@@ -437,10 +445,11 @@ public actor ServiceBroker {
         await release(reservations)
     }
 
-    /// Called only by the runtime's current paid pending-start owner under its
-    /// outer drain. That owner proves no source handoff/execution exists; a revoked
-    /// initiating interest is not the authority for disposing the surviving source.
-    /// False leaves ownership with the caller; absence is a conclusive disposition.
+    /// abandonUnhandedAcquisition abandons an acquisition that was never handed off. It is called
+    /// only by the runtime's current paid pending-start owner under its outer drain. That owner
+    /// proves no source handoff/execution exists; a revoked initiating interest is not the
+    /// authority for disposing the surviving source. False leaves ownership with the caller;
+    /// absence is a conclusive disposition.
     func abandonUnhandedAcquisition(_ acquisition: ServiceAcquisition, startTransferred: Bool) async -> Bool {
         guard var source = registry.sources[acquisition.sourceID] else { return true }
         guard !isRevisionExhausted, source.key == acquisition.sourceKey else { return false }
@@ -474,8 +483,8 @@ public actor ServiceBroker {
         try currentDemandDeadline(for: provider, at: now) != nil
     }
 
-    /// The latest exact canonical interest deadline lets the runtime reject
-    /// demand that expires while this actor hop is suspended.
+    /// currentDemandDeadline returns the latest exact canonical interest deadline, which lets the
+    /// runtime reject demand that expires while this actor hop is suspended.
     func currentDemandDeadline(
         for provider: VerifiedAddonIdentity,
         at now: RuntimeInstant
@@ -637,8 +646,8 @@ public actor ServiceBroker {
         }
     }
 
-    /// Commits one host-timestamped terminal event without reinterpreting a timely
-    /// receipt at a later owned-drain time. Missing or revoked authority never revives.
+    /// completeInvocation commits one host-timestamped terminal event without reinterpreting a
+    /// timely receipt at a later owned-drain time. Missing or revoked authority never revives.
     func completeInvocation(
         _ id       : UUID,
         response   : ServiceResponse,
@@ -801,8 +810,9 @@ public actor ServiceBroker {
         return impact.decisions
     }
 
-    /// The authority supplies the complete resolved path, not a consumer payload. No work is emitted on failure.
-    /// Reservations represent process admission; release only after all corresponding workers actually exit.
+    /// admitPath admits the complete resolved path supplied by the authority, not a consumer
+    /// payload. No work is emitted on failure. Reservations represent process admission; release
+    /// only after all corresponding workers actually exit.
     public func admitPath(_ providers: [VerifiedAddonIdentity]) async throws -> ServicePathAdmission {
         guard !providers.isEmpty, providers.count <= 8, paths.count < 16,
               Set(providers.map(\.addonID)).count == providers.count else { throw Self.failure(.resourceDenied) }
@@ -829,7 +839,7 @@ public actor ServiceBroker {
         await release(reservations)
     }
 
-    /// Releases broker metadata. Outstanding process admissions stay charged until observed exit.
+    /// shutdown releases broker metadata. Outstanding process admissions stay charged until observed exit.
     @discardableResult
     public func shutdown() async -> [ServiceDecision] {
         advanceRevision()
@@ -845,7 +855,8 @@ public actor ServiceBroker {
         return decisions
     }
 
-    /// Feed this into the host's one shared deadline queue; the broker creates no timers.
+    /// nextDeadline returns the earliest pending deadline for the host's one shared deadline queue;
+    /// the broker creates no timers.
     public func nextDeadline() -> Duration? {
         (registry.interests.values.map(\.deadline) + leases.grants.values.map(\.deadline)
             + leases.operations.values.map(\.deadline) + leases.requests.values.map(\.retainUntil)).min()
@@ -872,8 +883,9 @@ public actor ServiceBroker {
         return decisions
     }
 
-    /// System service-loss event: returns the precise features for resolver reevaluation.
-    /// Restoration requires a newly authorized binding; this method never selects a fallback.
+    /// providerUnavailable handles a system service-loss event and returns the precise features for
+    /// resolver reevaluation. Restoration requires a newly authorized binding; this method never
+    /// selects a fallback.
     public func providerUnavailable(_ identity: VerifiedAddonIdentity) async -> ServiceInvalidation {
         let ids = Set(permissions.entries.filter { $0.value.value.binding.providerIdentity == identity }.keys)
         let (reservations, impact) = invalidatePermissions(ids)

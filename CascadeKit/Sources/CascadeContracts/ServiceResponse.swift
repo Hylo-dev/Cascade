@@ -1,6 +1,6 @@
 //
 //  ServiceResponse.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

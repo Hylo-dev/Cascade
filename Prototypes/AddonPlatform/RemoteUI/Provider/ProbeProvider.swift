@@ -211,7 +211,7 @@ struct ProbeProvider: AppExtension {
     }
 }
 
-/// Pure SwiftUI UI is instantiated inside the extension, never inside the host.
+/// ProbeScene is pure SwiftUI UI, instantiated inside the extension, never inside the host.
 struct ProbeScene: View {
     @ObservedObject private var model = ProbeCounterModel.shared
     var body: some View {

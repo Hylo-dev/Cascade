@@ -1,6 +1,6 @@
 //
 //  AddonPermission.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

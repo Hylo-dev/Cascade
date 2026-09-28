@@ -1,3 +1,8 @@
+//
+//  SemanticVersionRange.swift
+//  CascadeKit
+//
+
 import Foundation
 
 public struct SemanticVersion: Hashable, Codable, Sendable, Comparable, CustomStringConvertible {

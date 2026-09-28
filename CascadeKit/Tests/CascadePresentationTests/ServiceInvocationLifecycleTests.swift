@@ -1,6 +1,6 @@
 //
 //  ServiceInvocationLifecycleTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts
@@ -9,7 +9,8 @@ import Testing
 
 @testable import CascadeAddonSDK
 
-/// Empty caller-owned buffers keep this scalar transition suite independent of runtime accounting.
+/// ServiceInvocationLifecycleTests uses empty caller-owned buffers to keep this scalar
+/// transition suite independent of runtime accounting.
 @Suite
 struct ServiceInvocationLifecycleTests {
     private typealias Lifecycle = ServiceInvocationLifecycle

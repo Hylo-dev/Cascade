@@ -279,8 +279,9 @@ struct RuntimeConnection: Sendable {
     }
 }
 
-/// Dedicated service bodies share the incarnation's single ingress slot. Kind is
-/// part of the exact claim; completion sequence belongs to publication, not consumer service.
+/// RuntimeServiceIngressKind names the dedicated service bodies that share the incarnation's single
+/// ingress slot. Kind is part of the exact claim; completion sequence belongs to publication, not
+/// consumer service.
 enum RuntimeServiceIngressKind: Hashable, Sendable { case invocation, completion, control, sourceOutput }
 struct RuntimeServiceIngressHandle: Hashable, Sendable {
     let token: UUID
@@ -305,7 +306,8 @@ struct RuntimeServiceDelivery: Equatable, Sendable {
     let receipt: RuntimeServiceReceipt
     let payload: Data
 }
-/// One scalar settlement withdraws an admitted consumer route without disclosing history.
+/// RuntimeServiceSettlement is one scalar settlement that withdraws an admitted consumer route
+/// without disclosing history.
 struct RuntimeServiceSettlement: Equatable, Sendable {
     let routeID: UUID
     let incarnation: RuntimeIncarnation
@@ -321,8 +323,9 @@ protocol AddonRuntimeServiceAdapter: AddonRuntimeAdapter {
     func settleServiceExchange(_ settlement: RuntimeServiceSettlement)
 }
 
-/// Cumulative subscription transport uses the same physical ingress/delivery slots.
-/// Receipts release staging before SDK event handlers run; handoff never calls user code.
+/// AddonRuntimeServiceSubscriptionAdapter carries cumulative subscription transport over the same
+/// physical ingress/delivery slots. Receipts release staging before SDK event handlers run; handoff
+/// never calls user code.
 protocol AddonRuntimeServiceSubscriptionAdapter: AddonRuntimeServiceAdapter {}
 
 enum RuntimeServiceSubscriptionReceiptKind: Equatable, Sendable {

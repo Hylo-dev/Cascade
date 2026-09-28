@@ -1,6 +1,6 @@
 //
 //  Publication.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

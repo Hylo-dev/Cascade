@@ -69,7 +69,7 @@ struct FocusRecord: Codable, Sendable {
     }
 }
 
-/// Keyed storage is the sole authority; ProviderOutput.checkpoint is never used.
+/// FocusStateCodec treats keyed storage as the sole authority; ProviderOutput.checkpoint is never used.
 enum FocusStateCodec {
     static let maximumBytes = 16_384
     static func decode(_ data: Data) throws -> FocusRecord {

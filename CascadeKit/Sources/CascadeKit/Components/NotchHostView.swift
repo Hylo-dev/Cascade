@@ -205,21 +205,22 @@ final class NotchHostView: NSView {
         )
     }
 
-    /// A temporary destination used only while a native file drag is active.
-    /// Ordinary mouse hit testing remains bound to the animated notch outline.
+    /// setFileDropIntakeFrame installs a temporary destination used only while
+    /// a native file drag is active. Ordinary mouse hit testing remains bound
+    /// to the animated notch outline.
     func setFileDropIntakeFrame(_ frame: CGRect?) {
         fileDropIntakeFrame = frame
     }
 
-    /// Set the notch fill. Called once by the controller from the configuration;
-    /// the renderer keeps the path moving, the color is stable. The SwiftUI
-    /// `Color` is bridged to a `CGColor` here, at the AppKit boundary.
+    /// setChromeColor sets the notch fill. Called once by the controller from the
+    /// configuration; the renderer keeps the path moving, the color is stable. The
+    /// SwiftUI `Color` is bridged to a `CGColor` here, at the AppKit boundary.
     func setChromeColor(_ color: Color) {
         shapeLayer.fillColor = NSColor(color).cgColor
         glassRenderer.setColor(color)
     }
 
-    /// Show or hide the widget content and place it within the open notch.
+    /// setContent shows or hides the widget content and places it within the open notch.
     func setContent(
         _ view   : AnyView,
         frame    : CGRect,
@@ -232,10 +233,10 @@ final class NotchHostView: NSView {
         )
     }
 
-    /// Set the two compact activity surfaces on either side of the physical
-    /// notch. The gap between the supplied frames is intentionally untouched:
-    /// it is the real camera cutout, not a SwiftUI spacer that could receive a
-    /// click or accidentally draw over the hardware.
+    /// setCompactActivityContent sets the two compact activity surfaces on
+    /// either side of the physical notch. The gap between the supplied frames is
+    /// intentionally untouched: it is the real camera cutout, not a SwiftUI
+    /// spacer that could receive a click or accidentally draw over the hardware.
     func setCompactActivityContent(
         leading      : AnyView?,
         leadingFrame : CGRect,
@@ -259,9 +260,9 @@ final class NotchHostView: NSView {
         )
     }
 
-    /// Set expanded activity content below the physical cutout. The controller
-    /// computes the safe frame once per discrete presentation change; this host
-    /// does not participate in the per-frame layer morph.
+    /// setExpandedActivityContent sets expanded activity content below the physical
+    /// cutout. The controller computes the safe frame once per discrete presentation
+    /// change; this host does not participate in the per-frame layer morph.
     func setExpandedActivityContent(
         _ view: AnyView?,
         frame : CGRect
@@ -283,8 +284,9 @@ final class NotchHostView: NSView {
         )
     }
 
-    /// Clear activity roots when widgets own the expanded surface or the panel
-    /// is hidden. Clearing the roots is what makes hidden content truly idle.
+    /// clearActivityContent clears activity roots when widgets own the expanded
+    /// surface or the panel is hidden. Clearing the roots is what makes hidden
+    /// content truly idle.
     func clearActivityContent() {
         clearDetachedActivityContent()
         update(
@@ -304,8 +306,9 @@ final class NotchHostView: NSView {
         )
     }
 
-    /// The satellite shares the chrome mask, but keeps its own host so its icon
-    /// can travel into the island without rebuilding SwiftUI on every frame.
+    /// setDetachedActivityContent hosts the satellite, which shares the chrome
+    /// mask but keeps its own host so its icon can travel into the island
+    /// without rebuilding SwiftUI on every frame.
     func setDetachedActivityContent(
         _ view  : AnyView,
         frame   : CGRect,
@@ -358,7 +361,7 @@ final class NotchHostView: NSView {
         false
     }
 
-    /// Push a freshly resolved geometry to the screen.
+    /// apply pushes a freshly resolved geometry to the screen.
     ///
     /// `isChromeVisible` may be false in a custom configuration: the path still
     /// tracks the interactive zone so input routing and content clipping remain

@@ -54,7 +54,8 @@ extension NSScreen {
         )
     }
 
-    /// Freeze this screen into an immutable snapshot for the engine.
+    /// activeDisplaySnapshot freezes this screen into an immutable snapshot for
+    /// the engine.
     func activeDisplaySnapshot() -> ActiveDisplay {
         ActiveDisplay(
             displayID   : displayID,

@@ -5,7 +5,7 @@
 
 import Foundation
 
-/// Bootstrap carries only a fresh endpoint, never business requests or grants.
+/// ProbeBootstrap carries only a fresh endpoint, never business requests or grants.
 @objc(ProbeBootstrap)
 protocol ProbeBootstrap {
     func connect(to endpoint: NSXPCListenerEndpoint)

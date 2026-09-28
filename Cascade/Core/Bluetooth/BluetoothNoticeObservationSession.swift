@@ -6,7 +6,8 @@
 import AppKit
 @preconcurrency import ApplicationServices
 
-/// The shared signal outlives every observer callback and is cancelled before unregistering hosts.
+/// BluetoothNoticeObservationSession owns the shared signal, which outlives every observer callback
+/// and is cancelled before unregistering hosts.
 nonisolated final class BluetoothNoticeObservationSession: @unchecked Sendable {
 
     let hosts : [BluetoothNoticeAccessibilityHostSession]

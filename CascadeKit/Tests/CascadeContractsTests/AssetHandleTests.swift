@@ -1,6 +1,6 @@
 //
 //  AssetHandleTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

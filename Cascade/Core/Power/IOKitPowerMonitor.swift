@@ -7,8 +7,9 @@ import AppKit
 import IOKit.ps
 import os
 
-/// IOKit and Low Power Mode notifications are the only wakeups. A serial
-/// utility queue preserves sample order; session checks discard late results.
+/// IOKitPowerMonitor wakes only on IOKit and Low Power Mode notifications. A
+/// serial utility queue preserves sample order; session checks discard late
+/// results.
 @MainActor
 final class IOKitPowerMonitor: PowerMonitoring {
 
@@ -121,8 +122,9 @@ final class IOKitPowerMonitor: PowerMonitoring {
         isSleeping = false
     }
 
-    /// The unretained context is valid only while our source is registered on
-    /// the main run loop. stop/deinit invalidate it on that same actor first.
+    /// powerChanged receives an unretained context that is valid only while our
+    /// source is registered on the main run loop. stop/deinit invalidate it on
+    /// that same actor first.
     private nonisolated static func powerChanged(_ context: UnsafeMutableRawPointer?) {
         guard let context else { return }
 

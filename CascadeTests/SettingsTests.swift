@@ -1,6 +1,6 @@
 //
 //  SettingsTests.swift
-//  CascadeTests
+//  Cascade
 //
 
 import AppKit

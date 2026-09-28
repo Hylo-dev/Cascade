@@ -1,7 +1,13 @@
+//
+//  RuntimeServiceSourceBinding.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 
-/// Persistent provider incarnation authority, independent of the finite startup job.
+/// RuntimeServiceSourceBinding holds persistent provider incarnation authority, independent of the
+/// finite startup job.
 struct RuntimeServiceSourceBinding: Sendable {
     let frame: ServiceSourceStartFrame
     let key: ServiceRegistry.SourceKey

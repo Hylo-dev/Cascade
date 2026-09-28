@@ -7,8 +7,9 @@ import AppKit
 import CascadeRuntime
 import SwiftUI
 
-/// App-only native interaction wrapper. A click activates the DTO action;
-/// crossing the drag threshold starts one file promise per prepared item.
+/// FileShelfDragSource is the app-only native interaction wrapper. A click
+/// activates the DTO action; crossing the drag threshold starts one file
+/// promise per prepared item.
 @MainActor
 struct FileShelfDragSource: NSViewRepresentable {
 

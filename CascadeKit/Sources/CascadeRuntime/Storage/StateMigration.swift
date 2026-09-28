@@ -1,6 +1,12 @@
+//
+//  StateMigration.swift
+//  CascadeKit
+//
+
 import Foundation
 
-/// Trusted host policy for one verified retained-data identity. Never decoded from provider input.
+/// StateRegistration is trusted host policy for one verified retained-data identity. Never decoded
+/// from provider input.
 public struct StateRegistration: Hashable, Sendable {
     public let identity: VerifiedAddonIdentity
     public let maximumSchemaVersion: UInt32
@@ -11,7 +17,7 @@ public struct StateRegistration: Hashable, Sendable {
     }
 }
 
-/// A capability issued by one store instance. It is never decoded from provider input.
+/// StateOwner is a capability issued by one store instance. It is never decoded from provider input.
 public struct StateOwner: Hashable, Sendable {
     let id: UUID
 }
@@ -31,7 +37,7 @@ public struct StateCheckpoint: Equatable, Sendable {
     public let digest: Data
 }
 
-/// The host may send this bounded source to a qualified external migration worker.
+/// StateMigration is the bounded source the host may send to a qualified external migration worker.
 /// This type does not execute addon code or authorize a process launch.
 public struct StateMigration: Sendable {
     public let ticket: StateMigrationTicket

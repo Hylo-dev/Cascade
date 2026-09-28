@@ -1,6 +1,6 @@
 //
 //  ActionAuthorizer.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

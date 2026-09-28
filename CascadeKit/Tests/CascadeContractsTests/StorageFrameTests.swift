@@ -1,6 +1,6 @@
 //
 //  StorageFrameTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

@@ -1,4 +1,9 @@
 // swift-tools-version: 6.2
+//
+//  Package.swift
+//  ServiceConsumer
+//
+
 import Foundation
 import PackageDescription
 guard let sdkPath = ProcessInfo.processInfo.environment["CASCADE_SDK_PATH"], sdkPath.hasPrefix("/"), !sdkPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { fatalError("Set CASCADE_SDK_PATH to an absolute public SDK package directory") }

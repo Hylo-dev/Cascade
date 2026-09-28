@@ -1,6 +1,6 @@
 //
 //  ContentPreview.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

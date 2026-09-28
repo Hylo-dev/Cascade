@@ -1,7 +1,13 @@
+//
+//  RuntimeServiceAcquisitionState.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 
-/// One two-phase control route. No payload, task or continuation is retained here.
+/// RuntimeServiceAcquisitionState tracks one two-phase control route. No payload, task or
+/// continuation is retained here.
 struct RuntimeServiceAcquisitionState: Sendable {
     let id: UUID
     let connection: RuntimeConnection

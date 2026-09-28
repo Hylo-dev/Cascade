@@ -1,3 +1,8 @@
+//
+//  ResolutionModels.swift
+//  CascadeKit
+//
+
 import Foundation
 import CascadeContracts
 

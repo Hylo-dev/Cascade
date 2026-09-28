@@ -1,10 +1,16 @@
+//
+//  ProcessMetricsTests.swift
+//  CascadeKit
+//
+
 import Darwin
 import Foundation
 import Testing
 @testable import CascadeRuntime
 
-/// Fixed records replace only the external libproc/clock boundary. Assertions exercise
-/// the real reader and reducer; expected interval values are independently derived.
+/// ProcessMetricsTests replaces only the external libproc/clock boundary with fixed records.
+/// Assertions exercise the real reader and reducer; expected interval values are
+/// independently derived.
 @Suite struct ProcessMetricsTests {
     private let executableUUID = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
     private let zeroUUID = UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
@@ -65,7 +71,7 @@ import Testing
         )
     }
 
-    /// This spy verifies acquisition count, supplied PID, and dependency ordering.
+    /// Acquisition is a spy that verifies acquisition count, supplied PID, and dependency ordering.
     /// Captured errno is represented as a value, so later clock reads cannot alter it.
     private final class Acquisition {
         var calls: [String] = []
@@ -423,9 +429,10 @@ import Testing
         #expect(try #require(result.interval).cpuNanoseconds == UInt64.max)
     }
 
-    /// Reads only this already-existing test process. The independent first v0 read
-    /// supplies an explicit expectation; this verifies buffer ABI, not authentication,
-    /// permissions across peers, CPU units, or macOS 14 runtime qualification.
+    /// nativeReaderObservesOnlyItsOwnExistingProcessABI reads only this already-existing
+    /// test process. The independent first v0 read supplies an explicit expectation; this
+    /// verifies buffer ABI, not authentication, permissions across peers, CPU units, or
+    /// macOS 14 runtime qualification.
     @Test func nativeReaderObservesOnlyItsOwnExistingProcessABI() throws {
         var raw = rusage_info_v0()
         let pid = getpid()

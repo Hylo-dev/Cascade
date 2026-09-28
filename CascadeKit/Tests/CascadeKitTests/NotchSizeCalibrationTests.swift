@@ -1,6 +1,6 @@
 //
 //  NotchSizeCalibrationTests.swift
-//  CascadeKitTests
+//  CascadeKit
 //
 
 import CoreGraphics

@@ -6,7 +6,8 @@
 import CoreAudio
 import Foundation
 
-/// A small value copied from the current CoreAudio output, never an IOBluetooth object.
+/// BluetoothAudioRouteSnapshot is a small value copied from the current CoreAudio output, never an
+/// IOBluetooth object.
 nonisolated struct BluetoothAudioRouteSnapshot: Equatable, Sendable {
 
     let uid          : String
@@ -26,9 +27,10 @@ nonisolated struct BluetoothAudioRouteSnapshot: Equatable, Sendable {
         )
     }
 
-    /// This exact output UID shape was verified on the local AirPods and in
-    /// Chromium's GetRelatedBluetoothDeviceIDs. Other HAL formats stay unknown:
-    /// names, substrings and input UIDs cannot identify a connected output.
+    /// bluetoothAddress accepts only the exact output UID shape verified on the
+    /// local AirPods and in Chromium's GetRelatedBluetoothDeviceIDs. Other HAL
+    /// formats stay unknown: names, substrings and input UIDs cannot identify a
+    /// connected output.
     static func bluetoothAddress(for uid: String) -> String? {
         let suffix = ":output"
         guard uid.hasSuffix(suffix) else { return nil }

@@ -1,6 +1,6 @@
 //
 //  SwiftDataArchiveValues.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

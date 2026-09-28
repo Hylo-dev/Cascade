@@ -1,3 +1,8 @@
+//
+//  AddonServiceMessageChannel.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 
@@ -8,15 +13,15 @@ public enum AddonServiceMessageExchangeResult: Sendable {
     case rejectedBeforeHandoff
 }
 
-/// One authenticated, immutable physical connection. The embedding prepays codec,
-/// raw, returned-value and callback lifetimes, including one latest event per alias
-/// (at most 64), and a running handler. This protocol is not a native transport.
-/// An unresolved unsubscribe retains that alias's same paid latest-event scope
-/// until no-effect restoration or terminal discard; it adds no second payload.
-/// Acquisition admission receipts are checked against the actual request, consumed
-/// internally, and never returned as terminal responses. Receipt precedes event
-/// reception; neither bind nor synchronous handoff may execute a receiver/handler.
-/// close drains physical staging, independently of running user handlers.
+/// AddonServiceMessageChannel is one authenticated, immutable physical connection. The
+/// embedding prepays codec, raw, returned-value and callback lifetimes, including one
+/// latest event per alias (at most 64), and a running handler. This protocol is not a
+/// native transport. An unresolved unsubscribe retains that alias's same paid
+/// latest-event scope until no-effect restoration or terminal discard; it adds no second
+/// payload. Acquisition admission receipts are checked against the actual request,
+/// consumed internally, and never returned as terminal responses. Receipt precedes event
+/// reception; neither bind nor synchronous handoff may execute a receiver/handler. close
+/// drains physical staging, independently of running user handlers.
 public protocol AddonServiceMessageChannel: Sendable {
     var generation: ConnectionGeneration { get }
     var invocationProfile: ServiceInvocationFrameProfile? { get }

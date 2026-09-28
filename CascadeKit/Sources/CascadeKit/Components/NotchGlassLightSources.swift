@@ -1,7 +1,13 @@
+//
+//  NotchGlassLightSources.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 
-/// One contribution per hosting surface; generations reject late SwiftUI
-/// preference deliveries after content has been replaced or removed.
+/// NotchGlassLightSources keeps one contribution per hosting surface;
+/// generations reject late SwiftUI preference deliveries after content has been
+/// replaced or removed.
 nonisolated struct NotchGlassLightSources {
     struct Token: Equatable, Sendable {
         let source: ObjectIdentifier
@@ -16,8 +22,8 @@ nonisolated struct NotchGlassLightSources {
         Array(order.flatMap { contributions[$0] ?? [] }.prefix(GlassLight.maximumCount))
     }
 
-    /// Replacement revokes the old contribution immediately, before SwiftUI
-    /// can asynchronously deliver the new root's lights or privacy placeholder.
+    /// replace revokes the old contribution immediately, before SwiftUI can
+    /// asynchronously deliver the new root's lights or privacy placeholder.
     mutating func replace(source: ObjectIdentifier) -> Token {
         if generations[source] == nil { order.append(source) }
         let generation = (generations[source] ?? 0) &+ 1

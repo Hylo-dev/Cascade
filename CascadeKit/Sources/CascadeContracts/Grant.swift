@@ -1,6 +1,6 @@
 //
 //  Grant.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

@@ -1,8 +1,14 @@
+//
+//  ServiceConnectionExchange.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 
-/// One whole-operation arbiter and sequence for invocation and controls. Only an
-/// invocation has a P1 ledger; no controls or event authority enter that ledger.
+/// ServiceConnectionExchange is the single whole-operation arbiter and sequence
+/// for invocation and controls. Only an invocation has an invocation-frame
+/// ledger; no controls or event authority enter that ledger.
 final class ServiceConnectionExchange: @unchecked Sendable {
     private struct Operation: @unchecked Sendable {
         let id: UUID
@@ -75,7 +81,7 @@ final class ServiceConnectionExchange: @unchecked Sendable {
         }
     }
 
-    /// Embedding plumbing, deliberately absent from AddonServiceClient.
+    /// acquire is embedding plumbing, deliberately absent from AddonServiceClient.
     func acquire(_ operation: OperationRequest, owner: AddonID) async throws -> Grant {
         let request = try ServiceControlRequest(requestID: UUID(), action: .acquire(operation))
         let reply = try await control(request) { reply in

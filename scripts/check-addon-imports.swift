@@ -1,8 +1,14 @@
+//
+//  check-addon-imports.swift
+//  Cascade
+//
+
 import Foundation
 import SwiftParser
 import SwiftSyntax
 
-/// Parse all source branches without resolving modules or executing provider code.
+/// ImportAttributes collects an import's attribute names, walking every source
+/// branch without resolving modules or executing provider code.
 /// Macro expansion and manifest-environment alternatives are outside this check.
 final class ImportAttributes: SyntaxVisitor {
     var names: [String] = []

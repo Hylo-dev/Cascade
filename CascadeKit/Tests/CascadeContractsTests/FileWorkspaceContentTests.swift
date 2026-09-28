@@ -1,6 +1,6 @@
 //
 //  FileWorkspaceContentTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

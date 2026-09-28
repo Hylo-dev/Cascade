@@ -1,6 +1,6 @@
 //
 //  GlassLight.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

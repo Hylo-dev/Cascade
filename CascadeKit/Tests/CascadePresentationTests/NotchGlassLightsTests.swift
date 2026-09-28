@@ -1,6 +1,6 @@
 //
 //  NotchGlassLightsTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import AppKit

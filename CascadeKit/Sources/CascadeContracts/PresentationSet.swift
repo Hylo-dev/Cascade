@@ -1,6 +1,6 @@
 //
 //  PresentationSet.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

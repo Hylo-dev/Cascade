@@ -5,9 +5,9 @@
 
 import SwiftUI
 
-/// SF Symbols retain their native metrics. Each skip arrow moves separately;
-/// the outgoing arrow is recycled only while invisible, so there are never
-/// more than the original two arrows on screen.
+/// MusicControlSymbol keeps SF Symbols at their native metrics. Each skip arrow
+/// moves separately; the outgoing arrow is recycled only while invisible, so
+/// there are never more than the original two arrows on screen.
 struct MusicControlSymbol: View {
 
     let symbol : String

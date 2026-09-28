@@ -7,9 +7,10 @@ import CascadeKit
 import Foundation
 import Observation
 
-/// Local feedback never changes the provider snapshot or drives audio capture.
-/// An intent survives delayed reads, then yields to confirmation, failure, a
-/// different track, or a bounded confirmation deadline.
+/// MusicPlaybackPresentation holds local feedback that never changes the
+/// provider snapshot or drives audio capture. An intent survives delayed reads,
+/// then yields to confirmation, failure, a different track, or a bounded
+/// confirmation deadline.
 @MainActor
 @Observable
 final class MusicPlaybackPresentation {

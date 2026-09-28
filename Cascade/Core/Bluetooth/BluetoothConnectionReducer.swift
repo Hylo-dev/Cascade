@@ -67,10 +67,10 @@ struct BluetoothConnectionReducer {
         return event
     }
 
-    /// Audio routing can return to the Mac while the underlying Bluetooth
-    /// link stays connected to both devices. The route monitor deduplicates
-    /// output changes; here only the first route following a fresh ACL event
-    /// is coalesced, so subsequent returns remain visible.
+    /// recordAudioRoute handles audio routing returning to the Mac while the
+    /// underlying Bluetooth link stays connected to both devices. The route
+    /// monitor deduplicates output changes; here only the first route following
+    /// a fresh ACL event is coalesced, so subsequent returns remain visible.
     mutating func recordAudioRoute(
         _ device: BluetoothConnectedDevice,
         eventID : UInt64,

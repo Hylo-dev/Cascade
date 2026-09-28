@@ -1,6 +1,6 @@
 //
 //  ActionDispatcher.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts
@@ -228,8 +228,8 @@ public struct ActionDispatcher: Sendable {
         }
     }
 
-    /// Exact unexpired queued command demand; retained journal rows and
-    /// already handed-off work never authorize a provider crash retry.
+    /// hasCurrentQueuedDemand reports only exact, unexpired queued command demand; retained
+    /// journal rows and already handed-off work never authorize a provider crash retry.
     func hasCurrentQueuedDemand(owner: AddonID, at instant: Duration) -> Bool {
         records.contains { key, record in
             guard key.owner == owner, !record.revoked,

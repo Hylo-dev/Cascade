@@ -5,10 +5,11 @@
 
 import Foundation
 
-/// Apple's CoreBluetoothUI catalog is the source of product identity, including
-/// newer variants that share hardware artwork. BluetoothUIService owns the
-/// corresponding banner turntables. Reading their resource files uses public
-/// Foundation APIs; no private framework code is loaded or called.
+/// OfficialHeadphoneAssetResolver treats Apple's CoreBluetoothUI catalog as the
+/// source of product identity, including newer variants that share hardware
+/// artwork. BluetoothUIService owns the corresponding banner turntables.
+/// Reading their resource files uses public Foundation APIs; no private
+/// framework code is loaded or called.
 nonisolated struct OfficialHeadphoneAssetResolver: OfficialHeadphoneAssetResolving {
 
     let catalogDirectory: URL

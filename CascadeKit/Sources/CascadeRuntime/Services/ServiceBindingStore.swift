@@ -1,7 +1,13 @@
+//
+//  ServiceBindingStore.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 
-/// A feature is part of binding identity; no resolver fallback is performed here.
+/// ServiceBindingStore treats the feature as part of binding identity; no resolver fallback is
+/// performed here.
 struct ServiceBindingStore {
     struct Key: Hashable {
         let consumer: VerifiedAddonIdentity

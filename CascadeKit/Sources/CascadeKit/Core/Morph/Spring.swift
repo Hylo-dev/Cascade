@@ -29,7 +29,7 @@ nonisolated struct Spring {
         self.parameters = parameters
     }
 
-    /// Step the spring one frame toward `target`.
+    /// advance steps the spring one frame toward `target`.
     ///
     /// `dt` is clamped before use: after the display link pauses (an idle
     /// notch), the first frame's delta can be huge, and an unclamped step would
@@ -55,7 +55,8 @@ nonisolated struct Spring {
         }
     }
 
-    /// Whether the spring has effectively reached `target` and stopped moving.
+    /// isSettled reports whether the spring has effectively reached `target`
+    /// and stopped moving.
     ///
     /// Both the position error and the velocity must fall under the rest
     /// threshold. The morph engine stops the display link once every spring is
@@ -71,7 +72,7 @@ nonisolated struct Spring {
             abs(velocity)          < tolerance
     }
 
-    /// Snap immediately to `value`, killing velocity. Used when the notch
+    /// snap jumps immediately to `value`, killing velocity. Used when the notch
     /// should jump rather than animate — e.g. when it moves to a new screen.
     mutating func snap(to value: Double) {
         self.value    = value

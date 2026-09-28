@@ -1,7 +1,12 @@
+//
+//  ProcessMetrics.swift
+//  CascadeKit
+//
+
 import Foundation
 
-/// An explicitly supplied observational expectation, scoped to one host binding
-/// and clock domain. Birth ticks and executable UUID do not authenticate a publisher,
+/// ProcessMetricBinding is an explicitly supplied observational expectation, scoped to one host
+/// binding and clock domain. Birth ticks and executable UUID do not authenticate a publisher,
 /// identify every exec generation, or grant any process-control authority.
 struct ProcessMetricBinding: Equatable, Sendable {
     let pid: Int32
@@ -24,8 +29,8 @@ struct ProcessMetricTimebase: Equatable, Sendable {
     var isValid: Bool { numer > 0 && denom > 0 }
 }
 
-/// Uptime brackets describe acquisition uncertainty, not an atomic timestamp.
-/// Raw birth ticks and these ticks share the native Mach absolute clock domain.
+/// ProcessMetricWindow brackets a read's acquisition uncertainty between two uptime ticks; it is not
+/// an atomic timestamp. Raw birth ticks and these ticks share the native Mach absolute clock domain.
 struct ProcessMetricWindow: Equatable, Sendable {
     let startTicks: UInt64
     let endTicks: UInt64
@@ -35,8 +40,8 @@ struct ProcessMetricWindow: Equatable, Sendable {
     }
 }
 
-/// Values extracted only from a successful public v0 read. CPU fields are Mach
-/// ticks; footprint is bytes. A failed read cannot carry a record of apparent zeros.
+/// ProcessMetricRecord holds values extracted only from a successful public v0 read. CPU fields
+/// are Mach ticks; footprint is bytes. A failed read cannot carry a record of apparent zeros.
 struct ProcessMetricRecord: Equatable, Sendable {
     let birthAbsoluteTicks: UInt64
     let executableUUID: UUID
@@ -90,16 +95,17 @@ enum ProcessMetricReductionStatus: Equatable, Sendable {
     case reset(ProcessMetricFailure), unavailable(ProcessMetricFailure), invalid(ProcessMetricFailure)
 }
 
-/// A current valid footprint can survive CPU-only arithmetic failure. Neither a
-/// baseline nor an unavailable/reset interval represents measured zero CPU use.
+/// ProcessMetricReduction is the outcome of one reduction; a current valid footprint can survive
+/// CPU-only arithmetic failure. Neither a baseline nor an unavailable/reset interval represents
+/// measured zero CPU use.
 struct ProcessMetricReduction: Equatable, Sendable {
     let status: ProcessMetricReductionStatus
     let footprintBytes: UInt64?
     let interval: ProcessCPUInterval?
 }
 
-/// Fixed-state, purely synchronous reducer. Its owner explicitly supplies resets;
-/// this value installs no observers, timers, tasks, or process lifecycle operations.
+/// ProcessMetricsReducer is a fixed-state, purely synchronous reducer. Its owner explicitly supplies
+/// resets; this value installs no observers, timers, tasks, or process lifecycle operations.
 struct ProcessMetricsReducer: Sendable {
     let binding: ProcessMetricBinding
     private var baseline: ProcessMetricObservation?
@@ -176,7 +182,7 @@ struct ProcessMetricsReducer: Sendable {
         }
     }
 
-    /// Breaks continuity for a future owner-controlled lifecycle/wake event.
+    /// reset breaks continuity for a future owner-controlled lifecycle/wake event.
     /// It cannot revive a rejected identity; that requires a new reducer binding.
     mutating func reset() {
         baseline = nil
@@ -190,10 +196,10 @@ struct ProcessMetricsReducer: Sendable {
         return ProcessMetricReduction(status: .invalid(failure), footprintBytes: footprint, interval: nil)
     }
 
-    /// Round only after combining CPU tick deltas. Full-width multiplication
-    /// admits representable quotients even when the intermediate product exceeds
-    /// UInt64. dividingFullWidth traps for zero divisors/unrepresentable quotients,
-    /// so validate both before invoking it; no wrapping or saturating arithmetic.
+    /// nanoseconds converts a tick delta through the Mach timebase, rounding only once, after CPU tick
+    /// deltas are combined. Full-width multiplication admits representable quotients even when the
+    /// intermediate product exceeds UInt64. dividingFullWidth traps for zero divisors/unrepresentable
+    /// quotients, so validate both before invoking it; no wrapping or saturating arithmetic.
     private func nanoseconds(_ ticks: UInt64, timebase: ProcessMetricTimebase) -> UInt64? {
         guard timebase.isValid else { return nil }
         let divisor = UInt64(timebase.denom)

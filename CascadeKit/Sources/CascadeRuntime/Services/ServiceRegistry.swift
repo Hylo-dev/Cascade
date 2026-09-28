@@ -1,3 +1,8 @@
+//
+//  ServiceRegistry.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 

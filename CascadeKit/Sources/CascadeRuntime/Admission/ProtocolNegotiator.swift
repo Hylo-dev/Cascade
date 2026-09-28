@@ -58,7 +58,8 @@ public enum ProtocolNegotiator {
         )
     }
 
-    /// Only the complete runtime assembly may supply serviceHost; offers/profiles confer no authority.
+    /// negotiate accepts serviceHost only from the complete runtime assembly; offers/profiles
+    /// confer no authority.
     static func negotiate(
         offer                       : ProtocolOffer,
         manifestProtocol            : ProtocolVersion,

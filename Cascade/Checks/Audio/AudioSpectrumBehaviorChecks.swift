@@ -247,8 +247,9 @@ enum AudioSpectrumBehaviorChecks {
         _ = orphaned
     }
 
-    /// A startup probe must request capture without a player, then release all
-    /// resources on completion or cancellation. It must not wait for audible PCM.
+    /// checkStartupPermissionRequest verifies that a startup probe requests
+    /// capture without a player, then releases all resources on completion or
+    /// cancellation. It must not wait for audible PCM.
     static func checkStartupPermissionRequest() async {
         let driver    = DelayedSpectrumCaptureDriver()
         let requester = AudioCapturePermissionRequester(driver: driver)

@@ -1,6 +1,6 @@
 //
 //  ClockFormat.swift
-//  Cascade
+//  CascadeKit
 //
 
 /// ClockFormat limits host formatting to locale-aware hours, minutes and seconds.

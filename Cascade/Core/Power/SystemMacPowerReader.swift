@@ -6,8 +6,9 @@
 import Foundation
 import IOKit.ps
 
-/// The IOKit snapshot is copied on a utility queue. No CF object escapes its
-/// owning snapshot and no battery or accessory lookup runs inside a view.
+/// SystemMacPowerReader copies the IOKit snapshot on a utility queue. No CF
+/// object escapes its owning snapshot and no battery or accessory lookup runs
+/// inside a view.
 nonisolated struct SystemMacPowerReader: MacPowerReading {
 
     func read() -> MacPowerSnapshot? {

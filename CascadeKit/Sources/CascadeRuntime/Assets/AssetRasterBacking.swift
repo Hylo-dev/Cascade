@@ -1,10 +1,15 @@
+//
+//  AssetRasterBacking.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import CoreGraphics
 import Foundation
 
-/// Immutable host raster; attribution is not a publication permission. The image
-/// retains the provider, which retains its one pixel allocation until final use.
-/// No mutable pointer or governor disposal capability escapes in this wrapper.
+/// AssetRasterBacking is an immutable host raster; attribution is not a publication permission.
+/// The image retains the provider, which retains its one pixel allocation until final use. No
+/// mutable pointer or governor disposal capability escapes in this wrapper.
 final class AssetRasterBacking: @unchecked Sendable {
     let image: CGImage
     let owner: AddonID
@@ -35,9 +40,9 @@ struct AssetRasterLayout: Sendable {
     }
 }
 
-/// Trusted construction boundary, not an addon callback. A nil provider result
-/// MUST retain neither context nor provider and cannot schedule a later callback.
-/// A builder may drop a successfully built provider before returning nil; the
+/// AssetRasterConstruction is the trusted construction boundary, not an addon callback. A nil
+/// provider result MUST retain neither context nor provider and cannot schedule a later
+/// callback. A builder may drop a successfully built provider before returning nil; the
 /// context's one-shot disposal handles that real callback as well as no callback.
 protocol AssetRasterConstruction: Sendable {
     func allocate(bytes: Int) -> UnsafeMutableRawPointer?
@@ -61,12 +66,12 @@ struct NativeAssetRasterConstruction: AssetRasterConstruction {
     }
 }
 
-/// The callback retain is distinct from the factory's local strong reference.
-/// On nullable provider failure the factory still owns a strong context and
-/// disposes it locally. A callback during a failed construction may already have
-/// consumed that retain: the locked one-shot state detects that, rather than
-/// assuming nil alone means that no release callback ran. No freed context is
-/// ever used to inject failures or duplicate callbacks.
+/// AssetRasterProviderContext owns one pixel allocation and frees it exactly once through the data
+/// provider's release callback. The callback retain is distinct from the factory's local strong
+/// reference. On nullable provider failure the factory still owns a strong context and disposes it
+/// locally. A callback during a failed construction may already have consumed that retain: the
+/// locked one-shot state detects that, rather than assuming nil alone means that no release
+/// callback ran. No freed context is ever used to inject failures or duplicate callbacks.
 final class AssetRasterProviderContext: @unchecked Sendable {
     private let lock = NSLock()
     private let pointer: UnsafeMutableRawPointer
@@ -120,8 +125,8 @@ final class AssetRasterProviderContext: @unchecked Sendable {
     }
 }
 
-/// Explicit non-MainActor executor for validation, destination allocation/copy,
-/// and actual CoreGraphics construction. Input Data remains caller-owned and
+/// AssetRasterFactory is the explicit non-MainActor executor for validation, destination
+/// allocation/copy, and actual CoreGraphics construction. Input Data remains caller-owned and
 /// separately accounted; no retained Data copy is attached to the result.
 actor AssetRasterFactory {
     let construction: any AssetRasterConstruction

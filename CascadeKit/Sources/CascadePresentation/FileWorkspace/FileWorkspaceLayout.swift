@@ -1,6 +1,6 @@
 //
 //  FileWorkspaceLayout.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CoreGraphics

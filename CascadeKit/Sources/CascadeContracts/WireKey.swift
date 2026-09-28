@@ -1,6 +1,6 @@
 //
 //  WireKey.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

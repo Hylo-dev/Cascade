@@ -1,4 +1,8 @@
 // swift-tools-version: 6.2
+//
+//  Package.swift
+//  StandaloneClock
+//
 
 import Foundation
 import PackageDescription

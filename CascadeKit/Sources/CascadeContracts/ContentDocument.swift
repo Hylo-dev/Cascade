@@ -1,6 +1,6 @@
 //
 //  ContentDocument.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

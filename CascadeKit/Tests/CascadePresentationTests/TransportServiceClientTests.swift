@@ -1,3 +1,8 @@
+//
+//  TransportServiceClientTests.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 import Testing
@@ -256,8 +261,9 @@ private actor SubscriptionSDKObservation {
     func record(_ value: Data) { payload = value }
 }
 
-/// Controlled wire boundary only: assertions target real shared SDK arbitration.
-/// Runtime/governor/receipt behavior is exercised separately through the real host.
+/// SubscriptionSDKChannel is a controlled wire boundary only: assertions target real
+/// shared SDK arbitration. Runtime/governor/receipt behavior is exercised separately
+/// through the real host.
 private final class SubscriptionSDKChannel: AddonServiceMessageChannel, @unchecked Sendable {
     let owner = AddonID(rawValue: "com.example.consumer")!
     let alias = UUID()

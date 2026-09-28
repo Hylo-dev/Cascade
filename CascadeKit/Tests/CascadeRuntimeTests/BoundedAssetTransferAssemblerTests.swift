@@ -1,6 +1,6 @@
 //
 //  BoundedAssetTransferAssemblerTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

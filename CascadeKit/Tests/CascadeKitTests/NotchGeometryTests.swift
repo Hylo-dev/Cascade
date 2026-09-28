@@ -1,15 +1,15 @@
 //
 //  NotchGeometryTests.swift
-//  CascadeKitTests
+//  CascadeKit
 //
 
 import Testing
 import CoreGraphics
 @testable import CascadeKit
 
-/// NotchGeometry.resolve is pure math, so it is the easiest part of the morph
-/// to nail down: at progress 0 it must equal the resting notch, at 1 the
-/// configured expansion, and the two sides must be free to disagree.
+/// NotchGeometryTests nails down NotchGeometry.resolve, the easiest part of the
+/// morph because it is pure math: at progress 0 it must equal the resting notch,
+/// at 1 the configured expansion, and the two sides must be free to disagree.
 struct NotchGeometryTests {
 
     private let configuration = NotchConfiguration.default

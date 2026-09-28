@@ -1,3 +1,8 @@
+//
+//  ResolutionPlanner.swift
+//  CascadeKit
+//
+
 import Foundation
 import CascadeContracts
 

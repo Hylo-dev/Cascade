@@ -1,6 +1,6 @@
 //
 //  FileWorkspaceEntry.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

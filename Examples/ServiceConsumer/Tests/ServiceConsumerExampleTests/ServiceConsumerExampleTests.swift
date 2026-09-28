@@ -1,3 +1,8 @@
+//
+//  ServiceConsumerExampleTests.swift
+//  ServiceConsumer
+//
+
 import Foundation
 import Testing
 import CascadeAddonSDK

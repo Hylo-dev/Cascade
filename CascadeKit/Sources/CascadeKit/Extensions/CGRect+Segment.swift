@@ -14,8 +14,8 @@ import CoreGraphics
 /// crosses the band counts as a hit, no matter how fast the mouse moved.
 extension CGRect {
 
-    /// Whether the line segment from `p0` to `p1` touches this rect (an endpoint
-    /// inside counts as touching).
+    /// intersects reports whether the line segment from `p0` to `p1` touches
+    /// this rect (an endpoint inside counts as touching).
     ///
     /// Uses Liang–Barsky clipping: it walks the segment's parameter `t ∈ [0, 1]`
     /// against the rect's four slabs, narrowing `[tEnter, tExit]`; the segment

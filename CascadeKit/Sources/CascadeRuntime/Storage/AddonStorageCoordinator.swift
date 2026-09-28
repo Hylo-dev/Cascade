@@ -325,7 +325,8 @@ actor AddonStorageCoordinator {
     private func establishArchiveInventory(_ operation: Operation) async throws {
         try validateStartup(operation)
         if archiveRootDescriptor < 0 {
-            // Retain this open description before any await. C1 duplicates it; restart must reuse it.
+            // Retain this open description before any await. Each archive's discovery
+            // (SwiftDataArchive.discover) duplicates it; restart must reuse it.
             archiveRootDescriptor = try KeyedStorageDirectory.openRoot(archiveRoot)
         }
         guard try await governor.reconcileObservedDisk(
@@ -396,7 +397,8 @@ actor AddonStorageCoordinator {
     }
 
     /// archiveOuterInventoryIsComplete checks bounded names and present private directories without links.
-    /// Each known child's C1 still owns recursive inventory; unknown entries acquire no attribution.
+    /// Each known child's own archive discovery still owns its recursive inventory; unknown entries
+    /// acquire no attribution.
     private func archiveOuterInventoryIsComplete() -> Bool {
         var complete = true
         do {

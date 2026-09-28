@@ -1,6 +1,6 @@
 //
 //  ScheduledEntry.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

@@ -1,6 +1,6 @@
 //
 //  MessageAddonAssetClient.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts
@@ -287,9 +287,9 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
         lock.withLock { busy = false }
     }
 
-    /// Successful completion and explicit close are ordered by the same lock. Once success
-    /// wins, a later close cannot revoke that completed result. If revocation wins, keep the
-    /// whole-operation slot through physical disposal and reject even a validated response.
+    /// concludeSuccess orders successful completion and explicit close under the same lock. Once
+    /// success wins, a later close cannot revoke that completed result. If revocation wins, keep
+    /// the whole-operation slot through physical disposal and reject even a validated response.
     private func concludeSuccess() async throws {
 #if DEBUG
         await Self.successFinalizationObserver?()

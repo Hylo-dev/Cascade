@@ -1,6 +1,6 @@
 //
 //  ProviderMessage.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

@@ -1,14 +1,21 @@
+//
+//  ServiceInvocationReply.swift
+//  CascadeKit
+//
+
 import Foundation
 
-/// Refusal means this exchange caused no new dispatch. A retained logical request
-/// may already have run; refusal is not the SDK's rejected-before-handoff proof.
+/// ServiceInvocationResult is the outcome an invocation reply carries; refusal
+/// means this exchange caused no new dispatch. A retained logical request may
+/// already have run; refusal is not the SDK's rejected-before-handoff proof.
 public enum ServiceInvocationResult: Equatable, Sendable {
     case completed(ServiceResponse)
     case refused(code: AddonFailure.Code, reason: String)
     case outcomeUnknown
 }
 
-/// A correlated reply has exactly one result, without null or cross-result fields.
+/// ServiceInvocationReply is a correlated reply with exactly one result, without
+/// null or cross-result fields.
 public struct ServiceInvocationReply: Codable, Equatable, Sendable {
     public let schemaVersion: Int
     public let requestID: UUID

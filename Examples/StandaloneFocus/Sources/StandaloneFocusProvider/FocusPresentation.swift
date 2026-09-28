@@ -6,7 +6,7 @@
 import CascadeContracts
 import Foundation
 
-/// Finite widget content. Countdown drawing belongs to the host; no timer task.
+/// FocusPresentation builds finite widget content. Countdown drawing belongs to the host; no timer task.
 enum FocusPresentation {
     static func output(record: FocusRecord, now: Date, completion: InvocationCompletion?, schedule: Bool) throws
         -> ProviderOutput

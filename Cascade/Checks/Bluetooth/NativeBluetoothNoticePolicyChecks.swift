@@ -45,6 +45,7 @@ struct NativeBluetoothNoticePolicyChecks {
                 dismissButtonIdentifier: dismissID
             )
 
+            // Italian system labels ("Connesse", "Connesso"): loadConnectionLabels reads every localization.
             return BluetoothNoticeMatchPolicy.matchingDevice(
                 in             : snapshot,
                 hints          : hints,

@@ -1,6 +1,6 @@
 //
 //  ServiceBrokerDemandTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

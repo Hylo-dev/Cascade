@@ -7,7 +7,8 @@ import AppKit
 import CascadeContracts
 import QuickLookUI
 
-/// Owns the Quick Look window for exactly as long as the host keeps its checked lease open.
+/// FileShelfPreviewController owns the Quick Look window for exactly as long as the host keeps its
+/// checked lease open.
 @MainActor
 final class FileShelfPreviewController: NSObject, NSWindowDelegate {
 

@@ -19,7 +19,8 @@ actor BluetoothNoticeAccessibilityWorker {
 
     private let logger = Logger(subsystem: "hylo.Cascade", category: "BluetoothNotice")
 
-    /// The macOS 27 identifiers are verified in SystemBannerUI; live AX exposure remains OS-dependent.
+    /// start registers AX observers on each notice host process. The macOS 27 banner identifiers are
+    /// verified in SystemBannerUI; live AX exposure remains OS-dependent.
     func start(processes: [String: pid_t]) throws -> BluetoothNoticeObservationSession {
         connectedLabels = loadConnectionLabels()
         guard !connectedLabels.isEmpty else {
@@ -132,7 +133,8 @@ actor BluetoothNoticeAccessibilityWorker {
         expiryTask = nil
     }
 
-    /// Performs a bounded inspection only after a real connection or routing hint.
+    /// inspectExpectedNotice performs a bounded inspection only after a real connection or
+    /// routing hint.
     /// Shared host windows are search roots only; they can never become a dismissal target.
     func inspectExpectedNotice() -> BluetoothNoticeSuppressionStatus? {
         hints.removeAll { $0.expiresAt <= Date() }
@@ -214,7 +216,8 @@ actor BluetoothNoticeAccessibilityWorker {
         logger.debug("Bluetooth banner inspection: \(reason, privacy: .public)")
     }
 
-    /// Searches only for Apple's exact banner identifier. Unknown ancestor content is never acted on.
+    /// systemBannerCandidates searches only for Apple's exact banner identifier. Unknown ancestor
+    /// content is never acted on.
     private func systemBannerCandidates(
         in root      : AXUIElement,
         ownerBundleID: String,
@@ -255,7 +258,8 @@ actor BluetoothNoticeAccessibilityWorker {
         return (candidates, unsupported)
     }
 
-    /// Classifies the entire identified subtree. A generic close control or extra button is rejected.
+    /// systemBannerSnapshot classifies the entire identified subtree. A generic close control or
+    /// extra button is rejected.
     private func systemBannerSnapshot(
         _ root       : AXUIElement,
         ownerBundleID: String,
@@ -341,7 +345,7 @@ actor BluetoothNoticeAccessibilityWorker {
         return size
     }
 
-    /// snapshot rejects any tree it cannot completely classify within its node and time budgets.
+    /// legacySnapshot rejects any tree it cannot completely classify within its node and time budgets.
     private func legacySnapshot(
         window  : AXUIElement,
         deadline: Date

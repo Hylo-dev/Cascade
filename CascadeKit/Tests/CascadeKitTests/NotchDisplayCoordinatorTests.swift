@@ -1,6 +1,6 @@
 //
 //  NotchDisplayCoordinatorTests.swift
-//  CascadeKitTests
+//  CascadeKit
 //
 
 import AppKit
@@ -1567,7 +1567,7 @@ private final class CoordinatorContextualPage: NotchContextualPage {
     let id: String
     var contentRevision: UInt64
     let contentHeight: CGFloat = 146
-    let accessibilityLabel = "Ripiano"
+    let accessibilityLabel = "Shelf"
     var keepsExpandedPresentation: Bool
 
     init(

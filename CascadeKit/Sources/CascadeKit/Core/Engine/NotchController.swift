@@ -250,7 +250,7 @@ final class NotchController: NotchDisplayPresenting {
 
     // MARK: - Lifecycle
 
-    /// Resolve the active display, place the panel, and start listening.
+    /// start resolves the active display, places the panel, and starts listening.
     func start() {
 
         guard !isStarted else {
@@ -292,7 +292,7 @@ final class NotchController: NotchDisplayPresenting {
         presentPanel()
     }
 
-    /// Hide the overlay and stop all observation and animation.
+    /// stop hides the overlay and stops all observation and animation.
     func stop() {
         guard isStarted else {
             return
@@ -518,10 +518,10 @@ final class NotchController: NotchDisplayPresenting {
             && displayPresentation?.contextualPage?.keepsExpandedPresentation == true
     }
 
-    /// Order the panel on screen and pin it into its SkyLight space. Pinning has
-    /// to come after the panel is visible (it needs a valid `windowNumber`); we
-    /// also call this on unlock, because hiding the window can drop its space
-    /// membership and it must be re-pinned to stay anchored.
+    /// presentPanel orders the panel on screen and pins it into its SkyLight
+    /// space. Pinning has to come after the panel is visible (it needs a valid
+    /// `windowNumber`); we also call this on unlock, because hiding the window
+    /// can drop its space membership and it must be re-pinned to stay anchored.
     private func presentPanel() {
         // Keep the ignored receiver visible in the active AppKit Space before
         // Finder starts its session. QA proved that a registered window in the
@@ -601,7 +601,8 @@ final class NotchController: NotchDisplayPresenting {
         return displayPresentation?.contextualPage
     }
 
-    /// Set whether accepted hover entries request AppKit haptic feedback.
+    /// setHapticsEnabled sets whether accepted hover entries request AppKit
+    /// haptic feedback.
     func setHapticsEnabled(_ isEnabled: Bool) {
         hoverFeedback.isEnabled = isEnabled
     }
@@ -626,8 +627,9 @@ final class NotchController: NotchDisplayPresenting {
         hostView.setBorderAppearance(appearance, animated: !reducesMotion() && isPanelVisible)
     }
 
-    /// Reveal or redact sensitive provider content globally. Redaction rebuilds
-    /// the shared surface without invoking any sensitive view factory.
+    /// setSensitiveContentVisible reveals or redacts sensitive provider content
+    /// globally. Redaction rebuilds the shared surface without invoking any
+    /// sensitive view factory.
     func setSensitiveContentVisible(_ isVisible: Bool) {
         guard isSensitiveContentVisible != isVisible else { return }
         isSensitiveContentVisible = isVisible
@@ -640,9 +642,9 @@ final class NotchController: NotchDisplayPresenting {
 
     // MARK: - Active display
 
-    /// Re-resolve which screen we follow; only re-place the panel when the
-    /// screen actually changed — the coalescing the project insists on, so a
-    /// mouse drifting within one screen never triggers window work.
+    /// refreshActiveDisplay re-resolves which screen we follow and re-places the
+    /// panel only when the screen actually changed — the coalescing the project
+    /// insists on, so a mouse drifting within one screen never triggers window work.
     private func refreshActiveDisplay() {
 
         let display = fixedDisplay
@@ -669,9 +671,9 @@ final class NotchController: NotchDisplayPresenting {
         startMorphIfNeeded()
     }
 
-    /// Park the panel as a fixed band across the top of the active screen. The
-    /// band is tall enough for a fully expanded notch, so it never resizes while
-    /// morphing — only the layer path moves, which is cheap.
+    /// layoutPanel parks the panel as a fixed band across the top of the active
+    /// screen. The band is tall enough for a fully expanded notch, so it never
+    /// resizes while morphing — only the layer path moves, which is cheap.
     private func layoutPanel(for display: ActiveDisplay) {
 
         let visualOutset = NotchBorderRenderer.visualOutset
@@ -754,10 +756,10 @@ final class NotchController: NotchDisplayPresenting {
         }
     }
 
-    /// Decide whether the pointer at `location` should open or close the notch.
-    /// While closed we open when the pointer enters the resting trigger band;
-    /// while open we close only when it leaves the *expanded* region, so sliding
-    /// down into the open notch does not immediately snap it shut.
+    /// handlePointer decides whether the pointer at `location` should open or close
+    /// the notch. While closed we open when the pointer enters the resting trigger
+    /// band; while open we close only when it leaves the *expanded* region, so
+    /// sliding down into the open notch does not immediately snap it shut.
     func handlePointer(at location: CGPoint) {
 
         guard isStarted, isPanelVisible, !sizeCalibration.isActive, !isExternalSurfacePresented else {
@@ -946,9 +948,9 @@ final class NotchController: NotchDisplayPresenting {
         fileDragTopEdgeGuard.stop()
     }
 
-    /// Keep interception alive through a control drag that began inside the
-    /// animated path. Releasing the button immediately restores path-based
-    /// routing at the current cursor position.
+    /// handlePointerButton keeps interception alive through a control drag
+    /// that began inside the animated path. Releasing the button immediately
+    /// restores path-based routing at the current cursor position.
     func handlePointerButton(isPressed: Bool) {
         guard isStarted, isPanelVisible, !sizeCalibration.isActive, !isExternalSurfacePresented else {
             return
@@ -989,8 +991,8 @@ final class NotchController: NotchDisplayPresenting {
         }
     }
 
-    /// The top-center trigger band, in AppKit global coordinates. It exists
-    /// whether or not a hardware notch is drawn there.
+    /// restingTriggerZone returns the top-center trigger band, in AppKit global
+    /// coordinates. It exists whether or not a hardware notch is drawn there.
     private func restingTriggerZone(for display: ActiveDisplay) -> CGRect {
 
         let size = restingSize(for: display)
@@ -1005,9 +1007,9 @@ final class NotchController: NotchDisplayPresenting {
         )
     }
 
-    /// The fully expanded footprint, in AppKit global coordinates. Used as the
-    /// "stay open" region so the notch only closes when the pointer truly
-    /// leaves it.
+    /// expandedRegion returns the fully expanded footprint, in AppKit global
+    /// coordinates. Used as the "stay open" region so the notch only closes
+    /// when the pointer truly leaves it.
     private func expandedRegion(for display: ActiveDisplay) -> CGRect {
 
         let halfWidth = effectiveExpandedHalfWidth(for: display)
@@ -1024,8 +1026,9 @@ final class NotchController: NotchDisplayPresenting {
         )
     }
 
-    /// File drags get a temporary, forgiving destination around the notch.
-    /// This does not alter ordinary pointer hit testing or the visible shape.
+    /// fileDragIntakeRegion gives file drags a temporary, forgiving destination
+    /// around the notch. This does not alter ordinary pointer hit testing or
+    /// the visible shape.
     private func fileDragIntakeRegion(for display: ActiveDisplay) -> CGRect {
         let resting = restingSize(for: display)
         let requestedWidth = max(
@@ -1094,7 +1097,9 @@ final class NotchController: NotchDisplayPresenting {
         _ = fileDragTopEdgeGuard.start(region: intake, screen: display.frame)
     }
 
-    /// Both pointer and accessibility activation use the same satellite selection.
+    /// expandSecondaryActivity opens the notch on the displayed secondary
+    /// activity; pointer and accessibility activation both route through it, so
+    /// they use the same satellite selection.
     private func expandSecondaryActivity() {
         guard isStarted, isPanelVisible, state.isClosed, !sizeCalibration.isActive,
               !isExternalSurfacePresented, !isMissionControlShowing, let secondary = displayedSecondaryActivity else { return }
@@ -1105,7 +1110,8 @@ final class NotchController: NotchDisplayPresenting {
         clickedOpen = true
     }
 
-    /// The circle clears the physical notch by ten points, including its top corners.
+    /// detachedBubbleFrame places the satellite circle so it clears the physical
+    /// notch by ten points, including its top corners.
     private func detachedBubbleFrame(for display: ActiveDisplay) -> CGRect {
         let centerGap = compactCenterGap(for: display)
         let height = compactContentHeight(for: display)
@@ -1125,7 +1131,8 @@ final class NotchController: NotchDisplayPresenting {
         pendingExitPoint = nil
     }
 
-    /// A clicked surface tolerates a brief excursion, with one cancellable deadline.
+    /// scheduleHoverExit lets a clicked surface tolerate a brief excursion, with one
+    /// cancellable deadline.
     private func scheduleHoverExit(at point: CGPoint) {
         pendingExitPoint = point
         guard hoverExitTask == nil else { return }
@@ -1145,10 +1152,10 @@ final class NotchController: NotchDisplayPresenting {
 
     // MARK: - Spaces / Mission Control
 
-    /// `activeSpaceDidChange` fires for *both* a desktop swipe and Mission
-    /// Control opening, so we disambiguate by what is on screen: Mission Control
-    /// (and Exposé / show-desktop) puts up a full-screen Dock-owned window, a
-    /// plain swipe does not.
+    /// handleSpaceChange disambiguates `activeSpaceDidChange`, which fires for
+    /// *both* a desktop swipe and Mission Control opening, by what is on screen:
+    /// Mission Control (and Exposé / show-desktop) puts up a full-screen
+    /// Dock-owned window, a plain swipe does not.
     ///
     /// - Mission Control → collapse, animated (the mouse-leave that normally
     ///   closes the notch never arrives while the overview holds the events).
@@ -1170,7 +1177,8 @@ final class NotchController: NotchDisplayPresenting {
         lastPointer = nil
     }
 
-    /// Whether Mission Control / Exposé / show-desktop is currently on screen.
+    /// isMissionControlActive reports whether Mission Control / Exposé /
+    /// show-desktop is currently on screen.
     ///
     /// Those overviews are drawn by the Dock (or WindowManager) as a window
     /// roughly the size of the whole display; a normal desktop swipe puts up no
@@ -1215,8 +1223,8 @@ final class NotchController: NotchDisplayPresenting {
 
     // MARK: - State & morph
 
-    /// Apply a new discrete state and make sure the morph engine is running to
-    /// animate toward it. Starting the engine is idempotent.
+    /// setState applies a new discrete state and makes sure the morph engine
+    /// is running to animate toward it. Starting the engine is idempotent.
     private func setState(
         _ newState: NotchState,
         activityID: String? = nil,
@@ -1316,9 +1324,9 @@ final class NotchController: NotchDisplayPresenting {
         }
     }
 
-    /// One morph frame: step both springs toward their targets, render, and —
-    /// once everything has settled — stop the engine so the notch costs nothing
-    /// while idle.
+    /// advanceMorph runs one morph frame: it steps both springs toward their
+    /// targets, renders, and — once everything has settled — stops the engine
+    /// so the notch costs nothing while idle.
     private func advanceMorph(dt: CFTimeInterval) {
 
         guard isStarted, isPanelVisible else {
@@ -1508,8 +1516,8 @@ final class NotchController: NotchDisplayPresenting {
         )
     }
 
-    /// Resolve the current geometry from the springs and hand it to the host
-    /// view. Cheap and allocation-light, safe to call every frame.
+    /// renderCurrentFrame resolves the current geometry from the springs and hands
+    /// it to the host view. Cheap and allocation-light, safe to call every frame.
     private func renderCurrentFrame() {
 
         guard let display = activeDisplay else {
@@ -1640,8 +1648,8 @@ final class NotchController: NotchDisplayPresenting {
         }
     }
 
-    /// The resting size: the measured hardware notch where one exists, the
-    /// configured fallback band where it does not.
+    /// restingSize is the measured hardware notch where one exists, and
+    /// the configured fallback band where it does not.
     private func restingSize(for display: ActiveDisplay) -> CGSize {
         guard display.hasHardwareNotch else { return softwareMetrics.restingSize }
         return sizeCalibration.size(for: display) ?? display.notch.size
@@ -1670,8 +1678,9 @@ final class NotchController: NotchDisplayPresenting {
         return state.isClosed && displayedPrimaryActivity != nil
     }
 
-    /// Bound provider and configuration numbers before they reach geometry.
-    /// A NaN or infinity from third-party content must never poison the shape.
+    /// normalizedMaximumExpandedHeight bounds provider and configuration
+    /// numbers before they reach geometry. A NaN or infinity from third-party
+    /// content must never poison the shape.
     private func normalizedMaximumExpandedHeight() -> CGFloat {
         configuration.expandedHeight.isFinite
             ? max(0, configuration.expandedHeight)
@@ -1727,8 +1736,9 @@ final class NotchController: NotchDisplayPresenting {
         return min(preferredCompactSideWidth, available)
     }
 
-    /// Cache provider sizing on discrete content changes; the animation reads
-    /// only a number and never calls provider getters or allocates an array.
+    /// updatePreferredCompactSideWidth caches provider sizing on discrete
+    /// content changes; the animation reads only a number and never calls
+    /// provider getters or allocates an array.
     private func updatePreferredCompactSideWidth() {
         let configured = configuration.compactActivityExtension.isFinite
             ? max(0, configuration.compactActivityExtension)
@@ -1749,14 +1759,15 @@ final class NotchController: NotchDisplayPresenting {
         preferredCompactSideWidth = activities.isEmpty ? configured : preferred
     }
 
-    /// Whether to draw the chrome on this display. Hardware notches always draw;
-    /// the configuration decides whether external displays use the fallback
-    /// compact notch (enabled by the default configuration).
+    /// shouldDrawChrome reports whether to draw the chrome on this display. Hardware
+    /// notches always draw; the configuration decides whether external displays use
+    /// the fallback compact notch (enabled by the default configuration).
     private func shouldDrawChrome(for display: ActiveDisplay) -> Bool {
         true
     }
 
-    /// Show the widgets inside the open notch and hide them when it closes.
+    /// renderContent shows the widgets inside the open notch and hides them
+    /// when it closes.
     ///
     /// The content lives in its own hosting view above the chrome, placed in the
     /// expanded interior and inset so it sits inside the rounded shape. It is a
@@ -1976,9 +1987,10 @@ final class NotchController: NotchDisplayPresenting {
         )
     }
 
-    /// Build one shared activity surface. Sensitive metadata is checked before
-    /// the factory, URL, accessibility label, or stale state is read, keeping
-    /// redacted content out of both the visual and accessibility hierarchies.
+    /// activitySurface builds one shared activity surface. Sensitive metadata
+    /// is checked before the factory, URL, accessibility label, or stale state
+    /// is read, keeping redacted content out of both the visual and
+    /// accessibility hierarchies.
     private func activitySurface(
         for activity                  : any NotchActivity,
         presentation                  : NotchActivityPresentation,

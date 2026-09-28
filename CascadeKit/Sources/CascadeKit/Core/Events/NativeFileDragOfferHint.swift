@@ -1,7 +1,13 @@
+//
+//  NativeFileDragOfferHint.swift
+//  CascadeKit
+//
+
 import AppKit
 import Foundation
 
-/// A best-effort look at the global drag pasteboard for early UI routing.
+/// NativeFileDragOfferHint takes a best-effort look at the global drag
+/// pasteboard for early UI routing.
 ///
 /// This hint never authorizes a drop. The destination must still validate the
 /// `NSDraggingInfo` pasteboard delivered by AppKit before accepting any files.

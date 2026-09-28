@@ -1,6 +1,6 @@
 //
 //  BoundedAssetImageDecoderTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

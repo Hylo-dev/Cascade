@@ -7,9 +7,10 @@ import Foundation
 
 /// ActiveDisplayResolving is the legacy single-surface display bridge.
 ///
-/// It remains intact until the display coordinator owns snapshots in task 4,
-/// preserving the current controller contract while focused-window selection is
-/// kept in `FocusedDisplayResolver` and out of this AppKit adapter.
+/// It predates the display coordinator, which now owns display snapshots
+/// through `DisplayInventory`. The protocol keeps the older single-controller
+/// contract intact, while focused-window selection is kept in
+/// `FocusedDisplayResolver` and out of this AppKit adapter.
 protocol ActiveDisplayResolving {
 
     /// resolveActiveDisplay returns the pointer screen, then the main screen.

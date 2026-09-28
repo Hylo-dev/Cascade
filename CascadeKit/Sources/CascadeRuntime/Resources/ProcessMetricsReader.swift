@@ -1,9 +1,14 @@
+//
+//  ProcessMetricsReader.swift
+//  CascadeKit
+//
+
 import Darwin
 import Foundation
 
-/// One read of an explicitly expected process incarnation. This reader performs
-/// no discovery, rebinding, retries, scheduling, authentication, or process control.
-/// Its future caller must invoke synchronous libproc work outside MainActor.
+/// ProcessMetricsReader reads one explicitly expected process incarnation. This reader performs
+/// no discovery, rebinding, retries, scheduling, authentication, or process control. Its future
+/// caller must invoke synchronous libproc work outside MainActor.
 struct ProcessMetricsReader {
     private let readRaw: (Int32) -> RawProcessMetricRead
     private let absoluteTicks: () -> UInt64

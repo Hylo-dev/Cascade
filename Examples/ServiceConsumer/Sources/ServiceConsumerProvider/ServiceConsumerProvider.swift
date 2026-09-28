@@ -1,9 +1,15 @@
+//
+//  ServiceConsumerProvider.swift
+//  ServiceConsumer
+//
+
 import Foundation
 import CascadeAddonSDK
 import CascadeContracts
 import FocusSessionsExampleContract
 
-/// One host assignment, fresh memory-only revisions. Not reconnect/recovery support.
+/// ServiceConsumerProvider serves one host assignment with fresh memory-only revisions. Not
+/// reconnect/recovery support.
 public actor ServiceConsumerProvider: AddonProvider {
     private let owner: AddonID
     private let assignment: PublicationID

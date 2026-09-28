@@ -1,6 +1,6 @@
 //
 //  AddonHealthStore.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts
@@ -250,9 +250,9 @@ public struct AddonHealthStore: Sendable {
         }
     }
 
-    /// A processless owner can retain delegated CPU health while its exact
-    /// crash ticket blocks binding. This preserves the retry on keep and never
-    /// treats a stale ticket as authority over another generation.
+    /// recordModerateDuringRetry records a moderate CPU incident against a processless owner, which
+    /// retains delegated CPU health while its exact crash ticket blocks binding. This preserves the
+    /// retry on keep and never treats a stale ticket as authority over another generation.
     mutating func recordModerateDuringRetry(
         from retry: AddonRetryTicket,
         at instant: RuntimeInstant

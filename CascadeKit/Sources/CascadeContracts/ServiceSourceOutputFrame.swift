@@ -1,3 +1,8 @@
+//
+//  ServiceSourceOutputFrame.swift
+//  CascadeKit
+//
+
 import Foundation
 
 public enum ServiceSourceOutput: Equatable, Sendable {
@@ -5,8 +10,9 @@ public enum ServiceSourceOutput: Equatable, Sendable {
     case sourceUpdate(ServiceResponse)
 }
 
-/// Dedicated provider output syntax; canonical source lifetime and readiness are
-/// external checks. Startup completion carries no response or update authority.
+/// ServiceSourceOutputFrame is the dedicated provider output syntax; canonical
+/// source lifetime and readiness are external checks. Startup completion carries
+/// no response or update authority.
 public struct ServiceSourceOutputFrame: Codable, Equatable, Sendable {
     public let schemaVersion: Int
     public let sourceID: UUID

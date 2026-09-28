@@ -1,6 +1,6 @@
 //
 //  AddonScheduler.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

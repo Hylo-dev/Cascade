@@ -1,6 +1,6 @@
 //
 //  FileConversionJobSnapshot.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

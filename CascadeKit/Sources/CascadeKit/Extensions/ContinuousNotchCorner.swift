@@ -43,7 +43,7 @@ enum ContinuousNotchCorner {
         }
     }
 
-    /// makeSegments extracts the lower-left quarter by coordinates instead of
+    /// makeProfile extracts the lower-left quarter by coordinates instead of
     /// relying on a private element count or the contour's starting element.
     /// Path.forEach copies its values, so no borrowed CGPath pointers escape.
     private static func makeProfile() -> (segments: ContiguousArray<CubicSegment>, span: CGFloat) {

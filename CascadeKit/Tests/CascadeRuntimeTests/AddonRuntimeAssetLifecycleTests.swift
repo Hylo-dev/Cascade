@@ -1,6 +1,6 @@
 //
 //  AddonRuntimeAssetLifecycleTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

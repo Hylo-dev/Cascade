@@ -1,6 +1,6 @@
 //
 //  LiveActivityHostTests.swift
-//  CascadeKitTests
+//  CascadeKit
 //
 
 import Foundation

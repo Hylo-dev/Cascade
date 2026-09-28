@@ -14,11 +14,13 @@ import CascadeKit
 /// widgets are decoupled from the app and the engine.
 final class ClockWidget: NotchWidget {
 
-    let id = WidgetIdentifier("clock-1") // UUID().uuidString
+    // Fixed, not a UUID: registering a clock again replaces this instance in
+    // place instead of auto-placing a second one.
+    let id = WidgetIdentifier("clock-1")
 
     static let kind = WidgetKind("com.cascade.clock")
 
-    /// A wide, one-row tile (compact): two columns by one row.
+    /// A wide, one-row tile (compact): four columns by one row.
     let size = GridSpan(columns: 4, rows: 1)
 
     func makeContentView() -> AnyView {

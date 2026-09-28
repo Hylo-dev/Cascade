@@ -1,10 +1,16 @@
+//
+//  ServiceControlRequest.swift
+//  CascadeKit
+//
+
 import Foundation
 
 public enum ServiceControlKind: String, Codable, Equatable, Sendable {
     case acquire, subscribe, unsubscribe
 }
 
-/// Consumer syntax has no owner, permission, partition or lifetime authority.
+/// ServiceControlAction is consumer syntax with no owner, permission, partition
+/// or lifetime authority.
 public enum ServiceControlAction: Equatable, Sendable {
     case acquire(OperationRequest)
     case subscribe(requirementID: String, grantID: UUID)

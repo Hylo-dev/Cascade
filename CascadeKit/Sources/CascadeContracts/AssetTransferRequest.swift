@@ -1,6 +1,6 @@
 //
 //  AssetTransferRequest.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

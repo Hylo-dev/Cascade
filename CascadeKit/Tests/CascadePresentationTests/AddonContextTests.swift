@@ -1,6 +1,6 @@
 //
 //  AddonContextTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeAddonSDK

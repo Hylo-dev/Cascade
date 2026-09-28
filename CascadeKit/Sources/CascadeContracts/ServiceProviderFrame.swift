@@ -1,6 +1,12 @@
+//
+//  ServiceProviderFrame.swift
+//  CascadeKit
+//
+
 import Foundation
 
-/// Dedicated provider input syntax. No source-update or runtime activation is implied.
+/// ServiceProviderFrame is the dedicated provider input syntax. No source-update or
+/// runtime activation is implied.
 public enum ServiceProviderFrame: Codable, Equatable, Sendable {
     case invocation(ServiceInvocation)
 

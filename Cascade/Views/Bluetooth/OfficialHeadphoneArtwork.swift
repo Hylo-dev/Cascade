@@ -8,9 +8,10 @@ import CoreGraphics
 import Foundation
 import ImageIO
 
-/// A small, transient rendering of Apple's installed banner movie. Decoding is
-/// performed by a utility task and capped at 48 frames of 96px. The renderer
-/// receives plain images; it never keeps a player, decoder or repeating timer.
+/// OfficialHeadphoneArtwork is a small, transient rendering of Apple's
+/// installed banner movie. Decoding is performed by a utility task and capped
+/// at 48 frames of 96px. The renderer receives plain images; it never keeps a
+/// player, decoder or repeating timer.
 nonisolated struct OfficialHeadphoneArtwork: Sendable {
 
     let poster  : CGImage

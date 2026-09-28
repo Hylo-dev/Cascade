@@ -1,6 +1,6 @@
 //
 //  ActivityDisplayRoutingTests.swift
-//  CascadeKitTests
+//  CascadeKit
 //
 
 import CoreGraphics

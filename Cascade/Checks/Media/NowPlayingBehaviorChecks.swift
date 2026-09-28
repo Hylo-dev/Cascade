@@ -527,7 +527,8 @@ private enum NowPlayingBehaviorChecks {
         } catch ScriptableMusicError.trackChanged {}
     }
 
-    /// Music may acknowledge Previous before its scripting state has settled.
+    /// checkPreviousTrackSettles covers Music acknowledging Previous before its
+    /// scripting state has settled.
     /// No second notification is assumed: the provider must confirm the command.
     private static func checkPreviousTrackSettles() async throws {
         func track(
@@ -707,8 +708,9 @@ private enum NowPlayingBehaviorChecks {
         )
     }
 
-    /// Music answers "playing" for a while after the spacebar paused it. The
-    /// announced pause must publish at once and survive the confirmation reads.
+    /// checkAnnouncedPauseOutranksStaleReads covers Music answering "playing"
+    /// for a while after the spacebar paused it. The announced pause must
+    /// publish at once and survive the confirmation reads.
     private static func checkAnnouncedPauseOutranksStaleReads() async throws {
         let playing = sample(
             source    : .music,

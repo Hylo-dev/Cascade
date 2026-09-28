@@ -13,7 +13,8 @@ import QuartzCore
 /// a real display link.
 protocol MorphEngineDriving: AnyObject {
 
-    /// Whether a frame stream is currently running.
+    /// isRunning lets the controller skip restarting an engine that is already
+    /// ticking, which keeps `start` idempotent from the caller's side.
     var isRunning: Bool { get }
 
     /// Begin ticking. `onFrame` is called once per display refresh with the

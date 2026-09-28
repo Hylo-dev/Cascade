@@ -1,9 +1,15 @@
+//
+//  ServiceControlReply.swift
+//  CascadeKit
+//
+
 import Foundation
 
 public enum ServiceControlPhase: String, Codable, Equatable, Sendable { case admission, terminal }
 
-/// accepted acknowledges committed intent, not readiness. refused asserts pre-effect
-/// refusal, never SDK request-side non-exposure. Lifecycle ordering is external.
+/// ServiceControlResult is the outcome a control reply carries; accepted
+/// acknowledges committed intent, not readiness. refused asserts pre-effect refusal,
+/// never SDK request-side non-exposure. Lifecycle ordering is external.
 public enum ServiceControlResult: Equatable, Sendable {
     case accepted
     case acquired(Grant)
@@ -51,7 +57,8 @@ public struct ServiceControlReply: Codable, Equatable, Sendable {
         }
     }
 
-    /// Binding names need not equal service IDs. Owner, current generation and
+    /// validate(matching:) checks the reply against the request it answers;
+    /// binding names need not equal service IDs. Owner, current generation and
     /// canonical authority checks remain host/channel responsibilities.
     public func validate(matching request: ServiceControlRequest) throws {
         try validate()

@@ -1,6 +1,6 @@
 //
 //  FileWorkspaceError.swift
-//  Cascade
+//  CascadeKit
 //
 
 /// FileWorkspaceError is a stable code suitable for transport without private failure details.

@@ -1,3 +1,8 @@
+//
+//  SnapshotActivity.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import CascadePresentation
 import SwiftUI

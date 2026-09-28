@@ -264,9 +264,10 @@ final class IOBluetoothConnectionMonitor: NSObject, BluetoothMonitoring {
         }
     }
 
-    /// Replacing the ACL baseline must discard buffered route events too.
-    /// Capturing its identity prevents a pre-wake stream value from acquiring
-    /// the new epoch merely because the main actor consumes it after wake.
+    /// restartAudioRouteMonitoring discards buffered route events whenever the
+    /// ACL baseline is replaced. Capturing its identity prevents a pre-wake
+    /// stream value from acquiring the new epoch merely because the main actor
+    /// consumes it after wake.
     private func restartAudioRouteMonitoring() {
         audioRouteTask?.cancel()
 

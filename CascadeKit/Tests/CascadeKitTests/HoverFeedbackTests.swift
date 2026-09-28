@@ -1,6 +1,6 @@
 //
 //  HoverFeedbackTests.swift
-//  CascadeKitTests
+//  CascadeKit
 //
 
 import Testing

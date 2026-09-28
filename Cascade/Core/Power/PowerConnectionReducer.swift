@@ -3,8 +3,9 @@
 //  Cascade
 //
 
-/// A transition to external power is the event. Capacity and Low Power Mode
-/// changes only enrich it, so they cannot renew a notice's deadline.
+/// PowerConnectionReducer treats a transition to external power as the event.
+/// Capacity and Low Power Mode changes only enrich it, so they cannot renew a
+/// notice's deadline.
 nonisolated struct PowerConnectionReducer {
 
     private var previous: MacPowerSnapshot?

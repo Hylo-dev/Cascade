@@ -1,6 +1,6 @@
 //
 //  FocusedDisplayResolverTests.swift
-//  CascadeKitTests
+//  CascadeKit
 //
 
 import CoreGraphics

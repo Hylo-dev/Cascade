@@ -5,9 +5,10 @@
 
 import AppKit
 
-/// An accessory app does not necessarily activate when its status menu opens.
-/// Observe permission changes independently of mounted SwiftUI views. The
-/// private system notification is a hint only; the worker rechecks real trust.
+/// VolumeAccessibilityObserver exists because an accessory app does not
+/// necessarily activate when its status menu opens. Observe permission changes
+/// independently of mounted SwiftUI views. The private system notification is a
+/// hint only; the worker rechecks real trust.
 @MainActor
 final class VolumeAccessibilityObserver {
 

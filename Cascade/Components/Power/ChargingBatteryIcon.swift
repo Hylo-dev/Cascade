@@ -5,9 +5,10 @@
 
 import SwiftUI
 
-/// The reference uses a solid, continuously rounded battery with a separate
-/// terminal and a straight charge boundary. Keep that silhouette at every
-/// percentage, including empty/full, without adding a lightning bolt.
+/// ChargingBatteryIcon follows the reference: a solid, continuously rounded
+/// battery with a separate terminal and a straight charge boundary. Keep that
+/// silhouette at every percentage, including empty/full, without adding a
+/// lightning bolt.
 struct ChargingBatteryIcon: View {
 
     let percentage    : Int?

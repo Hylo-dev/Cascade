@@ -352,7 +352,8 @@ struct AddonRuntimeArchiveShutdownTests {
             runtime: fixture.runtime,
             until  : .seconds(10)
         )
-        // The shutdown pass starts from C4's cursor, so the second owner is first.
+        // The shutdown pass starts from the archive-flush cursor, which the failed
+        // flushNextArchive already moved past the first owner, so the second owner is first.
         let first = await fixture.coordinator.flushNextShutdownArchive()
         guard
             case .committed(

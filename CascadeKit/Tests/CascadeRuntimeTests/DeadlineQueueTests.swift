@@ -1,6 +1,6 @@
 //
 //  DeadlineQueueTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

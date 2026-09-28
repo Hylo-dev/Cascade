@@ -1,6 +1,6 @@
 //
 //  FileWorkspacePresentationRuntimeTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

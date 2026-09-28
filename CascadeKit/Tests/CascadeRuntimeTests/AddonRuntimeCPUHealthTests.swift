@@ -1,6 +1,6 @@
 //
 //  AddonRuntimeCPUHealthTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

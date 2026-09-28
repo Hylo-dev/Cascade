@@ -5,8 +5,9 @@
 
 import Foundation
 
-/// One recovery per five seconds. Evaluated only on a kernel disable event;
-/// there is no watchdog timer or repeated attempt to steal another app's tap.
+/// VolumeTapRecovery allows one recovery per five seconds. Evaluated only on a
+/// kernel disable event; there is no watchdog timer or repeated attempt to
+/// steal another app's tap.
 nonisolated struct VolumeTapRecovery {
 
     private var lastAttempt: TimeInterval?

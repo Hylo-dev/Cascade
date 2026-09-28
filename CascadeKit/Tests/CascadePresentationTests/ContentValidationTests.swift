@@ -1,6 +1,6 @@
 //
 //  ContentValidationTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

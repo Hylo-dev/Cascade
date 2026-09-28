@@ -1,3 +1,8 @@
+//
+//  FileDragTopEdgeGuard.swift
+//  CascadeKit
+//
+
 import AppKit
 import CoreGraphics
 import OSLog
@@ -18,7 +23,7 @@ nonisolated struct FileDragTopEdgeGeometry: Equatable, Sendable {
     let horizontalRange: ClosedRange<CGFloat>
     let topEdgeY: CGFloat
 
-    /// Converts AppKit global coordinates using the first (principal) screen's
+    /// init converts AppKit global coordinates using the first (principal) screen's
     /// top edge. Display-topology changes therefore require `update` or `start`.
     init?(region: CGRect, screen: CGRect, primaryScreen: CGRect) {
         guard region.isFiniteAndPositive,
@@ -81,10 +86,10 @@ private nonisolated extension CGRect {
     }
 }
 
-/// A short-lived public Quartz event filter. Its owner may call `start` after
-/// AppKit validates a native offer or from a fresh, stable regular-file hint.
-/// The hint only protects UI routing; `NSDraggingInfo` remains the sole drop
-/// admission authority.
+/// FileDragTopEdgeGuard is a short-lived public Quartz event filter. Its
+/// owner may call `start` after AppKit validates a native offer or from a
+/// fresh, stable regular-file hint. The hint only protects UI routing;
+/// `NSDraggingInfo` remains the sole drop admission authority.
 @MainActor
 final class FileDragTopEdgeGuard: FileDragTopEdgeGuardOperating {
     enum Availability: Equatable {

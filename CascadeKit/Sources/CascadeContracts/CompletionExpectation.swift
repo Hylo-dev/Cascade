@@ -1,6 +1,6 @@
 //
 //  CompletionExpectation.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

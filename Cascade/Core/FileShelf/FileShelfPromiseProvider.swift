@@ -6,7 +6,7 @@
 import AppKit
 import CascadeRuntime
 
-/// Creates one native promise provider whose weak delegate is retained by userInfo.
+/// FileShelfPromiseProvider creates one native promise provider whose weak delegate is retained by userInfo.
 enum FileShelfPromiseProvider {
 
     @MainActor

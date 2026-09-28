@@ -43,8 +43,8 @@ final class WidgetHost {
         set { screens[currentScreenIndex] = newValue }
     }
 
-    /// Add a widget instance and, if it isn't placed yet, auto-place it into the
-    /// first free block of the current screen's main rows.
+    /// register adds a widget instance and, if it isn't placed yet, auto-places
+    /// it into the first free block of the current screen's main rows.
     func register(_ widget: NotchWidget) {
 
         widgets[widget.id] = widget
@@ -59,7 +59,8 @@ final class WidgetHost {
         }
     }
 
-    /// Remove one instance and revoke its context before provider cleanup runs.
+    /// unregister removes one instance and revokes its context before provider
+    /// cleanup runs.
     func unregister(id: WidgetIdentifier) {
         contexts.removeValue(forKey: id)?.revoke()
         cachedViews.removeValue(forKey: id)
@@ -69,9 +70,9 @@ final class WidgetHost {
         onContentChanged?()
     }
 
-    /// Activate the current screen's widgets when the notch is open, suspend them
-    /// all when it closes. (Per-screen activation; switching screens will re-run
-    /// this once paging exists.)
+    /// update activates the current screen's widgets when the notch is open and
+    /// suspends them all when it closes. (Per-screen activation; switching
+    /// screens will re-run this once paging exists.)
     func update(state: NotchState) {
 
         guard !state.isClosed else {
@@ -104,9 +105,10 @@ final class WidgetHost {
         }
     }
 
-    /// Build the current screen's content: resolve every placement to a frame and
-    /// drop each widget's view into a `ZStack` at that frame. Frames come back in
-    /// the host view's (y-up) coordinates, so we flip y for SwiftUI.
+    /// makeContentView builds the current screen's content: it resolves every
+    /// placement to a frame and drops each widget's view into a `ZStack` at that
+    /// frame. Frames come back in the host view's (y-up) coordinates, so we flip
+    /// y for SwiftUI.
     func makeContentView(
         interior     : CGRect,
         notchWidth   : CGFloat,
@@ -147,17 +149,18 @@ final class WidgetHost {
         onContentChanged?()
     }
 
-    /// A widget's resolved view + frame, ready to position in the `ZStack`.
+    /// PositionedWidget pairs a widget's resolved view with its frame, ready to
+    /// position in the `ZStack`.
     private struct PositionedWidget: Identifiable {
         let id  : WidgetIdentifier
         let view: AnyView
         let rect: CGRect
     }
 
-    /// First-fit placement in the main rows (1 and 2), skipping cells already
-    /// taken on the current screen. Row 0 (the notch band) is reserved for
-    /// explicit / drag-and-drop placement, since its availability depends on the
-    /// live notch geometry.
+    /// autoPlacement finds the first-fit placement in the main rows (1 and 2),
+    /// skipping cells already taken on the current screen. Row 0 (the notch
+    /// band) is reserved for explicit / drag-and-drop placement, since its
+    /// availability depends on the live notch geometry.
     private func autoPlacement(for span: GridSpan) -> WidgetPlacement? {
 
         let columns = resolver.metrics.columns

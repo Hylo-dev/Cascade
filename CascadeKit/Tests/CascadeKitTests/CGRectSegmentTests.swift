@@ -1,15 +1,15 @@
 //
 //  CGRectSegmentTests.swift
-//  CascadeKitTests
+//  CascadeKit
 //
 
 import Testing
 import CoreGraphics
 @testable import CascadeKit
 
-/// The segment test is what makes a fast flick over the notch still open it, so
-/// these pin down exactly that: a stroke that crosses the band counts as a hit
-/// even when both endpoints are outside, while a stroke that misses does not.
+/// CGRectSegmentTests pins down the segment test that makes a fast flick over
+/// the notch still open it: a stroke that crosses the band counts as a hit even
+/// when both endpoints are outside, while a stroke that misses does not.
 struct CGRectSegmentTests {
 
     private let zone = CGRect(x: 100, y: 100, width: 50, height: 20) // x:100…150, y:100…120

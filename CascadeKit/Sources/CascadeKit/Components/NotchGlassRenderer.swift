@@ -376,7 +376,7 @@ final class NotchGlassRenderer: NotchGlassRendering {
         return layer
     }
 
-    /// The falloff at full strength; the layer's opacity scales it.
+    /// colors returns the falloff at full strength; the layer's opacity scales it.
     private static func colors(of light: GlassLight) -> [CGColor] {
         let color = NSColor(
             srgbRed: CGFloat(light.red),

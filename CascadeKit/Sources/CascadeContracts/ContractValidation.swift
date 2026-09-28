@@ -1,6 +1,6 @@
 //
 //  ContractValidation.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

@@ -12,7 +12,7 @@ def validate(record, scenario, required):
     if record.get('unverified') != []:
         raise ValueError('unverified must be empty')
     if not required:
-        raise ValueError('Serve almeno una verifica esplicita')
+        raise ValueError('At least one explicit check is required')
     checks = record.get('checks')
     if not isinstance(checks, dict):
         raise ValueError('checks must be an object')

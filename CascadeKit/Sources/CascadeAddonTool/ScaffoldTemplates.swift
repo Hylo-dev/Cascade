@@ -1,3 +1,8 @@
+//
+//  ScaffoldTemplates.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 
@@ -247,8 +252,9 @@ enum ScaffoldTemplates {
         ]
     }
 
-    /// Escape scalars rather than using JSON escaping: Swift rejects JSON's \/
-    /// and \uXXXX, and a literal backslash must not introduce Swift interpolation.
+    /// swiftLiteral escapes scalars rather than using JSON escaping: Swift rejects
+    /// JSON's \/ and \uXXXX, and a literal backslash must not introduce Swift
+    /// interpolation.
     private static func swiftLiteral(_ value: String) -> String {
         var literal = "\""
         for scalar in value.unicodeScalars {

@@ -1,6 +1,6 @@
 //
 //  AddonHealthRetryProjectionTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

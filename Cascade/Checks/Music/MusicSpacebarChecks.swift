@@ -82,8 +82,9 @@ private enum MusicSpacebarChecks {
 
     private nonisolated static let noMessages: CFMachPortCallBack = { _, _, _, _ in }
 
-    /// A tap thread must end when its tap stops: invalidating the port alone
-    /// left the run loop asleep, one leaked thread per appearance.
+    /// checkTapThreadEnds verifies that a tap thread ends when its tap stops:
+    /// invalidating the port alone left the run loop asleep, one leaked thread
+    /// per appearance.
     private static func checkTapThreadEnds() {
         func exits(stoppingFirst: Bool) -> Bool {
             let port   = CFMachPortCreate(kCFAllocatorDefault, noMessages, nil, nil)!

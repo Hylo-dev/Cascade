@@ -51,7 +51,7 @@ public actor FileWorkspaceHost {
     private var waiterOrder: [UUID] = []
     private var waiters: [UUID: CheckedContinuation<Void, any Error>] = [:]
 
-    /// Creates one facade, store and namespace lifetime for a host-owned shelf directory.
+    /// init creates one facade, store and namespace lifetime for a host-owned shelf directory.
     public init(
         directory: URL,
         governor : ResourceGovernor
@@ -65,7 +65,7 @@ public actor FileWorkspaceHost {
         afterDeliveryLease = nil
     }
 
-    /// Test-only assembly seam for suspending after a delivery owns its checked source lease.
+    /// init is the test-only assembly seam for suspending after a delivery owns its checked source lease.
     init(
         directory        : URL,
         governor         : ResourceGovernor,
@@ -80,7 +80,7 @@ public actor FileWorkspaceHost {
         self.afterDeliveryLease = afterDeliveryLease
     }
 
-    /// Restores and accounts the durable shelf before it becomes available.
+    /// restore reloads and accounts the durable shelf before it becomes available.
     public func restore() async throws {
         try await withExclusive {
             guard self.state == .initialized, !self.closeRequested else {
@@ -109,7 +109,7 @@ public actor FileWorkspaceHost {
         }
     }
 
-    /// Closes this process lifetime permanently and releases retained in-memory charges.
+    /// close ends this process lifetime permanently and releases retained in-memory charges.
     public func close() async throws {
         guard !closeRequested, state != .closed else { return }
         closeRequested = true
@@ -126,19 +126,19 @@ public actor FileWorkspaceHost {
         }
     }
 
-    /// Adds authorized regular-file URLs using the store's bookmark and identity validation.
+    /// addOriginals adds authorized regular-file URLs using the store's bookmark and identity validation.
     public func addOriginals(_ urls: [URL]) async throws -> [UUID] {
         try await withOpenExclusive { try await self.requireStore().addOriginals(urls) }
     }
 
-    /// Returns one cursor-bound page sized to fit the shared presentation action limit.
+    /// snapshot returns one cursor-bound page sized to fit the shared presentation action limit.
     public func snapshot(cursor: String? = nil) async throws -> FileWorkspaceSnapshot {
         try await withOpenExclusive {
             try await self.requireStore().snapshot(cursor: cursor, pageSize: Self.pageSize)
         }
     }
 
-    /// Forgets one external reference at the caller's observed revision.
+    /// removeExternalReference forgets one external reference at the caller's observed revision.
     public func removeExternalReference(
         id      : UUID,
         revision: UInt64
@@ -148,7 +148,7 @@ public actor FileWorkspaceHost {
         }
     }
 
-    /// Replaces one external bookmark while preserving its item ID and order.
+    /// relinkExternalReference replaces one external bookmark while preserving its item ID and order.
     public func relinkExternalReference(
         id      : UUID,
         to url  : URL,
@@ -163,7 +163,8 @@ public actor FileWorkspaceHost {
         }
     }
 
-    /// Renames the original file without overwriting another file, preserving its shelf ID.
+    /// renameExternalReference renames the original file without overwriting another file,
+    /// preserving its shelf ID.
     public func renameExternalReference(id: UUID, newName: String, revision: UInt64) async throws {
         try await withOpenExclusive {
             try await self.requireStore().renameExternalReference(
@@ -172,21 +173,21 @@ public actor FileWorkspaceHost {
         }
     }
 
-    /// Prepares deferred native transfers without opening files or pinning store entries.
+    /// prepareItems prepares deferred native transfers without opening files or pinning store entries.
     public func prepareItems(ids: [UUID]) async throws -> [PreparedFile] {
         try await withOpenExclusive {
             try await self.requireStore().prepareItems(ids: ids).map(PreparedFile.init)
         }
     }
 
-    /// Prepares every shelf item from the manifest alone, without resolving bookmarks.
+    /// prepareAllItems prepares every shelf item from the manifest alone, without resolving bookmarks.
     public func prepareAllItems() async throws -> [PreparedFile] {
         try await withOpenExclusive {
             try await self.requireStore().prepareAllItems().map(PreparedFile.init)
         }
     }
 
-    /// Copies one prepared item to a new destination and removes it only after durable success.
+    /// copy writes one prepared item to a new destination and removes it only after durable success.
     public func copy(
         _ prepared   : PreparedFile,
         to destination: URL
@@ -212,7 +213,8 @@ public actor FileWorkspaceHost {
         }
     }
 
-    /// Holds a checked reference lease while the host previews or reveals one exact prepared item.
+    /// withCheckedURL holds a checked reference lease while the host previews or reveals one exact
+    /// prepared item.
     public func withCheckedURL<Result: Sendable>(
         for prepared: PreparedFile,
         operation   : @Sendable (URL) async throws -> Result

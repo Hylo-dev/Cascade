@@ -1,3 +1,8 @@
+//
+//  ServiceFrameCodecTests.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 import Testing
@@ -95,8 +100,8 @@ import Testing
         #expect(try JSONDecoder().decode(ServiceProviderFrame.self, from: JSONEncoder().encode(value)) == value)
     }
 
-    // Enumerates P1 keys/scalars; no owner/P3 fields or allocator-space claim.
-    @Test func maximumP1MetadataAndSlashEscapedPayloadFit() throws {
+    // Enumerates the invocation frame keys and scalars; no owner or subscription fields, and no allocator-space claim.
+    @Test func maximumInvocationFrameMetadataAndSlashEscapedPayloadFit() throws {
         let payload = Data(repeating: 255, count: 65_536)
         #expect(payload.base64EncodedString().count == 87_384)
         let consumer = try request(payload, maximumIDs: true)
@@ -129,7 +134,7 @@ import Testing
         #expect(Set(nested.keys) == invocationKeys)
         #expect(String(describing: nested["deadline"]!).utf8.count <= 32)
         #expect(Set(try #require(try object(data[1])["response"] as? [String: Any]).keys) == responseKeys)
-        // Enumerate the two payload-free P1 result wrappers too. The longest
+        // Enumerate the two payload-free invocation result wrappers too. The longest
         // existing code is dependencyUnavailable (21 ASCII bytes, 23 quoted).
         let refusalKeys: Set<String> = ["schemaVersion", "requestID", "contractID", "operation", "result", "failureCode", "failureReason"]
         let unknownKeys: Set<String> = ["schemaVersion", "requestID", "contractID", "operation", "result"]

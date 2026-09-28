@@ -1,6 +1,6 @@
 //
 //  ActionJournalTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

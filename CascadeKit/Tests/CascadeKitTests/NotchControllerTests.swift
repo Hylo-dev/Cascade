@@ -1,6 +1,6 @@
 //
 //  NotchControllerTests.swift
-//  CascadeKitTests
+//  CascadeKit
 //
 
 import AppKit
@@ -2417,7 +2417,7 @@ private final class ControllerContextualPage: NotchContextualPage {
     let contentRevision: UInt64 = 1
     let contentHeight: CGFloat
     let keepsExpandedPresentation: Bool
-    let accessibilityLabel = "Ripiano"
+    let accessibilityLabel = "Shelf"
     private(set) var contexts: [NotchContextualPageContext] = []
 
     init(contentHeight: CGFloat, keepsExpanded: Bool = false) {

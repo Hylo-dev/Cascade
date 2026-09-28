@@ -23,9 +23,10 @@ protocol EventMonitoring: AnyObject {
     /// path; it does not interpret buttons or synthesize clicks.
     var onPointerButtonChanged: ((Bool) -> Void)? { get set }
 
-    /// Fired when app activation or screen layout should make the legacy single
-    /// controller refresh its pointer snapshot. It carries no focus geometry;
-    /// focused-window ownership belongs to FocusedWindowMonitor.
+    /// Fired when app activation or screen layout may have moved the active
+    /// display. The display coordinator answers it by refreshing its
+    /// focused-window monitor. It carries no focus geometry; focused-window
+    /// ownership belongs to FocusedWindowMonitor.
     var onActiveDisplayMayHaveChanged: (() -> Void)? { get set }
 
     /// Fired when the active Space changes — this covers both a desktop swipe

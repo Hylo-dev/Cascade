@@ -1,3 +1,8 @@
+//
+//  ServiceSubscriptionMessageIntegrationTests.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 import Testing
@@ -708,8 +713,9 @@ private actor SubscriptionHandlerBox {
     func wait() async { if !finished { await withCheckedContinuation { waiter = $0 } } }
 }
 
-/// Actual byte legs and exact receipts, with a deterministic provider peer. It
-/// completes real admitted ServiceWork; no AddonServiceClient method is stubbed.
+/// SubscriptionRuntimeChannel carries actual byte legs and exact receipts, with a
+/// deterministic provider peer. It completes real admitted ServiceWork; no
+/// AddonServiceClient method is stubbed.
 private final class SubscriptionRuntimeChannel: AddonServiceMessageChannel, @unchecked Sendable {
     let host: InvocationMessageHost
     let connection: RuntimeConnection

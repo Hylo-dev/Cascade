@@ -1,6 +1,6 @@
 //
 //  StorageResponse.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

@@ -1,8 +1,14 @@
+//
+//  RuntimeServiceConnectionState.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 
-/// The shared admission domain uses ProcessRecord.lastServiceSequence for both
-/// request families. Invocation rows remain in their original result owner.
+/// RuntimeServiceConnectionState tracks the shared admission domain, which uses
+/// ProcessRecord.lastServiceSequence for both request families. Invocation rows remain in their
+/// original result owner.
 struct RuntimeServiceConnectionState: Sendable {
     // Box, allocator bookkeeping and simultaneous exact-receipt comparisons.
     static let receiptBytes = max(256, 4 * MemoryLayout<RuntimeServiceSubscriptionReceipt>.stride)

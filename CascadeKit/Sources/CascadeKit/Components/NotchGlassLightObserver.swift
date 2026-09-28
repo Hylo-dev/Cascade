@@ -1,3 +1,8 @@
+//
+//  NotchGlassLightObserver.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import CascadePresentation
 import SwiftUI
@@ -14,8 +19,9 @@ private struct GlassEmissionPreference: PreferenceKey {
     }
 }
 
-/// Include the root generation in the delivered value. Replacing content with
-/// the same colors still updates its ownership, without resetting view identity.
+/// NotchGlassLightObserver includes the root generation in the delivered value.
+/// Replacing content with the same colors still updates its ownership, without
+/// resetting view identity.
 struct NotchGlassLightObserver: View {
     let content: AnyView
     let token: NotchGlassLightSources.Token

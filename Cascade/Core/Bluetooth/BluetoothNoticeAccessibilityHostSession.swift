@@ -6,7 +6,8 @@
 import AppKit
 @preconcurrency import ApplicationServices
 
-/// Immutable host handles are messaged only by the worker; the main actor manages run-loop sources.
+/// BluetoothNoticeAccessibilityHostSession holds immutable host handles that only the worker
+/// messages; the main actor manages run-loop sources.
 nonisolated final class BluetoothNoticeAccessibilityHostSession: @unchecked Sendable {
 
     let bundleID     : String

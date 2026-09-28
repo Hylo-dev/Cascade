@@ -1,6 +1,6 @@
 //
 //  AddonRuntimeArchiveSaveTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

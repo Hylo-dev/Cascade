@@ -1,6 +1,6 @@
 //
 //  AddonEvent.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

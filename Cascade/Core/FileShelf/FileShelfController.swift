@@ -11,7 +11,7 @@ import CascadeRuntime
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// App-owned adapter between the durable local host and the shared shelf renderer.
+/// FileShelfController is the app-owned adapter between the durable local host and the shared shelf renderer.
 @MainActor
 final class FileShelfController: NotchContextualPage {
 

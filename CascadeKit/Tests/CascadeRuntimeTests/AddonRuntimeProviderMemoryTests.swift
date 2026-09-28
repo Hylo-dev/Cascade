@@ -1,6 +1,6 @@
 //
 //  AddonRuntimeProviderMemoryTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

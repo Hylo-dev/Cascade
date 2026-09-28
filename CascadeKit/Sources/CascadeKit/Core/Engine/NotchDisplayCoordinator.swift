@@ -1223,7 +1223,7 @@ final class NotchDisplayCoordinator {
         }
     }
 
-    /// Resolves the focused display and reports whether it moved.
+    /// resolveFocus resolves the focused display and reports whether it moved.
     ///
     /// Pointer and focused-window events arrive at up to the display's
     /// refresh rate, system-wide, even while the notch is closed. The

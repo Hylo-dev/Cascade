@@ -1,10 +1,16 @@
+//
+//  AddonStateStore.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import CryptoKit
 import Darwin
 import Foundation
 
-/// Bounded checkpoint persistence. All filesystem work runs on this actor, away from MainActor.
-/// The host must retain one instance until `close()` and supply all retained identities at reopen.
+/// AddonStateStore provides bounded checkpoint persistence. All filesystem work runs on this actor,
+/// away from MainActor. The host must retain one instance until `close()` and supply all retained
+/// identities at reopen.
 public actor AddonStateStore {
     public static let maximumCheckpointBytes = 65_536
     private static let headerBytes = 64
@@ -67,8 +73,9 @@ public actor AddonStateStore {
         if rootFD >= 0 { Darwin.close(rootFD) }
     }
 
-    /// Root must already exist, be owned by this user and private (0700), with no symlink components.
-    /// Unknown files fail admission. The registry includes disabled/uninstalled identities retaining data.
+    /// open requires the root to already exist, to be owned by this user and private (0700), and to
+    /// have no symlink components. Unknown files fail admission. The registry includes
+    /// disabled/uninstalled identities retaining data.
     public static func open(
         root: URL, registrations: [StateRegistration], namespaceLimit: Int = 256,
         governor: ResourceGovernor = ResourceGovernor(), diskBudget: Int = 100 * 1_024 * 1_024
@@ -119,7 +126,7 @@ public actor AddonStateStore {
         }
     }
 
-    /// Prepared data is durable staging only; the previous checkpoint remains the visible value.
+    /// stage writes prepared data to durable staging only; the previous checkpoint remains the visible value.
     public func stage(_ data: Data, schemaVersion: UInt32, owner: StateOwner) async throws -> StateWriteTicket {
         try await perform(owner) { store, namespace in
             try await store.stageRecord(data, schema: schemaVersion, namespace: namespace)
@@ -137,7 +144,8 @@ public actor AddonStateStore {
         }
     }
 
-    /// Revokes every outstanding ticket for this identity without releasing its durable disk charge.
+    /// revoke invalidates every outstanding ticket for this identity without releasing its durable
+    /// disk charge.
     public func revoke(owner: StateOwner) async throws {
         try await perform(owner, allocatingMemory: false) { store, namespace in
             namespace.handle = StateOwner(id: UUID())
@@ -146,7 +154,8 @@ public actor AddonStateStore {
         }
     }
 
-    /// Explicit host/user data deletion. This API is never called by cache purging or reconnection.
+    /// removeUserData performs explicit host/user data deletion. This API is never called by cache
+    /// purging or reconnection.
     public func removeUserData(owner: StateOwner) async throws {
         try await perform(owner, allocatingMemory: false) { store, namespace in
             try await store.releaseMigration(namespace)
@@ -215,8 +224,9 @@ public actor AddonStateStore {
         }
     }
 
-    /// Shutdown leaves prepared files for bounded recovery at the next open. No new work may be admitted
-    /// between shutdown and reconciliation. Always call this before releasing the host-owned store.
+    /// close shuts the store down and leaves prepared files for bounded recovery at the next open.
+    /// No new work may be admitted between shutdown and reconciliation. Always call this before
+    /// releasing the host-owned store.
     public func close() async throws {
         guard !busy else { throw StateStoreFailure.busy }
         guard rootFD >= 0 else { return }

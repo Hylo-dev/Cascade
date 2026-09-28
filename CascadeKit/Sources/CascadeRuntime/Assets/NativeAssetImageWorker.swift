@@ -1,6 +1,6 @@
 //
 //  NativeAssetImageWorker.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

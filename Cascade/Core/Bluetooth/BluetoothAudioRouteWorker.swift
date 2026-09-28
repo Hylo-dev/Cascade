@@ -8,8 +8,9 @@ import CoreAudio
 import Foundation
 import os
 
-/// Mutable HAL state stays on one queue. Epochs invalidate callbacks queued by
-/// a removed registration; the lock synchronously invalidates publication at stop.
+/// BluetoothAudioRouteWorker keeps mutable HAL state on one queue. Epochs
+/// invalidate callbacks queued by a removed registration; the lock synchronously
+/// invalidates publication at stop.
 nonisolated final class BluetoothAudioRouteWorker: @unchecked Sendable {
 
     private let queue           = DispatchQueue(label: "Cascade.BluetoothAudioRoute", qos: .utility)

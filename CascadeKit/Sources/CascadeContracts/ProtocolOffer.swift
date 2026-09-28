@@ -1,6 +1,6 @@
 //
 //  ProtocolOffer.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

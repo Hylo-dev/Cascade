@@ -1,13 +1,13 @@
 //
 //  ResourceGovernor.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts
 import Foundation
 
-/// Host-owned admission bookkeeping. A reservation is not a sandbox or proof of
-/// process termination. The runtime releases process charges after actual exit.
+/// ResourceGovernor keeps the host-owned admission bookkeeping. A reservation is not a sandbox
+/// or proof of process termination. The runtime releases process charges after actual exit.
 /// Native CPU/footprint observation is a separate, launcher-qualified boundary.
 public actor ResourceGovernor {
     private struct Entry {
@@ -333,10 +333,10 @@ public actor ResourceGovernor {
 }
 
 
-/// Opaque module-internal disposal authority. Only this file can mint a token;
-/// the backing wrapper and renderer never receive it. An exact stale token is
-/// idempotent, but it cannot complete a different entry or a different governor.
-/// The governor identity is a lifetime nonce, not a recyclable object address.
+/// RetainedAssetToken is the opaque module-internal disposal authority. Only this file can mint
+/// a token; the backing wrapper and renderer never receive it. An exact stale token is
+/// idempotent, but it cannot complete a different entry or a different governor. The governor
+/// identity is a lifetime nonce, not a recyclable object address.
 struct RetainedAssetToken: Sendable {
     let reservation: ResourceReservation
     fileprivate let governor: UUID

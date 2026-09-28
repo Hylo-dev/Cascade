@@ -1,6 +1,6 @@
 //
 //  ActionDispatcherTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

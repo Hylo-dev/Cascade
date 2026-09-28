@@ -1,8 +1,14 @@
+//
+//  TransportServiceClient.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 
-/// Complete message client for one canonical cumulative 1.4 connection. The host
-/// remains grant authority. The embedding owns the paid lifetime of running handlers.
+/// TransportServiceClient is the complete message client for one canonical cumulative
+/// 1.4 connection. The host remains grant authority. The embedding owns the paid
+/// lifetime of running handlers.
 public final class TransportServiceClient: AddonServiceClient, @unchecked Sendable {
     private struct Subscription {
         let requirementID: String
@@ -151,7 +157,8 @@ public final class TransportServiceClient: AddonServiceClient, @unchecked Sendab
         if restore { startPump() }
     }
 
-    /// Fresh context assembly is embedding plumbing, not a new service protocol method.
+    /// acquireContext is embedding plumbing for fresh context assembly, not a new
+    /// service protocol method.
     func acquireContext(operations: [OperationRequest], storage: any AddonStorageClient,
                         assets: any AddonAssetClient) async throws -> AddonContext {
         guard operations.count <= 64 else { throw Self.failure(.resourceDenied) }

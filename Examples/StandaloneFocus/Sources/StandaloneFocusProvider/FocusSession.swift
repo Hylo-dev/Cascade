@@ -8,7 +8,7 @@ import Foundation
 
 public enum FocusCommand: String, Codable, Sendable, CaseIterable { case start, pause, resume, end }
 
-/// A civil-clock reducer. Starting an already active session never resets its time.
+/// FocusSession is a civil-clock reducer. Starting an already active session never resets its time.
 public struct FocusSession: Codable, Equatable, Sendable {
     public enum Phase: String, Codable, Sendable { case idle, running, paused, completed, ended }
     public private(set) var phase: Phase = .idle

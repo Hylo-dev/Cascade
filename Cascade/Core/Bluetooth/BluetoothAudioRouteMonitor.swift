@@ -7,9 +7,10 @@ import AppKit
 import CoreAudio
 import Foundation
 
-/// Reports a switch back to Bluetooth audio even when its ACL link never
-/// disconnected. Starting, waking and session activation establish silent
-/// baselines; there is no timer, enumeration, audio write or device discovery.
+/// BluetoothAudioRouteMonitor reports a switch back to Bluetooth audio even
+/// when its ACL link never disconnected. Starting, waking and session
+/// activation establish silent baselines; there is no timer, enumeration, audio
+/// write or device discovery.
 @MainActor
 final class BluetoothAudioRouteMonitor {
 

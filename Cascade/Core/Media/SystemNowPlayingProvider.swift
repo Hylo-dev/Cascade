@@ -379,7 +379,8 @@ final class SystemNowPlayingProvider: NowPlayingProviding {
         Task { await reader.discardArtwork(source) }
     }
 
-    /// An AppleEvent reply/notification can precede the new playable track.
+    /// refreshAfterPlaybackChange exists because an AppleEvent reply or
+    /// notification can precede the new playable track.
     /// Reconcile after that transition even if Music emits no further event.
     /// New events replace this finite task; stop and process removal cancel it.
     private func refreshAfterPlaybackChange(_ source: ScriptableMusicSource) {

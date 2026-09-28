@@ -8,8 +8,9 @@ import OSLog
 
 private let fileDropLog = Logger(subsystem: "hylo.Cascade", category: "FileDrop")
 
-/// A native control that explicitly requests keyboard focus after user interaction.
-/// Other notch content remains nonactivating and cannot become the key window.
+/// NotchKeyboardFocusTarget marks a native control that explicitly requests
+/// keyboard focus after user interaction. Other notch content remains nonactivating
+/// and cannot become the key window.
 public protocol NotchKeyboardFocusTarget: AnyObject {}
 
 /// NotchPanel is the always-on overlay window.
@@ -75,10 +76,10 @@ final class NotchPanel: NSPanel {
     }
 }
 
-/// A public-AppKit drag transport kept in the active user Space. The visual
-/// panel is pinned into a private SkyLight space and cannot participate in a
-/// Finder destination session, so this transparent panel forwards only native
-/// drag callbacks to the visual host's admission logic.
+/// NotchFileDropReceiverPanel is a public-AppKit drag transport kept in the active
+/// user Space. The visual panel is pinned into a private SkyLight space and cannot
+/// participate in a Finder destination session, so this transparent panel forwards
+/// only native drag callbacks to the visual host's admission logic.
 final class NotchFileDropReceiverPanel: NSPanel, NSDraggingDestination {
 
     /// AppKit sends fresh window tags to WindowServer on every assignment, even

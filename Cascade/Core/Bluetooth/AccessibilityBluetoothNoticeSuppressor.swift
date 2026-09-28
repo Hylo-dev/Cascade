@@ -7,7 +7,8 @@ import AppKit
 @preconcurrency import ApplicationServices
 import Observation
 
-/// Observes identified SystemBannerUI subtrees plus the legacy Control Center floating notice.
+/// AccessibilityBluetoothNoticeSuppressor observes identified SystemBannerUI subtrees plus the legacy
+/// Control Center floating notice.
 /// AX delivers an already-presented view: this is selective dismissal, not pre-presentation prevention.
 /// No shared MenuBarAgent window or system notification preference is ever changed.
 @Observable
@@ -41,7 +42,7 @@ final class AccessibilityBluetoothNoticeSuppressor: BluetoothNoticeSuppressing {
         }
     }
 
-    /// Reuses a healthy observer; host restarts and permission events recreate only the AX session.
+    /// start reuses a healthy observer; host restarts and permission events recreate only the AX session.
     func start() {
         isEnabled = true
         installLifecycleObservers()
@@ -150,7 +151,8 @@ final class AccessibilityBluetoothNoticeSuppressor: BluetoothNoticeSuppressing {
         worker = nil
     }
 
-    /// These observers are idle between real lifecycle events; no process or permission polling.
+    /// installLifecycleObservers installs observers that stay idle between real lifecycle events;
+    /// no process or permission polling.
     private func installLifecycleObservers() {
         guard workspaceTokens.isEmpty else { return }
 

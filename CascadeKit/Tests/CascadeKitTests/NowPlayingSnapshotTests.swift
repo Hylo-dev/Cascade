@@ -1,6 +1,6 @@
 //
 //  NowPlayingSnapshotTests.swift
-//  CascadeKitTests
+//  CascadeKit
 //
 
 import Testing

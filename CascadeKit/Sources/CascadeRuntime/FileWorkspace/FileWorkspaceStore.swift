@@ -717,7 +717,8 @@ actor FileWorkspaceStore {
         }
     }
 
-    /// Renames the original in its current directory and refreshes the durable bookmark.
+    /// renameExternalReference renames the original in its current directory and refreshes the
+    /// durable bookmark.
     func renameExternalReference(id: UUID, newName: String, revision: UInt64) async throws {
         try await withOperation { operation in
             try self.requireWritable()

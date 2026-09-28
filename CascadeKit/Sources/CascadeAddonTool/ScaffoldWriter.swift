@@ -1,3 +1,8 @@
+//
+//  ScaffoldWriter.swift
+//  CascadeKit
+//
+
 import Darwin
 import Foundation
 
@@ -7,11 +12,11 @@ struct ScaffoldFile {
 }
 
 enum ScaffoldWriter {
-    /// All output is prepared under an exclusively created sibling directory.
+    /// publish prepares all output under an exclusively created sibling directory.
     /// Pinned descriptors avoid following output symlinks or reopening moved parents.
-    /// Cleanup is nonrecursive and checks recorded identities before unlinking.
-    /// These separate syscalls are best-effort protection, not isolation from
-    /// another process with the same user’s authority to mutate staging entries.
+    /// Cleanup is nonrecursive and checks recorded identities before unlinking. These
+    /// separate syscalls are best-effort protection, not isolation from another
+    /// process with the same user’s authority to mutate staging entries.
     static func publish(files: [ScaffoldFile], to destination: URL) throws {
         let name = destination.lastPathComponent
         guard !name.isEmpty, name != "/", name != ".", name != "..", !name.contains("\0") else {

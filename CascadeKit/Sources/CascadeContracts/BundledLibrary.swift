@@ -1,6 +1,6 @@
 //
 //  BundledLibrary.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

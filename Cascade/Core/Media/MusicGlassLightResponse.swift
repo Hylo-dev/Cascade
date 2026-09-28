@@ -5,8 +5,9 @@
 
 import Foundation
 
-/// Uses the existing measured 40–180 Hz and 180–500 Hz envelopes. No clock or
-/// generated rhythm: missing/silent PCM leaves only a steady artwork wash.
+/// MusicGlassLightResponse uses the existing measured 40–180 Hz and 180–500 Hz
+/// envelopes. No clock or generated rhythm: missing/silent PCM leaves only a
+/// steady artwork wash.
 nonisolated struct MusicGlassLightResponse: Equatable {
 
     let intensity: Double

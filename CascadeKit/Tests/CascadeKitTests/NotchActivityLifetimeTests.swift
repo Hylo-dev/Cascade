@@ -1,6 +1,6 @@
 //
 //  NotchActivityLifetimeTests.swift
-//  CascadeKitTests
+//  CascadeKit
 //
 
 import Foundation

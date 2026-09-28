@@ -1,6 +1,6 @@
 //
 //  ChargingGlowTests.swift
-//  CascadeKitTests
+//  CascadeKit
 //
 
 import AppKit

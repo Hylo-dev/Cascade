@@ -1,6 +1,6 @@
 //
 //  SwiftDataArchiveDirectory.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Darwin

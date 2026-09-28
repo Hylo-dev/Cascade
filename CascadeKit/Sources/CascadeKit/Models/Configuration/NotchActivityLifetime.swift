@@ -5,9 +5,10 @@
 
 import Foundation
 
-/// Finite session with an optional earlier freshness deadline. Cascade adopts
-/// the HIG's recommended eight-hour duration as its cap, independently of
-/// ActivityKit. End the activity earlier whenever the actual task ends.
+/// NotchActivityLifetime is a finite session with an optional earlier freshness
+/// deadline. Cascade adopts the HIG's recommended eight-hour duration as its
+/// cap, independently of ActivityKit. End the activity earlier whenever the
+/// actual task ends.
 public nonisolated struct NotchActivityLifetime: Sendable, Equatable {
     public static let maximumDuration: TimeInterval = 8 * 60 * 60
     public let startedAt: Date

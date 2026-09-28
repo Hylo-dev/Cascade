@@ -1,6 +1,6 @@
 //
 //  SnapshotSupport.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

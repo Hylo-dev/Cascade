@@ -324,7 +324,8 @@ private func storageExpect(
     catch { #expect((error as? AddonFailure)?.code == code) }
 }
 
-/// One held point and one arrival waiter, without queues, polling or cancellation disposal.
+/// StorageTestGate is one held point and one arrival waiter, without queues, polling or
+/// cancellation disposal.
 private actor StorageTestGate {
     private var arrived = false
     private var released = false
@@ -373,7 +374,8 @@ private final class StorageDrainObservation: @unchecked Sendable {
     }
 }
 
-/// The scripted dependency supplies bytes; assertions exercise client ordering and validation.
+/// StorageScriptChannel is the scripted dependency that supplies bytes; assertions exercise
+/// client ordering and validation.
 private actor StorageScriptChannel: AddonStorageMessageChannel {
     enum Fault: Equatable, Sendable {
         case reject, transport, malformed, oversized, wrongID, wrongOperation
@@ -457,7 +459,8 @@ private actor StorageScriptChannel: AddonStorageMessageChannel {
     }
 }
 
-/// A contract-violating dependency checks that cached syntax cannot authorize shifted bytes.
+/// StorageDriftingChannel is a contract-violating dependency; it checks that cached syntax
+/// cannot authorize shifted bytes.
 private final class StorageDriftingChannel: AddonStorageMessageChannel, @unchecked Sendable {
     let inner = StorageScriptChannel()
     private let lock = NSLock()

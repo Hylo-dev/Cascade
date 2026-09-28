@@ -1,6 +1,6 @@
 //
 //  StorageProtocolNegotiationTests.swift
-//  Cascade
+//  CascadeKit
 //
 import CascadeContracts
 import CascadeRuntime

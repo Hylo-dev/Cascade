@@ -1,6 +1,6 @@
 //
 //  QuarantineTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

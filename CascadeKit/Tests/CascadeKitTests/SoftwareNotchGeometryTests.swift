@@ -1,6 +1,6 @@
 //
 //  SoftwareNotchGeometryTests.swift
-//  CascadeKitTests
+//  CascadeKit
 //
 
 import CoreGraphics

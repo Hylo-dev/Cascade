@@ -1,3 +1,8 @@
+//
+//  AddonPresentationBridge.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import CascadePresentation
 import Foundation
@@ -15,8 +20,9 @@ protocol AddonPresentationSink: AnyObject {
 
 extension NotchEngine: AddonPresentationSink {}
 
-/// Converts validated, host-owned publication values into native notch surfaces.
-/// It retains no provider, executor, filesystem path, or transport object.
+/// AddonPresentationBridge converts validated, host-owned publication values
+/// into native notch surfaces. It retains no provider, executor, filesystem
+/// path, or transport object.
 @MainActor
 public final class AddonPresentationBridge {
     public typealias ActionHandler = @MainActor @Sendable (PublicationID, UInt64, ActionDescriptor) -> Void

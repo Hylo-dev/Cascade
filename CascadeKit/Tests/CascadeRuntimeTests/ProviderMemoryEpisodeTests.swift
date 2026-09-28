@@ -1,6 +1,6 @@
 //
 //  ProviderMemoryEpisodeTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Testing

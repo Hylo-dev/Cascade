@@ -1,6 +1,6 @@
 //
 //  RuntimeInstant.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

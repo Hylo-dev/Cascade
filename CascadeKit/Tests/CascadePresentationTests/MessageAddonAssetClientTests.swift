@@ -1,6 +1,6 @@
 //
 //  MessageAddonAssetClientTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 @testable import CascadeAddonSDK

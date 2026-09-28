@@ -1,3 +1,8 @@
+//
+//  ServiceInvocationMessageIntegrationTests.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 import Testing
@@ -915,8 +920,9 @@ struct ServiceInvocationMessageIntegrationTests {
     }
 }
 
-/// Fixture allocations (including all four raw representations and SDK return buffers)
-/// stay in a protected canonical governor scope through joined work and modeled exits.
+/// withInvocationHost keeps fixture allocations (including all four raw representations and
+/// SDK return buffers) in a protected canonical governor scope through joined work and
+/// modeled exits.
 func withInvocationHost(minor: Int = 3, maximumEnvelopeBytes: Int = 524_288, providerMinor: Int? = nil, dependency: Bool = false, maximumMetadata: Bool = false, secondConsumer: Bool = false,
                         _ body: @Sendable (InvocationMessageHost) async throws -> Void) async throws {
     let governor = ResourceGovernor()
@@ -1143,7 +1149,8 @@ final class InvocationMessageClock: RuntimeClock, @unchecked Sendable {
     } }
 }
 
-/// Exactly one shared raw slot and one compact payload per incarnation, paid by start.
+/// InvocationMessageAdapter owns exactly one shared raw slot and one compact payload per
+/// incarnation, paid by start.
 /// Stops synchronously dispose payloads; runtime charges physical work until modeled exit.
 final class InvocationMessageAdapter: AddonRuntimeServiceSubscriptionAdapter, AddonRuntimeStorageAdapter,
                                       AddonRuntimeAssetAdapter, @unchecked Sendable {
@@ -1301,7 +1308,8 @@ final class InvocationMessageAdapter: AddonRuntimeServiceSubscriptionAdapter, Ad
 
 }
 
-/// One-shot event signal in adapter/channel ownership, never a runtime waiter queue.
+/// InvocationByteEvent is a one-shot event signal in adapter/channel ownership, never a runtime
+/// waiter queue.
 final class InvocationByteEvent: @unchecked Sendable {
     private let lock = NSLock()
     private var signaled = false
@@ -1317,9 +1325,10 @@ final class InvocationByteEvent: @unchecked Sendable {
     }
 }
 
-/// An admitted exchange's single terminal event is adapter-owned and physically
-/// settled on reply rejection/suppression too. Returned buffers remain protected
-/// by withInvocationHost until actual caller disposal and joined task cleanup.
+/// InvocationRuntimeByteChannel carries one admitted exchange at a time, whose single
+/// terminal event is adapter-owned and physically settled on reply rejection/suppression
+/// too. Returned buffers remain protected by withInvocationHost until actual caller
+/// disposal and joined task cleanup.
 final class InvocationRuntimeByteChannel: AddonServiceInvocationMessageChannel, @unchecked Sendable {
     let runtime: AddonRuntime
     let adapter: InvocationMessageAdapter
@@ -1371,8 +1380,9 @@ final class InvocationRuntimeByteChannel: AddonServiceInvocationMessageChannel, 
     }
 }
 
-/// TEST ONLY: adapts the real invocation exchange to the existing context container.
-/// Subscription/control operations are outside this fixture and make no P3 claim.
+/// InvocationContextServiceClient is TEST ONLY: it adapts the real invocation exchange to the
+/// existing context container.
+/// Subscription/control operations are outside this fixture, which claims no coverage of them.
 private struct InvocationContextServiceClient: AddonServiceClient {
     private enum UnsupportedFixtureOperation: Error { case subscribe, unsubscribe }
     let exchange: ServiceInvocationExchange
@@ -1395,8 +1405,9 @@ private struct InvocationContextServiceClient: AddonServiceClient {
     }
 }
 
-/// Real SDK channels against canonical host handlers. All allocations and returned
-/// values stay inside withInvocationHost's prepaid scope; no OS channel is modeled.
+/// InvocationRuntimeStorageChannel wires the real SDK storage channel straight to canonical
+/// host handlers. All allocations and returned values stay inside withInvocationHost's
+/// prepaid scope; no OS channel is modeled.
 final class InvocationRuntimeStorageChannel: AddonStorageMessageChannel, @unchecked Sendable {
     let host: InvocationMessageHost
     let connection: RuntimeConnection
@@ -1431,7 +1442,8 @@ final class InvocationRuntimeAssetChannel: AddonAssetMessageChannel, @unchecked 
     func close() async { await host.runtime.closeConnection(connection) }
 }
 
-/// One arrival and one release, joined by the operation that owns the paid workspace.
+/// InvocationRouteGate holds one arrival and one release, joined by the operation that owns
+/// the paid workspace.
 private actor InvocationRouteGate {
     private var arrived = false, released = false
     var hasArrived: Bool { arrived }

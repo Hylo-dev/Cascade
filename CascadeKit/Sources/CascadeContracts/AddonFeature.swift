@@ -1,6 +1,6 @@
 //
 //  AddonFeature.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

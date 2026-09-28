@@ -5,7 +5,7 @@
 
 import Foundation
 
-/// Bootstrap carries only a fresh endpoint, never business requests or grants.
+/// ProbeBootstrap carries only a fresh endpoint, never business requests or grants.
 @objc(ProbeBootstrap)
 protocol ProbeBootstrap {
     func connect(to endpoint: NSXPCListenerEndpoint)
@@ -79,7 +79,7 @@ func recoveryTime() -> Double {
 }
 #endif
 
-/// Serializes delivery of the single authenticated channel from the listener.
+/// ProbeListenerDelegate serializes delivery of the single authenticated channel from the listener.
 final class ProbeListenerDelegate: NSObject, NSXPCListenerDelegate {
     private let lock = NSLock()
     private var delivered = false
@@ -121,7 +121,7 @@ final class ProbeReadyService: NSObject, ProbeReady {
     func ready() {}
 }
 
-/// Error, invalidation and reply can race; deliver a continuation at most once.
+/// ProbeReply delivers a continuation at most once, because error, invalidation and reply can race.
 final class ProbeReply {
     private let lock = NSLock()
     private var continuation: CheckedContinuation<ProbeResponse, Error>?

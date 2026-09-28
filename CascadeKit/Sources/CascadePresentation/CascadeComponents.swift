@@ -1,6 +1,6 @@
 //
 //  CascadeComponents.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

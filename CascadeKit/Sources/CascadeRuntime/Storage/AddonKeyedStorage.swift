@@ -1101,7 +1101,8 @@ actor AddonKeyedStorage {
         isClosing = true
     }
 
-    /// reconcile retains only one current name and scalar namespace totals, never an inventory of keys.
+    /// scanInventory streams the namespace tree, retaining only one current name and scalar
+    /// namespace totals, never an inventory of keys.
     private func scanInventory() throws -> ([Inventory], Pending?) {
         scanState = ScanState(count: namespaces.count)
         defer { scanState = nil }

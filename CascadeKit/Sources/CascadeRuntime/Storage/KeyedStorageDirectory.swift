@@ -213,7 +213,8 @@ enum KeyedStorageDirectory {
         return bytes
     }
 
-    /// stage writes an exclusively created file; the caller records existence before any possible error.
+    /// write fills an exclusively created file with every byte and fsyncs it; the caller records
+    /// existence before any possible error.
     static func write(
         _ descriptor : Int32,
         bytes        : Data,

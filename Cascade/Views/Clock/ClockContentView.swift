@@ -6,9 +6,10 @@
 import SwiftUI
 import CascadeKit
 
-/// The clock face. `TimelineView` is SwiftUI's declarative, GPU-driven ticker —
-/// it updates only while on screen, so it respects the "no idle polling" rule
-/// once the notch closes and the content host is hidden.
+/// ClockContentView draws the clock face. `TimelineView` is SwiftUI's
+/// declarative, GPU-driven ticker — it updates only while on screen, so it
+/// respects the "no idle polling" rule once the notch closes and the content
+/// host is hidden.
 struct ClockContentView: View {
 
     var body: some View {

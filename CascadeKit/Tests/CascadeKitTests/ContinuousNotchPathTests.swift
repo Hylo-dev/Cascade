@@ -1,6 +1,6 @@
 //
 //  ContinuousNotchPathTests.swift
-//  CascadeKitTests
+//  CascadeKit
 //
 
 import CoreGraphics

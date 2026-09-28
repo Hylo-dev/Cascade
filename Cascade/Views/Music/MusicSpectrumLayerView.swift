@@ -65,7 +65,7 @@ final class MusicSpectrumLayerView: NSView {
 
     required init?(coder: NSCoder) { nil }
 
-    /// Clicks belong to the SwiftUI activity around the bars.
+    /// hitTest returns nil because clicks belong to the SwiftUI activity around the bars.
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     override func viewDidMoveToWindow() {

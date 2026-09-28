@@ -1,8 +1,13 @@
+//
+//  StandaloneClockProvider.swift
+//  StandaloneClock
+//
+
 import CascadeAddonSDK
 import CascadeContracts
 import Foundation
 
-/// A finite, source-only example. The host owns assignment and revision history.
+/// StandaloneClockProvider is a finite, source-only example. The host owns assignment and revision history.
 public actor StandaloneClockProvider: AddonProvider {
     private let owner: AddonID
     private let assignment: PublicationID

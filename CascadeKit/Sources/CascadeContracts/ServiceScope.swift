@@ -1,6 +1,6 @@
 //
 //  ServiceScope.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

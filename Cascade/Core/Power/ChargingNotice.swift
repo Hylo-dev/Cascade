@@ -6,8 +6,9 @@
 import CascadeKit
 import SwiftUI
 
-/// A charger connection is a brief event, not a live activity lasting for the
-/// whole charging session. The host owns dismissal and the contextual glow.
+/// ChargingNotice presents a charger connection as a brief event, not a live
+/// activity lasting for the whole charging session. The host owns dismissal and
+/// the contextual glow.
 @MainActor
 final class ChargingNotice: NotchTransientNotice {
 

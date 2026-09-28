@@ -20,10 +20,11 @@ nonisolated struct NotchGeometry: Equatable, Sendable {
     let bottomCornerRadius: CGFloat // Convex radius of the two bottom corners.
     let topCornerRadius   : CGFloat // Concave (inverted) radius where the top meets the screen edge.
 
-    /// Total horizontal span of the notch.
+    /// width is the total horizontal span, derived from the two extents rather
+    /// than stored, so it can never disagree with sides that morph independently.
     var width: CGFloat { leftExtent + rightExtent }
 
-    /// Resolve the geometry for the current morph progress of each side.
+    /// resolve computes the geometry for the current morph progress of each side.
     ///
     /// `leadingProgress` / `trailingProgress` are the springs' normalized
     /// outputs in `[0, 1]`: 0 hugs the resting notch, 1 is fully expanded. We

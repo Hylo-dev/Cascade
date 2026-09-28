@@ -1,6 +1,6 @@
 //
 //  ServiceInvocationLifecycleIntegrationTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts
@@ -10,8 +10,9 @@ import Testing
 @testable import CascadeAddonSDK
 @testable import CascadeRuntime
 
-/// Actual runtime/broker composition. Identities, consent and observeExit are modeled test inputs;
-/// this suite makes no claim about signatures, external service wire traffic or physical process exit.
+/// ServiceInvocationLifecycleIntegrationTests exercises the actual runtime/broker composition.
+/// Identities, consent and observeExit are modeled test inputs; this suite makes no claim about
+/// signatures, external service wire traffic or physical process exit.
 @Suite(.timeLimit(.minutes(1)))
 struct ServiceInvocationLifecycleIntegrationTests {
     @Test(arguments: [false, true])
@@ -485,7 +486,8 @@ private func lifecycleIntegrationFailure(_ code: AddonFailure.Code, _ body: () a
     } catch { Issue.record("Expected AddonFailure \(code), got \(error)") }
 }
 
-/// Independently prepay fixture, SDK input/response and temporary encoding before any Data creation.
+/// withLifecycleHost independently prepays fixture, SDK input/response and temporary encoding
+/// before any Data creation.
 /// The protected scope returns only Void; host work is joined and all retained buffers drained first.
 private func withLifecycleHost(_ body: @Sendable (LifecycleHost) async throws -> Void) async throws
 {
@@ -664,7 +666,8 @@ private struct LifecycleHost: Sendable {
             sequence: sequence
         )
     }
-    /// Trusted test relay offers only the existing canonical completed history, never pending data.
+    /// knownCompletion is a trusted test relay that offers only the existing canonical completed
+    /// history, never pending data.
     func knownCompletion(requestID: UUID) async throws -> InvocationCompletion {
         guard
             case .completed(let response) = try await runtime.serviceOutcome(
@@ -742,8 +745,9 @@ private final class LifecycleClock: RuntimeClock, @unchecked Sendable {
     }
 }
 
-/// All access to adjacent recording support shares this lock, including runtime callbacks and
-/// inspection/staging from the test task. No mutable state of that adapter escapes the wrapper.
+/// LifecycleAdapter shares one lock for all access to adjacent recording support, including
+/// runtime callbacks and inspection/staging from the test task. No mutable state of that
+/// adapter escapes the wrapper.
 private final class LifecycleAdapter: AddonRuntimeAdapter, @unchecked Sendable {
     private let lock = NSLock()
     private let target = RecordingRuntimeAdapter()

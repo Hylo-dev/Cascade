@@ -1,6 +1,6 @@
 //
 //  SwiftDataArchive.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

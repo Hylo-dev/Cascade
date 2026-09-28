@@ -6,7 +6,8 @@
 import CascadeContracts
 import Foundation
 
-/// A trusted request observation, not proof that the public SDK can independently authenticate.
+/// AddonStorageMessageExchangeResult is a trusted request observation, not proof that the
+/// public SDK can independently authenticate.
 public enum AddonStorageMessageExchangeResult: Sendable {
     /// Bounded bytes for the exact request. The channel has consumed the host's exact receipt.
     case response(Data)
@@ -15,7 +16,8 @@ public enum AddonStorageMessageExchangeResult: Sendable {
     case rejectedBeforeHandoff
 }
 
-/// Injected bytes for one already authenticated connection, not an OS bootstrap or allocator.
+/// AddonStorageMessageChannel carries injected bytes for one already authenticated
+/// connection; it is not an OS bootstrap or allocator.
 ///
 /// The embedding must preadmit caller source allocations, SDK encoding/decoding workspace and
 /// returned-value lifetimes before request construction/encoding. Data.count does not bound a

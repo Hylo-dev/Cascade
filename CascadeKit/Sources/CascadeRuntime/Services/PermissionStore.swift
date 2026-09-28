@@ -1,7 +1,13 @@
+//
+//  PermissionStore.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 
-/// Trusted host authority input. This is not a wire permission or process authentication.
+/// HostServicePermission is trusted host authority input. This is not a wire permission or process
+/// authentication.
 public struct HostServicePermission: Sendable {
     public let consumer: VerifiedAddonIdentity
     public let binding: ServiceBinding

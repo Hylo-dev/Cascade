@@ -1,14 +1,14 @@
 //
 //  NotchStateTests.swift
-//  CascadeKitTests
+//  CascadeKit
 //
 
 import Testing
 @testable import CascadeKit
 
-/// NotchState is the OptionSet that lets the two sides open independently, so
-/// these tests pin down exactly that: closed is empty, open is both, and a
-/// single side can move without disturbing the other.
+/// NotchStateTests pins down NotchState, the OptionSet that lets the two sides
+/// open independently: closed is empty, open is both, and a single side can move
+/// without disturbing the other.
 struct NotchStateTests {
 
     @Test

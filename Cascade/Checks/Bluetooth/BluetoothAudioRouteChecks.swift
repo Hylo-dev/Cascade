@@ -185,8 +185,9 @@ struct BluetoothAudioRouteChecks {
     }
 }
 
-/// Only the external CoreAudio registration/read boundary is replaced. The
-/// production worker, reducer, stream and workspace lifecycle execute normally.
+/// ControlledAudioRouteSource replaces only the external CoreAudio
+/// registration/read boundary. The production worker, reducer, stream and
+/// workspace lifecycle execute normally.
 nonisolated private final class ControlledAudioRouteSource: BluetoothAudioRouteSource, @unchecked Sendable {
 
     private let lock                 = NSLock()

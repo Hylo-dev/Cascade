@@ -6,7 +6,8 @@
 import CascadeContracts
 import Foundation
 
-/// Concrete storage messages for one injected, already authenticated connection.
+/// MessageAddonStorageClient sends concrete storage messages over one injected,
+/// already authenticated connection.
 ///
 /// One lock serializes the scalar lifecycle and a separate whole-operation slot. No waiter
 /// queue, payload history or retry exists. Cancellation chooses a local outcome but SDK return
@@ -56,8 +57,9 @@ public final class MessageAddonStorageClient: AddonStorageClient, @unchecked Sen
         if response.result == .failure { throw hostFailure(response) }
     }
 
-    /// Revoke admission synchronously and await the single physical drain. Caller buffers and
-    /// the embedding scope still belong to their actual operation lifetime, not this flag.
+    /// close revokes admission synchronously and awaits the single physical drain. Caller
+    /// buffers and the embedding scope still belong to their actual operation lifetime, not
+    /// this flag.
     public func close() async {
         lock.withLock {
             closed = true
@@ -175,15 +177,17 @@ public final class MessageAddonStorageClient: AddonStorageClient, @unchecked Sen
         return response
     }
 
-    /// Caller holds the lock; keep the first local outcome and never complete an old ticket.
+    /// record keeps the first local outcome and never completes an old ticket; the caller
+    /// holds the lock.
     private func record(_ completion: StorageRequestLifecycle.LocalCompletion?) {
         guard let completion, completion.ticket == currentTicket, localCompletion == nil else { return }
         localCompletion = completion.failure
     }
 
-    /// Ledger consumption does not release the operational slot. Result delivery, including a
-    /// host failure, and close use the same lock. Later cancellation cannot relabel a consumed
-    /// result; cancellation that won earlier has a stored outcome and its response is discarded.
+    /// finalize runs after the ledger has consumed the response, because ledger consumption
+    /// alone does not release the operational slot. Result delivery, including a host failure,
+    /// and close use the same lock. Later cancellation cannot relabel a consumed result;
+    /// cancellation that won earlier has a stored outcome and its response is discarded.
     private func finalize(_ id: UUID) async throws {
         let decision: (revoked: Bool, completion: StorageRequestLifecycle.LocalFailure?) = lock.withLock {
             let revoked = closed || poisoned
@@ -198,9 +202,10 @@ public final class MessageAddonStorageClient: AddonStorageClient, @unchecked Sen
         if let completion = decision.completion { throw localFailure(completion) }
     }
 
-    /// Generic faults have no non-exposure proof. Preserve an earlier local completion;
-    /// otherwise unresolved mutations are unknown. A poison-induced ledger close is not an
-    /// explicit user close and must not disguise a read validation/transport error as one.
+    /// poisonFailure poisons the client on a generic fault, which carries no non-exposure
+    /// proof. Preserve an earlier local completion; otherwise unresolved mutations are
+    /// unknown. A poison-induced ledger close is not an explicit user close and must not
+    /// disguise a read validation/transport error as one.
     private func poisonFailure(
         _ ticket: StorageRequestLifecycle.Ticket,
         readCode: AddonFailure.Code,
@@ -231,7 +236,8 @@ public final class MessageAddonStorageClient: AddonStorageClient, @unchecked Sen
         }
     }
 
-    /// Caller holds the lock. Exact identity prevents stale catch/finalization cleanup.
+    /// clearOperation releases the operation slot; the caller holds the lock. Exact
+    /// identity prevents stale catch/finalization cleanup.
     private func clearOperation(_ id: UUID) {
         guard operationID == id else { return }
         operationID = nil

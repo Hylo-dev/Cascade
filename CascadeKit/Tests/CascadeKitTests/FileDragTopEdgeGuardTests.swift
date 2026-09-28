@@ -1,3 +1,8 @@
+//
+//  FileDragTopEdgeGuardTests.swift
+//  CascadeKit
+//
+
 import AppKit
 import Testing
 @testable import CascadeKit

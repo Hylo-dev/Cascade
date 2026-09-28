@@ -1,6 +1,6 @@
 //
 //  AssetTransferFrameCodec.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

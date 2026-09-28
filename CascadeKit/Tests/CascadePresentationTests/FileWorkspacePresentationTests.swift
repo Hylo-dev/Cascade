@@ -1,6 +1,6 @@
 //
 //  FileWorkspacePresentationTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts
@@ -136,7 +136,7 @@ struct FileWorkspacePresentationTests {
                 wrapped.insert(entry.id)
                 return content
             },
-            conversionUnavailableExplanation: "Conversione non ancora disponibile",
+            conversionUnavailableExplanation: "Conversion not available yet",
             clearAll: { clearCount += 1 },
             focusedEntryID: presentation.snapshot.entries.first?.id,
             rename: { renameCount += 1 },
@@ -241,7 +241,7 @@ struct FileWorkspacePresentationTests {
                         for: UTType(entry.typeIdentifier) ?? .data
                     ))
                 },
-                conversionUnavailableExplanation: "La conversione sarà disponibile prossimamente",
+                conversionUnavailableExplanation: "Conversion will be available soon",
                 clearAll: {},
                 focusedEntryID: presentation.mode == .list ? presentation.snapshot.entries.first?.id : nil,
                 rename: {},

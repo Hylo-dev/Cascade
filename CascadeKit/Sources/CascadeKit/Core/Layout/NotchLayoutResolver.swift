@@ -25,11 +25,11 @@ nonisolated struct NotchLayoutResolver {
         self.metrics = metrics
     }
 
-    /// Resolve `placements` into frames inside `interior` (the open notch's safe
-    /// content area, host coordinates, y growing upward). `notchWidth` /
-    /// `topBandHeight` are the physical notch's width and height (0 width when
-    /// there is no hardware notch). A placement whose cells aren't all available
-    /// is dropped from the result.
+    /// resolve turns `placements` into frames inside `interior` (the open
+    /// notch's safe content area, host coordinates, y growing upward).
+    /// `notchWidth` / `topBandHeight` are the physical notch's width and height
+    /// (0 width when there is no hardware notch). A placement whose cells aren't
+    /// all available is dropped from the result.
     func resolve(
         interior     : CGRect,
         notchWidth   : CGFloat,

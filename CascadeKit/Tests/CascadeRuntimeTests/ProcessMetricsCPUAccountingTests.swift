@@ -1,6 +1,6 @@
 //
 //  ProcessMetricsCPUAccountingTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

@@ -10,7 +10,7 @@ import CascadePresentation
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// In-memory Xcode canvas for adjusting the real shelf renderer at notch size.
+/// FileShelfDesignPreview is an in-memory Xcode canvas for adjusting the real shelf renderer at notch size.
 @MainActor
 private struct FileShelfDesignPreview: View {
 

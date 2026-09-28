@@ -266,7 +266,8 @@ enum ProbeHost {
 }
 
 #if RECOVERY_PROBE
-/// The callback may run on any queue; storage does not retain its process or channels.
+/// RecoveryNotifications records recovery notifications under a lock, because the callback may run
+/// on any queue; storage does not retain its process or channels.
 private enum RecoveryNotifications {
     static let lock = NSLock()
     static var values: [[String: Any]] = []

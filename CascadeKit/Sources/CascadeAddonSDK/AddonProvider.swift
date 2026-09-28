@@ -1,6 +1,6 @@
 //
 //  AddonProvider.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

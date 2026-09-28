@@ -1,6 +1,6 @@
 //
 //  NotchAuxiliaryInteractionTests.swift
-//  CascadeKitTests
+//  CascadeKit
 //
 
 import AppKit
@@ -227,7 +227,7 @@ struct NotchAuxiliaryInteractionTests {
             window.close()
         }
         let stack = NSStackView(views: [
-            NSTextField(labelWithString: "Uscita audio del Mac"),
+            NSTextField(labelWithString: "Mac audio output"),
             NSTextField(labelWithString: deviceName)
         ])
         stack.orientation = .vertical

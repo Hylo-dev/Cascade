@@ -1,6 +1,6 @@
 //
 //  verify-bluetooth-presentation.swift
-//  Cascade presentation verification
+//  Cascade
 //
 
 import AppKit
@@ -164,9 +164,9 @@ enum BluetoothPresentationVerification {
         let samples: [(String, BluetoothConnectionEvent)] = [
             ("AirPods Pro · 83%", event),
             ("AirPods · 17%", BluetoothConnectionEvent(deviceID: "airpods", name: "AirPods", symbolName: "airpods", isConnected: true, battery: BluetoothBatterySnapshot(level: 17), model: .airPods, productID: 0x2002)),
-            ("Batteria non disponibile", BluetoothConnectionEvent(deviceID: "unknown", name: "AirPods Pro", symbolName: "airpodspro", isConnected: true, model: .airPodsPro, productID: 0x200E)),
-            ("Disconnessione · dato precedente ignorato", BluetoothConnectionEvent(deviceID: "disconnected", name: "AirPods Pro", symbolName: "airpodspro", isConnected: false, battery: BluetoothBatterySnapshot(level: 83), model: .airPodsPro, productID: 0x200E)),
-            ("Accessorio generico · 7%", BluetoothConnectionEvent(deviceID: "generic", name: "Magic Mouse", symbolName: "computermouse.fill", isConnected: true, battery: BluetoothBatterySnapshot(level: 7)))
+            ("Battery unavailable", BluetoothConnectionEvent(deviceID: "unknown", name: "AirPods Pro", symbolName: "airpodspro", isConnected: true, model: .airPodsPro, productID: 0x200E)),
+            ("Disconnection · stale value ignored", BluetoothConnectionEvent(deviceID: "disconnected", name: "AirPods Pro", symbolName: "airpodspro", isConnected: false, battery: BluetoothBatterySnapshot(level: 83), model: .airPodsPro, productID: 0x200E)),
+            ("Generic accessory · 7%", BluetoothConnectionEvent(deviceID: "generic", name: "Magic Mouse", symbolName: "computermouse.fill", isConnected: true, battery: BluetoothBatterySnapshot(level: 7)))
         ]
         let sideWidth = notice.compactPreferredSideWidth ?? 40
         let context = NotchActivityViewContext(presentation: .compactLeading, availableSize: CGSize(width: sideWidth, height: 22))

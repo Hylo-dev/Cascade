@@ -13,8 +13,8 @@ import SwiftUI
 /// is what the notch chrome and content are composited in.
 public extension Color {
 
-    /// Build an opaque color from a packed RGB hex, `0xRRGGBB`.
-    /// `opacity` overrides the alpha if you want translucency.
+    /// init(hex:opacity:) builds an opaque color from a packed RGB hex,
+    /// `0xRRGGBB`. `opacity` overrides the alpha if you want translucency.
     init(
         hex    : UInt32,
         opacity: Double = 1
@@ -32,8 +32,9 @@ public extension Color {
         )
     }
 
-    /// Build a color from a packed ARGB value, `0xAARRGGBB` (alpha in the top
-    /// byte). Matches the layout the renderer used before colors became `Color`.
+    /// init(argb:) builds a color from a packed ARGB value, `0xAARRGGBB` (alpha
+    /// in the top byte). Matches the layout the renderer used before colors
+    /// became `Color`.
     init(argb: UInt32) {
         let alpha = Double((argb >> 24) & 0xFF) / 255.0
         let red   = Double((argb >> 16) & 0xFF) / 255.0

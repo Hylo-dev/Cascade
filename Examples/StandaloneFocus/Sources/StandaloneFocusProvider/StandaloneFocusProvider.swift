@@ -7,14 +7,16 @@ import CascadeAddonSDK
 import CascadeContracts
 import Foundation
 
-/// Fresh is a caller declaration that the host has no revision history for this assignment.
+/// FocusInitializationMode separates a fresh assignment from a resumed one: fresh is a
+/// caller declaration that the host has no revision history for this assignment.
 /// Resume never interprets missing storage as a new assignment.
 public enum FocusInitializationMode: Sendable { case freshAssignment, resumeExisting }
 public enum FocusError: Error, Equatable, Sendable {
     case busy, stopped, missingState, assignmentMismatch, corruptState, invalidConfiguration, revisionExhausted
 }
 
-/// One assigned timer, one bounded record, one host-serialized writer.
+/// StandaloneFocusProvider owns one assigned timer, one bounded record, and one
+/// host-serialized writer.
 /// Storage commit and output admission are separate; this API provides no CAS.
 public actor StandaloneFocusProvider: AddonProvider {
     public static let storageKey = "standalone-focus.state.v1"

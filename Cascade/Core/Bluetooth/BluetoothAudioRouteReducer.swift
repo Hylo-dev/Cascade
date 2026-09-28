@@ -6,7 +6,8 @@
 import CoreAudio
 import Foundation
 
-/// Default audio route changes are independent of ACL connection callbacks.
+/// BluetoothAudioRouteReducer treats default audio route changes independently
+/// of ACL connection callbacks.
 /// In particular, A → built-in → A must emit again even if A stayed connected.
 nonisolated struct BluetoothAudioRouteReducer {
 

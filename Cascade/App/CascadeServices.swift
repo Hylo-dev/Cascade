@@ -626,7 +626,7 @@ final class CascadeServices {
         notch.showNotice(activity)
     }
 
-    /// Preview changes presentation only; it never changes macOS energy settings.
+    /// previewCharging changes presentation only; it never changes macOS energy settings.
     func previewCharging(lowPower: Bool) {
         chargingPreviewRevision &+= 1
 

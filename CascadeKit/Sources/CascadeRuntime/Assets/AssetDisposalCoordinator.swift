@@ -1,8 +1,14 @@
+//
+//  AssetDisposalCoordinator.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 
-/// A narrow host adapter may delay forwarding, but must name and use this exact
-/// canonical governor. There is no default success or independent accounting.
+/// AssetReservationAccess is the narrow reservation seam: a host adapter may delay forwarding, but
+/// must name and use this exact canonical governor. There is no default success or independent
+/// accounting.
 protocol AssetReservationAccess: Sendable {
     var assetGovernor: ResourceGovernor { get }
     func reserveRaster(bytes: Int, owner: AddonID) async throws -> RetainedAssetToken
@@ -19,10 +25,10 @@ extension ResourceGovernor: AssetReservationAccess {
     }
 }
 
-/// One host-owned bridge per runtime. Its empty lock/control object is host
-/// baseline state; every proportional slot, context and in-flight record is
-/// admitted as 4096 bytes plus the governor's separate 1024-byte entry charge.
-/// Slots own only accounting tokens, never images/providers/contexts.
+/// AssetDisposalCoordinator is the one host-owned bridge per runtime. Its empty lock/control
+/// object is host baseline state; every proportional slot, context and in-flight record is
+/// admitted as 4096 bytes plus the governor's separate 1024-byte entry charge. Slots own only
+/// accounting tokens, never images/providers/contexts.
 final class AssetDisposalCoordinator: @unchecked Sendable {
     static let maximumSlots = (8 * 1_024 * 1_024) / (4_096 + 1_024)
 
@@ -35,12 +41,11 @@ final class AssetDisposalCoordinator: @unchecked Sendable {
         let drainStarts: UInt64
     }
     fileprivate enum Phase { case live, pending, refunding, fault, retired }
-    /// One individually allocated admitted record. Intrusive links avoid a
-    /// dictionary/array retaining uncharged peak capacity after partial refunds.
-    /// Weak backward and strong forward links make insertion/removal O(1), with
-    /// no active-list scan, table copy or strong-link cycle. A drain borrows one
-    /// strongly held node across the real refund; it unlinks and marks that same
-    /// node retired under the lock before dropping its bounded local reference.
+    /// Slot is one individually allocated admitted record. Intrusive links avoid a dictionary/array
+    /// retaining uncharged peak capacity after partial refunds. Weak backward and strong forward
+    /// links make insertion/removal O(1), with no active-list scan, table copy or strong-link
+    /// cycle. A drain borrows one strongly held node across the real refund; it unlinks and marks
+    /// that same node retired under the lock before dropping its bounded local reference.
     final class Slot: @unchecked Sendable {
         fileprivate let token: RetainedAssetToken
         fileprivate let coordinatorID: UUID
@@ -134,8 +139,8 @@ final class AssetDisposalCoordinator: @unchecked Sendable {
         }
     }
 
-    /// Called only after the actual allocation has been freed, or after an
-    /// admitted construction failed before any allocation existed.
+    /// disposed queues a slot for refund. It is called only after the actual allocation has been
+    /// freed, or after an admitted construction failed before any allocation existed.
     func disposed(_ slot: Slot) {
         lock.withLock {
             guard slot.coordinatorID == identity, slot.phase == .live else { return }
@@ -212,10 +217,10 @@ final class AssetDisposalCoordinator: @unchecked Sendable {
         }
     }
 
-    /// One observer at a time; fail-fast rather than an unbounded waiter list.
-    /// Waits only for disposal already queued at entry, never for live images.
-    /// At most two finite FIFO batches cover that watermark. Governor suspension
-    /// can delay it; this is an async barrier, never a blocking MainActor wait.
+    /// flushDisposed admits one observer at a time and fails fast rather than keeping an unbounded
+    /// waiter list. Waits only for disposal already queued at entry, never for live images. At most
+    /// two finite FIFO batches cover that watermark. Governor suspension can delay it; this is an
+    /// async barrier, never a blocking MainActor wait.
     func flushDisposed() async throws {
         let target: Slot? = try lock.withLock {
             guard !observing else { throw Self.failure("Raster disposal observation is busy.") }

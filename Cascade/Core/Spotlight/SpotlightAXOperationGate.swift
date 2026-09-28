@@ -5,8 +5,9 @@
 
 import Foundation
 
-/// Cancellation is synchronous even while the AX worker is inside another
-/// process. Each inspection also has one total budget, shared by every proxy.
+/// SpotlightAXOperationGate cancels synchronously, even while the AX worker is
+/// inside another process. Each inspection also has one total budget, shared by
+/// every proxy.
 nonisolated final class SpotlightAXOperationGate: @unchecked Sendable {
 
     struct Operation: Sendable {

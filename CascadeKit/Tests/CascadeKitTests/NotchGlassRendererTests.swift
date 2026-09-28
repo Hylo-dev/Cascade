@@ -1,3 +1,8 @@
+//
+//  NotchGlassRendererTests.swift
+//  CascadeKit
+//
+
 import AppKit
 import CascadeContracts
 import SwiftUI

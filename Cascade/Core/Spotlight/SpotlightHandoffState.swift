@@ -3,8 +3,9 @@
 //  Cascade
 //
 
-/// Commands change intent synchronously. AX observations acknowledge that intent;
-/// delayed observations from a closed window cannot control a later opening.
+/// SpotlightHandoffState lets commands change intent synchronously. AX
+/// observations acknowledge that intent; delayed observations from a closed
+/// window cannot control a later opening.
 nonisolated struct SpotlightHandoffState {
 
     private enum Phase { case idle, droplet, nativeRequested, visible, closing }

@@ -1,6 +1,6 @@
 //
 //  ObservedDiskReservationTests.swift
-//  Cascade
+//  CascadeKit
 //
 
 import CascadeContracts

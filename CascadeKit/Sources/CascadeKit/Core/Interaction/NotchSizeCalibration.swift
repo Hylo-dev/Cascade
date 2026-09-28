@@ -46,8 +46,9 @@ final class NotchSizeCalibration {
         onFinish?()
     }
 
-    /// Guides use the very same resolved sides and bottom as the rendered
-    /// notch. The reported width still includes its flared bezel attachments.
+    /// update hands the guides the very same resolved sides and bottom as the
+    /// rendered notch. The reported width still includes its flared bezel
+    /// attachments.
     func update(geometry: NotchGeometry) {
         guard isActive else { return }
         presenter.update(geometry: geometry)

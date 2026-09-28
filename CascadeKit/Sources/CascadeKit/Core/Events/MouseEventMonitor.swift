@@ -75,8 +75,8 @@ final class MouseEventMonitor: EventMonitoring {
             return event
         }
 
-        // The single-controller bridge still uses this nudge until task 4
-        // replaces it with inventory and focused-window inputs. It performs no
+        // App activation is only a nudge: the display coordinator answers it
+        // by refreshing its focused-window monitor. This observer performs no
         // AX work and does not define focus ownership.
         NSWorkspace.shared.notificationCenter.addObserver(
             self,
@@ -165,7 +165,8 @@ final class MouseEventMonitor: EventMonitoring {
         stop()
     }
 
-    /// Forward the current pointer location, throttled to `throttleInterval`.
+    /// emitPointer forwards the current pointer location, throttled to
+    /// `throttleInterval`.
     private func emitPointer(force: Bool = false) {
 
         let now = CACurrentMediaTime()

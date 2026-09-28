@@ -1,10 +1,16 @@
+//
+//  ServiceInvocationExchangeTests.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 import Testing
 @testable import CascadeAddonSDK
 
-/// Logical SDK arbitration, with a bounded embedding scope. Real governor/adapter
-/// byte ownership and pressure are exercised by RuntimeTests, not modeled here.
+/// ServiceInvocationExchangeTests covers logical SDK arbitration, with a bounded
+/// embedding scope. Real governor/adapter byte ownership and pressure are
+/// exercised by CascadeRuntimeTests, not modeled here.
 @Suite(.serialized, .timeLimit(.minutes(1)))
 struct ServiceInvocationExchangeTests {
     @Test(arguments: [0, 65_536])
@@ -204,7 +210,8 @@ private func sdkExpect(_ code: AddonFailure.Code, _ body: () async throws -> Voi
 }
 enum SDKReplyDamage: Sendable { case outerID, outerContract, outerOperation, nestedContract, nestedOperation, malformed }
 
-/// Deterministic one-arrival/one-release gate; no sleeps, polling or abandoned task.
+/// SDKInvocationGate is a deterministic one-arrival/one-release gate; no sleeps, polling or
+/// abandoned task.
 private actor SDKInvocationGate {
     private var arrived = false, released = false
     private var arrival: CheckedContinuation<Void, Never>?

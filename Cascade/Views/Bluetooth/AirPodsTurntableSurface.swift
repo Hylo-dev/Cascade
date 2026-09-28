@@ -158,7 +158,8 @@ final class AirPodsTurntableSurface: NSView, @preconcurrency CAAnimationDelegate
         isFallbackShown = false
     }
 
-    /// The notch is a standalone AppKit host, not a SwiftUI scene. Its mounted
+    /// viewDidMoveToWindow ties the surface's lifetime to the window, because
+    /// the notch is a standalone AppKit host, not a SwiftUI scene. Its mounted
     /// view and panel visibility provide the real lifetime; scenePhase can be
     /// background even while this nonactivating panel is visible.
     override func viewDidMoveToWindow() {

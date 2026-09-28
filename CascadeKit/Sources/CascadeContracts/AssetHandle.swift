@@ -1,6 +1,6 @@
 //
 //  AssetHandle.swift
-//  Cascade
+//  CascadeKit
 //
 
 import Foundation

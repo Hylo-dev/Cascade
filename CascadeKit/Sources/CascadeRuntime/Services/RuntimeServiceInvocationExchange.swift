@@ -1,8 +1,14 @@
+//
+//  RuntimeServiceInvocationExchange.swift
+//  CascadeKit
+//
+
 import CascadeContracts
 import Foundation
 
-/// Actor-owned routing scalars, not history or permission to disclose broker results.
-/// Every row is prepaid in the owner pool; no Data, task, timer or continuation lives here.
+/// RuntimeServiceInvocationExchange holds actor-owned routing scalars, not history or permission to
+/// disclose broker results. Every row is prepaid in the owner pool; no Data, task, timer or
+/// continuation lives here.
 struct RuntimeServiceInvocationExchange: Sendable {
     enum Admission: Equatable, Sendable { case refused(AddonFailure.Code), admitted(UUID) }
     enum Terminal: Equatable, Sendable { case completed, refused(AddonFailure.Code), unknown }

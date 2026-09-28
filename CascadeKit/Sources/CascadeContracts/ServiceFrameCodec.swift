@@ -1,15 +1,21 @@
+//
+//  ServiceFrameCodec.swift
+//  CascadeKit
+//
+
 import Foundation
 
-/// Proposed syntax only; selecting this profile negotiates or authenticates nothing.
-/// Runtime must select a profile from canonical negotiation after host integration.
+/// ServiceInvocationFrameProfile is proposed syntax only; selecting this profile
+/// negotiates or authenticates nothing. Runtime must select a profile from canonical
+/// negotiation after host integration.
 public enum ServiceInvocationFrameProfile: Equatable, Sendable { case v1_3 }
 
-/// Dedicated service bodies are bounded separately from generic AddonEvent.
-/// Bounds describe wire values, not Foundation workspace or process memory.
+/// ServiceFrameCodec bounds dedicated service bodies separately from generic
+/// AddonEvent. Bounds describe wire values, not Foundation workspace or process memory.
 public enum ServiceFrameCodec {
     /// Full 64 KiB base64 needs at most 174,768 bytes with every slash escaped.
-    /// P1 metadata (UUIDs, 128-byte ASCII identifiers, finite numeric date and fixed
-    /// keys) is below 8,192 bytes, so the total is below 192 KiB. Refusal reasons
+    /// Invocation frame metadata (UUIDs, 128-byte ASCII identifiers, finite numeric date
+    /// and fixed keys) is below 8,192 bytes, so the total is below 192 KiB. Refusal reasons
     /// need at most 24,576 escaped bytes plus metadata and cannot coexist with payload.
     /// Outer transports must account for their own representation and envelope limit.
     public static let maximumEncodedBytes = 196_608

@@ -5,11 +5,12 @@
 
 import SwiftUI
 
-/// Shared presentation contract for a task or brief status notice. This local
-/// macOS surface is not an ActivityKit conformance. Show only task information,
-/// never promotions. Keep every family recognizable and readable; reserve
-/// compact/minimal for a glance and expanded for essential actions. Factories
-/// respect the supplied bounds and never start polling or continuous animation.
+/// NotchActivity is the shared presentation contract for a task or brief status
+/// notice. This local macOS surface is not an ActivityKit conformance. Show
+/// only task information, never promotions. Keep every family recognizable and
+/// readable; reserve compact/minimal for a glance and expanded for essential
+/// actions. Factories respect the supplied bounds and never start polling or
+/// continuous animation.
 @MainActor
 public protocol NotchActivity: AnyObject {
     var id: String { get }

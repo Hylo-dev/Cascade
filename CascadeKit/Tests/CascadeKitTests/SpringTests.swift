@@ -1,14 +1,15 @@
 //
 //  SpringTests.swift
-//  CascadeKitTests
+//  CascadeKit
 //
 
 import Testing
 @testable import CascadeKit
 
-/// The spring is what makes the morph feel alive *and* what lets it stop: it
-/// must converge to its target, settle (so the display link can be torn down),
-/// and survive the huge `dt` of a link resuming after the notch sat idle.
+/// SpringTests covers the spring, which is what makes the morph feel alive *and*
+/// what lets it stop: it must converge to its target, settle (so the display
+/// link can be torn down), and survive the huge `dt` of a link resuming after
+/// the notch sat idle.
 struct SpringTests {
 
     @Test(arguments: [30.0, 60.0, 120.0])
