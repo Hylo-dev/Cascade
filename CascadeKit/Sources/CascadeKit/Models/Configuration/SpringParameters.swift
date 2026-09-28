@@ -31,10 +31,10 @@ public nonisolated struct SpringParameters: Sendable {
         self.restThreshold = restThreshold
     }
 
-    /// A snappy, barely-overshooting morph that settles quickly.
+    /// A liquid, underdamped morph with a small overshoot before it settles.
     public static let snappy = SpringParameters(
-        stiffness    : 240.0,
-        damping      : 28.0,
+        stiffness    : 320.0,
+        damping      : 20.0,
         restThreshold: 0.001
     )
 }

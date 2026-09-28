@@ -1,0 +1,44 @@
+[
+  {
+    "mode": "immediate-exit",
+    "attempt": 1,
+    "status": 84,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "mode": "immediate-exit",
+    "attempt": 2,
+    "status": 84,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "mode": "immediate-exit",
+    "attempt": 3,
+    "status": 84,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "mode": "wait-signal",
+    "attempt": 1,
+    "status": -9,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "mode": "wait-signal",
+    "attempt": 2,
+    "status": -9,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "mode": "wait-signal",
+    "attempt": 3,
+    "status": -9,
+    "stdout": "",
+    "stderr": ""
+  }
+]

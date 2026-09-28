@@ -1,0 +1,13 @@
+{
+  "recorded": 1790417326.324287,
+  "diskLogicalBytes": 50000000000,
+  "diskAllocatedBytes": 17855008768,
+  "freeBytes": 3932160000,
+  "memoryBytes": 4294967296,
+  "cpuCount": 2,
+  "vmState": "stopped",
+  "nativeSuspensionArmed": false,
+  "productionGateAdmitted": false,
+  "discoveryResult": "broker remains idle / -10814, including registered app and Launch Services launch",
+  "directControl": "GUI discovers provider and provider reaches main; broker-only peer requirement correctly rejects GUI identity (-67050)"
+}

@@ -18,7 +18,7 @@ public final class WidgetContext {
     /// The notch's current discrete state.
     public private(set) var state: NotchState
 
-    private let requestContent: () -> Void
+    private var requestContent: (() -> Void)?
 
     init(
         state         : NotchState,
@@ -31,12 +31,18 @@ public final class WidgetContext {
     /// Ask the host to rebuild this widget's content. Call this only when a
     /// declared input actually changed — never on a timer or per frame.
     public func setNeedsContent() {
-        requestContent()
+        requestContent?()
     }
 
     /// Keep the context's state in sync as the notch transitions. Internal: the
     /// host calls it, widgets only ever read `state`.
     func update(state: NotchState) {
+        guard requestContent != nil else { return }
         self.state = state
+    }
+
+    /// Makes retained copies inert before the matching widget is suspended.
+    func revoke() {
+        requestContent = nil
     }
 }

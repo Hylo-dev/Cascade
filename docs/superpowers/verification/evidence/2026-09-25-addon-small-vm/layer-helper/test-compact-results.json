@@ -1,0 +1,34 @@
+{
+  "allPassed": true,
+  "first": {
+    "allocatedAfterBytes": 4263936,
+    "allocatedBeforeBytes": 8392704,
+    "punchedBytes": 4128768,
+    "sha256After": "sha256:6e1bdae40fb4e71ca8354637bb547a5c05d3a783f658449c8c7d3a115280b780",
+    "sha256Before": "sha256:6e1bdae40fb4e71ca8354637bb547a5c05d3a783f658449c8c7d3a115280b780",
+    "sizeBytes": 8388699,
+    "status": "verified",
+    "zeroBlocks": 63
+  },
+  "second": {
+    "allocatedAfterBytes": 4263936,
+    "allocatedBeforeBytes": 4263936,
+    "punchedBytes": 4128768,
+    "sha256After": "sha256:6e1bdae40fb4e71ca8354637bb547a5c05d3a783f658449c8c7d3a115280b780",
+    "sha256Before": "sha256:6e1bdae40fb4e71ca8354637bb547a5c05d3a783f658449c8c7d3a115280b780",
+    "sizeBytes": 8388699,
+    "status": "verified",
+    "zeroBlocks": 63
+  },
+  "guards": [
+    "stopped-ack-required",
+    "outside-lab-rejected",
+    "hardlink-rejected"
+  ],
+  "checks": [
+    "all-bytes-unchanged",
+    "size-unchanged",
+    "allocation-reduced",
+    "second-pass-idempotent"
+  ]
+}

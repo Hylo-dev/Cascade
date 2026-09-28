@@ -28,31 +28,47 @@ nonisolated struct NotchGeometry: Equatable, Sendable {
     /// `leadingProgress` / `trailingProgress` are the springs' normalized
     /// outputs in `[0, 1]`: 0 hugs the resting notch, 1 is fully expanded. We
     /// interpolate each side independently from the resting half-width to the
-    /// configured expanded half-width, and grow the height by whichever side is
-    /// more open so the shape never clips its taller content.
+    /// configured expanded half-width. `resolvedHeight` lets the controller run
+    /// adaptive activity height on its own spring; callers that omit it retain
+    /// the original normalized side-driven height interpolation.
     static func resolve(
-        configuration   : NotchConfiguration,
-        restingHalfWidth: CGFloat,
-        restingHeight   : CGFloat,
-        leadingProgress : CGFloat,
-        trailingProgress: CGFloat
+        configuration           : NotchConfiguration,
+        restingHalfWidth        : CGFloat,
+        restingHeight           : CGFloat,
+        compactLeadingExtension : CGFloat = 0,
+        compactTrailingExtension: CGFloat = 0,
+        compactCenterHalfWidth  : CGFloat? = nil,
+        compactProgress         : CGFloat = 0,
+        expandedHalfWidth       : CGFloat? = nil,
+        resolvedHeight          : CGFloat? = nil,
+        leadingProgress         : CGFloat,
+        trailingProgress        : CGFloat
     ) -> NotchGeometry {
 
-        let reach       = configuration.expandedHalfWidth - restingHalfWidth
-        let leftExtent  = restingHalfWidth + reach * leadingProgress
-        let rightExtent = restingHalfWidth + reach * trailingProgress
+        let boundedCompactProgress = min(1, max(0, compactProgress))
+        let compactHalfWidth = compactCenterHalfWidth ?? restingHalfWidth
+        let resolvedCenterHalfWidth = restingHalfWidth
+            + (compactHalfWidth - restingHalfWidth) * boundedCompactProgress
+        let leadingRest  = resolvedCenterHalfWidth + compactLeadingExtension
+        let trailingRest = resolvedCenterHalfWidth + compactTrailingExtension
+        let expandedWidth = expandedHalfWidth ?? configuration.expandedHalfWidth
+        let leftExtent = leadingRest + (expandedWidth - leadingRest) * leadingProgress
+        let rightExtent = trailingRest + (expandedWidth - trailingRest) * trailingProgress
 
-        let openness    = max(leadingProgress, trailingProgress)
-        let height      = restingHeight + (configuration.expandedHeight - restingHeight) * openness
+        let openness = max(leadingProgress, trailingProgress)
+        let height = resolvedHeight
+            ?? restingHeight + (configuration.expandedHeight - restingHeight) * openness
 
-        // The corner radii morph from the resting set to the expanded set on the
-        // same `openness` curve as the height, so the closed pill and the open
-        // island can carry completely different roundness.
+        // Round the continuous corners ahead of the size change, then retain
+        // that softness on the way back to the hardware. Clamping only this
+        // curve keeps the opening overshoot without reversing the roundness.
+        let cornerProgress = min(1, max(0, openness))
+        let roundness = cornerProgress * (2 - cornerProgress)
         let bottomCornerRadius = configuration.restingBottomCornerRadius
-            + (configuration.expandedBottomCornerRadius - configuration.restingBottomCornerRadius) * openness
+            + (configuration.expandedBottomCornerRadius - configuration.restingBottomCornerRadius) * roundness
 
         let topCornerRadius = configuration.restingTopCornerRadius
-            + (configuration.expandedTopCornerRadius - configuration.restingTopCornerRadius) * openness
+            + (configuration.expandedTopCornerRadius - configuration.restingTopCornerRadius) * roundness
 
         return NotchGeometry(
             leftExtent        : leftExtent,

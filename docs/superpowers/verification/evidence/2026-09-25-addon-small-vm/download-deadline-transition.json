@@ -1,0 +1,7 @@
+{
+  "pid": 11838,
+  "command": "/private/tmp/cascade-addon-vm/tart.app/Contents/MacOS/tart clone ghcr.io/cirruslabs/macos-sonoma-vanilla@sha256:a6dc5a325aae43a90244953af0a85091fbe93e8f58583138c5ac96dd707fd700 cascade-addon-small --concurrency 4",
+  "reason": "Extend download time budget while retaining completed layers",
+  "signal": "SIGTERM",
+  "time": 1790361378.126988
+}

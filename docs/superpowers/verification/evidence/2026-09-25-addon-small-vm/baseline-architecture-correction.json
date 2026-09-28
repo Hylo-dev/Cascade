@@ -1,0 +1,6 @@
+{
+  "baselineSHA256": "713a8519b933022e630e706c999dc2009cb98d0e7f4a3fa16b8067157957d20f",
+  "correctedSHA256": "0f6fb4c590bb2647b1ee961917530d34bd168be7d1e64d0ba47e7ef3b1385522",
+  "change": "Select arm64 for static verification against the unchanged arm64 CDHash requirement. All-architecture integrity verification remains. No fixture, manifest, guard or classification changes.",
+  "nativeEvidence": "guest-signature-matrix.json"
+}

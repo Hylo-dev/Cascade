@@ -1,0 +1,31 @@
+{
+  "controllerSHA256": "d4a62d142224726bddb7178cd18211ded0dac51a557ef3e93a812ae30062c156",
+  "nativeVMOperations": false,
+  "networkScope": "127.0.0.1 only",
+  "checks": [
+    {
+      "scenario": "resume-after-disconnect",
+      "passed": true,
+      "requests": [
+        null,
+        "bytes=65536-"
+      ],
+      "error": null
+    },
+    {
+      "scenario": "range-ignored",
+      "passed": true,
+      "requests": [
+        null,
+        "bytes=65536-"
+      ],
+      "error": "non-retryable curl status 33"
+    },
+    {
+      "scenario": "bad-digest",
+      "passed": true,
+      "requests": [],
+      "error": "compressed digest mismatch at layer 1"
+    }
+  ]
+}

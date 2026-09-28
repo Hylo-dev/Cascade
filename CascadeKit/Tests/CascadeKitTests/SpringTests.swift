@@ -11,6 +11,19 @@ import Testing
 /// and survive the huge `dt` of a link resuming after the notch sat idle.
 struct SpringTests {
 
+    @Test(arguments: [30.0, 60.0, 120.0])
+    func overshootsGentlyBeforeSettling(refreshRate: Double) {
+        var spring = Spring(parameters: .snappy)
+        var peak = 0.0
+        for _ in 0..<Int(refreshRate * 2) {
+            spring.advance(toward: 1, dt: 1 / refreshRate)
+            peak = max(peak, spring.value)
+        }
+        #expect(peak > 1.04)
+        #expect(peak < 1.18)
+        #expect(spring.isSettled(at: 1))
+    }
+
     @Test
     func convergesTowardItsTarget() {
 

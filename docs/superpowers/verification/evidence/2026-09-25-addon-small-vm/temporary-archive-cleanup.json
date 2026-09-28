@@ -1,0 +1,16 @@
+{
+  "freeBefore": 12533760000,
+  "removed": [
+    {
+      "name": "tart.tar.gz",
+      "bytes": 22908684,
+      "sha256": "1712be82b687cc27792d5a2bae3f36fcb5e5dea4d5772231f5508dea567999e2"
+    },
+    {
+      "name": "payload.tar.gz",
+      "bytes": 10743365,
+      "sha256": "4da64e8ea598e196ab32ce727f1f128713a5ca5b1d0f9211f9c4f73aae9d2333"
+    }
+  ],
+  "freeAfter": 12533760000
+}

@@ -1,0 +1,23 @@
+# Verifica del client storage SDK — 18 settembre 2026
+
+**PASS nel perimetro del client a canale iniettato e dell’integrazione interna.** `MessageAddonStorageClient` implementa read/write/remove sui contratti esistenti e aggiunge chiusura con attesa della pulizia fisica. Quattro file nuovi, 282 input preesistenti catturati invariati; nessun incremento del protocollo, nuovo launcher o modifica a C0d.
+
+## Prove e consegna
+
+- **955 test in 87 suite passati** sul package completo: Runtime 624/50, Presentation 79/8, Kit 170/19, Contracts 65/8, Tool 17/2. Verifica seriale nella sessione GUI; il riepilogo XCTest di zero non conta i test Swift Testing.
+- Verifica mirata del worker: 203 dichiarazioni/12 suite; le due suite nuove hanno 26 dichiarazioni e 76 esecuzioni espanse. Bridge interno sul runtime canonico, coordinatore e backend reali, receipt esatte e scope di memoria preammessi.
+- Revisione indipendente Codex Sol high **PASS sul sorgente, nessun P1/P2**. Tre P3 restano come copertura facoltativa, con limiti espliciti sotto.
+- Esempi esterni verificati contro il package aggiornato: **StandaloneFocus 37 test**, **ServiceConsumer 16 test**, entrambi passati. I 64 input pubblici sono identici al freeze; la copia completa conserva anche i target di supporto richiesti dal manifest. I due primi tentativi con una copia incompleta sono falliti prima della compilazione e rimangono registrati.
+- Build Apple Development riuscita su snapshot locale di **419 input**, confrontati byte per byte col checkout dopo la build. Firma verificata e collegamento `/Applications/Cascade.app` aggiornato. Chiusura normale e riavvio verificati **PID 25731 → 51036**, eseguibile atteso e stabilità per cinque secondi.
+
+Tutte le evidenze sono in [continuation](../../../.scratch/codex-addon/20260918-continuation/): [handoff](../../../.scratch/codex-addon/20260918-continuation/storage-client-report.md), [freeze](../../../.scratch/codex-addon/20260918-continuation/storage-client-freeze-manifest.json), [review indipendente](../../../.scratch/codex-addon/20260918-continuation/storage-client-independent-review.md), [suite completa](../../../.scratch/codex-addon/20260918-continuation/storage-client-full.log), [Focus aggiornato](../../../.scratch/codex-addon/20260918-continuation/storage-client-focus-complete-sdk.log), [ServiceConsumer aggiornato](../../../.scratch/codex-addon/20260918-continuation/storage-client-service-complete-sdk.log), [build](../../../.scratch/codex-addon/20260918-continuation/storage-client-signed-build.log), [manifest dei 419 input](../../../.scratch/codex-addon/20260918-continuation/storage-client-build-snapshot-manifest.json), [riavvio](../../../.scratch/codex-addon/20260918-continuation/storage-client-restart-evidence.json). Log falliti e snapshot storici non sono stati sovrascritti.
+
+## Contratto e limiti
+
+Il canale è infrastruttura fidata già associata alla connessione autenticata: verifica generazione/sequence fisiche, consuma la receipt esatta e libera lo staging prima di restituire la risposta. Il client verifica i byte limitati e la correlazione pubblica; non autentica prove assenti da quei byte. Un rifiuto di risposta dopo commit non è rifiuto della richiesta: le mutazioni non risolte restano outcomeUnknown e non vengono ritentate.
+
+Uno slot mantiene l’intera operazione fino a finalizzazione o drain. Chiusura e consegna finale condividono l’ordine sotto lock; cancellazione prima dell’handoff impedisce l’invio, dopo un possibile handoff conserva l’incertezza delle mutazioni. Nessun lock attraversa await. Le allocazioni esterne, la codifica e i risultati devono essere ammessi dall’integrazione prima della loro costruzione: il client pubblico non contiene un allocator. Gli 8 MiB del test sono una scelta conservativa della fixture, non una misura Foundation/RSS.
+
+La matrice finita non è esaustiva: mancano alcune combinazioni di close nella preparazione, drift durante la risposta e cancellazione dei chiamanti close, oltre ad assert SDK specifici per reason massima/versionConflict. I tentativi publication/asset della nuova fixture provano la guardia di ingresso dell’adapter; non vengono presentati come prova autonoma del credito runtime fra famiglie. Le prove end-to-end del percorso storage e delle receipt restano valide.
+
+Il PARTIAL della review sui passi root pendenti è superato dalle prove sopra, non dalla riscrittura del rapporto storico. Restano aperti trasporto/bootstrap nativi, allocazioni produttive/RSS, macOS 14/Intel, composizione nell’app, qualificazione dei processi e C5/C12 completi. `observeExit` nella fixture è un input simulato; C0d conserva l’uscita incondizionata 78.

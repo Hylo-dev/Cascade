@@ -1,0 +1,262 @@
+{
+  "mode": "restart",
+  "launcherAdmitted": false,
+  "authenticated": true,
+  "registered": true,
+  "confirmed": true,
+  "guardDeadline": 431142.065182,
+  "trigger": 431117.083276,
+  "exits": {
+    "broker": {
+      "time": 431117.084418,
+      "status": 0
+    },
+    "provider": {
+      "time": 431117.08532,
+      "status": 15
+    }
+  },
+  "rootAlive": true,
+  "restartStarted": 431117.085455,
+  "freshAuthenticated": true,
+  "freshRegistered": true,
+  "freshConfirmed": true,
+  "freshBroker": true,
+  "freshProvider": true,
+  "freshGuard": 431152.221586,
+  "freshStop": 431127.238248,
+  "freshExits": {
+    "broker": {
+      "time": 431127.239267,
+      "status": 0
+    },
+    "provider": {
+      "time": 431127.24012,
+      "status": 15
+    }
+  },
+  "verdict": "PASS",
+  "hosts": [
+    {
+      "label": "restart-first",
+      "events": [
+        {
+          "event": "client-ready"
+        },
+        {
+          "authenticated": true,
+          "brokerGuard": 431151.891379,
+          "brokerInstance": "486AB56B-02A3-4884-B3CC-6D48A8D61DA6",
+          "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-q3h1sesl/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+          "brokerPID": 50425,
+          "event": "hello",
+          "nonce": "5A48B0EA-C40F-436D-A774-7AFBD189D936",
+          "provider": {
+            "authenticated": true,
+            "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-q3h1sesl/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+            "guardDeadline": 431142.065182,
+            "instance": "963357EF-1287-4FC2-BF66-A3223B19BBBC",
+            "pid": 50428
+          }
+        },
+        {
+          "authenticated": true,
+          "brokerGuard": 431151.891379,
+          "brokerInstance": "486AB56B-02A3-4884-B3CC-6D48A8D61DA6",
+          "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-q3h1sesl/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+          "brokerPID": 50425,
+          "event": "hello",
+          "nonce": "EC527579-B7E9-4279-B544-A5137558900D",
+          "provider": {
+            "authenticated": true,
+            "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-q3h1sesl/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+            "guardDeadline": 431142.065182,
+            "instance": "963357EF-1287-4FC2-BF66-A3223B19BBBC",
+            "pid": 50428
+          }
+        },
+        {
+          "authenticated": true,
+          "brokerGuard": 431151.891379,
+          "brokerInstance": "486AB56B-02A3-4884-B3CC-6D48A8D61DA6",
+          "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-q3h1sesl/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+          "brokerPID": 50425,
+          "event": "hold",
+          "nonce": "87F675EB-548D-468F-AC25-CC9F60364DE3",
+          "provider": {
+            "authenticated": true,
+            "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-q3h1sesl/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+            "guardDeadline": 431142.065182,
+            "instance": "963357EF-1287-4FC2-BF66-A3223B19BBBC",
+            "pid": 50428
+          }
+        },
+        {
+          "event": "stop-broker"
+        },
+        {
+          "error": "Error Domain=NSCocoaErrorDomain Code=4097 \"connection to service named hylo.Cascade.AddonProbe.DiscoveryBroker\" UserInfo={NSDebugDescription=connection to service named hylo.Cascade.AddonProbe.DiscoveryBroker}",
+          "event": "broker-unavailable"
+        },
+        {
+          "event": "ping",
+          "pid": 50424
+        },
+        {
+          "event": "restart"
+        },
+        {
+          "authenticated": true,
+          "brokerGuard": 431162.126872,
+          "brokerInstance": "67A87B5E-13A7-4026-83C1-D9ECFDE36D41",
+          "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-q3h1sesl/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+          "brokerPID": 50438,
+          "event": "hello",
+          "nonce": "0AB4FC12-4567-4569-92F4-7C1A45781482",
+          "provider": {
+            "authenticated": true,
+            "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-q3h1sesl/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+            "guardDeadline": 431152.221586,
+            "instance": "87E1C802-7B72-4B11-BFAE-9F60BFC1D6F5",
+            "pid": 50440
+          }
+        },
+        {
+          "authenticated": true,
+          "brokerGuard": 431162.126872,
+          "brokerInstance": "67A87B5E-13A7-4026-83C1-D9ECFDE36D41",
+          "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-q3h1sesl/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+          "brokerPID": 50438,
+          "event": "hello",
+          "nonce": "7518151C-AE77-45D0-A1B3-C67E8E2AEFB6",
+          "provider": {
+            "authenticated": true,
+            "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-q3h1sesl/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+            "guardDeadline": 431152.221586,
+            "instance": "87E1C802-7B72-4B11-BFAE-9F60BFC1D6F5",
+            "pid": 50440
+          }
+        },
+        {
+          "authenticated": true,
+          "brokerGuard": 431162.126872,
+          "brokerInstance": "67A87B5E-13A7-4026-83C1-D9ECFDE36D41",
+          "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-q3h1sesl/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+          "brokerPID": 50438,
+          "event": "hold",
+          "nonce": "682EB2DE-7345-4548-988C-235AEFCAC258",
+          "provider": {
+            "authenticated": true,
+            "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-q3h1sesl/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+            "guardDeadline": 431152.221586,
+            "instance": "87E1C802-7B72-4B11-BFAE-9F60BFC1D6F5",
+            "pid": 50440
+          }
+        },
+        {
+          "event": "stop-broker"
+        },
+        {
+          "error": "Error Domain=NSCocoaErrorDomain Code=4097 \"connection to service named hylo.Cascade.AddonProbe.DiscoveryBroker\" UserInfo={NSDebugDescription=connection to service named hylo.Cascade.AddonProbe.DiscoveryBroker}",
+          "event": "broker-unavailable"
+        },
+        {
+          "event": "ping",
+          "pid": 50424
+        }
+      ],
+      "chains": [
+        {
+          "startupRequested": 431116.771494,
+          "startupAuthenticated": 431117.082332,
+          "identities": {
+            "broker": {
+              "pid": 50425,
+              "instance": "486AB56B-02A3-4884-B3CC-6D48A8D61DA6",
+              "guardDeadline": 431151.891379,
+              "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-q3h1sesl/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc"
+            },
+            "provider": {
+              "authenticated": true,
+              "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-q3h1sesl/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+              "guardDeadline": 431142.065182,
+              "instance": "963357EF-1287-4FC2-BF66-A3223B19BBBC",
+              "pid": 50428
+            }
+          },
+          "authenticated": true,
+          "registered": true,
+          "confirmed": true,
+          "trigger": 431117.083276,
+          "exits": {
+            "broker": {
+              "time": 431117.084418,
+              "status": 0
+            },
+            "provider": {
+              "time": 431117.08532,
+              "status": 15
+            }
+          },
+          "cleanupExits": {
+            "broker": {
+              "time": 431117.084418,
+              "status": 0
+            },
+            "provider": {
+              "time": 431117.08532,
+              "status": 15
+            }
+          }
+        },
+        {
+          "startupRequested": 431117.085666,
+          "startupAuthenticated": 431127.237342,
+          "identities": {
+            "broker": {
+              "pid": 50438,
+              "instance": "67A87B5E-13A7-4026-83C1-D9ECFDE36D41",
+              "guardDeadline": 431162.126872,
+              "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-q3h1sesl/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc"
+            },
+            "provider": {
+              "authenticated": true,
+              "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-q3h1sesl/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+              "guardDeadline": 431152.221586,
+              "instance": "87E1C802-7B72-4B11-BFAE-9F60BFC1D6F5",
+              "pid": 50440
+            }
+          },
+          "authenticated": true,
+          "registered": true,
+          "confirmed": true,
+          "trigger": 431127.238248,
+          "exits": {
+            "broker": {
+              "time": 431127.239267,
+              "status": 0
+            },
+            "provider": {
+              "time": 431127.24012,
+              "status": 15
+            }
+          },
+          "cleanupExits": {
+            "broker": {
+              "time": 431127.239267,
+              "status": 0
+            },
+            "provider": {
+              "time": 431127.24012,
+              "status": 15
+            }
+          }
+        }
+      ],
+      "pid": 50424,
+      "cleanupComplete": true,
+      "rootStatus": 0
+    }
+  ],
+  "cleanupComplete": true
+}

@@ -1,0 +1,23 @@
+Executable=/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-8zj1e_09/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex/Contents/MacOS/ProbeProvider
+Identifier=hylo.Cascade.AddonProbeContainer.Provider
+Format=bundle with Mach-O thin (arm64)
+CodeDirectory v=20500 size=821 flags=0x10000(runtime) hashes=14+7 location=embedded
+Hash type=sha256 size=32
+CandidateCDHash sha256=073b77e51b0b15e068bb89867e83c8dd339fe63e
+CandidateCDHashFull sha256=073b77e51b0b15e068bb89867e83c8dd339fe63ed43899368cf641a8795dd1da
+Hash choices=sha256
+CMSDigest=073b77e51b0b15e068bb89867e83c8dd339fe63ed43899368cf641a8795dd1da
+CMSDigestType=2
+CDHash=073b77e51b0b15e068bb89867e83c8dd339fe63e
+Signature size=4798
+Authority=Apple Development: cavallerolore@icloud.com (MRZYW8THXH)
+Authority=Apple Worldwide Developer Relations Certification Authority
+Authority=Apple Root CA
+Signed Time=25 Sep 2026 at 6:22:10 PM
+Info.plist entries=19
+TeamIdentifier=A6A5HQL6K4
+Runtime Version=27.0.0
+Sealed Resources version=2 rules=13 files=0
+Internal requirements count=1 size=216
+Total signatures=1
+Chosen signature=1

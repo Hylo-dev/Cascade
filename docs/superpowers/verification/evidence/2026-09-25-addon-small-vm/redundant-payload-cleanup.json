@@ -1,0 +1,10 @@
+{
+  "time": 1790375548.913389,
+  "verifiedArchive": "/private/tmp/cascade-addon-vm/share/payload.tar.gz",
+  "removed": [
+    "/private/tmp/cascade-addon-vm/payload/python",
+    "/private/tmp/cascade-addon-vm/payload/products"
+  ],
+  "freeBefore": 3694592000,
+  "freeAfter": 3727360000
+}

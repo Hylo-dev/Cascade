@@ -1,0 +1,114 @@
+{
+  "mode": "broker",
+  "events": [
+    {
+      "event": "client-ready"
+    },
+    {
+      "authenticated": true,
+      "brokerGuard": 431532.1981,
+      "brokerInstance": "5148F4FD-D57F-419E-A162-857644EDBDFA",
+      "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-b76biql4/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+      "brokerPID": 52141,
+      "event": "hello",
+      "nonce": "870D51BE-E60F-4AEA-AC86-E8138FB5E368",
+      "provider": {
+        "authenticated": true,
+        "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-b76biql4/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+        "guardDeadline": 431522.281889,
+        "instance": "6E5A5763-5E15-4958-804D-3E317A563A82",
+        "pid": 52143
+      }
+    },
+    {
+      "authenticated": true,
+      "brokerGuard": 431532.1981,
+      "brokerInstance": "5148F4FD-D57F-419E-A162-857644EDBDFA",
+      "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-b76biql4/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+      "brokerPID": 52141,
+      "event": "hold",
+      "nonce": "755BAF0D-12F9-4857-A37B-B1EEDD6077E1",
+      "provider": {
+        "authenticated": true,
+        "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-b76biql4/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+        "guardDeadline": 431522.281889,
+        "instance": "6E5A5763-5E15-4958-804D-3E317A563A82",
+        "pid": 52143
+      }
+    },
+    {
+      "authenticated": true,
+      "brokerGuard": 431532.1981,
+      "brokerInstance": "5148F4FD-D57F-419E-A162-857644EDBDFA",
+      "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-b76biql4/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+      "brokerPID": 52141,
+      "event": "invalidate",
+      "nonce": "0BEBD815-9D43-4212-B8A3-6435F04A696C"
+    },
+    {
+      "event": "ping",
+      "pid": 52140
+    },
+    {
+      "event": "stop-broker"
+    },
+    {
+      "error": "Error Domain=NSCocoaErrorDomain Code=4097 \"connection to service named hylo.Cascade.AddonProbe.DiscoveryBroker\" UserInfo={NSDebugDescription=connection to service named hylo.Cascade.AddonProbe.DiscoveryBroker}",
+      "event": "broker-unavailable"
+    },
+    {
+      "event": "ping",
+      "pid": 52140
+    }
+  ],
+  "exits": {
+    "broker": {
+      "time": 431499.304122,
+      "status": 0
+    },
+    "provider": {
+      "time": 431499.306046,
+      "status": 9
+    }
+  },
+  "launcherAdmitted": false,
+  "rootPID": 52140,
+  "authenticated": true,
+  "registered": true,
+  "identities": {
+    "broker": {
+      "pid": 52141,
+      "instance": "5148F4FD-D57F-419E-A162-857644EDBDFA",
+      "guardDeadline": 431532.1981,
+      "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-b76biql4/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc"
+    },
+    "provider": {
+      "authenticated": true,
+      "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-b76biql4/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+      "guardDeadline": 431522.281889,
+      "instance": "6E5A5763-5E15-4958-804D-3E317A563A82",
+      "pid": 52143
+    }
+  },
+  "brokerGuard": 431532.1981,
+  "providerGuard": 431522.281889,
+  "confirmed": true,
+  "survivedInvalidation": true,
+  "trigger": 431499.301367,
+  "rootAlive": true,
+  "verdict": "PASS",
+  "cleanup": {
+    "rootStatus": 0,
+    "exits": {
+      "broker": {
+        "time": 431499.304122,
+        "status": 0
+      },
+      "provider": {
+        "time": 431499.306046,
+        "status": 9
+      }
+    },
+    "complete": true
+  }
+}

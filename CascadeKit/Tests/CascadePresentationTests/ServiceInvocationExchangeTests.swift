@@ -1,0 +1,253 @@
+import CascadeContracts
+import Foundation
+import Testing
+@testable import CascadeAddonSDK
+
+/// Logical SDK arbitration, with a bounded embedding scope. Real governor/adapter
+/// byte ownership and pressure are exercised by RuntimeTests, not modeled here.
+@Suite(.serialized, .timeLimit(.minutes(1)))
+struct ServiceInvocationExchangeTests {
+    @Test(arguments: [0, 65_536])
+    func completedThenRefusedAndUnknownPermitNewOperation(bytes: Int) async throws {
+        try await withSDKExchange { channel, executor in
+            let invocation = try sdkInvocation(bytes: bytes)
+            let response = try sdkResponse(bytes: bytes)
+            channel.result = .completed(response)
+            #expect(try await executor.invoke(grantID: UUID(), invocation: invocation) == .completed(response))
+            channel.result = .refused(code: .permissionDenied, reason: "denied")
+            guard case .refused(let code, _) = try await executor.invoke(grantID: UUID(), invocation: sdkInvocation()) else {
+                Issue.record("Expected refusal"); return
+            }
+            #expect(code == .permissionDenied)
+            channel.result = .outcomeUnknown
+            #expect(try await executor.invoke(grantID: UUID(), invocation: sdkInvocation()) == .outcomeUnknown)
+            channel.result = .completed(try sdkResponse())
+            let actual = try await executor.invoke(grantID: UUID(), invocation: sdkInvocation())
+            let expected = ServiceInvocationResult.completed(try sdkResponse())
+            #expect(actual == expected)
+            #expect(channel.sequences == [1, 2, 3, 4])
+        }
+    }
+
+    @Test(arguments: [SDKReplyDamage.outerID, .outerContract, .outerOperation, .nestedContract, .nestedOperation, .malformed])
+    func entireReplyValidationPrecedesProjectionAndPoisons(damage: SDKReplyDamage) async throws {
+        try await withSDKExchange { channel, executor in
+            channel.damage = damage
+            await sdkExpect(.outcomeUnknown) { _ = try await executor.invoke(grantID: UUID(), invocation: sdkInvocation()) }
+            #expect(channel.closeCount == 1)
+            await sdkExpect(.sessionRevoked) { _ = try await executor.invoke(grantID: UUID(), invocation: sdkInvocation()) }
+        }
+    }
+
+    @Test(arguments: [false, true])
+    func refusedAndUnknownRequireWholeReplyCorrelation(unknown: Bool) async throws {
+        try await withSDKExchange { channel, executor in
+            channel.result = unknown ? .outcomeUnknown : .refused(code: .permissionDenied, reason: "denied")
+            channel.damage = .outerID
+            await sdkExpect(.outcomeUnknown) { _ = try await executor.invoke(grantID: UUID(), invocation: sdkInvocation()) }
+            #expect(channel.closeCount == 1)
+            await sdkExpect(.sessionRevoked) { _ = try await executor.invoke(grantID: UUID(), invocation: sdkInvocation()) }
+        }
+    }
+
+    @Test(arguments: ["read", "write"])
+    func unresolvedTransportHasUnknownEffectsForEveryOperation(operation: String) async throws {
+        try await withSDKExchange { channel, executor in
+            channel.transportThrows = true
+            await sdkExpect(.outcomeUnknown) { _ = try await executor.invoke(grantID: UUID(), invocation: sdkInvocation(operation: operation)) }
+        }
+    }
+
+    @Test func explicitRequestRejectionAllowsReuse() async throws {
+        try await withSDKExchange { channel, executor in
+            channel.rejectRequest = true
+            await sdkExpect(.dependencyUnavailable) { _ = try await executor.invoke(grantID: UUID(), invocation: sdkInvocation()) }
+            channel.rejectRequest = false
+            let actual = try await executor.invoke(grantID: UUID(), invocation: sdkInvocation())
+            let expected = ServiceInvocationResult.completed(try sdkResponse())
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func sequenceExhaustionDoesNotWrap() async throws {
+        let channel = SDKInvocationChannel()
+        let executor = try ServiceInvocationExchange(channel: channel, lastSequence: UInt64.max - 1)
+        do {
+            _ = try await executor.invoke(grantID: UUID(), invocation: sdkInvocation())
+            await sdkExpect(.sessionRevoked) { _ = try await executor.invoke(grantID: UUID(), invocation: sdkInvocation()) }
+            #expect(channel.sequences == [UInt64.max])
+        } catch { await executor.close(); throw error }
+        await executor.close()
+    }
+
+    @Test func cancelPreparedPreventsSendAndDoesNotPoison() async throws {
+        try await withSDKExchange { channel, executor in
+            let gate = SDKInvocationGate()
+            let work = Task {
+                try await ServiceInvocationExchange.$preparedObserver.withValue({ await gate.pause() }) {
+                    try await executor.invoke(grantID: UUID(), invocation: sdkInvocation())
+                }
+            }
+            await gate.wait()
+            work.cancel()
+            await gate.release()
+            do { _ = try await work.value; Issue.record("Expected cancellation") }
+            catch { #expect(error is CancellationError) }
+            #expect(channel.sequences.isEmpty)
+            let actual = try await executor.invoke(grantID: UUID(), invocation: sdkInvocation())
+            let expected = ServiceInvocationResult.completed(try sdkResponse())
+            #expect(actual == expected)
+        }
+    }
+
+    @Test(arguments: [false, true])
+    func cancelAndConsumeUseFirstLocalOutcome(cancelFirst: Bool) async throws {
+        try await withSDKExchange { channel, executor in
+            let gate = SDKInvocationGate()
+            if cancelFirst { channel.exchangeGate = gate }
+            let observer: (@Sendable () async -> Void)?
+            if cancelFirst { observer = nil } else { observer = { await gate.pause() } }
+            let work = Task {
+                try await ServiceInvocationExchange.$consumedObserver.withValue(observer) {
+                    try await executor.invoke(grantID: UUID(), invocation: sdkInvocation())
+                }
+            }
+            await gate.wait()
+            work.cancel()
+            await gate.release()
+            if cancelFirst { await sdkExpect(.outcomeUnknown) { _ = try await work.value } }
+            else {
+                let actual = try await work.value
+                let expected = ServiceInvocationResult.completed(try sdkResponse())
+                #expect(actual == expected)
+            }
+        }
+    }
+
+    @Test func closeAfterConsumeSuppressesFinalDeliveryAndSharesDrain() async throws {
+        try await withSDKExchange { channel, executor in
+            let gate = SDKInvocationGate(), drainGate = SDKInvocationGate()
+            channel.closeGate = drainGate
+            let work = Task {
+                try await ServiceInvocationExchange.$consumedObserver.withValue({ await gate.pause() }) {
+                    try await executor.invoke(grantID: UUID(), invocation: sdkInvocation())
+                }
+            }
+            await gate.wait()
+            let close1 = Task { await executor.close() }
+            await drainGate.wait()
+            let close2 = Task { await executor.close() }
+            await sdkExpect(.sessionRevoked) { _ = try await executor.invoke(grantID: UUID(), invocation: sdkInvocation()) }
+            await gate.release()
+            await drainGate.release()
+            await close1.value; await close2.value
+            await sdkExpect(.sessionRevoked) { _ = try await work.value }
+            #expect(channel.closeCount == 1)
+        }
+    }
+
+    @Test func wholeOperationSlotRemainsOccupiedAfterConsume() async throws {
+        try await withSDKExchange { _, executor in
+            let gate = SDKInvocationGate()
+            let work = Task {
+                try await ServiceInvocationExchange.$consumedObserver.withValue({ await gate.pause() }) {
+                    try await executor.invoke(grantID: UUID(), invocation: sdkInvocation())
+                }
+            }
+            await gate.wait()
+            await sdkExpect(.resourceDenied) { _ = try await executor.invoke(grantID: UUID(), invocation: sdkInvocation()) }
+            await gate.release()
+            _ = try await work.value
+        }
+    }
+
+    @Test(arguments: [false, true])
+    func descriptorDriftBeforeAndAfterExposureFailsClosed(profileDrift: Bool) async throws {
+        for beforeExposure in [false, true] {
+            try await withSDKExchange { channel, executor in
+                let gate = SDKInvocationGate()
+                if !beforeExposure { channel.exchangeGate = gate }
+                let observer: (@Sendable () async -> Void)?
+                if beforeExposure { observer = { await gate.pause() } } else { observer = nil }
+                let work = Task {
+                    try await ServiceInvocationExchange.$preparedObserver.withValue(observer) {
+                        try await executor.invoke(grantID: UUID(), invocation: sdkInvocation())
+                    }
+                }
+                await gate.wait()
+                if profileDrift { channel.withdrawProfile() } else { channel.replaceGeneration() }
+                await gate.release()
+                await sdkExpect(beforeExposure ? .sessionRevoked : .outcomeUnknown) { _ = try await work.value }
+            }
+        }
+    }
+}
+
+private func withSDKExchange(_ body: @Sendable (SDKInvocationChannel, ServiceInvocationExchange) async throws -> Void) async throws {
+    // Source/codec/return lifetime is bounded here; quota enforcement is proved only
+    // in runtime integration's protected ResourceGovernor scope. No buffers escape.
+    let channel = SDKInvocationChannel()
+    let executor = try ServiceInvocationExchange(channel: channel)
+    do { try await body(channel, executor) } catch { await executor.close(); throw error }
+    await executor.close()
+}
+private func sdkInvocation(bytes: Int = 1, operation: String = "read") throws -> ServiceInvocation {
+    try ServiceInvocation(schemaVersion: 1, requestID: UUID(), contractID: "com.example.service", operation: operation,
+                          payload: Data(repeating: 255, count: bytes), deadline: Date(timeIntervalSince1970: 2_000))
+}
+private func sdkResponse(bytes: Int = 1) throws -> ServiceResponse {
+    try ServiceResponse(schemaVersion: 1, contractID: "com.example.service", operation: "read", payload: Data(repeating: 255, count: bytes))
+}
+private func sdkExpect(_ code: AddonFailure.Code, _ body: () async throws -> Void) async {
+    do { try await body(); Issue.record("Expected \(code)") }
+    catch { #expect((error as? AddonFailure)?.code == code, "Actual: \(error)") }
+}
+enum SDKReplyDamage: Sendable { case outerID, outerContract, outerOperation, nestedContract, nestedOperation, malformed }
+
+/// Deterministic one-arrival/one-release gate; no sleeps, polling or abandoned task.
+private actor SDKInvocationGate {
+    private var arrived = false, released = false
+    private var arrival: CheckedContinuation<Void, Never>?
+    private var releaseWaiter: CheckedContinuation<Void, Never>?
+    func pause() async {
+        arrived = true; arrival?.resume(); arrival = nil
+        if !released { await withCheckedContinuation { releaseWaiter = $0 } }
+    }
+    func wait() async { if !arrived { await withCheckedContinuation { arrival = $0 } } }
+    func release() { released = true; releaseWaiter?.resume(); releaseWaiter = nil; arrival?.resume(); arrival = nil }
+}
+private final class SDKInvocationChannel: AddonServiceInvocationMessageChannel, @unchecked Sendable {
+    private let lock = NSLock()
+    private var g = ConnectionGeneration()
+    private var p: ServiceInvocationFrameProfile? = .v1_3
+    private var closes = 0
+    private var sent: [UInt64] = []
+    var generation: ConnectionGeneration { lock.withLock { g } }
+    var profile: ServiceInvocationFrameProfile? { lock.withLock { p } }
+    var sequences: [UInt64] { lock.withLock { sent } }
+    var closeCount: Int { lock.withLock { closes } }
+    // These configurations are changed only while no operation accesses them, or at a gate.
+    var result: ServiceInvocationResult = .completed(try! sdkResponse())
+    var damage: SDKReplyDamage?
+    var transportThrows = false, rejectRequest = false
+    var exchangeGate: SDKInvocationGate?, closeGate: SDKInvocationGate?
+    func replaceGeneration() { lock.withLock { g = ConnectionGeneration() } }
+    func withdrawProfile() { lock.withLock { p = nil } }
+    func exchange(_ frame: Data, sequence: UInt64) async throws -> AddonServiceInvocationMessageExchangeResult {
+        lock.withLock { sent.append(sequence) }
+        let request = try ServiceFrameCodec.decodeInvocationRequest(frame, profile: .v1_3)
+        await exchangeGate?.pause()
+        if transportThrows { throw AddonFailure(code: .dependencyUnavailable, reason: "transport fault") }
+        if rejectRequest { return .rejectedBeforeHandoff }
+        if damage == .malformed { return .response(Data([123])) }
+        let nested: ServiceInvocationResult
+        if damage == .nestedContract || damage == .nestedOperation {
+            nested = .completed(try ServiceResponse(schemaVersion: 1, contractID: damage == .nestedContract ? "wrong" : "com.example.service", operation: damage == .nestedOperation ? "wrong" : "read", payload: Data()))
+        } else { nested = result }
+        let reply = try ServiceInvocationReply(requestID: damage == .outerID ? UUID() : request.invocation.requestID,
+            contractID: damage == .outerContract ? "wrong" : request.invocation.contractID,
+            operation: damage == .outerOperation ? "wrong" : request.invocation.operation, result: nested)
+        return .response(try ServiceFrameCodec.encode(reply, profile: .v1_3))
+    }
+    func close() async { lock.withLock { closes += 1 }; await closeGate?.pause() }
+}

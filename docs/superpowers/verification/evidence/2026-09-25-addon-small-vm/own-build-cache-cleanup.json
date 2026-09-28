@@ -1,0 +1,15 @@
+{
+  "time": 1790373153.367923,
+  "generatedCachesOnly": true,
+  "buildActivityStatus": 1,
+  "freeBefore": 12560453632,
+  "removed": [
+    "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeDevelopment/SDKExplicitPrecompiledModules",
+    "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeDevelopment/ModuleCache.noindex",
+    "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeDevelopment/SDKStatCaches.noindex",
+    "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeDevelopment/Index.noindex",
+    "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeDevelopment/CompilationCache.noindex"
+  ],
+  "freeAfter": 12541120512,
+  "appStillPresent": true
+}

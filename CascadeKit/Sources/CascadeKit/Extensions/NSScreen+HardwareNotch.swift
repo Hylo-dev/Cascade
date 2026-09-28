@@ -20,7 +20,9 @@ extension NSScreen {
         return (deviceDescription[key] as? NSNumber)?.uint32Value ?? 0
     }
 
-    /// Measure this screen's hardware notch, or `.absent` if it has none.
+    /// hardwareNotch measures the compact footprint, or `.absent` without a
+    /// cutout. The measured width bounds the complete compact outline, while
+    /// two points below the safe area give its underside a small coverage margin.
     var hardwareNotch: HardwareNotch {
 
         guard safeAreaInsets.top > 0 else {
@@ -37,7 +39,7 @@ extension NSScreen {
 
         return HardwareNotch(
             isPresent: true,
-            size     : CGSize(width: notchWidth - 1, height: safeAreaInsets.top - 1)
+            size     : CGSize(width: notchWidth, height: safeAreaInsets.top + 2)
         )
     }
 

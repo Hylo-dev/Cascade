@@ -1,0 +1,33 @@
+{
+  "cloneExitCode": 0,
+  "localDisk": "/private/tmp/cascade-addon-vm/state/vms/cascade-addon-small/disk.img",
+  "regularFile": true,
+  "inode": 145440721,
+  "allocatedBytes": 17812783104,
+  "logicalBytes": 50000000000,
+  "otherDiskFiles": [
+    "/private/tmp/cascade-addon-vm/state/cache/OCIs/ghcr.io/cirruslabs/macos-sonoma-vanilla/sha256:a6dc5a325aae43a90244953af0a85091fbe93e8f58583138c5ac96dd707fd700/disk.img"
+  ],
+  "config": {
+    "os": "darwin",
+    "cpuCountMin": 2,
+    "memorySize": 8589934592,
+    "version": 1,
+    "ecid": "YnBsaXN0MDDRAQJURUNJRBQAAAAAAAAAAKCf6XXRWri0CAsQAAAAAAAAAQEAAAAAAAAAAwAAAAAAAAAAAAAAAAAAACE=",
+    "macAddress": "1e:41:2d:cc:f8:a5",
+    "display": {
+      "height": 768,
+      "width": 1024
+    },
+    "arch": "arm64",
+    "cpuCount": 4,
+    "memorySizeMin": 4294967296,
+    "hardwareModel": "YnBsaXN0MDDTAQIDBAUGXxAZRGF0YVJlcHJlc2VudGF0aW9uVmVyc2lvbl8QD1BsYXRmb3JtVmVyc2lvbl8QEk1pbmltdW1TdXBwb3J0ZWRPUxQAAAAAAAAAAAAAAAAAAAABEAKjBwgIEA0QAAgPKz1SY2VpawAAAAAAAAEBAAAAAAAAAAkAAAAAAAAAAAAAAAAAAABt"
+  },
+  "list": {
+    "status": 0,
+    "stdout": "[\n  {\n    \"Size\" : 17,\n    \"Disk\" : 50,\n    \"Source\" : \"local\",\n    \"Name\" : \"cascade-addon-small\",\n    \"State\" : \"stopped\",\n    \"Accessed\" : \"2026-09-25T22:27:35Z\",\n    \"Running\" : false\n  },\n  {\n    \"Size\" : 17,\n    \"Running\" : false,\n    \"Disk\" : 50,\n    \"Name\" : \"ghcr.io\\/cirruslabs\\/macos-sonoma-vanilla@sha256:a6dc5a325aae43a90244953af0a85091fbe93e8f58583138c5ac96dd707fd700\",\n    \"State\" : \"stopped\",\n    \"Accessed\" : \"2026-09-25T22:26:36Z\",\n    \"Source\" : \"OCI\"\n  }\n]\n",
+    "stderr": ""
+  },
+  "freeBytes": 3493888000
+}

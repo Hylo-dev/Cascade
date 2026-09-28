@@ -11,9 +11,10 @@ import SwiftUI
 /// spring behaves.
 ///
 /// It is injected into the engine so the look can be tuned (or themed) without
-/// touching the geometry math or the renderer. `fallbackRestingSize` is only
-/// used on displays without a hardware notch — where a real cut-out exists we
-/// measure it instead of guessing.
+/// touching the geometry math or the renderer. `fallbackRestingSize` remains a
+/// source-compatible configuration value; the current software-notch styles
+/// use `SoftwareNotchMetrics` so old saved calibration and theme values cannot
+/// enlarge the fixed 96 × 8 bump.
 ///
 /// The corner radii come in two sets, `resting*` (closed) and `expanded*`
 /// (open); the geometry interpolates between them as the notch morphs, so the
@@ -22,9 +23,11 @@ import SwiftUI
 @frozen
 public nonisolated struct NotchConfiguration: Sendable {
 
-    public let fallbackRestingSize: CGSize  // Used only when no hardware notch is present.
+    public let fallbackRestingSize: CGSize  // Legacy fallback retained for source compatibility.
+    public let compactActivityExtension: CGFloat // Extra reach per side while an activity is compact.
     public let expandedHalfWidth  : CGFloat // Each side's reach from center when fully open.
-    public let expandedHeight     : CGFloat
+    public let expandedHeight     : CGFloat // Height of the ordinary widget surface.
+    public let maximumActivityExpandedHeight: CGFloat // Activities size to content, up to this height.
 
     public let restingBottomCornerRadius : CGFloat // Convex bottom radius when closed.
     public let restingTopCornerRadius    : CGFloat // Concave (inverted) top radius when closed.
@@ -34,14 +37,14 @@ public nonisolated struct NotchConfiguration: Sendable {
     public let spring             : SpringParameters
     public let chromeColor        : Color   // The notch fill. Use Color(hex:) / Color(argb:) for convenience.
 
-    /// Draw the chrome even on displays without a hardware notch. Production
-    /// keeps this `false` (chrome only where the cut-out is, interaction
-    /// everywhere); it exists so the notch can be *seen* while developing on a
-    /// Mac or external display that has no physical notch.
+    /// Draw the compact fallback chrome on displays without a hardware notch.
+    /// The default keeps this enabled so external displays retain the same
+    /// interaction surface; custom configurations may opt out.
     public let drawsChromeWithoutHardwareNotch: Bool
 
     public init(
         fallbackRestingSize             : CGSize,
+        compactActivityExtension        : CGFloat = 64,
         expandedHalfWidth               : CGFloat,
         expandedHeight                  : CGFloat,
         restingBottomCornerRadius       : CGFloat,
@@ -50,11 +53,14 @@ public nonisolated struct NotchConfiguration: Sendable {
         expandedTopCornerRadius         : CGFloat,
         spring                          : SpringParameters,
         chromeColor                     : Color  = .black,
-        drawsChromeWithoutHardwareNotch : Bool   = false
+        drawsChromeWithoutHardwareNotch : Bool   = false,
+        maximumActivityExpandedHeight  : CGFloat? = nil
     ) {
         self.fallbackRestingSize             = fallbackRestingSize
+        self.compactActivityExtension        = compactActivityExtension
         self.expandedHalfWidth               = expandedHalfWidth
         self.expandedHeight                  = expandedHeight
+        self.maximumActivityExpandedHeight   = maximumActivityExpandedHeight ?? expandedHeight
         self.restingBottomCornerRadius       = restingBottomCornerRadius
         self.restingTopCornerRadius          = restingTopCornerRadius
         self.expandedBottomCornerRadius      = expandedBottomCornerRadius
@@ -64,29 +70,33 @@ public nonisolated struct NotchConfiguration: Sendable {
         self.drawsChromeWithoutHardwareNotch = drawsChromeWithoutHardwareNotch
     }
 
-    /// The default look: a compact resting band that opens into a wide island,
-    /// black, drawn only where a hardware notch exists.
+    /// The default look: a compact black band that remains visible on external
+    /// displays and opens into a wide island.
     public static let `default` = NotchConfiguration(
-        fallbackRestingSize       : CGSize(width: 220, height: 32),
-        expandedHalfWidth         : 320.0,
-        expandedHeight            : 180.0,
-        restingBottomCornerRadius : 10.0,
-        restingTopCornerRadius    : 4,
-        expandedBottomCornerRadius: 22.0,
-        expandedTopCornerRadius   : 12.0,
-        spring                    : .snappy
+        fallbackRestingSize             : SoftwareNotchMetrics().restingSize,
+        compactActivityExtension        : 64,
+        expandedHalfWidth               : 220.0,
+        expandedHeight                  : 144.0,
+        restingBottomCornerRadius       : 14.0,
+        restingTopCornerRadius          : 4,
+        expandedBottomCornerRadius      : 44.0,
+        expandedTopCornerRadius         : 18.0,
+        spring                          : .snappy,
+        drawsChromeWithoutHardwareNotch : true,
+        maximumActivityExpandedHeight  : 240
     )
 
     /// A development look: bright fill, drawn on every display (even those with
     /// no hardware notch) so the overlay is unmistakable while wiring things up.
     public static let debug = NotchConfiguration(
-        fallbackRestingSize             : CGSize(width: 220, height: 32),
+        fallbackRestingSize             : SoftwareNotchMetrics().restingSize,
+        compactActivityExtension        : 64,
         expandedHalfWidth               : 220.0,
         expandedHeight                  : 144.0,
-        restingBottomCornerRadius       : 10.0,
+        restingBottomCornerRadius       : 14.0,
         restingTopCornerRadius          : 4,
-        expandedBottomCornerRadius      : 22.0,
-        expandedTopCornerRadius         : 12.0,
+        expandedBottomCornerRadius      : 44.0,
+        expandedTopCornerRadius         : 18.0,
         spring                          : .snappy,
         chromeColor                     : Color.red, // System-red.
         drawsChromeWithoutHardwareNotch : true

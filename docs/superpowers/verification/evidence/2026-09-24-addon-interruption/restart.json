@@ -1,0 +1,12 @@
+{
+  "app": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeDevelopment/Build/Products/Debug/Cascade.app",
+  "executable": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeDevelopment/Build/Products/Debug/Cascade.app/Contents/MacOS/Cascade",
+  "before": [
+    38905
+  ],
+  "after": [
+    40692
+  ],
+  "verified": true,
+  "scope": "standalone interruption fixture; no product source changes"
+}

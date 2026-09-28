@@ -1,0 +1,98 @@
+pid/73116/hylo.Cascade.AddonProbeContainer.Provider = {
+	active count = 0
+	path = /Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-veiyjfa3/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex
+	type = Extension
+	managed_by = com.apple.runningboard
+	managedby_services = {
+		hylo.Cascade.AddonProbeContainer.Provider
+		hylo.Cascade.AddonProbeContainer.Provider.xpc-session
+	}
+	state = not running
+	bundle id = hylo.Cascade.AddonProbeContainer.Provider
+	bundle version = 1
+	extension point = hylo.Cascade.AddonProbe.provider
+
+	program = /Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-veiyjfa3/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex/Contents/MacOS/ProbeProvider
+	arguments = {
+		/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-veiyjfa3/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex/Contents/MacOS/ProbeProvider
+		-BSServiceDomains
+		{"XPCService":{"Services":{"MainService":{}}}}
+		-LaunchArguments
+		eyJzZXJ2aWNlTmFtZSI6Imh5bG8uQ2FzY2FkZS5BZGRvblByb2JlQ29udGFpbmVyLlByb3ZpZGVyIiwidHlwZSI6MSwiZW5oYW5jZWRTZWN1cml0eSI6ZmFsc2V9
+	}
+
+	container id = /private/var/root/Library/Containers/hylo.Cascade.AddonProbeContainer.Provider/Data
+	sandbox profile = application
+	inherited environment = {
+		LANG => C.UTF-8
+		PATH => /opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Library/Apple/usr/bin:/Library/Frameworks/Mono.framework/Versions/Current/Commands:/Users/c4v4h/.codex/tmp/arg0/codex-arg0LlfN3N:/Users/c4v4h/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/override:/Library/TeX/texbin:/Users/c4v4h/.cargo/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/Users/c4v4h/.local/bin:/usr/local/texlive/2025basic/bin/x86_64-darwin:/Users/c4v4h/.lmstudio/bin:/Users/c4v4h/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback:/Applications/ChatGPT.app/Contents/Resources:/Users/c4v4h/Library/Application Support/JetBrains/Toolbox/scripts:/Users/c4v4h/.lmstudio/bin
+		SSH_AUTH_SOCK => /var/run/com.apple.launchd.yxgi2YN5kg/Listeners
+		HOME => /Users/c4v4h
+		__CF_USER_TEXT_ENCODING => 0x1F5:0x0:0x0
+		TMPDIR => /var/folders/m_/9_81hg0x7_11mmlk8zd6vy2h0000gn/T/
+	}
+
+	default environment = {
+		PATH => /usr/bin:/bin:/usr/sbin:/sbin
+	}
+
+	environment = {
+		OSLogRateLimit => 64
+		MallocSpaceEfficient => 1
+		BSServiceDomains => {"XPCService":{"Services":{"MainService":{}}}}
+		XPC_SERVICE_NAME => hylo.Cascade.AddonProbeContainer.Provider
+	}
+
+	domain = pid/73116 [DiscoveryBroker]
+	asid = 101817
+	minimum runtime = 10
+	exit timeout = 5
+	voluntary exit timeout = 5
+	launch watchdog timeout = 0
+	runs = 1
+	spawn reason filter = launch job demand
+	last exit code = 0
+
+	endpoints = {
+		"hylo.Cascade.AddonProbeContainer.Provider" = {
+			port = 0x147a83
+			active = 0
+			managed = 1
+			reset = 0
+			hide = 0
+			watching = 1
+			non-launching = 1
+		}
+		"hylo.Cascade.AddonProbeContainer.Provider.xpc-session" = {
+			port = 0x13a943
+			active = 0
+			managed = 1
+			reset = 0
+			hide = 0
+			watching = 1
+			non-launching = 1
+		}
+	}
+
+	resource coalition = {
+		ID = 24357
+		type = resource
+		state = active
+		active count = 1
+		name = hylo.Cascade.AddonProbeContainer.Provider
+		bundle ID = hylo.Cascade.AddonProbeContainer.Provider
+	}
+
+	spawn type = interactive (4)
+	jetsam priority = 30
+	jetsam memory limit (active, soft) = 1000 MB
+	jetsam memory limit (inactive, soft) = 1000 MB
+	jetsamproperties category = extension
+	jetsam thread limit = 32
+	cpumon = default
+	job state = exited
+	platform = 1
+	sanitizer flags = 0x0
+
+	properties = xpc bundle | supports transactions | joins host session | abandon coalition | extension
+}

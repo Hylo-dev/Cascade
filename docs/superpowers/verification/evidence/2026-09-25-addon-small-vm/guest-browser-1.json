@@ -1,0 +1,7 @@
+{
+  "started": 1790416218.896624,
+  "finished": 1790416219.315867,
+  "exitCode": 0,
+  "stdout": "{\"host\": \"/Users/admin/CascadeProbe/products/Build/Build/Products/Debug/CascadeAddonProbe.app\", \"container\": \"/Users/admin/CascadeProbe/products/Build/Build/Products/Debug/CascadeAddonProbeContainer.app\", \"provider\": \"/Users/admin/CascadeProbe/products/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex\"}\n",
+  "stderr": ""
+}

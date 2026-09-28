@@ -1,0 +1,9 @@
+/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCDiscoveryProbe/probe-b6lidt3c/DiscoveryProbe.app/Contents/XPCServices/DiscoveryBroker.xpc: replacing existing signature
+Executable=/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCDiscoveryProbe/probe-b6lidt3c/DiscoveryProbe.app/Contents/XPCServices/DiscoveryBroker.xpc/Contents/MacOS/DiscoveryBroker
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>com.apple.security.app-sandbox</key><true/></dict></plist>
+/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCDiscoveryProbe/probe-b6lidt3c/DiscoveryProbe.app: replacing existing signature
+Executable=/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCDiscoveryProbe/probe-b6lidt3c/DiscoveryProbe.app/Contents/MacOS/DiscoveryProbe
+ProductName:		macOS
+ProductVersion:		27.0
+BuildVersion:		26A5425a
+27.0

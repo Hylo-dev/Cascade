@@ -13,11 +13,10 @@ import AppKit
 /// its window level sits above the menu bar so the chrome can sit flush in the
 /// notch region. The panel never becomes key or main.
 ///
-/// It also `ignoresMouseEvents`: the band spans the full width of the screen, so
-/// if it intercepted clicks it would swallow the whole top strip. Hover is
-/// detected by the global event monitor regardless, so clicks pass straight
-/// through everywhere. When widgets need to receive clicks, this will be toggled
-/// off only while expanded and only over the live region — not before.
+/// The controller toggles `ignoresMouseEvents` from the exact animated path
+/// under the cursor. This matters because the panel's frame spans the whole menu
+/// bar and AppKit cannot pass a click to another process using view hit-testing
+/// alone.
 final class NotchPanel: NSPanel {
 
     init(contentView: NSView) {
@@ -29,7 +28,14 @@ final class NotchPanel: NSPanel {
             defer      : false
         )
 
-        self.contentView            = contentView
+        // The content canvas keeps its original coordinates above a transparent
+        // bottom gutter. A separate root lets its halo extend outside the canvas
+        // while remaining inside the window, without changing hit-test geometry.
+        let rootView = NSView(frame: contentView.bounds)
+        rootView.wantsLayer = true
+        rootView.clipsToBounds = false
+        rootView.addSubview(contentView)
+        self.contentView            = rootView
         isFloatingPanel             = true
         isOpaque                    = false
         backgroundColor             = .clear

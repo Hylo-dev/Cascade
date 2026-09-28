@@ -1,0 +1,18 @@
+{
+  "nativeOperations": false,
+  "controllerSHA256": "d5d686d5272e45fff52e3bd179e32358a9f96a7c0b4bc223d0f12185a7858739",
+  "checks": [
+    {
+      "scenario": "ipv4-error",
+      "pass_": true,
+      "fixtureStarted": false,
+      "stopRequested": true
+    },
+    {
+      "scenario": "interrupt-during-copy",
+      "pass_": true,
+      "fixtureStarted": true,
+      "stopRequested": true
+    }
+  ]
+}

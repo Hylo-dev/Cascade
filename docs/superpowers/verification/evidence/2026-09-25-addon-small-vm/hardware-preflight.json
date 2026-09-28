@@ -1,0 +1,8 @@
+{
+  "hardwareModelSupported": true,
+  "hardwareModelValid": true,
+  "virtualizationSupported": true,
+  "sourceSHA256": "d955da8218776b9e5184c556f8501843edd954cb3372c6a86812166db86d446b",
+  "executableSHA256": "7c8ea6efcf23ba7c879ba760c67c6d7580cb88d3a2bf2e266c9cf4ccdb725c2a",
+  "temporaryModuleCacheRemoved": true
+}

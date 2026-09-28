@@ -1,0 +1,6 @@
+{
+  "status": 78,
+  "stdout": "{\"error\": \"RuntimeError('Refusing: explicit disposable VirtualMac guest and nonroot user required')\", \"event\": \"runner-refused\", \"observed\": 441821.921538}\n",
+  "stderr": "",
+  "noOutputDirectory": true
+}

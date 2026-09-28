@@ -1,0 +1,389 @@
+{
+  "type": "object",
+  "properties": {
+    "manifestVersion": {
+      "const": 1
+    },
+    "id": {
+      "$ref": "#/$defs/addonID"
+    },
+    "version": {
+      "$ref": "#/$defs/semver"
+    },
+    "compatibility": {
+      "type": "object",
+      "properties": {
+        "macOS": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^>=([1-9][0-9]*)\\.[0-9]+$"
+        },
+        "cascadeProtocol": {
+          "type": "object",
+          "properties": {
+            "major": {
+              "const": 1
+            },
+            "minimumMinor": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            }
+          },
+          "required": [
+            "major",
+            "minimumMinor"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "macOS",
+        "cascadeProtocol"
+      ],
+      "additionalProperties": false
+    },
+    "execution": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "const": "cascade"
+        },
+        "activation": {
+          "const": "onDemand"
+        },
+        "entryPoint": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[A-Za-z][A-Za-z0-9._-]*$"
+        }
+      },
+      "required": [
+        "owner",
+        "activation",
+        "entryPoint"
+      ],
+      "additionalProperties": false
+    },
+    "sourceApp": {
+      "type": "object",
+      "properties": {
+        "bundleID": {
+          "$ref": "#/$defs/addonID"
+        },
+        "required": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "bundleID",
+        "required"
+      ],
+      "additionalProperties": false
+    },
+    "bundledLibraries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z][A-Za-z0-9._-]*$"
+          },
+          "version": {
+            "$ref": "#/$defs/semver"
+          }
+        },
+        "required": [
+          "name",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 64
+    },
+    "REQUIRES": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/requirement"
+      },
+      "maxItems": 32
+    },
+    "PROVIDES": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "const": "service"
+          },
+          "id": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z][A-Za-z0-9._-]*$"
+          },
+          "version": {
+            "$ref": "#/$defs/semver"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 64
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z][A-Za-z0-9._-]*$"
+          },
+          "REQUIRES": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/requirement"
+            },
+            "maxItems": 32
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^[A-Za-z][A-Za-z0-9._-]*$"
+            },
+            "maxItems": 64,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "id",
+          "REQUIRES"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 64
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "const": "storage.own"
+          },
+          "scope": {
+            "const": "addon"
+          }
+        },
+        "required": [
+          "id",
+          "scope"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 64,
+      "uniqueItems": true
+    },
+    "resources": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "const": "eventDriven"
+        },
+        "requestedMemoryMiB": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "maximumConcurrentWork": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "background": {
+          "enum": [
+            "scheduledDeadline",
+            "none"
+          ]
+        }
+      },
+      "required": [
+        "profile",
+        "requestedMemoryMiB",
+        "maximumConcurrentWork",
+        "background"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "manifestVersion",
+    "id",
+    "version",
+    "compatibility",
+    "execution",
+    "bundledLibraries",
+    "REQUIRES",
+    "PROVIDES",
+    "features",
+    "permissions",
+    "resources"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cascade.local/addons/manifest.schema.json",
+  "title": "Cascade addon manifest v1",
+  "description": "All addon origins use these limits. UTF-8 byte bounds, duplicate semantic IDs, and numeric prerelease rules are additionally enforced by CascadeContracts.",
+  "$defs": {
+    "addonID": {
+      "type": "string",
+      "maxLength": 255,
+      "pattern": "^[a-zA-Z][a-zA-Z0-9-]*(\\.[a-zA-Z][a-zA-Z0-9-]*)+$"
+    },
+    "semver": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "versionRange": {
+      "type": "string",
+      "maxLength": 1047,
+      "pattern": "^(>=|<=|>|<|=)?(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?( (>=|<=|>|<|=)?(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?){0,7}$"
+    },
+    "leafRequirement": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "hostCapability"
+            },
+            "id": {
+              "enum": [
+                "cascade.activities",
+                "cascade.scheduler",
+                "cascade.widgets",
+                "cascade.notices",
+                "cascade.storage"
+              ]
+            },
+            "version": {
+              "$ref": "#/$defs/versionRange"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "version"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "service"
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^[A-Za-z][A-Za-z0-9._-]*$"
+            },
+            "version": {
+              "$ref": "#/$defs/versionRange"
+            }
+          },
+          "required": [
+            "kind",
+            "id",
+            "version"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "application"
+            },
+            "bundleID": {
+              "$ref": "#/$defs/addonID"
+            },
+            "state": {
+              "enum": [
+                "installed",
+                "running"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "bundleID",
+            "state"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "alternative": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[A-Za-z][A-Za-z0-9._-]*$"
+        },
+        "REQUIRES": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/leafRequirement"
+          },
+          "maxItems": 32,
+          "minItems": 1
+        }
+      },
+      "required": [
+        "id",
+        "REQUIRES"
+      ],
+      "additionalProperties": false
+    },
+    "requirement": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/leafRequirement"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "anyOf"
+            },
+            "anyOf": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/alternative"
+              },
+              "maxItems": 8,
+              "minItems": 1
+            }
+          },
+          "required": [
+            "kind",
+            "anyOf"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

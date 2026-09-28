@@ -1,0 +1,15 @@
+{
+  "recorded": 1790417603.277409,
+  "executable": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeDevelopment/Build/Products/Debug/Cascade.app/Contents/MacOS/Cascade",
+  "before": [
+    39220
+  ],
+  "quitVerified": true,
+  "quitObserved": 1790417627.611626,
+  "after": [
+    50048
+  ],
+  "stableAfterThreeSeconds": true,
+  "completed": 1790417657.868886,
+  "applicationLink": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeDevelopment/Build/Products/Debug/Cascade.app"
+}

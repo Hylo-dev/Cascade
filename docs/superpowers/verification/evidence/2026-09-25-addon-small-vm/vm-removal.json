@@ -1,0 +1,27 @@
+{
+  "started": 1790417934.683172,
+  "freeBeforeBytes": 3907584000,
+  "vm": "cascade-addon-small",
+  "diskAllocatedBeforeBytes": 17855008768,
+  "preflight": [
+    {
+      "Name": "cascade-addon-small",
+      "Disk": 50,
+      "Size": 17,
+      "Source": "local",
+      "State": "stopped",
+      "Running": false,
+      "Accessed": "2026-09-26T10:06:22Z"
+    }
+  ],
+  "authorization": "User explicitly requested freeing the space of the current VM and pausing the VM approach",
+  "delete": {
+    "exitCode": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "remainingVMs": [],
+  "finished": 1790417940.047681,
+  "freeAfterBytes": 21790720000,
+  "remainingDiskImages": []
+}

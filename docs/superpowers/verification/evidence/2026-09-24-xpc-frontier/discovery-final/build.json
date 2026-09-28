@@ -1,0 +1,129 @@
+{
+  "commands": [
+    [
+      "xcrun",
+      "swiftc",
+      "-parse-as-library",
+      "-swift-version",
+      "5",
+      "-O",
+      "-target",
+      "arm64-apple-macos14.0",
+      "-D",
+      "BROKER",
+      "/Users/c4v4h/Library/Mobile Documents/com~apple~CloudDocs/Projects/XcodeProjects/Cascade/Prototypes/AddonPlatform/XPCDiscovery/Probe.swift",
+      "-framework",
+      "AppKit",
+      "-framework",
+      "ExtensionFoundation",
+      "-Xlinker",
+      "-sectcreate",
+      "-Xlinker",
+      "__TEXT",
+      "-Xlinker",
+      "__info_plist",
+      "-Xlinker",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCDiscoveryProbe/probe-0s0ccy7h/DiscoveryProbe.app/Contents/XPCServices/DiscoveryBroker.xpc/Contents/Info.plist",
+      "-o",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCDiscoveryProbe/probe-0s0ccy7h/DiscoveryProbe.app/Contents/XPCServices/DiscoveryBroker.xpc/Contents/MacOS/DiscoveryBroker"
+    ],
+    [
+      "codesign",
+      "--force",
+      "--timestamp=none",
+      "--options",
+      "runtime",
+      "--sign",
+      "4A857D842A5406C2D3071776FDE7B27B3098FE63",
+      "--entitlements",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCDiscoveryProbe/probe-0s0ccy7h/Service.entitlements",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCDiscoveryProbe/probe-0s0ccy7h/DiscoveryProbe.app/Contents/XPCServices/DiscoveryBroker.xpc"
+    ],
+    [
+      "codesign",
+      "--verify",
+      "--strict",
+      "--deep",
+      "-R",
+      "=anchor apple generic and identifier \"hylo.Cascade.AddonProbe.DiscoveryBroker\" and certificate leaf = H\"4A857D842A5406C2D3071776FDE7B27B3098FE63\"",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCDiscoveryProbe/probe-0s0ccy7h/DiscoveryProbe.app/Contents/XPCServices/DiscoveryBroker.xpc"
+    ],
+    [
+      "codesign",
+      "-d",
+      "--entitlements",
+      "-",
+      "--xml",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCDiscoveryProbe/probe-0s0ccy7h/DiscoveryProbe.app/Contents/XPCServices/DiscoveryBroker.xpc"
+    ],
+    [
+      "xcrun",
+      "swiftc",
+      "-parse-as-library",
+      "-swift-version",
+      "5",
+      "-O",
+      "-target",
+      "arm64-apple-macos14.0",
+      "/Users/c4v4h/Library/Mobile Documents/com~apple~CloudDocs/Projects/XcodeProjects/Cascade/Prototypes/AddonPlatform/XPCDiscovery/Probe.swift",
+      "-framework",
+      "AppKit",
+      "-framework",
+      "ExtensionFoundation",
+      "-Xlinker",
+      "-sectcreate",
+      "-Xlinker",
+      "__TEXT",
+      "-Xlinker",
+      "__info_plist",
+      "-Xlinker",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCDiscoveryProbe/probe-0s0ccy7h/DiscoveryProbe.app/Contents/Info.plist",
+      "-o",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCDiscoveryProbe/probe-0s0ccy7h/DiscoveryProbe.app/Contents/MacOS/DiscoveryProbe"
+    ],
+    [
+      "codesign",
+      "--force",
+      "--timestamp=none",
+      "--options",
+      "runtime",
+      "--sign",
+      "4A857D842A5406C2D3071776FDE7B27B3098FE63",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCDiscoveryProbe/probe-0s0ccy7h/DiscoveryProbe.app"
+    ],
+    [
+      "codesign",
+      "--verify",
+      "--strict",
+      "--deep",
+      "-R",
+      "=anchor apple generic and identifier \"hylo.Cascade.AddonProbe\" and certificate leaf = H\"4A857D842A5406C2D3071776FDE7B27B3098FE63\"",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCDiscoveryProbe/probe-0s0ccy7h/DiscoveryProbe.app"
+    ],
+    [
+      "codesign",
+      "-d",
+      "--entitlements",
+      "-",
+      "--xml",
+      "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeXPCDiscoveryProbe/probe-0s0ccy7h/DiscoveryProbe.app"
+    ],
+    [
+      "sw_vers"
+    ],
+    [
+      "xcrun",
+      "--show-sdk-version"
+    ]
+  ],
+  "signer": "4A857D842A5406C2D3071776FDE7B27B3098FE63",
+  "sourceHashes": {
+    "XPCDiscovery/Probe.swift": "d6dc1248279e3192e1aef6c3bae536df0e2c14c5bb123782dd332cabeb8284c5",
+    "XPCDiscovery/run_discovery.py": "b6918d82490733a1358176e5a4c2a9f03cf75c0fc48e834b1eb1dc298c0010d5",
+    "Host/Probe.appextensionpoint": "357e05da8cd76a1a3841844470d14125428dab8b45aef5d2f4e87ece419e295f"
+  },
+  "binaries": {
+    "DiscoveryProbe.app/Contents/XPCServices/DiscoveryBroker.xpc/Contents/MacOS/DiscoveryBroker": "0e68684c88f6b25a427ed6e4f0a72e3fe0da8a0228de75ec95f8b5e17d34df6a",
+    "DiscoveryProbe.app/Contents/MacOS/DiscoveryProbe": "80d5a109c1977c403a6974ee19f2fea1d32aadb09b41973962c6ad555ff6ceaf"
+  }
+}
