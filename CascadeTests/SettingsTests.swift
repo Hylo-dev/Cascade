@@ -445,6 +445,7 @@ private final class RecordingSpotlightTap: SpotlightKeyTapping {
     ) -> Bool { true }
     func stop() {}
     var isActive: Bool { true }
+    func updateGate(keyCode: CGKeyCode?, isEngaged: Bool) {}
     func invokeNative(_ shortcut: SpotlightShortcut) { nativeInvocationCount += 1 }
     func deliver(_ events: [CGEvent], to processID: pid_t) {}
 }
