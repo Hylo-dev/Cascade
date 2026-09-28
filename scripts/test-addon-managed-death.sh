@@ -13,7 +13,7 @@ exit 78
 source_dir=${0:A:h:h}/Prototypes/AddonPlatform/Tracing
 products=$(mktemp -d /private/tmp/cascade-managed-death-XXXXXX)
 identity=4A857D842A5406C2D3071776FDE7B27B3098FE63
-export DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer
+export DEVELOPER_DIR=${DEVELOPER_DIR:-$(/usr/bin/xcode-select -p)}
 exec > >(tee "$products/build-run.log") 2>&1
 print "Products: $products"
 trap 'result=$?; print "Script exit: $result"; if [[ ! -f "$products/death-report.json" ]]; then print "{\"schema\":\"managed-death-observation-v1\",\"result\":\"unknown\",\"complete\":false,\"nativeLauncherAdmitted\":false,\"productionTemplateVerifierQualified\":false,\"hostDeathQualified\":false,\"startupRaceQualified\":false,\"allVMProtectionsPreserved\":\"unknown\",\"cases\":[],\"setupExit\":$result}" > "$products/death-report.json"; fi' EXIT

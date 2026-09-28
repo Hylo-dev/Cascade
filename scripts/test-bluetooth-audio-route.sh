@@ -2,7 +2,7 @@
 set -euo pipefail
 script_directory=${0:A:h}
 project_directory=${script_directory:h}
-developer_directory=${DEVELOPER_DIR:-/Applications/Xcode-beta.app/Contents/Developer}
+developer_directory=${DEVELOPER_DIR:-$(/usr/bin/xcode-select -p)}
 module_cache=/private/tmp/cascade-bluetooth-audio-route-module-cache
 test_binary=/private/tmp/cascade-bluetooth-audio-route-tests
 mkdir -p "$module_cache"

@@ -4,7 +4,7 @@ script_directory=${0:A:h}
 probe_source=${script_directory:h}/Prototypes/AddonPlatform/DirectChild
 probe_products=${CASCADE_DIRECT_CHILD_PRODUCTS:-${HOME}/Library/Developer/Xcode/DerivedData/CascadeAddonDirectChild/Products}
 probe_identity=${CASCADE_PROBE_SIGN_IDENTITY:-4A857D842A5406C2D3071776FDE7B27B3098FE63}
-export DEVELOPER_DIR=${DEVELOPER_DIR:-/Applications/Xcode-beta.app/Contents/Developer}
+export DEVELOPER_DIR=${DEVELOPER_DIR:-$(/usr/bin/xcode-select -p)}
 mkdir -p "$probe_products/DirectWorker.app/Contents/MacOS" "$probe_source/Results"
 for program in Host Supervisor Worker; do
     target="$probe_products/Direct$program"

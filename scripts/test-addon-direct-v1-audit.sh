@@ -4,7 +4,7 @@ source_dir=${0:A:h:h}/Prototypes/AddonPlatform/DirectV1
 products=$(mktemp -d /private/tmp/cascade-direct-v1-audit.XXXXXX)
 identity=${CASCADE_PROBE_SIGN_IDENTITY:-4A857D842A5406C2D3071776FDE7B27B3098FE63}
 label="hylo.Cascade.DirectV1.Audit.$(uuidgen)"
-export DEVELOPER_DIR=${DEVELOPER_DIR:-/Applications/Xcode-beta.app/Contents/Developer}
+export DEVELOPER_DIR=${DEVELOPER_DIR:-$(/usr/bin/xcode-select -p)}
 cp "$source_dir/../DirectChild/Info.plist" "$products/Info.plist"
 /usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier hylo.Cascade.DirectV1.AuditWorker' "$products/Info.plist"
 xcrun clang -Wall -Wextra -Werror -O2 -mmacosx-version-min=14.0 -framework Security -framework CoreFoundation -lbsm -Wl,-sectcreate,__TEXT,__info_plist,"$products/Info.plist" "$source_dir/AuditProbe.c" -o "$products/AuditServer"

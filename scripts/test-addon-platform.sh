@@ -4,7 +4,7 @@ script_directory=${0:A:h}
 prototype_directory=${script_directory:h}/Prototypes/AddonPlatform
 probe_derived_data=${CASCADE_PROBE_DERIVED_DATA:-${HOME}/Library/Developer/Xcode/DerivedData/CascadeAddonPlatform}
 probe_configuration=${CASCADE_PROBE_CONFIGURATION:-Debug}
-export DEVELOPER_DIR=${DEVELOPER_DIR:-/Applications/Xcode-beta.app/Contents/Developer}
+export DEVELOPER_DIR=${DEVELOPER_DIR:-$(/usr/bin/xcode-select -p)}
 probe_case=${2:-}
 if [[ ${1:-} != --case || "$probe_configuration" != (Debug|Release) || "$probe_case" != (standalone-echo|lifecycle|application-stop|sandbox|malformed|browser) ]]; then
     print -u2 'Usage: test-addon-platform.sh --case standalone-echo|lifecycle|application-stop|sandbox|malformed|browser'

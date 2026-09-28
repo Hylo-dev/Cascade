@@ -4,10 +4,35 @@ set -euo pipefail
 
 script_directory=${0:A:h}
 project_directory=${script_directory:h}
-build_products=${1:-/private/tmp/cascade-airpods-derived/Build/Products/Debug}
 output_directory=/private/tmp/cascade-bluetooth-presentation
 module_cache=/private/tmp/cascade-airpods-module-cache
-developer_directory=${DEVELOPER_DIR:-/Applications/Xcode-beta.app/Contents/Developer}
+developer_directory=${DEVELOPER_DIR:-$(/usr/bin/xcode-select -p)}
+
+# Default to the products of the workspace's own Debug build, wherever Xcode
+# keeps its DerivedData, instead of a fixed scratch path.
+if (( $# > 0 )); then
+    build_products=$1
+else
+    build_products=$(DEVELOPER_DIR="$developer_directory" /usr/bin/xcodebuild \
+        -workspace "$project_directory/Cascade.xcworkspace" \
+        -scheme Cascade \
+        -configuration Debug \
+        -showBuildSettings 2>/dev/null \
+        | /usr/bin/awk '$1 == "BUILT_PRODUCTS_DIR" { print $3; exit }')
+fi
+
+# CascadeKit is split into modules; its object depends on these two siblings.
+package_objects=(
+    "$build_products/CascadeKit.o"
+    "$build_products/CascadeContracts.o"
+    "$build_products/CascadePresentation.o"
+)
+for object in $package_objects; do
+    if [[ ! -f "$object" ]]; then
+        print -u2 "error: missing $object. Build the Cascade scheme (Debug) first, or pass its Build/Products/Debug directory."
+        exit 1
+    fi
+done
 
 mkdir -p "$output_directory" "$module_cache"
 
@@ -32,7 +57,7 @@ SWIFT_MODULE_CACHE_PATH="$module_cache" \
     "$project_directory/Cascade/Features/BluetoothBatteryRing.swift" \
     "$project_directory/Cascade/Features/BluetoothConnectionActivity.swift" \
     "$script_directory/verify-bluetooth-presentation.swift" \
-    "$build_products/CascadeKit.o" \
+    $package_objects \
     -o "$output_directory/verify"
 
 LLVM_PROFILE_FILE="$output_directory/verify.profraw" \

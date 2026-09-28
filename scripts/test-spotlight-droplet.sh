@@ -4,7 +4,7 @@ set -euo pipefail
 
 script_directory=${0:A:h}
 project_directory=${script_directory:h}
-export DEVELOPER_DIR=${DEVELOPER_DIR:-/Applications/Xcode-beta.app/Contents/Developer}
+export DEVELOPER_DIR=${DEVELOPER_DIR:-$(/usr/bin/xcode-select -p)}
 export CLANG_MODULE_CACHE_PATH=/private/tmp/cascade-spotlight-droplet-module-cache
 check_directory=$(mktemp -d /private/tmp/cascade-spotlight-droplet-checks.XXXXXX)
 trap 'rm -rf "$check_directory"' EXIT

@@ -3,7 +3,7 @@ set -euo pipefail
 source_dir=${0:A:h:h}/Prototypes/AddonPlatform/DirectV1
 products=$(mktemp -d /private/tmp/cascade-direct-v1-group.XXXXXX)
 identity=${CASCADE_PROBE_SIGN_IDENTITY:-4A857D842A5406C2D3071776FDE7B27B3098FE63}
-export DEVELOPER_DIR=${DEVELOPER_DIR:-/Applications/Xcode-beta.app/Contents/Developer}
+export DEVELOPER_DIR=${DEVELOPER_DIR:-$(/usr/bin/xcode-select -p)}
 xcrun clang -Wall -Wextra -Werror -O2 -mmacosx-version-min=14.0 "$source_dir/GroupProbe.c" -o "$products/GroupHelper"
 cp "$source_dir/../DirectChild/Info.plist" "$products/Info.plist"
 /usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier hylo.Cascade.DirectV1.Worker' "$products/Info.plist"

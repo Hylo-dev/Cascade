@@ -4,7 +4,7 @@ set -euo pipefail
 
 script_directory=${0:A:h}
 project_directory=${script_directory:h}
-developer_directory=${DEVELOPER_DIR:-/Applications/Xcode-beta.app/Contents/Developer}
+developer_directory=${DEVELOPER_DIR:-$(/usr/bin/xcode-select -p)}
 test_directory=$(mktemp -d /private/tmp/cascade-now-playing-tests.XXXXXX)
 module_cache=/private/tmp/cascade-now-playing-module-cache
 trap 'rm -rf "$test_directory"' EXIT

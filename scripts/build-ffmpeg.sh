@@ -197,7 +197,7 @@ install_directory=${build_directory}/install
 /usr/bin/tar -xf "$tarball_path" -C "$build_directory"
 [[ -x "$source_directory/configure" ]] || fail "authenticated archive has no executable configure script"
 
-developer_directory=${CASCADE_DEVELOPER_DIR:-${DEVELOPER_DIR:-/Applications/Xcode-beta.app/Contents/Developer}}
+developer_directory=${CASCADE_DEVELOPER_DIR:-${DEVELOPER_DIR:-$(/usr/bin/xcode-select -p)}}
 [[ -d "$developer_directory" ]] || fail "Xcode developer directory not found: $developer_directory"
 clang_path=$(DEVELOPER_DIR="$developer_directory" /usr/bin/xcrun --sdk macosx --find clang)
 sdk_path=$(DEVELOPER_DIR="$developer_directory" /usr/bin/xcrun --sdk macosx --show-sdk-path)

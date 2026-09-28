@@ -15,7 +15,7 @@ if [[ $# -gt 0 ]]; then
 fi
 source_dir=${0:A:h:h}/Prototypes/AddonPlatform/SwiftDataArchive
 products=$(mktemp -d /private/tmp/cascade-swiftdata-archive-XXXXXX)
-export DEVELOPER_DIR=${DEVELOPER_DIR:-/Applications/Xcode-beta.app/Contents/Developer}
+export DEVELOPER_DIR=${DEVELOPER_DIR:-$(/usr/bin/xcode-select -p)}
 export CLANG_MODULE_CACHE_PATH=${CLANG_MODULE_CACHE_PATH:-/private/tmp/cascade-plugin-module-cache}
 export SWIFTPM_MODULECACHE_OVERRIDE=$CLANG_MODULE_CACHE_PATH
 print -u2 "Probe artifacts: $products"

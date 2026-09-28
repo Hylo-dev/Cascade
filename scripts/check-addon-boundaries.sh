@@ -4,7 +4,7 @@ set -euo pipefail
 
 script_dir="${0:A:h}"
 if [[ -z "${DEVELOPER_DIR:-}" && -d /Applications/Xcode-beta.app/Contents/Developer ]]; then
-    export DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer
+    export DEVELOPER_DIR=${DEVELOPER_DIR:-$(/usr/bin/xcode-select -p)}
 fi
 swiftc_path="$(xcrun --find swiftc)"
 swift_path="$(xcrun --find swift)"
