@@ -366,9 +366,19 @@ final class CascadeServices {
         startupPermissionTask?.cancel()
         startupPermissionTask = Task { [weak self] in
             guard let self, self.isRunning, !Task.isCancelled else { return }
-            if self.musicEnabled && self.audioVisualizerEnabled {
+            let audioConsentKey = "startupAudioCaptureRequested"
+            if self.musicEnabled && self.audioVisualizerEnabled
+                && !self.preferences.bool(forKey: audioConsentKey) {
                 let result = await self.audioPermissionRequester.requestAccess()
                 guard self.isRunning, !Task.isCancelled else { return }
+                // Once is enough. Core Audio has no public preflight and, without
+                // consent, a tap still starts and delivers silence, so repeating
+                // the full tap/aggregate/IO probe on every launch verified nothing.
+                // A failed setup is retried next launch; later denials surface
+                // from the real capture when music plays.
+                if result == .capturing {
+                    self.preferences.set(true, forKey: audioConsentKey)
+                }
                 self.startupAudioStatus = result == .capturing ? .stopped : result
                 self.mediaActivity?.retryAudioCapture()
             }

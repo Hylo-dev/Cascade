@@ -6,7 +6,9 @@
 /// AudioCapturePermissionRequester performs a short, independent capture attempt.
 /// Core Audio has no public consent-only API: starting a private tap aggregate
 /// asks macOS for system-audio access. This probe discards every sample and
-/// releases the tap as soon as setup succeeds, fails or is cancelled.
+/// releases the tap as soon as setup succeeds, fails or is cancelled. Startup
+/// runs it once per installation, not per launch: it cannot detect a denial
+/// (the tap then delivers silence), so repeating it would only cost HAL churn.
 @MainActor
 final class AudioCapturePermissionRequester {
     private let driver: any AudioSpectrumCaptureDriving
