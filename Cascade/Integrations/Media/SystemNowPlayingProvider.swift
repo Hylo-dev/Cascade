@@ -292,9 +292,13 @@ final class SystemNowPlayingProvider: NowPlayingProviding {
 
     private func reconcileRunningPlayers(refreshExisting: Bool) {
         let running = resolveTargets()
+        var removedPlayer = false
         for source in ScriptableMusicSource.allCases {
             guard let target = running[source] else {
-                if targets[source] != nil { remove(source) }
+                if targets[source] != nil {
+                    remove(source)
+                    removedPlayer = true
+                }
                 continue
             }
             if targets[source] != target {
@@ -305,7 +309,7 @@ final class SystemNowPlayingProvider: NowPlayingProviding {
                 requestRefresh(source)
             }
         }
-        publish()
+        publish(repeatingEmpty: removedPlayer)
         updateStatus()
     }
 
@@ -413,9 +417,12 @@ final class SystemNowPlayingProvider: NowPlayingProviding {
         }
     }
 
-    private func publish() {
+    /// publish yields only changes, except that a player quitting repeats an
+    /// empty selection a stop had already emptied: observers learn from it
+    /// that the session is over, not merely stopped.
+    private func publish(repeatingEmpty: Bool = false) {
         let snapshot = selection.current
-        guard snapshot != lastPublished else { return }
+        guard snapshot != lastPublished || (repeatingEmpty && snapshot == nil) else { return }
         lastPublished = snapshot
         continuation?.yield(snapshot)
     }

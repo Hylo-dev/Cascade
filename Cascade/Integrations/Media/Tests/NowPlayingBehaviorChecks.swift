@@ -24,6 +24,7 @@ private enum NowPlayingBehaviorChecks {
         try await checkPreviousTrackSettlesAfterSlowRead()
         try checkPlayerInfoParsing()
         try await checkAnnouncedPauseOutranksStaleReads()
+        try await checkQuittingRepeatsTheEmptySelection()
         print("Now Playing behavior checks passed")
         if CommandLine.arguments.contains("--probe") { await probeAuthorizedPlayers() }
     }
@@ -354,6 +355,37 @@ private enum NowPlayingBehaviorChecks {
         let readsAfter = await reader.readCount
         try expect(readsAfter > readsBefore, "The notification still confirms with reads")
         try expect(received.latest?.isPlaying == false, "Stale 'playing' replies inside the settle window must not reopen the notch")
+    }
+
+    private static func checkQuittingRepeatsTheEmptySelection() async throws {
+        let playing = sample(source: .music, title: "A", playing: true, identifier: "A")
+        let target = ScriptablePlayerTarget(source: .music, processIdentifier: 460)
+        let reader = TransitionMusicReader(target: target, original: playing, transition: .success(playing), settled: playing)
+        let running = RunningPlayers(targets: [.music: target])
+        let provider = SystemNowPlayingProvider(reader: reader, commandSender: reader, resolveTargets: { running.targets })
+        let recorder = EmissionRecorder()
+        let stream = provider.start()
+        let observation = Task { for await snapshot in stream { recorder.values.append(snapshot) } }
+        defer { provider.stop(); observation.cancel() }
+        try await waitUntil("Initial playback must be available") { recorder.values.last == playing }
+
+        provider.receivePlayerNotification(.stopped, from: .music)
+        try await waitUntil("A stop empties the selection") { recorder.values.last == .some(nil) }
+        let emptiesBeforeQuit = recorder.values.filter { $0 == nil }.count
+        running.targets = [:]
+        provider.receivePlayerNotification(nil, from: .music)
+        try await waitUntil("Quitting repeats the empty selection") {
+            recorder.values.filter { $0 == nil }.count > emptiesBeforeQuit
+        }
+    }
+
+    private final class RunningPlayers {
+        var targets: [ScriptableMusicSource: ScriptablePlayerTarget]
+        init(targets: [ScriptableMusicSource: ScriptablePlayerTarget]) { self.targets = targets }
+    }
+
+    private final class EmissionRecorder {
+        var values: [NowPlayingSnapshot?] = []
     }
 
     private final class SnapshotRecorder {

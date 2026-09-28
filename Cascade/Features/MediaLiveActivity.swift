@@ -26,6 +26,7 @@ final class MediaLiveActivity: NotchLiveActivity {
     }
 
     private var snapshot: NowPlayingSnapshot
+    var sourceBundleIdentifier: String { snapshot.sourceBundleIdentifier }
     private var context: LiveActivityContext?
     private let send: (MediaCommand, NowPlayingSnapshot) async throws -> Void
     private let spectrum: (any AudioSpectrumMonitoring)?

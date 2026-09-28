@@ -682,11 +682,17 @@ final class CascadeServices {
             for await snapshot in stream {
                 guard !Task.isCancelled, let self, self.isRunning else { return }
                 guard let snapshot else {
-                    if let activity = self.mediaActivity {
+                    guard let activity = self.mediaActivity else { continue }
+                    // A stopped player keeps its last cover as the widget; one
+                    // that has quit leaves the notch as it was before it played.
+                    if Self.isRunning(activity.sourceBundleIdentifier) {
                         activity.markPlaybackStopped()
                         self.notch.setExpandedFallback(activity)
-                        self.notch.endActivity(id: activity.id)
+                    } else {
+                        self.notch.setExpandedFallback(nil)
+                        self.mediaActivity = nil
                     }
+                    self.notch.endActivity(id: activity.id)
                     continue
                 }
                 if snapshot.isPlaying {
@@ -714,6 +720,11 @@ final class CascadeServices {
                 }
             }
         }
+    }
+
+    private static func isRunning(_ bundleIdentifier: String) -> Bool {
+        NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier)
+            .contains { !$0.isTerminated }
     }
 
     private func updateVolumeMonitoring() {
