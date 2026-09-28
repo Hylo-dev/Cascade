@@ -23,6 +23,7 @@ final class MouseEventMonitor: EventMonitoring {
     var onSpaceChanged               : (() -> Void)?
     var onScreenLocked               : (() -> Void)?
     var onScreenUnlocked             : (() -> Void)?
+    var onScreensAsleepChanged       : ((Bool) -> Void)?
 
     private var globalMouse: Any?
     private var localMouse : Any?
@@ -95,6 +96,20 @@ final class MouseEventMonitor: EventMonitoring {
             self,
             selector: #selector(spaceChanged),
             name    : NSWorkspace.activeSpaceDidChangeNotification,
+            object  : nil
+        )
+
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(screensSlept),
+            name    : NSWorkspace.screensDidSleepNotification,
+            object  : nil
+        )
+
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(screensWoke),
+            name    : NSWorkspace.screensDidWakeNotification,
             object  : nil
         )
 
@@ -253,6 +268,16 @@ final class MouseEventMonitor: EventMonitoring {
     @objc
     private func screenUnlocked() {
         onScreenUnlocked?()
+    }
+
+    @objc
+    private func screensSlept() {
+        onScreensAsleepChanged?(true)
+    }
+
+    @objc
+    private func screensWoke() {
+        onScreensAsleepChanged?(false)
     }
 }
 

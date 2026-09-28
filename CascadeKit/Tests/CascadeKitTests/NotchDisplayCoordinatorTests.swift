@@ -893,6 +893,27 @@ struct NotchDisplayCoordinatorTests {
     }
 
     @Test
+    func displaySleepSuspendsActivitiesAndWakeNeverRevealsALockedScreen() {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
+        let activity = CoordinatorActivityFixture(id: "music")
+        fixture.activityHost.present(activity)
+        fixture.coordinator.start()
+
+        fixture.monitor.sendScreensAsleep(true)
+        #expect(fixture.surfaces.values.allSatisfy { $0.visibilityUpdates.last == false })
+        #expect(activity.activeCount == 0)
+
+        fixture.monitor.sendLock()
+        fixture.monitor.sendScreensAsleep(false)
+        #expect(fixture.surfaces.values.allSatisfy { $0.visibilityUpdates.last == false })
+        #expect(activity.activeCount == 0)
+
+        fixture.monitor.sendUnlock()
+        #expect(fixture.surfaces.values.allSatisfy { $0.visibilityUpdates.last == true })
+        #expect(activity.activeCount == 1)
+    }
+
+    @Test
     func lockUnlockAndStopUseOneSharedLifecycle() {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
         let activity = CoordinatorActivityFixture(id: "music")
@@ -1364,6 +1385,7 @@ private final class RecordingCoordinatorEventMonitor: EventMonitoring {
     var onSpaceChanged               : (() -> Void)?
     var onScreenLocked               : (() -> Void)?
     var onScreenUnlocked             : (() -> Void)?
+    var onScreensAsleepChanged       : ((Bool) -> Void)?
     private(set) var startCount = 0
     private(set) var stopCount = 0
     private var fileDragRecognitionHandler: ((Bool, CGPoint, Bool) -> Void)?
@@ -1371,6 +1393,7 @@ private final class RecordingCoordinatorEventMonitor: EventMonitoring {
     func stop() { stopCount += 1 }
     func sendLock() { onScreenLocked?() }
     func sendUnlock() { onScreenUnlocked?() }
+    func sendScreensAsleep(_ asleep: Bool) { onScreensAsleepChanged?(asleep) }
     func sendPointer(_ point: CGPoint) { onPointerMoved?(point) }
     func sendButton(isPressed: Bool) { onPointerButtonChanged?(isPressed) }
     func setFileDragRecognitionHandler(_ handler: ((Bool, CGPoint, Bool) -> Void)?) {

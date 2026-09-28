@@ -38,6 +38,12 @@ protocol EventMonitoring: AnyObject {
     var onScreenLocked  : (() -> Void)? { get set }
     var onScreenUnlocked: (() -> Void)? { get set }
 
+    /// Fired with `true` when every display goes to sleep and `false` when they
+    /// wake. Display sleep does not lock the session, so without this signal a
+    /// playing track keeps its audio tap and 30 Hz spectrum running for a dark
+    /// screen. It is independent of lock: waking a locked screen stays hidden.
+    var onScreensAsleepChanged: ((Bool) -> Void)? { get set }
+
     /// Installs the gesture-bound file-drag signal. The first Bool is true once
     /// for a freshly populated native drag pasteboard and false at its end. The
     /// second Bool is a fresh, stable regular-file hint for early UI routing;

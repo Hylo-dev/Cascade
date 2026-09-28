@@ -258,6 +258,10 @@ final class NotchDisplayCoordinator {
     private var isExternalSurfaceActive = false
     private var isStarted = false
     private var isVisible = true
+    /// Lock and display sleep hide the overlay for independent reasons, so each
+    /// keeps its own flag: waking a locked screen must not reveal the notch.
+    private var isScreenLocked   = false
+    private var areScreensAsleep = false
     private var widgetContentRevision: UInt64 = 0
     private var isHapticsEnabled = true
     private var borderAppearance: NotchBorderAppearance = .neutral
@@ -358,6 +362,8 @@ final class NotchDisplayCoordinator {
 
         isStarted = true
         isVisible = true
+        isScreenLocked   = false
+        areScreensAsleep = false
         pointerLocation = pointer()
         inventory.onChange = { [weak self] in self?.reconcileInventory() }
         focusMonitor.onChange = { [weak self] frame in
@@ -381,10 +387,20 @@ final class NotchDisplayCoordinator {
         monitor.onSpaceChanged = { [weak self] in self?.handleSpaceChange() }
         monitor.onScreenLocked = { [weak self] in
             guard let self else { return }
-            self.setVisible(false)
+            self.isScreenLocked = true
+            self.updateVisibility()
             self.onScreenLocked?()
         }
-        monitor.onScreenUnlocked = { [weak self] in self?.setVisible(true) }
+        monitor.onScreenUnlocked = { [weak self] in
+            guard let self else { return }
+            self.isScreenLocked = false
+            self.updateVisibility()
+        }
+        monitor.onScreensAsleepChanged = { [weak self] asleep in
+            guard let self else { return }
+            self.areScreensAsleep = asleep
+            self.updateVisibility()
+        }
         monitor.setFileDragRecognitionHandler { [weak self] active, point, hasValidatedOfferHint in
             self?.handleRecognizedFileDrag(
                 active: active,
@@ -419,6 +435,7 @@ final class NotchDisplayCoordinator {
         monitor.onSpaceChanged = nil
         monitor.onScreenLocked = nil
         monitor.onScreenUnlocked = nil
+        monitor.onScreensAsleepChanged = nil
         monitor.setFileDragRecognitionHandler(nil)
         activityHost.onChange = nil
         activityHost.onValidityChange = nil
@@ -1457,6 +1474,10 @@ final class NotchDisplayCoordinator {
         for displayID in destinations {
             surfaces[displayID]?.surface.handleSpaceChange()
         }
+    }
+
+    private func updateVisibility() {
+        setVisible(!isScreenLocked && !areScreensAsleep)
     }
 
     private func setVisible(_ visible: Bool) {

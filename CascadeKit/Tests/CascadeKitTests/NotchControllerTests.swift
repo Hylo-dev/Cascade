@@ -2264,6 +2264,7 @@ private final class RecordingEventMonitor: EventMonitoring {
     var onSpaceChanged               : (() -> Void)?
     var onScreenLocked               : (() -> Void)?
     var onScreenUnlocked             : (() -> Void)?
+    var onScreensAsleepChanged       : ((Bool) -> Void)?
 
     func start() {}
     func stop() {}
