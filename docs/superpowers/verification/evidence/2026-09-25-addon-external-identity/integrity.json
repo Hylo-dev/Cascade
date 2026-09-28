@@ -1,0 +1,57 @@
+[
+  {
+    "build": "probe-8zj1e_09",
+    "label": "ordinary",
+    "sourceCount": 21,
+    "binaryCount": 6,
+    "runnerCount": 12,
+    "signatureVerifiedAfterExtraction": [
+      "BrokerRecovery.app",
+      "Build/Build/Products/Debug/CascadeAddonProbe.app",
+      "Build/Build/Products/Debug/CascadeAddonProbeContainer.app",
+      "TaskObserver"
+    ],
+    "identityBeforeHello": true,
+    "cleanupComplete": true,
+    "controlCheck": {
+      "event": "control-check",
+      "status": 5,
+      "sameAudit": false
+    },
+    "debugPreflight": null,
+    "fixtureArchiveSHA256": "e50961e108c62add2154325b6832c9a835e1dcc33b01b494cff5158490c2e207"
+  },
+  {
+    "build": "probe-veiyjfa3",
+    "label": "debug-permission",
+    "sourceCount": 21,
+    "binaryCount": 6,
+    "runnerCount": 12,
+    "signatureVerifiedAfterExtraction": [
+      "BrokerRecovery.app",
+      "Build/Build/Products/Debug/CascadeAddonProbe.app",
+      "Build/Build/Products/Debug/CascadeAddonProbeContainer.app",
+      "TaskObserver"
+    ],
+    "identityBeforeHello": true,
+    "cleanupComplete": true,
+    "controlCheck": {
+      "event": "control-check",
+      "status": 5,
+      "sameAudit": false
+    },
+    "debugPreflight": {
+      "command": [
+        "launchctl",
+        "debug",
+        "pid/73116/hylo.Cascade.AddonProbeContainer.Provider",
+        "--environment",
+        "CASCADE_PROBE_DEBUG_PREFLIGHT=1"
+      ],
+      "status": 1,
+      "stdout": "",
+      "stderr": "This subcommand requires root privileges: debug\n"
+    },
+    "fixtureArchiveSHA256": "949c1469cc09c4cf361c6e531b12fd824558f7b7cbb41bb0dbe534704dc65bd5"
+  }
+]

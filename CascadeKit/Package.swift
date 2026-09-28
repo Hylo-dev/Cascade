@@ -17,24 +17,89 @@ import PackageDescription
 let package = Package(
     name: "CascadeKit",
     platforms: [
-        .macOS(.v14) // Floor: Sonoma. @Observable, CADisplayLink, safeAreaInsets.
+        .macOS(.v14)  // Floor: Sonoma. @Observable, CADisplayLink, safeAreaInsets.
     ],
     products: [
+        .executable(name: "cascade-addon", targets: ["CascadeAddonTool"]),
         .library(
-            name   : "CascadeKit",
+            name   : "CascadePresentation",
+            targets: ["CascadePresentation"]
+        ),
+        .library(
+            name   : "CascadeAddonSDK",
+            targets: ["CascadeAddonSDK"]
+        ),
+        .library(
+            name: "CascadeContracts",
+            targets: ["CascadeContracts"]
+        ),
+        .library(
+            name: "CascadeRuntime",
+            targets: ["CascadeRuntime"]
+        ),
+        .library(
+            name: "CascadeKit",
             targets: ["CascadeKit"]
         ),
     ],
     targets: [
+        .executableTarget(
+            name: "CascadeAddonTool",
+            dependencies: ["CascadeContracts"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .testTarget(
+            name: "CascadeAddonToolTests",
+            dependencies: ["CascadeAddonTool"],
+            resources: [.process("Fixtures")],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
         .target(
-            name         : "CascadeKit",
+            name: "CascadePresentation",
+            dependencies: ["CascadeContracts"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .target(
+            name: "CascadeAddonSDK",
+            dependencies: ["CascadeContracts", "CascadePresentation"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .testTarget(
+            name: "CascadePresentationTests",
+            dependencies: ["CascadePresentation", "CascadeAddonSDK"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .target(
+            name: "CascadeContracts",
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .testTarget(
+            name: "CascadeContractsTests",
+            dependencies: ["CascadeContracts"],
+            resources: [.process("Fixtures")],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .target(
+            name: "CascadeRuntime",
+            dependencies: ["CascadeContracts"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .testTarget(
+            name: "CascadeRuntimeTests",
+            dependencies: ["CascadeRuntime", "CascadeContracts", "CascadeAddonSDK"],
+            resources: [.process("Fixtures")],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .target(
+            name: "CascadeKit",
+            dependencies: ["CascadeContracts", "CascadePresentation"],
             swiftSettings: [
                 .defaultIsolation(MainActor.self)
             ]
         ),
         .testTarget(
-            name        : "CascadeKitTests",
-            dependencies: ["CascadeKit"]
+            name: "CascadeKitTests",
+            dependencies: ["CascadeKit", "CascadeContracts", "CascadePresentation", "CascadeRuntime"]
         ),
     ],
     swiftLanguageModes: [.v5]

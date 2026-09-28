@@ -1,0 +1,190 @@
+{
+  "schema": "xpc-broker-probe-v1",
+  "layout": "nested",
+  "launcherAdmitted": false,
+  "cases": [
+    {
+      "mode": "blocked-control-stop",
+      "events": [
+        {
+          "event": "client-ready"
+        },
+        {
+          "event": "A-hello",
+          "authenticated": true,
+          "workerAuthenticated": true,
+          "broker": {
+            "pid": 28934,
+            "instance": "9e64bc32-d9b6-456e-a124-f82ef619aecf",
+            "guardDeadline": 328796.696637
+          },
+          "worker": {
+            "pid": 28935,
+            "instance": "407722f9-3ba1-4bd8-b1a6-851fa8ef5f95",
+            "guardDeadline": 328796.802486
+          },
+          "time": 328784.820328
+        },
+        {
+          "event": "A-hold-both",
+          "authenticated": true,
+          "workerAuthenticated": true,
+          "broker": {
+            "pid": 28934,
+            "instance": "9e64bc32-d9b6-456e-a124-f82ef619aecf",
+            "guardDeadline": 328796.696637
+          },
+          "worker": {
+            "pid": 28935,
+            "instance": "407722f9-3ba1-4bd8-b1a6-851fa8ef5f95",
+            "guardDeadline": 328796.802486
+          },
+          "time": 328784.822839
+        },
+        {
+          "event": "B-hello",
+          "authenticated": true,
+          "workerAuthenticated": true,
+          "broker": {
+            "pid": 28936,
+            "instance": "53e9b2f2-7815-4279-ba89-e7754a38fec6",
+            "guardDeadline": 328796.919982
+          },
+          "worker": {
+            "pid": 28937,
+            "instance": "2372395d-a955-40d7-8dc1-510d408ce256",
+            "guardDeadline": 328797.026296
+          },
+          "time": 328785.040552
+        },
+        {
+          "event": "B-ping",
+          "authenticated": true,
+          "workerAuthenticated": true,
+          "broker": {
+            "pid": 28936,
+            "instance": "53e9b2f2-7815-4279-ba89-e7754a38fec6",
+            "guardDeadline": 328796.919982
+          },
+          "worker": {
+            "pid": 28937,
+            "instance": "2372395d-a955-40d7-8dc1-510d408ce256",
+            "guardDeadline": 328797.026296
+          },
+          "time": 328785.042671
+        },
+        {
+          "event": "A-control",
+          "authenticated": true,
+          "broker": {
+            "pid": 28934,
+            "instance": "9e64bc32-d9b6-456e-a124-f82ef619aecf",
+            "guardDeadline": 328796.696637
+          }
+        },
+        {
+          "event": "action-sent",
+          "time": 328785.046405
+        },
+        {
+          "event": "connection-invalid",
+          "chain": "A"
+        },
+        {
+          "event": "connection-invalid",
+          "chain": "A"
+        },
+        {
+          "event": "B-ping",
+          "authenticated": true,
+          "workerAuthenticated": true,
+          "broker": {
+            "pid": 28936,
+            "instance": "53e9b2f2-7815-4279-ba89-e7754a38fec6",
+            "guardDeadline": 328796.919982
+          },
+          "worker": {
+            "pid": 28937,
+            "instance": "2372395d-a955-40d7-8dc1-510d408ce256",
+            "guardDeadline": 328797.026296
+          },
+          "time": 328787.06157
+        }
+      ],
+      "nodes": {
+        "A.broker": {
+          "pid": 28934,
+          "instance": "9e64bc32-d9b6-456e-a124-f82ef619aecf",
+          "guardDeadline": 328796.696637
+        },
+        "A.worker": {
+          "pid": 28935,
+          "instance": "407722f9-3ba1-4bd8-b1a6-851fa8ef5f95",
+          "guardDeadline": 328796.802486
+        },
+        "B.broker": {
+          "pid": 28936,
+          "instance": "53e9b2f2-7815-4279-ba89-e7754a38fec6",
+          "guardDeadline": 328796.919982
+        },
+        "B.worker": {
+          "pid": 28937,
+          "instance": "2372395d-a955-40d7-8dc1-510d408ce256",
+          "guardDeadline": 328797.026296
+        }
+      },
+      "guards": {
+        "A.broker": 328796.696637,
+        "A.worker": 328796.802486,
+        "B.broker": 328796.919982,
+        "B.worker": 328797.026296
+      },
+      "exits": {
+        "A.broker": {
+          "time": 328785.04708,
+          "status": 0
+        },
+        "A.worker": {
+          "time": 328785.047794,
+          "status": 9
+        }
+      },
+      "windowComplete": true,
+      "hostPID": 28933,
+      "blockedControlConfirmed": true,
+      "authenticated": true,
+      "registered": true,
+      "sameInstances": true,
+      "controlBound": true,
+      "trigger": 328785.046388,
+      "actionConfirmed": true,
+      "actionTime": 328785.046405,
+      "hostStatus": null,
+      "survivorConfirmed": true,
+      "verdict": "PASS",
+      "cleanup": {
+        "hostStatus": 0,
+        "exits": {
+          "A.broker": {
+            "time": 328785.04708,
+            "status": 0
+          },
+          "A.worker": {
+            "time": 328785.047794,
+            "status": 9
+          },
+          "B.broker": {
+            "time": 328787.066896,
+            "status": 9
+          },
+          "B.worker": {
+            "time": 328787.067924,
+            "status": 9
+          }
+        },
+        "allKnownExited": true,
+        "allFourTracked": true
+      }
+    }
+  ]
+}

@@ -5,15 +5,14 @@
 
 import Foundation
 
-/// ActiveDisplayResolving resolves which screen Cascade should follow right now.
+/// ActiveDisplayResolving is the legacy single-surface display bridge.
 ///
-/// It is a protocol so the engine can be driven by a fake multi-display layout
-/// in tests, with no real screens attached. The concrete `SafeAreaNotchDetector`
-/// reads AppKit; every caller depends only on this contract.
+/// It remains intact until the display coordinator owns snapshots in task 4,
+/// preserving the current controller contract while focused-window selection is
+/// kept in `FocusedDisplayResolver` and out of this AppKit adapter.
 protocol ActiveDisplayResolving {
 
-    /// Resolve the screen the overlay should live on (the screen under the
-    /// pointer, falling back to the main screen), together with its notch
-    /// metrics. Returns `nil` only if there is somehow no screen at all.
+    /// resolveActiveDisplay returns the pointer screen, then the main screen.
+    /// It never consults application focus or Accessibility.
     func resolveActiveDisplay() -> ActiveDisplay?
 }

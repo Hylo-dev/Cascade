@@ -30,6 +30,7 @@ final class WidgetHost {
 
     private var contexts      : [WidgetIdentifier: WidgetContext] = [:]
     private var activeWidgets : Set<WidgetIdentifier> = []
+    private var cachedViews   : [WidgetIdentifier: AnyView] = [:]
 
     private let resolver: NotchLayoutResolver
 
@@ -47,6 +48,7 @@ final class WidgetHost {
     func register(_ widget: NotchWidget) {
 
         widgets[widget.id] = widget
+        cachedViews.removeValue(forKey: widget.id)
 
         guard currentScreen.arrangement[widget.id] == nil else {
             return
@@ -57,15 +59,28 @@ final class WidgetHost {
         }
     }
 
+    /// Remove one instance and revoke its context before provider cleanup runs.
+    func unregister(id: WidgetIdentifier) {
+        contexts.removeValue(forKey: id)?.revoke()
+        cachedViews.removeValue(forKey: id)
+        if activeWidgets.remove(id) != nil { widgets[id]?.suspend() }
+        widgets.removeValue(forKey: id)
+        for index in screens.indices { screens[index].arrangement.removeValue(forKey: id) }
+        onContentChanged?()
+    }
+
     /// Activate the current screen's widgets when the notch is open, suspend them
     /// all when it closes. (Per-screen activation; switching screens will re-run
     /// this once paging exists.)
     func update(state: NotchState) {
 
         guard !state.isClosed else {
-            activeWidgets.forEach { widgets[$0]?.suspend() }
+            activeWidgets.forEach {
+                contexts.removeValue(forKey: $0)?.revoke()
+                cachedViews.removeValue(forKey: $0)
+                widgets[$0]?.suspend()
+            }
             activeWidgets.removeAll()
-            contexts.removeAll()
             return
         }
 
@@ -76,10 +91,11 @@ final class WidgetHost {
             }
 
             if activeWidgets.contains(id) {
+                if contexts[id]?.state != state { cachedViews.removeValue(forKey: id) }
                 contexts[id]?.update(state: state)
             } else {
                 let context = WidgetContext(state: state) { [weak self] in
-                    self?.onContentChanged?()
+                    self?.refresh(id: id)
                 }
                 contexts[id] = context
                 widget.activate(in: context)
@@ -107,7 +123,9 @@ final class WidgetHost {
 
         let placed = layout.frames.compactMap { id, rect -> PositionedWidget? in
             guard let widget = widgets[id] else { return nil }
-            return PositionedWidget(id: id, view: widget.makeContentView(), rect: rect)
+            let view = cachedViews[id] ?? widget.makeContentView()
+            cachedViews[id] = view
+            return PositionedWidget(id: id, view: view, rect: rect)
         }
 
         return AnyView(
@@ -121,6 +139,12 @@ final class WidgetHost {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         )
+    }
+
+    private func refresh(id: WidgetIdentifier) {
+        guard activeWidgets.contains(id), let widget = widgets[id] else { return }
+        cachedViews[id] = widget.makeContentView()
+        onContentChanged?()
     }
 
     /// A widget's resolved view + frame, ready to position in the `ZStack`.

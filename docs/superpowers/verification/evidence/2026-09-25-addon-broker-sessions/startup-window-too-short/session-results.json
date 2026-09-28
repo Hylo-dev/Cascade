@@ -1,0 +1,150 @@
+{
+  "cases": [
+    {
+      "mode": "restart",
+      "launcherAdmitted": false,
+      "authenticated": true,
+      "registered": true,
+      "confirmed": true,
+      "guardDeadline": 430984.887501,
+      "trigger": 430959.907556,
+      "exits": {
+        "broker": {
+          "time": 430959.908875,
+          "status": 0
+        },
+        "provider": {
+          "time": 430959.909951,
+          "status": 15
+        }
+      },
+      "rootAlive": true,
+      "restartStarted": 430959.910075,
+      "observationError": "TimeoutError('waiting for hello')",
+      "verdict": "UNKNOWN",
+      "hosts": [
+        {
+          "label": "restart-first",
+          "events": [
+            {
+              "event": "client-ready"
+            },
+            {
+              "authenticated": true,
+              "brokerGuard": 430994.714347,
+              "brokerInstance": "387AD3A5-8DD5-487E-9C09-619CCF137E5E",
+              "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-hae_1plo/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+              "brokerPID": 49556,
+              "event": "hello",
+              "nonce": "FC3AEBA1-A87B-4FB8-A326-2336BEA43706",
+              "provider": {
+                "authenticated": true,
+                "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-hae_1plo/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+                "guardDeadline": 430984.887501,
+                "instance": "D22FDF7A-4C35-4E7B-AFA1-8C483C7AF6D4",
+                "pid": 49558
+              }
+            },
+            {
+              "authenticated": true,
+              "brokerGuard": 430994.714347,
+              "brokerInstance": "387AD3A5-8DD5-487E-9C09-619CCF137E5E",
+              "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-hae_1plo/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+              "brokerPID": 49556,
+              "event": "hello",
+              "nonce": "CA4B704D-8981-4B6F-B9DF-0FE1D8BA714B",
+              "provider": {
+                "authenticated": true,
+                "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-hae_1plo/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+                "guardDeadline": 430984.887501,
+                "instance": "D22FDF7A-4C35-4E7B-AFA1-8C483C7AF6D4",
+                "pid": 49558
+              }
+            },
+            {
+              "authenticated": true,
+              "brokerGuard": 430994.714347,
+              "brokerInstance": "387AD3A5-8DD5-487E-9C09-619CCF137E5E",
+              "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-hae_1plo/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+              "brokerPID": 49556,
+              "event": "hold",
+              "nonce": "4B83ED08-583D-41E5-A969-72FE6E7785D7",
+              "provider": {
+                "authenticated": true,
+                "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-hae_1plo/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+                "guardDeadline": 430984.887501,
+                "instance": "D22FDF7A-4C35-4E7B-AFA1-8C483C7AF6D4",
+                "pid": 49558
+              }
+            },
+            {
+              "event": "stop-broker"
+            },
+            {
+              "error": "Error Domain=NSCocoaErrorDomain Code=4097 \"connection to service named hylo.Cascade.AddonProbe.DiscoveryBroker\" UserInfo={NSDebugDescription=connection to service named hylo.Cascade.AddonProbe.DiscoveryBroker}",
+              "event": "broker-unavailable"
+            },
+            {
+              "event": "ping",
+              "pid": 49554
+            },
+            {
+              "event": "restart"
+            }
+          ],
+          "chains": [
+            {
+              "identities": {
+                "broker": {
+                  "pid": 49556,
+                  "instance": "387AD3A5-8DD5-487E-9C09-619CCF137E5E",
+                  "guardDeadline": 430994.714347,
+                  "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-hae_1plo/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc"
+                },
+                "provider": {
+                  "authenticated": true,
+                  "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-hae_1plo/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+                  "guardDeadline": 430984.887501,
+                  "instance": "D22FDF7A-4C35-4E7B-AFA1-8C483C7AF6D4",
+                  "pid": 49558
+                }
+              },
+              "authenticated": true,
+              "registered": true,
+              "confirmed": true,
+              "trigger": 430959.907556,
+              "exits": {
+                "broker": {
+                  "time": 430959.908875,
+                  "status": 0
+                },
+                "provider": {
+                  "time": 430959.909951,
+                  "status": 15
+                }
+              },
+              "cleanupExits": {
+                "broker": {
+                  "time": 430959.908875,
+                  "status": 0
+                },
+                "provider": {
+                  "time": 430959.909951,
+                  "status": 15
+                }
+              }
+            },
+            {
+              "cleanupExits": {}
+            }
+          ],
+          "pid": 49554,
+          "cleanupComplete": false,
+          "rootStatus": 0
+        }
+      ],
+      "cleanupComplete": false
+    }
+  ],
+  "launcherAdmitted": false
+}

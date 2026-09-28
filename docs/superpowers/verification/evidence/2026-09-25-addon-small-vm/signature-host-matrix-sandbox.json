@@ -1,0 +1,63 @@
+{
+  "nativeFixtureExecuted": false,
+  "operation": "static signature verification only",
+  "archiveSHA256": "4da64e8ea598e196ab32ce727f1f128713a5ca5b1d0f9211f9c4f73aae9d2333",
+  "cases": [
+    {
+      "name": "arm64-exact",
+      "argv": [
+        "/usr/bin/codesign",
+        "--verify",
+        "--strict",
+        "--arch",
+        "arm64",
+        "-R",
+        "=anchor apple generic and identifier \"hylo.Cascade.AddonProbeContainer.Provider\" and certificate leaf = H\"4A857D842A5406C2D3071776FDE7B27B3098FE63\" and cdhash H\"c5bc573b5761bcfc420b2922486e29d391c80b27\"",
+        "/private/tmp/cascade-addon-vm/signature-review-b_n5n3fz/CascadeProbeProvider.appex"
+      ],
+      "status": 1,
+      "expectedStatus": 0,
+      "stdout": "",
+      "stderr": "/private/tmp/cascade-addon-vm/signature-review-b_n5n3fz/CascadeProbeProvider.appex: CSSMERR_TP_NOT_TRUSTED\nIn architecture: arm64\n",
+      "passed": false
+    },
+    {
+      "name": "x86_64-arm64-pin",
+      "argv": [
+        "/usr/bin/codesign",
+        "--verify",
+        "--strict",
+        "--arch",
+        "x86_64",
+        "-R",
+        "=anchor apple generic and identifier \"hylo.Cascade.AddonProbeContainer.Provider\" and certificate leaf = H\"4A857D842A5406C2D3071776FDE7B27B3098FE63\" and cdhash H\"c5bc573b5761bcfc420b2922486e29d391c80b27\"",
+        "/private/tmp/cascade-addon-vm/signature-review-b_n5n3fz/CascadeProbeProvider.appex"
+      ],
+      "status": 1,
+      "expectedStatus": 3,
+      "stdout": "",
+      "stderr": "/private/tmp/cascade-addon-vm/signature-review-b_n5n3fz/CascadeProbeProvider.appex: CSSMERR_TP_NOT_TRUSTED\nIn architecture: x86_64\n",
+      "passed": false
+    },
+    {
+      "name": "arm64-wrong-pin",
+      "argv": [
+        "/usr/bin/codesign",
+        "--verify",
+        "--strict",
+        "--arch",
+        "arm64",
+        "-R",
+        "=anchor apple generic and identifier \"hylo.Cascade.AddonProbeContainer.Provider\" and certificate leaf = H\"4A857D842A5406C2D3071776FDE7B27B3098FE63\" and cdhash H\"0000000000000000000000000000000000000000\"",
+        "/private/tmp/cascade-addon-vm/signature-review-b_n5n3fz/CascadeProbeProvider.appex"
+      ],
+      "status": 1,
+      "expectedStatus": 3,
+      "stdout": "",
+      "stderr": "/private/tmp/cascade-addon-vm/signature-review-b_n5n3fz/CascadeProbeProvider.appex: CSSMERR_TP_NOT_TRUSTED\nIn architecture: arm64\n",
+      "passed": false
+    }
+  ],
+  "manifestSHA256": "da70811afe12af4feb60b74c8249d586a0e079e02b828d51a181c5b749ef987e",
+  "allPassed": false
+}

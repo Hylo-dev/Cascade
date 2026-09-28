@@ -19,11 +19,12 @@ import CoreGraphics
 ///   the top edge.
 ///
 /// Everything is in the host view's coordinates (y grows upward), with the notch
-/// hanging down from `topY`. The path is rebuilt each morph frame; it is a dozen
-/// cheap segments and one small `CGPath` allocation, which is well within budget.
+/// hanging down from `topY`. Both sets of corners use Apple's continuous
+/// rounded-rectangle profile. Its normalized control points are cached once;
+/// each morph frame only reflects/scales those points and creates one `CGPath`.
 extension CGPath {
 
-    /// Build the notch outline for `geometry`, horizontally centered on
+    /// notch builds the outline for `geometry`, horizontally centered on
     /// `centerX` and hanging down from `topY`.
     static func notch(
         geometry: NotchGeometry,
@@ -51,46 +52,64 @@ extension CGPath {
 
         path.addLine(to: CGPoint(x: right + topR, y: top))
 
-        // Top-right concave corner: curve from the flared top down to the side.
-        path.addArc(
-            center    : CGPoint(x: right + topR, y: top - topR),
-            radius    : topR,
-            startAngle: .pi / 2,
-            endAngle  : .pi,
-            clockwise : false
+        // Reflect the same native corner for both the concave bezel attachment
+        // and the convex underside. The radius remains the corner's total span,
+        // so switching profiles does not change layout bounds or hit regions.
+        ContinuousNotchCorner.append(
+            to       : path,
+            transform: CGAffineTransform(
+                a : 0,
+                b : -topR,
+                c : topR,
+                d : 0,
+                tx: right,
+                ty: top
+            )
         )
 
         path.addLine(to: CGPoint(x: right, y: bottom + bottomR))
 
         // Bottom-right convex corner.
-        path.addArc(
-            center    : CGPoint(x: right - bottomR, y: bottom + bottomR),
-            radius    : bottomR,
-            startAngle: 0,
-            endAngle  : -.pi / 2,
-            clockwise : true
+        ContinuousNotchCorner.append(
+            to       : path,
+            transform: CGAffineTransform(
+                a : -bottomR,
+                b : 0,
+                c : 0,
+                d : bottomR,
+                tx: right,
+                ty: bottom
+            )
         )
 
         path.addLine(to: CGPoint(x: left + bottomR, y: bottom))
 
         // Bottom-left convex corner.
-        path.addArc(
-            center    : CGPoint(x: left + bottomR, y: bottom + bottomR),
-            radius    : bottomR,
-            startAngle: -.pi / 2,
-            endAngle  : .pi,
-            clockwise : true
+        ContinuousNotchCorner.append(
+            to       : path,
+            transform: CGAffineTransform(
+                a : 0,
+                b : bottomR,
+                c : bottomR,
+                d : 0,
+                tx: left,
+                ty: bottom
+            )
         )
 
         path.addLine(to: CGPoint(x: left, y: top - topR))
 
         // Top-left concave corner: curve from the side back up to the flared top.
-        path.addArc(
-            center    : CGPoint(x: left - topR, y: top - topR),
-            radius    : topR,
-            startAngle: 0,
-            endAngle  : .pi / 2,
-            clockwise : false
+        ContinuousNotchCorner.append(
+            to       : path,
+            transform: CGAffineTransform(
+                a : -topR,
+                b : 0,
+                c : 0,
+                d : -topR,
+                tx: left,
+                ty: top
+            )
         )
 
         path.closeSubpath()

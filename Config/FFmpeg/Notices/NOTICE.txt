@@ -1,0 +1,20 @@
+FFmpeg 9.0.2
+============
+
+Cascade includes separate ffmpeg and ffprobe executables built from the
+unmodified FFmpeg 9.0.2 release source. FFmpeg is licensed under the GNU Lesser
+General Public License version 2.1 or later for this configuration. The
+accompanying FFmpeg-LICENSE.md and COPYING.LGPLv2.1 files contain the upstream
+license notice and terms.
+
+Source: https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz
+SHA-256: 8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e
+Build and verification instructions: docs/third-party/ffmpeg.md in the Cascade
+source repository.
+
+This build enables no GPL, nonfree, or external third-party libraries. It links
+only Apple system libraries and frameworks. The full configure command is
+reported by `ffmpeg -buildconf` and is reproduced by scripts/build-ffmpeg.sh.
+
+Portions of FFmpeg's JPEG implementation originate with the Independent JPEG
+Group. Cascade and this FFmpeg build contain no changes to those upstream files.

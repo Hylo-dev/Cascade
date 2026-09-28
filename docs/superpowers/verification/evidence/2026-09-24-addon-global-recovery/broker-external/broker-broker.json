@@ -1,0 +1,114 @@
+{
+  "mode": "broker",
+  "events": [
+    {
+      "event": "client-ready"
+    },
+    {
+      "authenticated": true,
+      "brokerGuard": 346874.66841,
+      "brokerInstance": "FAD9E55D-FAF9-4FAB-B812-CF807AFDF6DA",
+      "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-7zwrmymw/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+      "brokerPID": 37489,
+      "event": "hello",
+      "nonce": "D599B55E-324A-4E2C-AE29-67295D00FBF3",
+      "provider": {
+        "authenticated": true,
+        "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-7zwrmymw/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+        "guardDeadline": 346864.832773,
+        "instance": "9186C1FF-93D7-4AA5-A523-C81A97630806",
+        "pid": 37491
+      }
+    },
+    {
+      "authenticated": true,
+      "brokerGuard": 346874.66841,
+      "brokerInstance": "FAD9E55D-FAF9-4FAB-B812-CF807AFDF6DA",
+      "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-7zwrmymw/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+      "brokerPID": 37489,
+      "event": "hold",
+      "nonce": "FFC89DBE-8AED-4E9E-A698-29B9F30F9971",
+      "provider": {
+        "authenticated": true,
+        "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-7zwrmymw/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+        "guardDeadline": 346864.832773,
+        "instance": "9186C1FF-93D7-4AA5-A523-C81A97630806",
+        "pid": 37491
+      }
+    },
+    {
+      "authenticated": true,
+      "brokerGuard": 346874.66841,
+      "brokerInstance": "FAD9E55D-FAF9-4FAB-B812-CF807AFDF6DA",
+      "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-7zwrmymw/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+      "brokerPID": 37489,
+      "event": "invalidate",
+      "nonce": "05FFD7BF-891B-47C1-9260-C6DD33B3B3CF"
+    },
+    {
+      "event": "ping",
+      "pid": 37487
+    },
+    {
+      "event": "stop-broker"
+    },
+    {
+      "error": "Error Domain=NSCocoaErrorDomain Code=4097 \"connection to service with pid 37489 named hylo.Cascade.AddonProbe.DiscoveryBroker\" UserInfo={NSDebugDescription=connection to service with pid 37489 named hylo.Cascade.AddonProbe.DiscoveryBroker}",
+      "event": "broker-unavailable"
+    },
+    {
+      "event": "ping",
+      "pid": 37487
+    }
+  ],
+  "exits": {
+    "broker": {
+      "time": 346841.855637,
+      "status": 0
+    },
+    "provider": {
+      "time": 346841.857716,
+      "status": 9
+    }
+  },
+  "launcherAdmitted": false,
+  "rootPID": 37487,
+  "authenticated": true,
+  "registered": true,
+  "identities": {
+    "broker": {
+      "pid": 37489,
+      "instance": "FAD9E55D-FAF9-4FAB-B812-CF807AFDF6DA",
+      "guardDeadline": 346874.66841,
+      "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-7zwrmymw/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc"
+    },
+    "provider": {
+      "authenticated": true,
+      "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-7zwrmymw/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+      "guardDeadline": 346864.832773,
+      "instance": "9186C1FF-93D7-4AA5-A523-C81A97630806",
+      "pid": 37491
+    }
+  },
+  "brokerGuard": 346874.66841,
+  "providerGuard": 346864.832773,
+  "confirmed": true,
+  "survivedInvalidation": true,
+  "trigger": 346841.851471,
+  "rootAlive": true,
+  "verdict": "PASS",
+  "cleanup": {
+    "rootStatus": 0,
+    "exits": {
+      "broker": {
+        "time": 346841.855637,
+        "status": 0
+      },
+      "provider": {
+        "time": 346841.857716,
+        "status": 9
+      }
+    },
+    "complete": true
+  }
+}

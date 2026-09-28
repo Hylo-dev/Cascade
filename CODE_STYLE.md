@@ -163,7 +163,38 @@ final class NotchController {
 private var controller = NotchController()
 ```
 
-## Widget plugin protocol (the strict contract)
+## Addon SDK: one contract for Cascade and external widgets
+
+The approved [addon architecture](docs/superpowers/specs/2026-09-09-addon-runtime-design.md)
+and [implementation plan](docs/superpowers/plans/2026-09-09-addon-runtime.md)
+define the destination of the widget layer. All future widgets, notices and
+activities developed by the Cascade team must use the same public SDK, manifest,
+REQUIRES, permissions, process isolation and resource policy as external addons.
+Bundled origin is distribution metadata, never an authorization or budget bypass.
+
+Providers publish bounded content descriptions; Cascade renders them with SwiftUI
+and retains valid publications after the provider exits. Advanced SwiftUI scenes
+run remotely with a separate visibility lease. Do not load custom provider code
+into the host or register new concrete widgets directly with NotchEngine.
+Renderer and system adapters are shared infrastructure; access from a widget goes
+through the same broker and grants regardless of its publisher.
+
+The SDK is planned, not implemented by this documentation update. New widget work
+must include its required SDK milestone first. Existing implementations migrate
+in P3; only the generic presentation bridge will use the internal notch protocols.
+
+**Approved local exception (26 September 2026):** the file shelf may be mounted
+temporarily as a directly integrated Cascade page, like the existing music page,
+while the external addon launcher remains blocked. This exception covers only the
+file shelf and does not authorize other new widgets, in-host external code, or a
+relaxation of SDK grants, isolation or resource budgets. The shelf's external
+addon path remains subject to the native gate before activation.
+
+## Legacy widget protocol (migration reference)
+
+The following sketch describes the earlier in-process model, not the public addon
+SDK. Keep it only as context for existing code until P3 removes the direct path.
+Its view lifecycle does not define the lifetime of an addon publication or service.
 
 The widget layer is the modular heart of Cascade, and the protocol is deliberately severe because a widget is a guest in an **always-on** overlay. The protocol is shaped so the cheap, event-driven path is the only natural one.
 
@@ -208,6 +239,16 @@ The rules every widget — and the host that loads it — must honor:
 - **Isolated and modular.** A widget reaches the outside world only through the typed `WidgetContext`. No singletons, no `NSApp` spelunking, no reaching into the engine. This is what lets a widget be added or removed without touching the notch engine.
 - **Frugal by contract.** Compact state, lazy assets, large resources released on `suspend()`. The host may measure a widget and cap or evict one that misbehaves.
 
+## Activity and notice contracts
+
+Preserve [the notch activity behavior](docs/architecture/live-activity-contracts.md)
+and its Apple HIG reference through the common SDK. New providers publish finite
+activities or brief notices as values, with privacy, accessibility, revision and
+expiry metadata. The generic bridge adapts them to `NotchLiveActivity` and
+`NotchTransientNotice`; concrete addon code does not conform to those host
+protocols directly. The host owns presentation and deadlines; shared data sources
+are acquired through the broker, independently from visible-resource lifetimes.
+
 ## Extensions
 
 - **Only create an extension when it earns its place.** If the code can live directly in the type's own file, put it there. A private helper used only inside `Foo` belongs in `Foo.swift`, not in a separate extension.
@@ -225,10 +266,10 @@ The app's smoothness depends on keeping three classes of work apart. Mixing them
 
 Rules:
 
-- `async`/`await` for asynchronous work; no completion handlers in new code.
+- `async`/`await` for application asynchronous work. Keep platform-required callbacks, such as Objective-C XPC reply blocks, inside transport adapters and expose async interfaces to consumers.
 - Heavy work (decode, IO, parse) stays off the main actor and never stalls the compositor.
 - Cross the actor boundary explicitly when handing a finished result back to the UI; do not let observation reach into background-mutated state.
-- Widgets obey all three rules — the `WidgetContext` is the only sanctioned way for a widget to do background work.
+- New addon providers run in their controlled process and use SDK clients for managed services. `WidgetContext` is only the legacy/internal presentation seam; it is not an isolation boundary or the new background-work API.
 
 ## Performance-critical code (the fast path)
 
@@ -255,7 +296,7 @@ func controlPoints(for geometry: NotchGeometry) -> InlineArray<8, CGPoint> {
   - guarantee the bounds before entering the unsafe region.
 - **Do not allocate in the `CADisplayLink` callback**, and avoid per-frame allocation in the morph loop generally. The spring integrator is pure value math on the stack.
 - **Renderer:** update the `path` of a `CAShapeLayer` instead of overriding `draw(_:)`, so the GPU does the rasterization. The morph runs on its own layer; opening one side must never trigger a recompute of unrelated layers. Target 120 Hz or better.
-- **Widgets pay rent in the budget too.** A widget's main-actor entry points are frame-bounded; anything slower is a contract violation (see **Widget plugin protocol**).
+- **Widgets pay rent in the budget too.** Host rendering adapters are frame-bounded; provider work, remote scenes and shared services count in the common resource policy. Apply the same admission and supervision to bundled and external addons.
 - When you optimize, **say what you traded and why** in a comment. An unexplained `UnsafeMutablePointer` is a future bug.
 
 ## Error handling
@@ -268,7 +309,7 @@ func controlPoints(for geometry: NotchGeometry) -> InlineArray<8, CGPoint> {
 
 - One main type per file; file name = type name. The file opens with the header banner (see **File header**).
 - `private` / `fileprivate` for everything that is not part of the public contract.
-- The **widget SDK surface** (`NotchWidget`, `WidgetContext`, `NotchRegion`, identifiers) is the deliberately-public seam — mark it `public` on purpose and keep it small and stable, so widget authors depend on a clean contract.
+- The **addon SDK surface** is limited to the public contracts, content components and provider/service clients defined in the implementation plan. Keep host engine, windows, monitors and runtime administration out of those products. Existing public notch protocols are a migration surface, not the API for future third-party or Cascade widgets.
 - `private(set)` for read-only exposed state.
 - Use extensions to separate protocol conformances (`extension Foo: SomeProtocol { … }`) — kept in the type's own file unless the Extensions rule above applies.
 - `// MARK: -` to separate sections of a long file.

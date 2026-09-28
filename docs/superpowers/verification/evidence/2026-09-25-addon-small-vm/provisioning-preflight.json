@@ -1,0 +1,32 @@
+[
+  {
+    "bundle": "BrokerRecovery.app",
+    "entitlements": "",
+    "profile": "none",
+    "codesignStderr": "Executable=/private/tmp/cascade-addon-vm/payload/products/BrokerRecovery.app/Contents/MacOS/BrokerRecovery\n"
+  },
+  {
+    "bundle": "Build/Build/Products/Debug/CascadeAddonProbeContainer.app",
+    "entitlements": "",
+    "profile": "none",
+    "codesignStderr": "Executable=/private/tmp/cascade-addon-vm/payload/products/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/MacOS/ProbeContainer\n"
+  },
+  {
+    "bundle": "Build/Build/Products/Debug/CascadeAddonProbe.app",
+    "entitlements": "",
+    "profile": "none",
+    "codesignStderr": "Executable=/private/tmp/cascade-addon-vm/payload/products/Build/Build/Products/Debug/CascadeAddonProbe.app/Contents/MacOS/ProbeHost\n"
+  },
+  {
+    "bundle": "Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+    "entitlements": "[Dict]\n\t[Key] com.apple.security.app-sandbox\n\t[Value]\n\t\t[Bool] true\n",
+    "profile": "none",
+    "codesignStderr": "Executable=/private/tmp/cascade-addon-vm/payload/products/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex/Contents/MacOS/ProbeProvider\n"
+  },
+  {
+    "bundle": "BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+    "entitlements": "[Dict]\n\t[Key] com.apple.security.app-sandbox\n\t[Value]\n\t\t[Bool] true\n",
+    "profile": "none",
+    "codesignStderr": "Executable=/private/tmp/cascade-addon-vm/payload/products/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc/Contents/MacOS/DiscoveryBroker\n"
+  }
+]

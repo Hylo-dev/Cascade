@@ -5,10 +5,13 @@
 
 import AppKit
 import Observation
+import OSLog
 import QuartzCore
+import SwiftUI
 
-/// NotchController is the brain of the notch: it owns the discrete state, wires
-/// the event monitor to the morph, and runs the per-frame spring math.
+private let fileDropLog = Logger(subsystem: "hylo.Cascade", category: "FileDrop")
+
+/// NotchController renders and animates one panel anchored to one display.
 ///
 /// Two layers of state live here on purpose:
 ///
@@ -21,21 +24,85 @@ import QuartzCore
 ///   hears about the discrete transitions.
 @Observable
 @MainActor
-final class NotchController {
+final class NotchController: NotchDisplayPresenting {
 
     private(set) var state        : NotchState = .closed
     private(set) var activeDisplay: ActiveDisplay?
 
+    @ObservationIgnored
+    var onExpandedFrameChanged: ((CGRect?) -> Void)?
+
+    var onSettingsRequested: (() -> Void)? {
+        get { hostView.onSettingsRequested }
+        set { hostView.onSettingsRequested = newValue }
+    }
+
+    /// expandedFrame exposes the target silhouette in global AppKit coordinates,
+    /// so an adjacent window never relies on the full-width overlay panel frame.
+    var expandedFrame: CGRect? {
+        guard isStarted, isPanelVisible, let display = activeDisplay else { return nil }
+        return expandedRegion(for: display)
+    }
+
+    /// restingFrame exposes the actual compact silhouette in global AppKit
+    /// coordinates. Auxiliary surfaces can share this anchor without deriving
+    /// it from the full-width overlay window.
+    var restingFrame: CGRect? {
+        guard isStarted, isPanelVisible, let display = activeDisplay else { return nil }
+        let size = restingSize(for: display)
+        return CGRect(
+            x     : display.frame.midX - size.width / 2,
+            y     : display.frame.maxY - size.height,
+            width : size.width,
+            height: size.height
+        )
+    }
+
     @ObservationIgnored private let configuration: NotchConfiguration
-    @ObservationIgnored private let resolver     : ActiveDisplayResolving
-    @ObservationIgnored private let monitor      : EventMonitoring
     @ObservationIgnored private let morphEngine  : MorphEngineDriving
     @ObservationIgnored private let panel        : NotchPanel
     @ObservationIgnored private let hostView     : NotchHostView
+    @ObservationIgnored let fileDropReceiverPanel: NotchFileDropReceiverPanel
     @ObservationIgnored private let windowPinner : WindowPinning
+    @ObservationIgnored private let hoverFeedback: HoverFeedback
+    @ObservationIgnored private let reducesMotion: () -> Bool
+    @ObservationIgnored private let sizeCalibration: NotchSizeCalibration
+    @ObservationIgnored private let softwareMetrics = SoftwareNotchMetrics()
 
     @ObservationIgnored private var leadingSpring : Spring
     @ObservationIgnored private var trailingSpring: Spring
+    @ObservationIgnored private var compactSpring : Spring
+    @ObservationIgnored private var heightSpring  : Spring
+    @ObservationIgnored private var compactTrailingSpring: Spring
+    @ObservationIgnored private var bubbleSpring: Spring
+    @ObservationIgnored private var dragHeartbeatSpring: Spring
+    @ObservationIgnored private var dragHeartbeatPhase = 0
+    @ObservationIgnored private var isRecognizedFileDragActive = false
+    @ObservationIgnored private var fileDragHasValidatedOfferHint = false
+    @ObservationIgnored private var hasAuthoritativeNativeFileHover = false
+    @ObservationIgnored private var fileDragPhysicalGestureEnded = false
+    @ObservationIgnored private var hasAttemptedFileDragTopEdgeGuard = false
+    @ObservationIgnored private var loggedFileDragWindowReady = false
+    @ObservationIgnored private var isAttachingSecondary = false
+    @ObservationIgnored private var presentedActivityID: String?
+    @ObservationIgnored private var presentedSecondaryActivityID: String?
+    @ObservationIgnored private var isReplacingActivity = false
+    @ObservationIgnored private var clickedOpen = false
+    @ObservationIgnored private var hoverExitTask: Task<Void, Never>?
+    @ObservationIgnored private var pendingExitPoint: CGPoint?
+
+    /// Insets belong to the shared renderer rather than providers. Compact
+    /// content remains readable inside a narrow wing, while expanded content
+    /// clears the physical cutout and the rounded lower edge.
+    @ObservationIgnored private let compactOuterInset     : CGFloat = 12
+    @ObservationIgnored private let compactInnerInset     : CGFloat = 2
+    @ObservationIgnored private let compactVerticalInset  : CGFloat = 6
+    @ObservationIgnored private let expandedHorizontalInset: CGFloat = 20
+    @ObservationIgnored private let expandedTopInset       : CGFloat = 4
+    @ObservationIgnored private let expandedBottomInset    : CGFloat = 16
+    @ObservationIgnored private let staleAccessoryWidth     : CGFloat = 18
+    @ObservationIgnored private let openAccessoryWidth      : CGFloat = 76
+    @ObservationIgnored private let hiddenExpandedHeight    : CGFloat = 40
 
     /// Slack (in points) added around the stay-open region. It absorbs pointer
     /// jitter at the edges and — crucially — extends the region past the very
@@ -44,7 +111,67 @@ final class NotchController {
     /// notch shut the moment the pointer reaches the screen edge.
     @ObservationIgnored private let hoverHysteresis: CGFloat = 8
 
-    @ObservationIgnored private let widgetHost = WidgetHost()
+    @ObservationIgnored private let widgetHost   : WidgetHost
+    @ObservationIgnored private let activityHost : LiveActivityHost
+    @ObservationIgnored private let fileDragTopEdgeGuard: any FileDragTopEdgeGuardOperating
+    @ObservationIgnored private var fixedDisplay: ActiveDisplay
+    @ObservationIgnored private var displayPresentation: DisplayPresentation?
+    @ObservationIgnored private var presentationKey: LocalPresentationKey?
+    @ObservationIgnored private var outgoingActivityRoots: [any NotchActivity] = []
+    @ObservationIgnored private var retainsLiveActivityGeometry = false
+    @ObservationIgnored private var pendingCollapseGeneration: UInt64?
+    @ObservationIgnored private var localRequestGeneration: UInt64 = 0
+    @ObservationIgnored private var pendingHoverGeneration: UInt64?
+    @ObservationIgnored private var isApplyingCoordinatorPresentation = false
+
+    @ObservationIgnored var onExpansionRequested: ((DisplayExpansionRequest) -> Void)?
+    @ObservationIgnored var onExpansionCancelled: ((UInt64) -> Void)?
+    @ObservationIgnored var onCollapseRequested: (() -> Void)?
+    @ObservationIgnored var onCollapseFinished: ((UInt64) -> Void)?
+    @ObservationIgnored var onInteractionHoldChanged: ((NotchInteractionKind, Bool) -> Void)?
+    @ObservationIgnored var onDragOwnershipChanged: ((Bool) -> Void)?
+    @ObservationIgnored var onRetainedActivityRootsChanged: (() -> Void)?
+    @ObservationIgnored var onFileDragHoverChanged: (([URL]?) -> Void)?
+    @ObservationIgnored var onFileDrop: (([URL]) -> Bool)?
+    @ObservationIgnored var onUnsupportedFileDrop: (() -> Void)?
+
+    var retainedActivityRoots: [any NotchActivity] {
+        let mounted = mountedActivityRoots
+        let mountedIdentities = Set(mounted.map(ObjectIdentifier.init))
+        return mounted + outgoingActivityRoots.filter {
+            !mountedIdentities.contains(ObjectIdentifier($0))
+        }
+    }
+
+    @ObservationIgnored private var isStarted           = false
+    @ObservationIgnored private var isExternalSurfacePresented = false
+    @ObservationIgnored private var isSettingsFocused = false
+    @ObservationIgnored private var isPanelVisible      = false
+    @ObservationIgnored private var isControlDragActive = false
+    @ObservationIgnored private var dragReleaseTask     : Task<Void, Never>?
+    @ObservationIgnored private var isSensitiveContentVisible = false
+    @ObservationIgnored private var isReturningToBase = false
+    @ObservationIgnored private var preferredCompactSideWidth: CGFloat = 0
+    @ObservationIgnored private var baseBorderAppearance: NotchBorderAppearance = .neutral
+
+    private struct LocalPresentationKey: Equatable {
+        let primaryIdentity  : ObjectIdentifier?
+        let primaryRevision  : UInt64?
+        let secondaryIdentity: ObjectIdentifier?
+        let secondaryRevision: UInt64?
+        let noticeIdentity   : ObjectIdentifier?
+        let noticeRevision   : UInt64?
+        let expandedIdentity : ObjectIdentifier?
+        let expandedRevision : UInt64?
+        let expandedIsLiveActivity: Bool
+        let showsWidgets     : Bool
+        let contextualPageIdentity: ObjectIdentifier?
+        let contextualPageID: String?
+        let contextualPageRevision: UInt64?
+        let contextualPageIsSelected: Bool
+        let widgetContentRevision: UInt64
+        let style            : ExternalNotchStyle
+    }
 
     /// The previous pointer sample, so we can test the *segment* travelled since
     /// the last event — a fast flick can land samples on both sides of the small
@@ -58,22 +185,67 @@ final class NotchController {
 
     init(
         configuration: NotchConfiguration,
-        resolver     : ActiveDisplayResolving,
-        monitor      : EventMonitoring,
+        display      : ActiveDisplay,
         morphEngine  : MorphEngineDriving,
         panel        : NotchPanel,
         hostView     : NotchHostView,
-        windowPinner : WindowPinning
+        windowPinner : WindowPinning,
+        hoverFeedback: HoverFeedback,
+        sizeCalibration: NotchSizeCalibration,
+        activityHost : LiveActivityHost,
+        widgetHost   : WidgetHost,
+        fileDropReceiverPanel: NotchFileDropReceiverPanel? = nil,
+        fileDragTopEdgeGuard: (any FileDragTopEdgeGuardOperating)? = nil,
+        reducesMotion: @escaping () -> Bool = {
+            NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        }
     ) {
         self.configuration  = configuration
-        self.resolver       = resolver
-        self.monitor        = monitor
         self.morphEngine    = morphEngine
         self.panel          = panel
         self.hostView       = hostView
+        self.fileDropReceiverPanel = fileDropReceiverPanel ?? NotchFileDropReceiverPanel()
         self.windowPinner   = windowPinner
+        self.hoverFeedback  = hoverFeedback
+        self.reducesMotion  = reducesMotion
+        self.sizeCalibration = sizeCalibration
+        self.activityHost   = activityHost
+        self.widgetHost     = widgetHost
+        self.fileDragTopEdgeGuard = fileDragTopEdgeGuard ?? FileDragTopEdgeGuard()
+        self.fixedDisplay   = display
         self.leadingSpring  = Spring(parameters: configuration.spring)
         self.trailingSpring = Spring(parameters: configuration.spring)
+        self.compactSpring  = Spring(parameters: configuration.spring)
+        self.heightSpring   = Spring(parameters: configuration.spring)
+        self.compactTrailingSpring = Spring(parameters: configuration.spring)
+        self.bubbleSpring = Spring(parameters: configuration.spring)
+        self.dragHeartbeatSpring = Spring(parameters: configuration.spring)
+        sizeCalibration.onChange = { [weak self] in self?.applySizeCalibrationPreview() }
+        sizeCalibration.onFinish = { [weak self] in
+            self?.finishSizeCalibrationPresentation()
+            self?.onInteractionHoldChanged?(.calibration, false)
+        }
+        hostView.onFileDragHoverChanged = { [weak self] urls in
+            guard let self else { return }
+            if let urls, !urls.isEmpty {
+                self.hasAuthoritativeNativeFileHover = true
+                self.onFileDragHoverChanged?(urls)
+                self.armFileDragTopEdgeGuardIfEligible(
+                    at: self.lastPointer ?? NSEvent.mouseLocation,
+                    hasAuthoritativeNativeHover: true
+                )
+            } else {
+                self.hasAuthoritativeNativeFileHover = false
+                self.fileDragTopEdgeGuard.stop()
+                if !self.fileDragPhysicalGestureEnded,
+                   self.fileDragTopEdgeGuard.availability != .unavailable {
+                    self.hasAttemptedFileDragTopEdgeGuard = false
+                }
+                self.onFileDragHoverChanged?(urls)
+            }
+        }
+        hostView.onFileDrop = { [weak self] in self?.onFileDrop?($0) ?? false }
+        hostView.onUnsupportedFileDrop = { [weak self] in self?.onUnsupportedFileDrop?() }
     }
 
     // MARK: - Lifecycle
@@ -81,44 +253,269 @@ final class NotchController {
     /// Resolve the active display, place the panel, and start listening.
     func start() {
 
-        hostView.setChromeColor(configuration.chromeColor)
+        guard !isStarted else {
+            return
+        }
 
-        widgetHost.onContentChanged = { [weak self] in
-            self?.renderContent()
+        isStarted = true
+        lastPointer = nil
+        dragReleaseTask?.cancel()
+        dragReleaseTask = nil
+        isRecognizedFileDragActive = false
+        fileDragHasValidatedOfferHint = false
+        hasAuthoritativeNativeFileHover = false
+        fileDragPhysicalGestureEnded = true
+        hasAttemptedFileDragTopEdgeGuard = false
+        fileDragTopEdgeGuard.stop()
+        fileDropReceiverPanel.deactivate()
+
+        hostView.setChromeColor(configuration.chromeColor)
+        hostView.auxiliaryInteraction.onDismiss = { [weak self] in
+            Task { @MainActor [weak self] in
+                // Dismissal can originate in a state change or view teardown.
+                // Re-evaluate only after that transaction has finished.
+                await Task.yield()
+                guard let self, self.isStarted, self.isPanelVisible,
+                      let point = self.lastPointer else { return }
+                self.handlePointer(at: point)
+            }
+        }
+        hostView.auxiliaryInteraction.onActiveChanged = { [weak self] isActive in
+            self?.onInteractionHoldChanged?(.popover, isActive)
         }
 
         refreshActiveDisplay()
-
-        monitor.onPointerMoved = { [weak self] location in
-            self?.handlePointer(at: location)
-        }
-
-        monitor.onActiveDisplayMayHaveChanged = { [weak self] in
-            self?.refreshActiveDisplay()
-        }
-
-        monitor.onSpaceChanged = { [weak self] in
-            self?.handleSpaceChange()
-        }
-
-        monitor.onScreenLocked = { [weak self] in
-            // Hide while locked so the overlay never shows on the login screen.
-            self?.panel.orderOut(nil)
-        }
-
-        monitor.onScreenUnlocked = { [weak self] in
-            self?.presentPanel()
-        }
-
-        monitor.start()
+        isPanelVisible = true
+        renderCurrentFrame()
+        renderContent()
+        startMorphIfNeeded()
         presentPanel()
     }
 
     /// Hide the overlay and stop all observation and animation.
     func stop() {
-        monitor.stop()
+        guard isStarted else {
+            return
+        }
+
+        hostView.auxiliaryInteraction.onDismiss = nil
+        hostView.auxiliaryInteraction.onActiveChanged = nil
+        isStarted           = false
+        isExternalSurfacePresented = false
+        isSettingsFocused = false
+        isPanelVisible      = false
+        isControlDragActive = false
+        dragReleaseTask?.cancel()
+        dragReleaseTask = nil
+        isRecognizedFileDragActive = false
+        fileDragHasValidatedOfferHint = false
+        hasAuthoritativeNativeFileHover = false
+        fileDragPhysicalGestureEnded = true
+        hasAttemptedFileDragTopEdgeGuard = false
+        fileDragTopEdgeGuard.stop()
+        fileDropReceiverPanel.deactivate()
+        fileDropReceiverPanel.orderOut(nil)
+        lastPointer = nil
+        hoverFeedback.update(isHovering: false)
         morphEngine.stop()
+        state = .closed
+        isReturningToBase = false
+        leadingSpring.snap(to: 0)
+        trailingSpring.snap(to: 0)
+        compactSpring.snap(to: 0)
+        compactTrailingSpring.snap(to: 0)
+        bubbleSpring.snap(to: 0)
+        isAttachingSecondary = false
+        presentedActivityID = nil
+        presentedSecondaryActivityID = nil
+        isReplacingActivity = false
+        clickedOpen = false
+        cancelHoverExit()
+        hostView.auxiliaryInteraction.dismiss()
+        heightSpring.snap(to: activeDisplay.map { Double(restingSize(for: $0).height) } ?? 0)
+        outgoingActivityRoots.removeAll()
+        retainsLiveActivityGeometry = false
+        displayPresentation = nil
+        presentationKey = nil
+        pendingCollapseGeneration = nil
+        pendingHoverGeneration = nil
+        sizeCalibration.finish(save: false)
+        hostView.setContent(AnyView(EmptyView()), frame: .zero, isVisible: false)
+        hostView.clearActivityContent()
+        hostView.setSettingsButton(frame: .zero, isVisible: false)
+        hostView.setFileDropIntakeFrame(nil)
+        onExpandedFrameChanged?(nil)
+        panel.ignoresMouseEvents = true
         panel.orderOut(nil)
+    }
+
+    /// updateDisplay changes only this surface's fixed geometry. Focus changes
+    /// never call it; inventory topology is the sole owner of panel placement.
+    func updateDisplay(_ display: ActiveDisplay) {
+        fixedDisplay = display
+        guard isStarted else { return }
+        let changed = activeDisplay != display
+        activeDisplay = display
+        guard changed else { return }
+        sizeCalibration.finish(save: false)
+        layoutPanel(for: display)
+        heightSpring.snap(to: Double(morphTargets(for: display).height))
+        renderContent()
+        renderCurrentFrame()
+        startMorphIfNeeded()
+    }
+
+    /// applyPresentation accepts a host-validated projection. The coordinator
+    /// has already activated every provider before this method can call a view
+    /// factory, including during same-ID replacement overlap.
+    func applyPresentation(_ presentation: DisplayPresentation) {
+        if shouldCloseBeforeApplyingStyle(presentation.style) {
+            if pendingCollapseGeneration == nil {
+                onCollapseRequested?()
+            }
+            return
+        }
+        let nextKey = localPresentationKey(for: presentation)
+        let targetState: NotchState = presentation.isExpanded
+            && pendingCollapseGeneration == nil ? .open : .closed
+        if !targetState.isClosed {
+            pendingHoverGeneration = nil
+        }
+        if presentationKey == nextKey,
+           state == targetState {
+            return
+        }
+        let previousRoots = mountedActivityRoots
+        let incomingIdentities = Set(presentation.visibleActivityRoots.map(ObjectIdentifier.init))
+        let outgoing = previousRoots.filter {
+            !incomingIdentities.contains(ObjectIdentifier($0))
+        }
+        let outgoingWasLive = !outgoing.isEmpty
+            && displayPresentation?.expandedIsLiveActivity == true
+
+        displayPresentation = presentation
+        presentationKey = nextKey
+        if keepsContextualPresentationExpanded {
+            cancelHoverExit()
+        }
+        if !outgoing.isEmpty, !reducesMotion() {
+            outgoingActivityRoots = outgoing
+            retainsLiveActivityGeometry = outgoingWasLive
+            isReplacingActivity = true
+            isReturningToBase = true
+            onRetainedActivityRootsChanged?()
+        } else if !outgoingActivityRoots.isEmpty {
+            outgoingActivityRoots.removeAll()
+            if !isReturningToBase {
+                retainsLiveActivityGeometry = false
+            }
+            onRetainedActivityRootsChanged?()
+        }
+
+        let previousState = state
+        isApplyingCoordinatorPresentation = true
+        setState(targetState)
+        isApplyingCoordinatorPresentation = false
+        if state == previousState {
+            renderContent()
+        }
+        renderCurrentFrame()
+        startMorphIfNeeded()
+    }
+
+    private func shouldCloseBeforeApplyingStyle(
+        _ style: ExternalNotchStyle
+    ) -> Bool {
+        guard let display = activeDisplay,
+              !display.hasHardwareNotch,
+              let currentStyle = displayPresentation?.style,
+              currentStyle != style else { return false }
+        return !state.isClosed
+            || isReturningToBase
+            || leadingSpring.value > 0
+            || trailingSpring.value > 0
+    }
+
+    private func localPresentationKey(
+        for presentation: DisplayPresentation
+    ) -> LocalPresentationKey {
+        LocalPresentationKey(
+            primaryIdentity  : presentation.primary.map(ObjectIdentifier.init),
+            primaryRevision  : presentation.primary?.contentRevision,
+            secondaryIdentity: presentation.secondary.map(ObjectIdentifier.init),
+            secondaryRevision: presentation.secondary?.contentRevision,
+            noticeIdentity   : presentation.notice.map(ObjectIdentifier.init),
+            noticeRevision   : presentation.notice?.contentRevision,
+            expandedIdentity : presentation.expanded.map(ObjectIdentifier.init),
+            expandedRevision : presentation.expanded?.contentRevision,
+            expandedIsLiveActivity: presentation.expandedIsLiveActivity,
+            showsWidgets     : presentation.showsWidgets,
+            contextualPageIdentity: presentation.contextualPage.map(ObjectIdentifier.init),
+            contextualPageID: presentation.contextualPage?.id,
+            contextualPageRevision: presentation.contextualPage?.contentRevision,
+            contextualPageIsSelected: presentation.contextualPageIsSelected,
+            widgetContentRevision: presentation.widgetContentRevision,
+            style            : presentation.style
+        )
+    }
+
+    func discardRetainedActivityRoots(_ identities: Set<ObjectIdentifier>) {
+        let remaining = outgoingActivityRoots.filter {
+            !identities.contains(ObjectIdentifier($0))
+        }
+        guard remaining.count != outgoingActivityRoots.count else { return }
+        outgoingActivityRoots = remaining
+        hostView.clearActivityContent()
+        presentationKey = nil
+        onRetainedActivityRootsChanged?()
+    }
+
+    /// close starts local collapse and reports completion only from the morph's
+    /// exact compact/base completion path, including reduced motion.
+    func close(
+        animated  : Bool,
+        generation: UInt64
+    ) {
+        pendingCollapseGeneration = generation
+        isApplyingCoordinatorPresentation = true
+        setState(.closed)
+        isApplyingCoordinatorPresentation = false
+        startMorphIfNeeded()
+    }
+
+    func cancelClose() {
+        guard pendingCollapseGeneration != nil else { return }
+        pendingCollapseGeneration = nil
+        isReturningToBase = false
+        isReplacingActivity = false
+        isApplyingCoordinatorPresentation = true
+        setState(.open)
+        isApplyingCoordinatorPresentation = false
+        renderContent()
+        startMorphIfNeeded()
+    }
+
+    func setVisible(_ isVisible: Bool) {
+        if isVisible {
+            restoreAfterScreenUnlock()
+        } else {
+            hideForScreenLock()
+        }
+    }
+
+    private var mountedActivityRoots: [any NotchActivity] {
+        if let primary = displayedPrimaryActivity {
+            if state.isClosed, let secondary = displayedSecondaryActivity {
+                return [primary, secondary]
+            }
+            return [primary]
+        }
+        return []
+    }
+
+    private var keepsContextualPresentationExpanded: Bool {
+        displayPresentation?.contextualPageIsSelected == true
+            && displayPresentation?.contextualPage?.keepsExpandedPresentation == true
     }
 
     /// Order the panel on screen and pin it into its SkyLight space. Pinning has
@@ -126,13 +523,119 @@ final class NotchController {
     /// also call this on unlock, because hiding the window can drop its space
     /// membership and it must be re-pinned to stay anchored.
     private func presentPanel() {
+        // Keep the ignored receiver visible in the active AppKit Space before
+        // Finder starts its session. QA proved that a registered window in the
+        // private SkyLight space is excluded from native destination routing.
+        fileDropReceiverPanel.setFrame(panel.frame, display: false)
+        fileDropReceiverPanel.orderFrontRegardless()
         panel.orderFrontRegardless()
         windowPinner.pin(panel)
     }
 
-    /// Register a widget with the host. Safe to call before or after `start()`.
-    func register(_ widget: NotchWidget) {
-        widgetHost.register(widget)
+    /// beginSizeCalibration freezes the bare compact silhouette while the user
+    /// aligns it with the physical cutout. Live sessions retain their deadlines.
+    func beginSizeCalibration() -> Bool {
+        guard isStarted, isPanelVisible, let display = activeDisplay,
+              display.hasHardwareNotch else { return false }
+        sizeCalibration.begin(on: display, size: restingSize(for: display))
+        return sizeCalibration.isActive
+    }
+
+    private func applySizeCalibrationPreview() {
+        guard isStarted, isPanelVisible, let display = activeDisplay else { return }
+        isReturningToBase = false
+        state = .closed
+        isControlDragActive = false
+        dragReleaseTask?.cancel()
+        dragReleaseTask = nil
+        lastPointer = nil
+        hoverFeedback.update(isHovering: false)
+        morphEngine.stop()
+        leadingSpring.snap(to: 0)
+        trailingSpring.snap(to: 0)
+        compactSpring.snap(to: 0)
+        compactTrailingSpring.snap(to: 0)
+        bubbleSpring.snap(to: 0)
+        isAttachingSecondary = false
+        presentedActivityID = nil
+        presentedSecondaryActivityID = nil
+        isReplacingActivity = false
+        clickedOpen = false
+        cancelHoverExit()
+        hostView.auxiliaryInteraction.dismiss()
+        heightSpring.snap(to: Double(restingSize(for: display).height))
+        renderContent()
+        renderCurrentFrame()
+        panel.ignoresMouseEvents = true
+    }
+
+    private func finishSizeCalibrationPresentation() {
+        guard isStarted, isPanelVisible, let display = activeDisplay else { return }
+        lastPointer = nil
+        heightSpring.snap(to: Double(restingSize(for: display).height))
+        renderContent()
+        renderCurrentFrame()
+        startMorphIfNeeded()
+    }
+
+    /// displayedPrimaryActivity resolves only the root this local renderer is
+    /// allowed to mount. Shared selection stays in the coordinator.
+    private var displayedPrimaryActivity: (any NotchActivity)? {
+        guard let displayPresentation else { return nil }
+        if state.isClosed {
+            return displayPresentation.notice ?? displayPresentation.primary
+        }
+        return displayPresentation.expanded
+    }
+
+    /// displayedSecondaryActivity is present only in the real compact layout.
+    private var displayedSecondaryActivity: (any NotchLiveActivity)? {
+        guard let displayPresentation else { return nil }
+        guard state.isClosed, displayPresentation.notice == nil else { return nil }
+        return displayPresentation.secondary
+    }
+
+    private var displayedContextualPage: (any NotchContextualPage)? {
+        guard !state.isClosed,
+              displayPresentation?.contextualPageIsSelected == true else { return nil }
+        return displayPresentation?.contextualPage
+    }
+
+    /// Set whether accepted hover entries request AppKit haptic feedback.
+    func setHapticsEnabled(_ isEnabled: Bool) {
+        hoverFeedback.isEnabled = isEnabled
+    }
+
+    /// setBorderAppearance retains the latest status underneath a visible
+    /// activity override. A network change never rebuilds content or starts a morph.
+    func setBorderAppearance(_ appearance: NotchBorderAppearance) {
+        guard baseBorderAppearance != appearance else { return }
+        baseBorderAppearance = appearance
+        updateBorderAppearance()
+    }
+
+    /// updateBorderAppearance resolves the visible provider on each discrete
+    /// presentation change, so dismissal restores current rather than old state.
+    private func updateBorderAppearance() {
+        var appearance = baseBorderAppearance
+        if isStarted, isPanelVisible, !isReturningToBase,
+           let activity = displayedPrimaryActivity,
+           activity.privacy != .sensitive || isSensitiveContentVisible {
+            appearance = activity.borderAppearance ?? appearance
+        }
+        hostView.setBorderAppearance(appearance, animated: !reducesMotion() && isPanelVisible)
+    }
+
+    /// Reveal or redact sensitive provider content globally. Redaction rebuilds
+    /// the shared surface without invoking any sensitive view factory.
+    func setSensitiveContentVisible(_ isVisible: Bool) {
+        guard isSensitiveContentVisible != isVisible else { return }
+        isSensitiveContentVisible = isVisible
+        // A retained satellite root may still be travelling into the expanded
+        // surface. Redaction must revoke that old tree in the same transaction.
+        if !isVisible { hostView.clearDetachedActivityContent() }
+        renderContent()
+        startMorphIfNeeded()
     }
 
     // MARK: - Active display
@@ -142,11 +645,11 @@ final class NotchController {
     /// mouse drifting within one screen never triggers window work.
     private func refreshActiveDisplay() {
 
-        guard let display = resolver.resolveActiveDisplay() else {
-            return
-        }
+        let display = fixedDisplay
 
-        let didChange = display.displayID != activeDisplay?.displayID
+        let didChange = display != activeDisplay
+
+        if didChange { sizeCalibration.finish(save: false) }
 
         activeDisplay = display
 
@@ -155,7 +658,15 @@ final class NotchController {
         }
 
         layoutPanel(for: display)
+        heightSpring.snap(to: Double(morphTargets(for: display).height))
+        renderContent()
+        // Moving to a narrower display must not leave the old absolute wing
+        // width outside its new bounds, even while the display link was idle.
+        let safeWidth = Double(compactExtension(for: display))
+        if compactSpring.value > safeWidth { compactSpring.snap(to: safeWidth) }
+        if compactTrailingSpring.value > safeWidth { compactTrailingSpring.snap(to: safeWidth) }
         renderCurrentFrame()
+        startMorphIfNeeded()
     }
 
     /// Park the panel as a fixed band across the top of the active screen. The
@@ -163,7 +674,20 @@ final class NotchController {
     /// morphing — only the layer path moves, which is cheap.
     private func layoutPanel(for display: ActiveDisplay) {
 
-        let bandHeight = configuration.expandedHeight
+        let visualOutset = NotchBorderRenderer.visualOutset
+        // Reserve overshoot in the fixed canvas, so even the tallest activity can bounce.
+        let softwareDropletDepth = display.hasHardwareNotch
+            ? 0
+            : softwareMetrics.restingSize.height + softwareMetrics.bodyOffset
+        let canvasHeight = ceil(
+            max(
+                normalizedMaximumExpandedHeight(),
+                normalizedActivityMaximumHeight(),
+                compactContentHeight(for: display),
+                restingSize(for: display).height
+            ) * 1.18 + softwareDropletDepth
+        )
+        let bandHeight = canvasHeight + visualOutset
         let frame      = CGRect(
             x     : display.frame.minX,
             y     : display.frame.maxY - bandHeight,
@@ -172,16 +696,73 @@ final class NotchController {
         )
 
         panel.setFrame(frame, display: true)
-        hostView.frame = CGRect(origin: .zero, size: frame.size)
+        hostView.frame = CGRect(
+            x     : 0,
+            y     : visualOutset,
+            width : frame.width,
+            height: canvasHeight
+        )
+        updateFileDropIntakeFrame(for: display)
+    }
+
+    /// setExternalSurfacePresented reserves the notch origin for a system-surface
+    /// transition. Hover and clicks cannot expand a competing local surface.
+    func setExternalSurfacePresented(_ isPresented: Bool) {
+        guard isExternalSurfacePresented != isPresented else { return }
+        isExternalSurfacePresented = isPresented
+        lastPointer = nil
+        if isPresented {
+            isRecognizedFileDragActive = false
+            fileDragHasValidatedOfferHint = false
+            hasAuthoritativeNativeFileHover = false
+            fileDragPhysicalGestureEnded = true
+            hasAttemptedFileDragTopEdgeGuard = false
+            hostView.setFileDropIntakeFrame(nil)
+            fileDropReceiverPanel.deactivate()
+            fileDragTopEdgeGuard.stop()
+            dragHeartbeatPhase = 0
+            dragHeartbeatSpring.snap(to: 0)
+            cancelHoverExit()
+            clickedOpen = false
+            isControlDragActive = false
+            hostView.auxiliaryInteraction.dismiss()
+            hoverFeedback.update(isHovering: false)
+            setState(.closed)
+            panel.ignoresMouseEvents = true
+        } else if isSettingsFocused, isStarted, isPanelVisible, !sizeCalibration.isActive {
+            // A cancelled Spotlight handoff may never take keyboard focus away
+            // from settings. Restore its expansion without waiting for re-focus.
+            setState(.open, trigger: .settings)
+        }
     }
 
     // MARK: - Interaction
+
+    /// setSettingsFocused holds expansion for keyboard interaction, independent
+    /// of hover. Releasing focus immediately re-evaluates the last pointer sample.
+    func setSettingsFocused(_ isFocused: Bool) {
+        guard isSettingsFocused != isFocused else { return }
+        isSettingsFocused = isFocused
+        cancelHoverExit()
+        if isFocused {
+            guard isStarted, isPanelVisible, !sizeCalibration.isActive,
+                  !isExternalSurfacePresented else { return }
+            setState(.open, trigger: .settings)
+        } else {
+            clickedOpen = false
+            handlePointer(at: lastPointer ?? NSEvent.mouseLocation)
+        }
+    }
 
     /// Decide whether the pointer at `location` should open or close the notch.
     /// While closed we open when the pointer enters the resting trigger band;
     /// while open we close only when it leaves the *expanded* region, so sliding
     /// down into the open notch does not immediately snap it shut.
-    private func handlePointer(at location: CGPoint) {
+    func handlePointer(at location: CGPoint) {
+
+        guard isStarted, isPanelVisible, !sizeCalibration.isActive, !isExternalSurfacePresented else {
+            return
+        }
 
         guard let display = activeDisplay else {
             lastPointer = location
@@ -189,13 +770,64 @@ final class NotchController {
         }
 
         // Remember this sample for the next segment test, whatever we decide.
-        defer { lastPointer = location }
+        defer {
+            lastPointer = location
+            updatePanelMouseInterception(at: location)
+            armFileDragTopEdgeGuardIfEligible(
+                at: location,
+                hasAuthoritativeNativeHover: hasAuthoritativeNativeFileHover
+            )
+        }
+
+        if isSettingsFocused {
+            cancelHoverExit()
+            return
+        }
+
+        hostView.auxiliaryInteraction.updatePointer(at: location)
+        if hostView.auxiliaryInteraction.contains(location) {
+            cancelHoverExit()
+            return
+        }
+
+        // The control that received mouse-down must stay alive until AppKit has
+        // delivered mouse-up. Drag samples still update the remembered pointer,
+        // but they cannot collapse and replace its SwiftUI hosting root.
+        guard !isControlDragActive else {
+            return
+        }
 
         if state.isClosed {
+            if isRecognizedFileDragActive {
+                let nearDropZone = fileDragIntakeRegion(for: display)
+                if nearDropZone.intersects(segmentFrom: lastPointer ?? location, to: location) {
+                    if isMissionControlShowing {
+                        isMissionControlShowing = isMissionControlActive()
+                    }
+                    if !isMissionControlShowing {
+                        setState(.open, trigger: .drag)
+                    }
+                    return
+                }
+            }
             // Test the segment the pointer travelled since the last sample, not
             // just where it is now: a fast flick can skip clean over the small
             // trigger band between two events and never land inside it.
+            // The detached circle is selected by click; crossing it must not
+            // open the primary or consume the gap between the two silhouettes.
+            if detachedBubbleFrame(for: display).contains(location), displayedSecondaryActivity != nil {
+                return
+            }
             let zone = restingTriggerZone(for: display)
+
+            if let generation = pendingHoverGeneration {
+                if !zone.contains(location) {
+                    pendingHoverGeneration = nil
+                    hoverFeedback.update(isHovering: false)
+                    onExpansionCancelled?(generation)
+                }
+                return
+            }
 
             if zone.intersects(segmentFrom: lastPointer ?? location, to: location) {
 
@@ -209,17 +841,150 @@ final class NotchController {
                 }
 
                 if !isMissionControlShowing {
+                    // Feedback belongs to the accepted entry and is synchronous.
+                    // Keeping it before setState also keeps automatic activity
+                    // updates completely outside the haptic path.
+                    hoverFeedback.update(isHovering: true)
                     setState(.open)
                 }
             }
         } else {
+            if keepsContextualPresentationExpanded {
+                cancelHoverExit()
+                return
+            }
             // Inset negatively to grow the region, so the top screen edge and a
             // little slack around the island all count as "still hovering".
-            let stayOpen = expandedRegion(for: display)
-                .insetBy(dx: -hoverHysteresis, dy: -hoverHysteresis)
+            let slack = clickedOpen ? CGFloat(20) : hoverHysteresis
+            let baseRegion = isRecognizedFileDragActive
+                ? fileDragIntakeRegion(for: display)
+                : expandedRegion(for: display)
+            let stayOpen = baseRegion.insetBy(dx: -slack, dy: -slack)
 
-            if !stayOpen.contains(location) {
+            if stayOpen.contains(location) {
+                cancelHoverExit()
+            } else if clickedOpen {
+                scheduleHoverExit(at: location)
+            } else {
+                hoverFeedback.update(isHovering: false)
                 setState(.closed)
+            }
+        }
+    }
+
+    func setRecognizedFileDragActive(
+        _ isActive: Bool,
+        at point: CGPoint,
+        hasValidatedOfferHint: Bool
+    ) {
+        guard isStarted, isPanelVisible, !sizeCalibration.isActive,
+              !isExternalSurfacePresented else { return }
+        if isActive {
+            guard !isRecognizedFileDragActive else {
+                fileDragHasValidatedOfferHint = fileDragHasValidatedOfferHint
+                    || hasValidatedOfferHint
+                handlePointer(at: point)
+                return
+            }
+            isRecognizedFileDragActive = true
+            fileDragHasValidatedOfferHint = hasValidatedOfferHint
+            fileDragPhysicalGestureEnded = false
+            hasAttemptedFileDragTopEdgeGuard = false
+            loggedFileDragWindowReady = false
+            updateFileDropIntakeFrame(for: activeDisplay)
+            let intake = activeDisplay.map(fileDragIntakeRegion(for:))
+            let ignoredPreviously = fileDropReceiverPanel.ignoresMouseEvents
+            // Arm before crossing the panel boundary: changing interception
+            // after entry failed native Finder QA. The usual lifecycle and
+            // Mission Control guards still own whether the panel may receive.
+            updatePanelMouseInterception(at: point)
+            fileDropLog.notice(
+                "phase=panelReady recognized=true receiverIgnoredPreviously=\(ignoredPreviously) receiverIgnoredNow=\(self.fileDropReceiverPanel.ignoresMouseEvents) visualIgnored=\(self.panel.ignoresMouseEvents) pointerInsidePanel=\(self.panel.frame.contains(point)) pointerInsideIntake=\(intake?.contains(point) == true) windowVisible=\(self.panel.isVisible)"
+            )
+            if state.isClosed, !reducesMotion() {
+                dragHeartbeatPhase = 1
+                dragHeartbeatSpring.snap(to: 0)
+                startMorphIfNeeded()
+            }
+            handlePointer(at: point)
+        } else {
+            guard isRecognizedFileDragActive || dragHeartbeatPhase != 0 else { return }
+            isRecognizedFileDragActive = false
+            fileDragHasValidatedOfferHint = false
+            hasAuthoritativeNativeFileHover = false
+            fileDragPhysicalGestureEnded = true
+            hostView.setFileDropIntakeFrame(nil)
+            fileDropReceiverPanel.deactivate()
+            fileDragTopEdgeGuard.stop()
+            dragHeartbeatPhase = 0
+            dragHeartbeatSpring.snap(to: 0)
+            renderCurrentFrame()
+        }
+    }
+
+    func setFileDropEnabled(_ isEnabled: Bool) {
+        if !isEnabled {
+            fileDragHasValidatedOfferHint = false
+            hasAuthoritativeNativeFileHover = false
+            fileDragPhysicalGestureEnded = true
+            fileDropReceiverPanel.deactivate()
+            fileDragTopEdgeGuard.stop()
+        }
+        hostView.setFileDropEnabled(isEnabled)
+        fileDropReceiverPanel.setFileDropDestination(
+            isEnabled ? hostView : nil,
+            enabled: isEnabled
+        )
+        fileDropLog.notice(
+            "phase=receiverReadiness enabled=\(isEnabled) registered=\(self.fileDropReceiverPanel.fileDropDestinationTypeCount) activeSpace=\(self.fileDropReceiverPanel.isOnActiveSpace) windowVisible=\(self.fileDropReceiverPanel.isVisible)"
+        )
+    }
+
+    func endRecognizedFileDragGesture() {
+        fileDragHasValidatedOfferHint = false
+        fileDragPhysicalGestureEnded = true
+        fileDragTopEdgeGuard.stop()
+    }
+
+    /// Keep interception alive through a control drag that began inside the
+    /// animated path. Releasing the button immediately restores path-based
+    /// routing at the current cursor position.
+    func handlePointerButton(isPressed: Bool) {
+        guard isStarted, isPanelVisible, !sizeCalibration.isActive, !isExternalSurfacePresented else {
+            return
+        }
+
+        if isPressed {
+            cancelHoverExit()
+            if state.isClosed, !panel.ignoresMouseEvents, let display = activeDisplay,
+               displayedSecondaryActivity != nil,
+               detachedBubbleFrame(for: display).contains(lastPointer ?? NSEvent.mouseLocation) {
+                expandSecondaryActivity()
+            } else if !state.isClosed, !panel.ignoresMouseEvents {
+                clickedOpen = true
+            }
+            dragReleaseTask?.cancel()
+            dragReleaseTask = nil
+            isControlDragActive = !panel.ignoresMouseEvents
+            onDragOwnershipChanged?(isControlDragActive)
+        } else {
+            guard isControlDragActive else {
+                updatePanelMouseInterception(at: lastPointer ?? NSEvent.mouseLocation)
+                return
+            }
+
+            let releasePoint = lastPointer ?? NSEvent.mouseLocation
+            dragReleaseTask?.cancel()
+            dragReleaseTask = Task { [weak self] in
+                // The local NSEvent monitor runs before the mouse-up reaches the
+                // pressed SwiftUI control. Yielding keeps its root alive through
+                // delivery, then applies the normal hover rule at release.
+                await Task.yield()
+                guard !Task.isCancelled, let self else { return }
+                self.isControlDragActive = false
+                self.onDragOwnershipChanged?(false)
+                self.dragReleaseTask = nil
+                self.handlePointer(at: releasePoint)
             }
         }
     }
@@ -229,11 +994,13 @@ final class NotchController {
     private func restingTriggerZone(for display: ActiveDisplay) -> CGRect {
 
         let size = restingSize(for: display)
+        let leading = max(0, CGFloat(compactSpring.value))
+        let trailing = max(0, CGFloat(compactTrailingSpring.value))
 
         return CGRect(
-            x     : display.frame.midX - size.width / 2,
+            x     : display.frame.midX - size.width / 2 - leading,
             y     : display.frame.maxY - size.height,
-            width : size.width,
+            width : size.width + leading + trailing,
             height: size.height
         )
     }
@@ -243,12 +1010,137 @@ final class NotchController {
     /// leaves it.
     private func expandedRegion(for display: ActiveDisplay) -> CGRect {
 
-        CGRect(
-            x     : display.frame.midX - configuration.expandedHalfWidth,
-            y     : display.frame.maxY - configuration.expandedHeight,
-            width : configuration.expandedHalfWidth * 2,
-            height: configuration.expandedHeight
+        let halfWidth = effectiveExpandedHalfWidth(for: display)
+        let dropletDepth = usesSoftwareDroplet(on: display)
+            ? softwareMetrics.restingSize.height + softwareMetrics.bodyOffset
+            : 0
+        let height = expandedTargetHeight(for: display) + dropletDepth
+
+        return CGRect(
+            x     : display.frame.midX - halfWidth,
+            y     : display.frame.maxY - height,
+            width : halfWidth * 2,
+            height: height
         )
+    }
+
+    /// File drags get a temporary, forgiving destination around the notch.
+    /// This does not alter ordinary pointer hit testing or the visible shape.
+    private func fileDragIntakeRegion(for display: ActiveDisplay) -> CGRect {
+        let resting = restingSize(for: display)
+        let requestedWidth = max(
+            effectiveExpandedHalfWidth(for: display) * 2 + 80,
+            resting.width + 160
+        )
+        let width = min(display.frame.width, requestedWidth)
+        let approach = CGRect(
+            x: display.frame.midX - width / 2,
+            y: display.frame.maxY - 180,
+            width: width,
+            height: 180
+        )
+        return approach.union(expandedRegion(for: display))
+            .intersection(display.frame)
+            .intersection(panel.frame)
+    }
+
+    private func updateFileDropIntakeFrame(for display: ActiveDisplay?) {
+        guard isRecognizedFileDragActive, let display else {
+            hostView.setFileDropIntakeFrame(nil)
+            fileDropReceiverPanel.deactivate()
+            return
+        }
+        let screenFrame = fileDragIntakeRegion(for: display)
+        guard !screenFrame.isNull, !screenFrame.isEmpty else {
+            hostView.setFileDropIntakeFrame(nil)
+            fileDropReceiverPanel.deactivate()
+            return
+        }
+        fileDropReceiverPanel.setFrame(screenFrame, display: false)
+        let localOrigin = hostView.convert(
+            panel.convertPoint(fromScreen: screenFrame.origin),
+            from: nil
+        )
+        let localMaximum = hostView.convert(
+            panel.convertPoint(fromScreen: CGPoint(x: screenFrame.maxX, y: screenFrame.maxY)),
+            from: nil
+        )
+        hostView.setFileDropIntakeFrame(CGRect(
+            x: min(localOrigin.x, localMaximum.x),
+            y: min(localOrigin.y, localMaximum.y),
+            width: abs(localMaximum.x - localOrigin.x),
+            height: abs(localMaximum.y - localOrigin.y)
+        ))
+        if fileDragTopEdgeGuard.availability == .active {
+            fileDragTopEdgeGuard.update(region: screenFrame, screen: display.frame)
+        }
+    }
+
+    private func armFileDragTopEdgeGuardIfEligible(
+        at point: CGPoint,
+        hasAuthoritativeNativeHover: Bool
+    ) {
+        guard isRecognizedFileDragActive,
+              !fileDragPhysicalGestureEnded,
+              !hasAttemptedFileDragTopEdgeGuard,
+              hasAuthoritativeNativeHover || fileDragHasValidatedOfferHint,
+              isStarted, isPanelVisible, !sizeCalibration.isActive,
+              !isExternalSurfacePresented, !isMissionControlShowing,
+              !state.isClosed,
+              let display = activeDisplay else { return }
+        let intake = fileDragIntakeRegion(for: display)
+        guard intake.contains(point), !fileDropReceiverPanel.ignoresMouseEvents else { return }
+        hasAttemptedFileDragTopEdgeGuard = true
+        _ = fileDragTopEdgeGuard.start(region: intake, screen: display.frame)
+    }
+
+    /// Both pointer and accessibility activation use the same satellite selection.
+    private func expandSecondaryActivity() {
+        guard isStarted, isPanelVisible, state.isClosed, !sizeCalibration.isActive,
+              !isExternalSurfacePresented, !isMissionControlShowing, let secondary = displayedSecondaryActivity else { return }
+        cancelHoverExit()
+        isAttachingSecondary = !reducesMotion()
+        hoverFeedback.update(isHovering: true)
+        setState(.open, activityID: secondary.id, trigger: .click)
+        clickedOpen = true
+    }
+
+    /// The circle clears the physical notch by ten points, including its top corners.
+    private func detachedBubbleFrame(for display: ActiveDisplay) -> CGRect {
+        let centerGap = compactCenterGap(for: display)
+        let height = compactContentHeight(for: display)
+        let available = max(0, (display.frame.width - centerGap) / 2 - 10)
+        let diameter = min(height, available)
+        return CGRect(
+            x     : display.frame.midX + centerGap / 2 + 10,
+            y     : display.frame.maxY - height / 2 - diameter / 2,
+            width : diameter,
+            height: diameter
+        )
+    }
+
+    private func cancelHoverExit() {
+        hoverExitTask?.cancel()
+        hoverExitTask = nil
+        pendingExitPoint = nil
+    }
+
+    /// A clicked surface tolerates a brief excursion, with one cancellable deadline.
+    private func scheduleHoverExit(at point: CGPoint) {
+        pendingExitPoint = point
+        guard hoverExitTask == nil else { return }
+        hoverExitTask = Task { [weak self] in
+            do { try await Task.sleep(for: .milliseconds(280)) }
+            catch { return }
+            guard !Task.isCancelled, let self, let point = self.pendingExitPoint else { return }
+            self.hoverExitTask = nil
+            self.pendingExitPoint = nil
+            guard !self.keepsContextualPresentationExpanded,
+                  !self.isSettingsFocused, !self.isControlDragActive,
+                  !self.hostView.auxiliaryInteraction.contains(point) else { return }
+            self.hoverFeedback.update(isHovering: false)
+            self.setState(.closed)
+        }
     }
 
     // MARK: - Spaces / Mission Control
@@ -264,7 +1156,7 @@ final class NotchController {
     ///   the panel joins all Spaces and is stationary. (We deliberately do *not*
     ///   re-order the panel here — doing that on every fire is what made it
     ///   flicker.)
-    private func handleSpaceChange() {
+    func handleSpaceChange() {
 
         isMissionControlShowing = isMissionControlActive()
 
@@ -272,7 +1164,9 @@ final class NotchController {
             return
         }
 
+        sizeCalibration.finish(save: false)
         setState(.closed)
+        hoverFeedback.update(isHovering: false)
         lastPointer = nil
     }
 
@@ -323,19 +1217,95 @@ final class NotchController {
 
     /// Apply a new discrete state and make sure the morph engine is running to
     /// animate toward it. Starting the engine is idempotent.
-    private func setState(_ newState: NotchState) {
+    private func setState(
+        _ newState: NotchState,
+        activityID: String? = nil,
+        trigger   : DisplayExpansionTrigger = .hover
+    ) {
+
+        if !isApplyingCoordinatorPresentation {
+            guard let displayID = activeDisplay?.displayID else { return }
+            if newState.isClosed {
+                if let generation = pendingHoverGeneration {
+                    pendingHoverGeneration = nil
+                    onExpansionCancelled?(generation)
+                } else {
+                    onExpansionCancelled?(localRequestGeneration)
+                }
+                onCollapseRequested?()
+            } else {
+                localRequestGeneration &+= 1
+                pendingHoverGeneration = trigger == .hover ? localRequestGeneration : nil
+                onExpansionRequested?(DisplayExpansionRequest(
+                    displayID : displayID,
+                    activityID: activityID,
+                    trigger   : trigger,
+                    generation: localRequestGeneration
+                ))
+            }
+            return
+        }
 
         guard newState != state else {
             return
         }
 
+        cancelHoverExit()
+        if newState.isClosed {
+            clickedOpen = false
+            hostView.auxiliaryInteraction.dismiss()
+        }
+        isReturningToBase = !reducesMotion() && (isReplacingActivity
+            || (newState.isClosed && displayedPrimaryActivity is any NotchLiveActivity))
         state = newState
-        widgetHost.update(state: newState)
         renderContent()
         startMorphIfNeeded()
     }
 
     private func startMorphIfNeeded() {
+
+        guard isStarted, isPanelVisible, !sizeCalibration.isActive else {
+            morphEngine.stop()
+            return
+        }
+
+        let targets = morphTargets()
+
+        if reducesMotion() {
+            finishReturnToBaseIfNeeded()
+            let targets = morphTargets()
+            leadingSpring.snap(to: targets.leading)
+            trailingSpring.snap(to: targets.trailing)
+            compactSpring.snap(to: targets.compact)
+            compactTrailingSpring.snap(to: targets.compactTrailing)
+            bubbleSpring.snap(to: targets.bubble)
+            if targets.bubble == 0 {
+                isAttachingSecondary = false
+                hostView.clearDetachedActivityContent()
+            }
+            heightSpring.snap(to: Double(targets.height))
+            dragHeartbeatPhase = 0
+            dragHeartbeatSpring.snap(to: 0)
+            morphEngine.stop()
+            renderCurrentFrame()
+            finishCoordinatorCollapseIfNeeded()
+            return
+        }
+
+        guard !leadingSpring.isSettled(at: targets.leading)
+           || !trailingSpring.isSettled(at: targets.trailing)
+           || !compactSpring.isSettled(at: targets.compact)
+           || !compactTrailingSpring.isSettled(at: targets.compactTrailing)
+           || !bubbleSpring.isSettled(at: targets.bubble)
+           || !heightSpring.isSettled(at: Double(targets.height))
+           || dragHeartbeatPhase != 0
+           || !dragHeartbeatSpring.isSettled(at: dragHeartbeatTarget) else {
+            if isReturningToBase {
+                finishReturnToBaseIfNeeded()
+                startMorphIfNeeded()
+            }
+            return
+        }
 
         guard !morphEngine.isRunning else {
             return
@@ -351,23 +1321,189 @@ final class NotchController {
     /// while idle.
     private func advanceMorph(dt: CFTimeInterval) {
 
-        let leadingTarget : Double = state.contains(.leading)  ? 1 : 0
-        let trailingTarget: Double = state.contains(.trailing) ? 1 : 0
+        guard isStarted, isPanelVisible else {
+            morphEngine.stop()
+            return
+        }
 
-        leadingSpring.advance(toward: leadingTarget,  dt: dt)
-        trailingSpring.advance(toward: trailingTarget, dt: dt)
+        let targets = morphTargets()
+
+        if reducesMotion() {
+            finishReturnToBaseIfNeeded()
+            let targets = morphTargets()
+            leadingSpring.snap(to: targets.leading)
+            trailingSpring.snap(to: targets.trailing)
+            compactSpring.snap(to: targets.compact)
+            compactTrailingSpring.snap(to: targets.compactTrailing)
+            bubbleSpring.snap(to: targets.bubble)
+            if targets.bubble == 0 {
+                isAttachingSecondary = false
+                hostView.clearDetachedActivityContent()
+            }
+            heightSpring.snap(to: Double(targets.height))
+            dragHeartbeatPhase = 0
+            dragHeartbeatSpring.snap(to: 0)
+            renderCurrentFrame()
+            morphEngine.stop()
+            finishCoordinatorCollapseIfNeeded()
+            return
+        }
+
+        // Only a closing axis meets the solid resting contour. Opening and
+        // adaptive resizing retain their free spring and interruption velocity.
+        leadingSpring.advance(
+            toward    : targets.leading,
+            dt        : dt,
+            lowerBound: targets.leading == 0 ? 0 : nil
+        )
+        trailingSpring.advance(
+            toward    : targets.trailing,
+            dt        : dt,
+            lowerBound: targets.trailing == 0 ? 0 : nil
+        )
+        compactSpring.advance(
+            toward    : targets.compact,
+            dt        : dt,
+            lowerBound: targets.compact == 0 ? 0 : nil
+        )
+        compactTrailingSpring.advance(
+            toward    : targets.compactTrailing,
+            dt        : dt,
+            lowerBound: targets.compactTrailing == 0 ? 0 : nil
+        )
+        bubbleSpring.advance(toward: targets.bubble, dt: dt)
+        dragHeartbeatSpring.advance(toward: dragHeartbeatTarget, dt: dt)
+        heightSpring.advance(
+            toward    : Double(targets.height),
+            dt        : dt,
+            lowerBound: state.isClosed || isReturningToBase ? Double(targets.height) : nil
+        )
 
         renderCurrentFrame()
 
-        if leadingSpring.isSettled(at: leadingTarget),
-           trailingSpring.isSettled(at: trailingTarget) {
+        // Contact still carries outward velocity. Let that visible rebound
+        // settle before revealing compact content or shutting the link down.
+        // Point-valued axes can finish below a tenth of a point; waiting for a
+        // thousandth would leave an invisible pause before compact content.
+        let basePointThreshold: Double? = isReturningToBase ? 0.1 : nil
+        let settled = leadingSpring.isSettled(at: targets.leading)
+            && trailingSpring.isSettled(at: targets.trailing)
+            && compactSpring.isSettled(at: targets.compact, threshold: basePointThreshold)
+            && compactTrailingSpring.isSettled(at: targets.compactTrailing, threshold: basePointThreshold)
+            && bubbleSpring.isSettled(at: targets.bubble)
+            && heightSpring.isSettled(at: Double(targets.height), threshold: basePointThreshold)
+            && dragHeartbeatSpring.isSettled(at: dragHeartbeatTarget)
+        if settled {
 
-            leadingSpring.snap(to: leadingTarget)
-            trailingSpring.snap(to: trailingTarget)
+            if advanceDragHeartbeatPhase() {
+                renderCurrentFrame()
+                return
+            }
+
+            leadingSpring.snap(to: targets.leading)
+            trailingSpring.snap(to: targets.trailing)
+            compactSpring.snap(to: targets.compact)
+            compactTrailingSpring.snap(to: targets.compactTrailing)
+            bubbleSpring.snap(to: targets.bubble)
+            if targets.bubble == 0 {
+                isAttachingSecondary = false
+                hostView.clearDetachedActivityContent()
+            }
+            heightSpring.snap(to: Double(targets.height))
 
             renderCurrentFrame()
-            morphEngine.stop()
+            if isReturningToBase {
+                // This frame draws the exact bare notch with empty content.
+                // The next display-link frame starts widening the compact wings.
+                finishReturnToBaseIfNeeded()
+            } else {
+                morphEngine.stop()
+                finishCoordinatorCollapseIfNeeded()
+            }
         }
+    }
+
+    private var dragHeartbeatTarget: Double {
+        dragHeartbeatPhase == 1 || dragHeartbeatPhase == 3 ? 1 : 0
+    }
+
+    private func advanceDragHeartbeatPhase() -> Bool {
+        guard dragHeartbeatPhase != 0 else { return false }
+        dragHeartbeatSpring.snap(to: dragHeartbeatTarget)
+        if dragHeartbeatPhase == 4 {
+            dragHeartbeatPhase = 0
+            dragHeartbeatSpring.snap(to: 0)
+            return false
+        }
+        dragHeartbeatPhase += 1
+        return true
+    }
+
+    private func finishReturnToBaseIfNeeded() {
+        guard isReturningToBase else { return }
+        isReturningToBase = false
+        isReplacingActivity = false
+        if pendingCollapseGeneration == nil {
+            releaseOutgoingActivityRoots()
+            renderContent()
+        } else {
+            renderContent()
+            finishCoordinatorCollapseIfNeeded()
+        }
+    }
+
+    private func releaseOutgoingActivityRoots() {
+        let releasedRoots = !outgoingActivityRoots.isEmpty
+        outgoingActivityRoots.removeAll()
+        retainsLiveActivityGeometry = false
+        if releasedRoots {
+            onRetainedActivityRootsChanged?()
+        }
+    }
+
+    /// finishCoordinatorCollapseIfNeeded emits only after the controller has
+    /// reached a non-expanded geometry and released every expanded root.
+    private func finishCoordinatorCollapseIfNeeded() {
+        guard state.isClosed,
+              !isReturningToBase,
+              let generation = pendingCollapseGeneration else {
+            return
+        }
+        pendingCollapseGeneration = nil
+        let releasedOutgoingRoots = !outgoingActivityRoots.isEmpty
+        outgoingActivityRoots.removeAll()
+        retainsLiveActivityGeometry = false
+        onCollapseFinished?(generation)
+        if releasedOutgoingRoots {
+            onRetainedActivityRootsChanged?()
+        }
+    }
+
+    /// morphTargets keeps side expansion, compact wings, satellite and height
+    /// on one display link, preserving their velocities across interruptions.
+    private func morphTargets() -> (leading: Double, trailing: Double, compact: Double, compactTrailing: Double, bubble: Double, height: CGFloat) {
+        guard let display = activeDisplay else {
+            return (0, 0, 0, 0, 0, 0)
+        }
+        return morphTargets(for: display)
+    }
+
+    private func morphTargets(
+        for display: ActiveDisplay
+    ) -> (leading: Double, trailing: Double, compact: Double, compactTrailing: Double, bubble: Double, height: CGFloat) {
+        if isReturningToBase { return (0, 0, 0, 0, 0, restingSize(for: display).height) }
+        return (
+            leading : state.contains(.leading) ? 1 : 0,
+            trailing: state.contains(.trailing) ? 1 : 0,
+            compact : state.isClosed && !isReturningToBase && displayedPrimaryActivity != nil
+                ? Double(compactExtension(for: display)) : 0,
+            compactTrailing: state.isClosed && displayedPrimaryActivity != nil && displayedSecondaryActivity == nil
+                ? Double(compactExtension(for: display)) : 0,
+            bubble: state.isClosed && displayedSecondaryActivity != nil ? 1 : 0,
+            height  : state.isClosed && displayedPrimaryActivity != nil
+                ? compactContentHeight(for: display)
+                : (state.isClosed ? restingSize(for: display).height : expandedTargetHeight(for: display))
+        )
     }
 
     /// Resolve the current geometry from the springs and hand it to the host
@@ -379,14 +1515,62 @@ final class NotchController {
         }
 
         let resting = restingSize(for: display)
-
-        let geometry = NotchGeometry.resolve(
-            configuration   : configuration,
-            restingHalfWidth: resting.width / 2,
-            restingHeight   : resting.height,
-            leadingProgress : CGFloat(leadingSpring.value),
-            trailingProgress: CGFloat(trailingSpring.value)
+        let maximumHeight = max(
+            resting.height,
+            compactContentHeight(for: display),
+            normalizedMaximumExpandedHeight(),
+            normalizedActivityMaximumHeight()
         )
+        let renderedHeight = min(
+            maximumHeight * 1.18,
+            max(resting.height, CGFloat(heightSpring.value))
+        )
+
+        // Hardware and calibrated widths include the upper corner attachments.
+        // The path adds those outside its straight sides, so reserve their span
+        // inside the compact footprint instead of widening past the cutout.
+        let restingAttachment = max(
+            0,
+            min(configuration.restingTopCornerRadius, resting.height / 2, resting.width / 2)
+        )
+        let compactWidth = Double(compactExtension(for: display))
+        let compactProgress = compactWidth > 0
+            ? min(1, max(0, max(compactSpring.value, compactTrailingSpring.value) / compactWidth))
+            : 0
+
+        let resolved = NotchGeometry.resolve(
+            configuration           : configuration,
+            restingHalfWidth        : resting.width / 2 - restingAttachment,
+            restingHeight           : resting.height,
+            compactLeadingExtension : max(0, CGFloat(compactSpring.value)),
+            compactTrailingExtension: max(0, CGFloat(compactTrailingSpring.value)),
+            compactCenterHalfWidth  : display.hasHardwareNotch
+                ? resting.width / 2 - restingAttachment
+                : compactCenterGap(for: display) / 2,
+            compactProgress         : CGFloat(compactProgress),
+            expandedHalfWidth       : effectiveExpandedHalfWidth(for: display),
+            resolvedHeight          : renderedHeight,
+            leadingProgress         : max(0, CGFloat(leadingSpring.value)),
+            trailingProgress        : max(0, CGFloat(trailingSpring.value))
+        )
+
+        let safeExtent = max(0, display.frame.width / 2 - resolved.topCornerRadius)
+        let heartbeat = max(0, CGFloat(dragHeartbeatSpring.value))
+        let geometry = NotchGeometry(
+            leftExtent        : min(safeExtent, resolved.leftExtent + heartbeat * 5),
+            rightExtent       : min(safeExtent, resolved.rightExtent + heartbeat * 5),
+            height            : resolved.height + heartbeat * 3,
+            bottomCornerRadius: resolved.bottomCornerRadius,
+            topCornerRadius   : resolved.topCornerRadius
+        )
+        sizeCalibration.update(geometry: geometry)
+
+        // Compact content earns only a faint edge. Spring progress returns it
+        // to zero with the wings, keeping the bare hardware notch unoutlined.
+        let expandedBorderOpacity = min(1, max(0, leadingSpring.value, trailingSpring.value))
+        let compactBorderOpacity = compactWidth > 0
+            ? min(1, max(0, compactSpring.value / compactWidth)) * 0.12
+            : 0
 
         // The notch hangs from the top of the host view; in the view's own
         // (non-flipped) coordinates that is `bounds.maxY`, centered.
@@ -394,23 +1578,142 @@ final class NotchController {
             geometry       : geometry,
             centerX        : hostView.bounds.midX,
             topY           : hostView.bounds.maxY,
-            isChromeVisible: shouldDrawChrome(for: display)
+            isChromeVisible: shouldDrawChrome(for: display),
+            borderOpacity  : CGFloat(max(expandedBorderOpacity, compactBorderOpacity)),
+            materialProgress: CGFloat(expandedBorderOpacity),
+            detachedFrame  : detachedBubbleFrame(for: display).offsetBy(
+                dx: -display.frame.minX,
+                dy: hostView.bounds.maxY - display.frame.maxY
+            ),
+            detachedProgress: max(0, CGFloat(bubbleSpring.value)),
+            isAttaching    : isAttachingSecondary,
+            softwareDroplet: usesSoftwareDroplet(on: display),
+            dropletProgress: max(
+                0,
+                min(1, CGFloat(max(leadingSpring.value, trailingSpring.value)))
+            ),
+            softwareMetrics: softwareMetrics
         )
+
+        if let lastPointer {
+            updatePanelMouseInterception(at: lastPointer)
+        }
     }
 
     /// The resting size: the measured hardware notch where one exists, the
     /// configured fallback band where it does not.
     private func restingSize(for display: ActiveDisplay) -> CGSize {
-        display.hasHardwareNotch
-            ? display.notch.size
-            : configuration.fallbackRestingSize
+        guard display.hasHardwareNotch else { return softwareMetrics.restingSize }
+        return sizeCalibration.size(for: display) ?? display.notch.size
     }
 
-    /// Whether to draw the chrome on this display. Production draws only where a
-    /// hardware notch exists; the dev flag forces it on so the overlay is
-    /// visible while building on a notch-less screen.
+    private func compactContentHeight(for display: ActiveDisplay) -> CGFloat {
+        display.hasHardwareNotch ? restingSize(for: display).height : softwareMetrics.compactHeight
+    }
+
+    private func compactCenterGap(for display: ActiveDisplay) -> CGFloat {
+        display.hasHardwareNotch ? restingSize(for: display).width : softwareMetrics.compactCenterGap
+    }
+
+    private func usesSoftwareDroplet(on display: ActiveDisplay) -> Bool {
+        guard !display.hasHardwareNotch,
+              displayPresentation?.style == .dynamicIsland,
+              !displayPresentationIsShowingLiveActivity else { return false }
+        return !state.isClosed || leadingSpring.value > 0 || trailingSpring.value > 0
+    }
+
+    private var displayPresentationIsShowingLiveActivity: Bool {
+        guard let displayPresentation else { return false }
+        if displayPresentation.expandedIsLiveActivity || retainsLiveActivityGeometry {
+            return true
+        }
+        return state.isClosed && displayedPrimaryActivity != nil
+    }
+
+    /// Bound provider and configuration numbers before they reach geometry.
+    /// A NaN or infinity from third-party content must never poison the shape.
+    private func normalizedMaximumExpandedHeight() -> CGFloat {
+        configuration.expandedHeight.isFinite
+            ? max(0, configuration.expandedHeight)
+            : 0
+    }
+
+    private func normalizedActivityMaximumHeight() -> CGFloat {
+        configuration.maximumActivityExpandedHeight.isFinite
+            ? max(0, configuration.maximumActivityExpandedHeight)
+            : normalizedMaximumExpandedHeight()
+    }
+
+    private func declaredExpandedContentHeight(for activity: any NotchActivity) -> CGFloat {
+        if activity.privacy == .sensitive, !isSensitiveContentVisible {
+            return hiddenExpandedHeight
+        }
+
+        let declared = activity.expandedContentHeight
+        return declared.isFinite ? max(0, declared) : 0
+    }
+
+    private func expandedTargetHeight(for display: ActiveDisplay) -> CGFloat {
+        let resting = restingSize(for: display)
+        if let page = displayedContextualPage {
+            let declared = page.contentHeight
+            let contentHeight = declared.isFinite ? max(0, declared) : 0
+            let hardwareNotchHeight = display.hasHardwareNotch ? resting.height : 0
+            let requested = hardwareNotchHeight
+                + expandedTopInset + expandedBottomInset + contentHeight
+            return max(resting.height, min(normalizedMaximumExpandedHeight(), requested))
+        }
+        guard let activity = displayedPrimaryActivity else {
+            return max(resting.height, normalizedMaximumExpandedHeight())
+        }
+
+        let hardwareNotchHeight = display.hasHardwareNotch ? resting.height : 0
+        let requested = hardwareNotchHeight
+            + expandedTopInset + expandedBottomInset
+            + declaredExpandedContentHeight(for: activity)
+        return max(resting.height, min(normalizedActivityMaximumHeight(), requested))
+    }
+
+    private func effectiveExpandedHalfWidth(for display: ActiveDisplay) -> CGFloat {
+        let edgeSafeHalfWidth = max(0, display.frame.width / 2 - 12)
+        let configured = configuration.expandedHalfWidth.isFinite
+            ? max(0, configuration.expandedHalfWidth)
+            : 0
+        return min(configured, edgeSafeHalfWidth)
+    }
+
+    private func compactExtension(for display: ActiveDisplay) -> CGFloat {
+        let available = max(0, (display.frame.width - compactCenterGap(for: display)) / 2)
+        return min(preferredCompactSideWidth, available)
+    }
+
+    /// Cache provider sizing on discrete content changes; the animation reads
+    /// only a number and never calls provider getters or allocates an array.
+    private func updatePreferredCompactSideWidth() {
+        let configured = configuration.compactActivityExtension.isFinite
+            ? max(0, configuration.compactActivityExtension)
+            : 0
+        let activities = [displayedPrimaryActivity].compactMap { $0 }
+        var preferred: CGFloat = 0
+        for activity in activities {
+            var width = configured
+            if activity.privacy != .sensitive || isSensitiveContentVisible,
+               let requested = activity.compactPreferredSideWidth,
+               requested.isFinite, requested > 0 {
+                width = min(160, requested)
+            }
+            preferred = max(preferred, width)
+        }
+        // The configured width is a fallback, not a minimum. The satellite
+        // uses the resting height as its diameter and never widens the main wing.
+        preferredCompactSideWidth = activities.isEmpty ? configured : preferred
+    }
+
+    /// Whether to draw the chrome on this display. Hardware notches always draw;
+    /// the configuration decides whether external displays use the fallback
+    /// compact notch (enabled by the default configuration).
     private func shouldDrawChrome(for display: ActiveDisplay) -> Bool {
-        display.hasHardwareNotch || configuration.drawsChromeWithoutHardwareNotch
+        true
     }
 
     /// Show the widgets inside the open notch and hide them when it closes.
@@ -421,23 +1724,201 @@ final class NotchController {
     /// it never touches the 120 Hz path.
     private func renderContent() {
 
-        guard let display = activeDisplay else {
+        updateBorderAppearance()
+        updatePreferredCompactSideWidth()
+        onExpandedFrameChanged?(expandedFrame)
+        hostView.setSettingsButton(frame: .zero, isVisible: false)
+
+        guard isStarted, isPanelVisible, !isReturningToBase, !sizeCalibration.isActive,
+              let display = activeDisplay else {
+            hostView.setContent(AnyView(EmptyView()), frame: .zero, isVisible: false)
+            hostView.clearActivityContent()
             return
         }
 
-        let width  = configuration.expandedHalfWidth * 2
-        let height = configuration.expandedHeight
+        // A drag can open the shelf after the intake was first armed. Refresh
+        // the destination now that the selected page's declared height is known.
+        updateFileDropIntakeFrame(for: display)
+        if let lastPointer {
+            armFileDragTopEdgeGuardIfEligible(
+                at: lastPointer,
+                hasAuthoritativeNativeHover: hasAuthoritativeNativeFileHover
+            )
+        }
+
+        presentedActivityID = displayedPrimaryActivity.map { $0.sourceID + ":" + $0.id }
+        presentedSecondaryActivityID = displayedSecondaryActivity.map { $0.sourceID + ":" + $0.id }
+        let resting = restingSize(for: display)
+        let centerX = hostView.bounds.midX
+        let topY    = hostView.bounds.maxY
+        let dropletDepth = usesSoftwareDroplet(on: display)
+            ? softwareMetrics.restingSize.height + softwareMetrics.bodyOffset
+            : 0
+        let contentTopY = topY - dropletDepth
+        let hardwareNotchWidth = display.hasHardwareNotch ? resting.width : 0
+        let hardwareNotchHeight = display.hasHardwareNotch ? resting.height : 0
+        hostView.setFileDropExclusionFrame(display.hasHardwareNotch ? CGRect(
+            x: centerX - resting.width / 2,
+            y: topY - resting.height,
+            width: resting.width,
+            height: resting.height
+        ) : .zero)
+
+        if !state.isClosed {
+            let buttonSize: CGFloat = 28
+            let rightEdge = centerX + effectiveExpandedHalfWidth(for: display) - 12
+            hostView.setSettingsButton(
+                frame    : CGRect(
+                    x     : rightEdge - buttonSize,
+                    y     : contentTopY - max(hardwareNotchHeight, buttonSize),
+                    width : buttonSize,
+                    height: buttonSize
+                ),
+                isVisible: rightEdge - buttonSize >= centerX + hardwareNotchWidth / 2
+            )
+        }
+
+        if state.isClosed {
+            hostView.setContent(AnyView(EmptyView()), frame: .zero, isVisible: false)
+
+            guard let activity = displayedPrimaryActivity else {
+                hostView.clearActivityContent()
+                return
+            }
+
+            let extensionWidth = compactExtension(for: display)
+            let compactHeight = compactContentHeight(for: display)
+            let centerGap = compactCenterGap(for: display)
+            let leadingFrame = CGRect(
+                x     : centerX - centerGap / 2 - extensionWidth,
+                y     : topY - compactHeight,
+                width : extensionWidth,
+                height: compactHeight
+            )
+            let trailingFrame = CGRect(
+                x     : centerX + centerGap / 2,
+                y     : topY - compactHeight,
+                width : extensionWidth,
+                height: compactHeight
+            )
+
+            if let secondary = displayedSecondaryActivity {
+                hostView.setCompactActivityContent(
+                    leading      : activitySurface(
+                        for         : activity,
+                        presentation: .compactLeading,
+                        outerSize   : leadingFrame.size
+                    ),
+                    leadingFrame : leadingFrame,
+                    trailing     : nil,
+                    trailingFrame: .zero
+                )
+                let bubbleFrame = detachedBubbleFrame(for: display).offsetBy(
+                    dx: -display.frame.minX,
+                    dy: topY - display.frame.maxY
+                )
+                hostView.setDetachedActivityContent(
+                    activitySurface(
+                        for         : secondary,
+                        presentation: .compactLeading,
+                        outerSize   : bubbleFrame.size,
+                        isDetached  : true
+                    ),
+                    frame   : bubbleFrame,
+                    onSelect: { [weak self] in self?.expandSecondaryActivity() }
+                )
+            } else {
+                hostView.clearDetachedActivityContent()
+                hostView.setCompactActivityContent(
+                    leading      : activitySurface(
+                        for         : activity,
+                        presentation: .compactLeading,
+                        outerSize   : leadingFrame.size
+                    ),
+                    leadingFrame : leadingFrame,
+                    trailing     : activitySurface(
+                        for         : activity,
+                        presentation: .compactTrailing,
+                        outerSize   : trailingFrame.size
+                    ),
+                    trailingFrame: trailingFrame
+                )
+            }
+            return
+        }
+
+        if !isAttachingSecondary { hostView.clearDetachedActivityContent() }
+        if let page = displayedContextualPage {
+            hostView.clearActivityContent()
+            let height = expandedTargetHeight(for: display)
+            let halfWidth = effectiveExpandedHalfWidth(for: display)
+            let pageFrame = CGRect(
+                x: centerX - halfWidth + expandedHorizontalInset,
+                y: contentTopY - height + expandedBottomInset,
+                width: max(0, halfWidth * 2 - expandedHorizontalInset * 2),
+                height: max(0, height - expandedTopInset - expandedBottomInset)
+            )
+            let obstructionFrame: CGRect
+            if display.hasHardwareNotch {
+                let obstructionHeight = max(0, hardwareNotchHeight - expandedTopInset)
+                obstructionFrame = CGRect(
+                    x: (pageFrame.width - hardwareNotchWidth) / 2,
+                    y: 0,
+                    width: hardwareNotchWidth,
+                    height: obstructionHeight
+                )
+            } else {
+                obstructionFrame = .zero
+            }
+            hostView.setContent(
+                page.makeContentView(in: NotchContextualPageContext(
+                    availableSize: pageFrame.size,
+                    centerObstructionFrame: obstructionFrame
+                )),
+                frame: pageFrame,
+                isVisible: true
+            )
+            return
+        }
+        if let activity = displayedPrimaryActivity {
+            hostView.setContent(AnyView(EmptyView()), frame: .zero, isVisible: false)
+
+            let expandedHeight = expandedTargetHeight(for: display)
+            let expandedHalfWidth = effectiveExpandedHalfWidth(for: display)
+            let expandedFrame = CGRect(
+                x     : centerX - expandedHalfWidth,
+                y     : contentTopY - expandedHeight,
+                width : expandedHalfWidth * 2,
+                height: max(0, expandedHeight - hardwareNotchHeight)
+            )
+            hostView.setExpandedActivityContent(
+                activitySurface(
+                    for         : activity,
+                    presentation: .expanded,
+                    outerSize   : expandedFrame.size
+                ),
+                frame: expandedFrame
+            )
+            return
+        }
+
+        hostView.clearActivityContent()
+
+        let width  = effectiveExpandedHalfWidth(for: display) * 2
+        let height = expandedTargetHeight(for: display)
 
         let interior = CGRect(
             x     : hostView.bounds.midX - width / 2,
-            y     : hostView.bounds.maxY - height,
+            y     : contentTopY - height,
             width : width,
             height: height
         )
         .insetBy(dx: 20, dy: 16)
 
-        let notchWidth    = display.hasHardwareNotch ? display.notch.size.width  : 0
-        let topBandHeight = display.hasHardwareNotch ? display.notch.size.height : configuration.fallbackRestingSize.height
+        let notchWidth    = hardwareNotchWidth
+        let topBandHeight = display.hasHardwareNotch
+            ? resting.height
+            : softwareMetrics.compactHeight
 
         // The content host fills the whole band; the widgets are positioned
         // inside it from the resolved frames (which are in host, y-up coords).
@@ -451,7 +1932,322 @@ final class NotchController {
         hostView.setContent(
             content,
             frame    : hostView.bounds,
-            isVisible: !state.isClosed
+            isVisible: true
         )
+    }
+
+    /// Build one shared activity surface. Sensitive metadata is checked before
+    /// the factory, URL, accessibility label, or stale state is read, keeping
+    /// redacted content out of both the visual and accessibility hierarchies.
+    private func activitySurface(
+        for activity                  : any NotchActivity,
+        presentation                  : NotchActivityPresentation,
+        outerSize                     : CGSize,
+        isDetached                    : Bool = false
+    ) -> AnyView {
+        if activity.privacy == .sensitive, !isSensitiveContentVisible {
+            return AnyView(
+                SensitiveNotchActivityPlaceholder(presentation: presentation)
+            )
+        }
+
+        let contentURL = isDetached ? nil : activity.contentURL
+        let isStale    = !isDetached && activityHost.isStale(activity)
+        let insets     = isDetached
+            ? EdgeInsets(top: 6, leading: 6, bottom: 6, trailing: 6)
+            : activityInsets(for: presentation)
+        var reservedWidth = isStale ? staleAccessoryWidth : 0
+        if isExpanded(presentation), contentURL != nil {
+            reservedWidth += openAccessoryWidth
+        }
+        let availableSize = CGSize(
+            width : max(0, outerSize.width - insets.leading - insets.trailing - reservedWidth),
+            height: max(0, outerSize.height - insets.top - insets.bottom)
+        )
+        let context = NotchActivityViewContext(
+            presentation : presentation,
+            availableSize: availableSize,
+            isStale      : isStale,
+            hardwareNotchWidth: isExpanded(presentation)
+                ? activeDisplay.map { $0.hasHardwareNotch ? restingSize(for: $0).width : 0 } ?? 0
+                : nil
+        )
+        let content: AnyView
+        switch presentation {
+        case .compactLeading:
+            content = activity.makeCompactLeadingView(in: context)
+        case .compactTrailing:
+            content = activity.makeCompactTrailingView(in: context)
+        case .minimal:
+            content = activity.makeMinimalView(in: context)
+        case .expanded:
+            guard let liveActivity = activity as? any NotchLiveActivity else { return AnyView(EmptyView()) }
+            content = liveActivity.makeExpandedView(in: context)
+        }
+
+        return AnyView(
+            SharedNotchActivitySurface(
+                content           : content,
+                contentSize       : availableSize,
+                contentURL        : contentURL,
+                accessibilityLabel: activity.accessibilityLabel,
+                presentation      : presentation,
+                isStale           : isStale,
+                insets            : insets
+            )
+        )
+    }
+
+    private func activityInsets(
+        for presentation: NotchActivityPresentation
+    ) -> EdgeInsets {
+        switch presentation {
+        case .compactLeading:
+            EdgeInsets(
+                top     : compactVerticalInset,
+                leading : compactOuterInset,
+                bottom  : compactVerticalInset,
+                trailing: compactInnerInset
+            )
+        case .compactTrailing:
+            EdgeInsets(
+                top     : compactVerticalInset,
+                leading : compactInnerInset,
+                bottom  : compactVerticalInset,
+                trailing: compactOuterInset
+            )
+        case .minimal:
+            EdgeInsets(
+                top     : compactVerticalInset,
+                leading : compactOuterInset,
+                bottom  : compactVerticalInset,
+                trailing: compactOuterInset
+            )
+        case .expanded:
+            EdgeInsets(
+                top     : expandedTopInset,
+                leading : expandedHorizontalInset,
+                bottom  : expandedBottomInset,
+                trailing: expandedHorizontalInset
+            )
+        }
+    }
+
+    private func isExpanded(_ presentation: NotchActivityPresentation) -> Bool {
+        if case .expanded = presentation { return true }
+        return false
+    }
+
+    /// hideForScreenLock stops all activity and widget presentation before the
+    /// panel leaves the screen. Pointer callbacks remain installed for wake, but
+    /// the visibility guard makes them inert while loginwindow owns the screen.
+    private func hideForScreenLock() {
+        guard isStarted, isPanelVisible else {
+            return
+        }
+
+        isPanelVisible             = false
+        isSettingsFocused          = false
+        isExternalSurfacePresented = false
+        isControlDragActive        = false
+        dragReleaseTask?.cancel()
+        dragReleaseTask = nil
+        hoverFeedback.update(isHovering: false)
+        lastPointer = nil
+        morphEngine.stop()
+        state = .closed
+        isReturningToBase = false
+        leadingSpring.snap(to: 0)
+        trailingSpring.snap(to: 0)
+        compactSpring.snap(to: 0)
+        compactTrailingSpring.snap(to: 0)
+        bubbleSpring.snap(to: 0)
+        dragHeartbeatSpring.snap(to: 0)
+        dragHeartbeatPhase = 0
+        isRecognizedFileDragActive = false
+        fileDragHasValidatedOfferHint = false
+        hasAuthoritativeNativeFileHover = false
+        fileDragPhysicalGestureEnded = true
+        hasAttemptedFileDragTopEdgeGuard = false
+        hostView.setFileDropIntakeFrame(nil)
+        fileDropReceiverPanel.deactivate()
+        fileDragTopEdgeGuard.stop()
+        isAttachingSecondary = false
+        presentedActivityID = nil
+        presentedSecondaryActivityID = nil
+        isReplacingActivity = false
+        clickedOpen = false
+        cancelHoverExit()
+        hostView.auxiliaryInteraction.dismiss()
+        heightSpring.snap(to: activeDisplay.map { Double(restingSize(for: $0).height) } ?? 0)
+        sizeCalibration.finish(save: false)
+        renderContent()
+        panel.ignoresMouseEvents = true
+        panel.orderOut(nil)
+        fileDropReceiverPanel.deactivate()
+        fileDropReceiverPanel.orderOut(nil)
+    }
+
+    /// restoreAfterScreenUnlock takes a fresh display snapshot before showing
+    /// content, so wake and resolution changes update geometry and views as one
+    /// presentation rather than flashing the stale pre-lock layout.
+    private func restoreAfterScreenUnlock() {
+        guard isStarted, !isPanelVisible else {
+            return
+        }
+
+        refreshActiveDisplay()
+        isPanelVisible = true
+        renderCurrentFrame()
+        renderContent()
+        startMorphIfNeeded()
+        presentPanel()
+    }
+
+    /// updatePanelMouseInterception toggles the whole-band window using the
+    /// exact animated path under the current cursor. This is the only reliable
+    /// way for an NSPanel to let another process receive menu-bar clicks.
+    private func updatePanelMouseInterception(at screenPoint: CGPoint) {
+        guard isStarted, isPanelVisible, !sizeCalibration.isActive, !isExternalSurfacePresented else {
+            panel.ignoresMouseEvents = true
+            fileDropReceiverPanel.deactivate()
+            return
+        }
+
+        if isControlDragActive {
+            fileDropReceiverPanel.deactivate()
+            panel.ignoresMouseEvents = false
+            return
+        }
+
+        if isRecognizedFileDragActive, !isMissionControlShowing, let display = activeDisplay {
+            let ignoredPreviously = fileDropReceiverPanel.ignoresMouseEvents
+            panel.ignoresMouseEvents = true
+            fileDropReceiverPanel.activate(frame: fileDragIntakeRegion(for: display))
+            if !loggedFileDragWindowReady {
+                loggedFileDragWindowReady = true
+                let intake = fileDragIntakeRegion(for: display)
+                fileDropLog.notice(
+                    "phase=intakeWindowReady recognized=true ignoredPreviously=\(ignoredPreviously) pointerInsidePanel=\(self.panel.frame.contains(screenPoint)) pointerInsideIntake=\(intake.contains(screenPoint))"
+                )
+            }
+            return
+        }
+
+        fileDropReceiverPanel.deactivate()
+        let windowPoint = panel.convertPoint(fromScreen: screenPoint)
+        let viewPoint   = hostView.convert(windowPoint, from: nil)
+        panel.ignoresMouseEvents = !hostView.containsInteractivePoint(viewPoint)
+    }
+}
+
+/// SharedNotchActivitySurface applies the host-owned appearance and behavior
+/// around standard provider content. Providers keep control of their own view,
+/// while Cascade supplies safe insets, stale status, accessibility, and links.
+private struct SharedNotchActivitySurface: View {
+    let content           : AnyView
+    let contentSize       : CGSize
+    let contentURL        : URL?
+    let accessibilityLabel: String
+    let presentation      : NotchActivityPresentation
+    let isStale           : Bool
+    let insets            : EdgeInsets
+
+    var body: some View {
+        ZStack {
+            // The host owns expanded chrome, including glass and the opaque
+            // accessibility fallback. A provider wrapper must not cover it.
+            isExpandedPresentation ? Color.clear : Color.black
+            linkedContent
+                .padding(insets)
+        }
+        .environment(\.colorScheme, .dark)
+        .font(isExpandedPresentation ? .body : .callout)
+        .foregroundStyle(.white)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    @ViewBuilder
+    private var linkedContent: some View {
+        if !isExpandedPresentation, let contentURL {
+            Link(destination: contentURL) {
+                row(showsOpenControl: false)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } else {
+            row(showsOpenControl: isExpandedPresentation && contentURL != nil)
+        }
+    }
+
+    private func row(showsOpenControl: Bool) -> some View {
+        HStack(spacing: 0) {
+            content
+                .frame(
+                    width : contentSize.width,
+                    height: contentSize.height
+                )
+                // Layout stays inside the content insets. Permit a bounded
+                // glow/shadow around it; the native container still clips all
+                // painting to the notch outline, including above the content.
+                .padding(40)
+                .clipped()
+                .padding(-40)
+
+            if isStale {
+                Spacer().frame(width: 4)
+                Image(systemName: "clock.badge.exclamationmark")
+                    .font(.caption2)
+                    .frame(width: 14)
+                    .accessibilityLabel("Aggiornamento in ritardo")
+            }
+
+            if showsOpenControl, let contentURL {
+                Spacer().frame(width: 8)
+                Link(destination: contentURL) {
+                    Label("Apri", systemImage: "arrow.up.forward.app")
+                        .labelStyle(.titleAndIcon)
+                }
+                .buttonStyle(.plain)
+                .frame(width: 68)
+            }
+        }
+    }
+
+    private var isExpandedPresentation: Bool {
+        if case .expanded = presentation { return true }
+        return false
+    }
+}
+
+/// SensitiveNotchActivityPlaceholder is constructed without consulting the
+/// provider, so private text, URLs, freshness, and accessibility labels cannot
+/// enter the hidden SwiftUI tree.
+private struct SensitiveNotchActivityPlaceholder: View {
+    let presentation: NotchActivityPresentation
+
+    var body: some View {
+        ZStack {
+            isExpandedPresentation ? Color.clear : Color.black
+            if isExpandedPresentation {
+                Label("Attività nascosta", systemImage: "lock.fill")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .padding(16)
+            } else {
+                Image(systemName: "lock.fill")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .environment(\.colorScheme, .dark)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Attività sensibile nascosta")
+    }
+
+    private var isExpandedPresentation: Bool {
+        if case .expanded = presentation { return true }
+        return false
     }
 }

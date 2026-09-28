@@ -1,0 +1,24 @@
+{
+  "started": 1790415467.2791302,
+  "freeBefore": 4423680000,
+  "helperSHA256": "01bf608914f8211a4dba38c2d64d69d718835b7968788ae83275087504995dbd",
+  "sourceSHA256": "08edc7c30673760e36887c94a61d0e291a68d9851a8c3fe05fc00f8097c7591e",
+  "finished": 1790415550.5615401,
+  "exitCode": 0,
+  "stdout": "{\"allocatedAfterBytes\":17507381248,\"allocatedBeforeBytes\":17584783360,\"pageBytes\":4096,\"punchedBytes\":77402112,\"scannedPages\":4293159,\"sha256After\":\"sha256:0c0d46984b170fe9f40bbcfc1ef3a490a878fbd95d8fdd3d6b051c677d085721\",\"sha256Before\":\"sha256:0c0d46984b170fe9f40bbcfc1ef3a490a878fbd95d8fdd3d6b051c677d085721\",\"sizeBytes\":50000000000,\"skippedHoleBytes\":32415219712,\"status\":\"verified\",\"zeroBlocks\":18897}\n",
+  "stderr": "",
+  "freeAfter": 6307840000,
+  "measurement": {
+    "allocatedAfterBytes": 17507381248,
+    "allocatedBeforeBytes": 17584783360,
+    "pageBytes": 4096,
+    "punchedBytes": 77402112,
+    "scannedPages": 4293159,
+    "sha256After": "sha256:0c0d46984b170fe9f40bbcfc1ef3a490a878fbd95d8fdd3d6b051c677d085721",
+    "sha256Before": "sha256:0c0d46984b170fe9f40bbcfc1ef3a490a878fbd95d8fdd3d6b051c677d085721",
+    "sizeBytes": 50000000000,
+    "skippedHoleBytes": 32415219712,
+    "status": "verified",
+    "zeroBlocks": 18897
+  }
+}

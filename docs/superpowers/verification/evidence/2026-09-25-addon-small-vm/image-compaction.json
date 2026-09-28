@@ -1,0 +1,21 @@
+{
+  "started": 1790375299.7433689,
+  "beforeFreeBytes": 3489792000,
+  "helperSHA256": "30e3856e8bf7d43f4c50363dbb1c2ee9e6e99ae3008ada7d2280a175e4f06ecf",
+  "sourceSHA256": "4cbba931e5436c65da52c8860d0564170ece52811cf7befa77290d2f0ad18d96",
+  "exitCode": 0,
+  "stdout": "{\"allocatedAfterBytes\":17584783360,\"allocatedBeforeBytes\":17812783104,\"punchedBytes\":32415219712,\"sha256After\":\"sha256:0c0d46984b170fe9f40bbcfc1ef3a490a878fbd95d8fdd3d6b051c677d085721\",\"sha256Before\":\"sha256:0c0d46984b170fe9f40bbcfc1ef3a490a878fbd95d8fdd3d6b051c677d085721\",\"sizeBytes\":50000000000,\"status\":\"verified\",\"zeroBlocks\":494617}\n",
+  "stderr": "",
+  "measurement": {
+    "allocatedAfterBytes": 17584783360,
+    "allocatedBeforeBytes": 17812783104,
+    "punchedBytes": 32415219712,
+    "sha256After": "sha256:0c0d46984b170fe9f40bbcfc1ef3a490a878fbd95d8fdd3d6b051c677d085721",
+    "sha256Before": "sha256:0c0d46984b170fe9f40bbcfc1ef3a490a878fbd95d8fdd3d6b051c677d085721",
+    "sizeBytes": 50000000000,
+    "status": "verified",
+    "zeroBlocks": 494617
+  },
+  "finished": 1790375375.2181592,
+  "afterFreeBytes": 3694592000
+}

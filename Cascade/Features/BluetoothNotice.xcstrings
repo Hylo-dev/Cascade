@@ -1,0 +1,168 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Audio on Mac": {
+      "comment": "Accessibility status when AirPods become the Mac audio output.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio on Mac"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio sul Mac"
+          }
+        }
+      }
+    },
+    "Battery unavailable": {
+      "comment": "Accessibility status for an unknown battery charge.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery unavailable"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Batteria non disponibile"
+          }
+        }
+      }
+    },
+    "Battery, %lld percent": {
+      "comment": "Accessibility description of the device battery percentage.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery, %lld percent"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Batteria, %lld percento"
+          }
+        }
+      }
+    },
+    "Case, %lld percent": {
+      "comment": "Accessibility description of the charging case percentage.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Case, %lld percent"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custodia, %lld percento"
+          }
+        }
+      }
+    },
+    "Connected": {
+      "comment": "Accessibility status after the Bluetooth connection completes.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connected"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connesso"
+          }
+        }
+      }
+    },
+    "Disconnected": {
+      "comment": "Accessibility status after the Bluetooth connection ends.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disconnected"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disconnesso"
+          }
+        }
+      }
+    },
+    "Disconnected, battery unavailable": {
+      "comment": "Accessibility description of an unavailable battery after disconnection.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disconnected, battery unavailable"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disconnesso, batteria non disponibile"
+          }
+        }
+      }
+    },
+    "Left, %lld percent": {
+      "comment": "Accessibility description of the left earbud battery percentage.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Left, %lld percent"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sinistro, %lld percento"
+          }
+        }
+      }
+    },
+    "Right, %lld percent": {
+      "comment": "Accessibility description of the right earbud battery percentage.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Right, %lld percent"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Destro, %lld percento"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

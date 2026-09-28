@@ -1,0 +1,25 @@
+{
+  "launcherAdmitted": false,
+  "rejected": true,
+  "observer": {
+    "events": [
+      {
+        "event": "observer-ready",
+        "pid": 59372,
+        "guardDeadline": 433408.366824
+      },
+      {
+        "event": "authentication-error"
+      }
+    ],
+    "cleanupStatus": 91,
+    "teardownLookups": [
+      {
+        "event": "lookup-result",
+        "status": 1102,
+        "absent": true
+      }
+    ],
+    "serviceAbsent": true
+  }
+}

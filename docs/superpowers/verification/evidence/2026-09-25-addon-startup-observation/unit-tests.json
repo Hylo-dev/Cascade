@@ -1,0 +1,82 @@
+[
+  {
+    "suite": "StartupObservation",
+    "command": [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "Prototypes/AddonPlatform/StartupObservation",
+      "-p",
+      "test_*.py"
+    ],
+    "exitCode": 0,
+    "stdout": "",
+    "stderr": "........\n----------------------------------------------------------------------\nRan 8 tests in 0.000s\n\nOK\n"
+  },
+  {
+    "suite": "BrokerRecovery",
+    "command": [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "Prototypes/AddonPlatform/BrokerRecovery",
+      "-p",
+      "test_*.py"
+    ],
+    "exitCode": 0,
+    "stdout": "",
+    "stderr": "...........\n----------------------------------------------------------------------\nRan 11 tests in 0.000s\n\nOK\n"
+  },
+  {
+    "suite": "Recovery",
+    "command": [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "Prototypes/AddonPlatform/Recovery",
+      "-p",
+      "test_*.py"
+    ],
+    "exitCode": 0,
+    "stdout": "",
+    "stderr": "....\n----------------------------------------------------------------------\nRan 4 tests in 0.000s\n\nOK\n"
+  },
+  {
+    "suite": "Interruption",
+    "command": [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "Prototypes/AddonPlatform/Interruption",
+      "-p",
+      "test_*.py"
+    ],
+    "exitCode": 0,
+    "stdout": "",
+    "stderr": "...\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nOK\n"
+  },
+  {
+    "suite": "XPCLifetime",
+    "command": [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "Prototypes/AddonPlatform/XPCLifetime",
+      "-p",
+      "test_*.py"
+    ],
+    "exitCode": 0,
+    "stdout": "",
+    "stderr": ".......\n----------------------------------------------------------------------\nRan 7 tests in 0.000s\n\nOK\n"
+  }
+]

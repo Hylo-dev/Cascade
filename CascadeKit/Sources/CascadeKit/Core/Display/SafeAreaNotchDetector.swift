@@ -5,12 +5,12 @@
 
 import AppKit
 
-/// SafeAreaNotchDetector resolves the active display from AppKit.
+/// SafeAreaNotchDetector preserves the existing single-controller pointer
+/// fallback until the multi-display coordinator receives inventory snapshots.
 ///
-/// "Active" means the screen under the pointer — the place the user is looking —
-/// falling back to the main screen. We resolve from the mouse rather than the
-/// key window on purpose: Cascade is a nonactivating overlay that never holds
-/// focus, so there is often no key window of ours to ask.
+/// Focused-window ownership is deliberately absent here. Keeping focus in the
+/// pure resolver prevents this legacy adapter from competing with the new AX
+/// monitor or with `DisplayInventory`.
 final class SafeAreaNotchDetector: ActiveDisplayResolving {
 
     func resolveActiveDisplay() -> ActiveDisplay? {

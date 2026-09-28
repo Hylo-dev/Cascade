@@ -1,0 +1,13 @@
+Timestamp               Ty Process[PID:TID]
+2026-09-24 13:17:41.021 Df DiscoveryProbe[31593:123f1d] (libxpc.dylib) Code-signing requirement (anchor apple generic and identifier "hylo.Cascade.AddonProbe.DiscoveryBroker" and certificate leaf = H"4A857D842A5406C2D3071776FDE7B27B3098FE63") set on connection
+2026-09-24 13:17:41.021 Df DiscoveryProbe[31593:123f1d] [com.apple.xpc:connection] [0x775347d180] activating connection: mach=false listener=false peer=false name=hylo.Cascade.AddonProbe.DiscoveryBroker
+2026-09-24 13:17:41.033 Df launchd[1:123ef2] [pid/31593 [DiscoveryProbe]:] Service stub initialized for hylo.Cascade.AddonProbe.DiscoveryBroker
+2026-09-24 13:17:41.052 A  DiscoveryBroker[31607:123f8d] (libsystem_secinit.dylib) AppSandbox
+2026-09-24 13:17:41.142 Df secinitd[708:123548] (AppSandbox) initializing owners for container ~/Library/Containers/hylo.Cascade.AddonProbe.DiscoveryBroker/Data with <<A6A5HQL6K4/hylo.Cascade.AddonProbe.DiscoveryBroker; signer:development>>
+2026-09-24 13:17:41.254 Df launchd[1:1233cd] [pid/31593 [DiscoveryProbe]:] service inactive: hylo.Cascade.AddonProbe.DiscoveryBroker
+2026-09-24 13:17:41.254 Df launchd[1:1233cd] [pid/31593/hylo.Cascade.AddonProbe.DiscoveryBroker [31607]:] draining messages from hylo.Cascade.AddonProbe.DiscoveryBroker
+2026-09-24 13:17:48.682 Df ReportCrashService[31608:123fa3] extension check: bundleID=hylo.Cascade.AddonProbe.DiscoveryBroker, teamID=A6A5HQL6K4, task=8707, featureEnabled=1
+2026-09-24 13:17:48.682 Df ReportCrashService[31608:123fa3] Checking for crash reporter extension for hylo.Cascade.AddonProbe.DiscoveryBroker (team: A6A5HQL6K4, signingID: hylo.Cascade.AddonProbe.DiscoveryBroker)
+2026-09-24 13:17:48.682 Df ReportCrashService[31608:123fa3] [ReportCrashService:CrashReporterExtension]  Bundle: hylo.Cascade.AddonProbe.DiscoveryBroker
+2026-09-24 13:17:48.874 Df ReportCrashService[31608:123fa3] hylo.Cascade.AddonProbe.DiscoveryBroker is not a MetricKit client
+2026-09-24 13:18:13.804 Df log[31668:124251] [com.apple.log:] log run noninteractively, parent: 1205 (codex), args: '/usr/bin/log' 'show' '--last' '3m' '--style' 'compact' '--predicate' 'process == "DiscoveryBroker" OR eventMessage CONTAINS "hylo.Cascade.AddonProbe.DiscoveryBroker"'

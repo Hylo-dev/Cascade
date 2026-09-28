@@ -5,20 +5,27 @@
 
 import CoreGraphics
 
-/// EventMonitoring watches the system for the few signals the notch cares
-/// about, and reports them as cheap callbacks.
+/// EventMonitoring watches the system once for the process and reports the few
+/// signals the display coordinator needs as cheap callbacks.
 ///
 /// It is a protocol so the controller can be tested without a real event
 /// stream. The contract is intentionally tiny: a coalesced pointer position and
-/// a "the active screen may have changed" nudge. The controller decides what to
-/// do with them — the monitor never reaches into the notch state itself.
+/// a "focus may have changed" nudge. The coordinator routes each event to the
+/// pointed surface plus the previous/current owner; local panels never install
+/// competing global monitors.
 protocol EventMonitoring: AnyObject {
 
     /// Throttled pointer position, in AppKit global (bottom-left) coordinates.
     var onPointerMoved: ((CGPoint) -> Void)? { get set }
 
-    /// Fired when the active app changes or the screen layout changes — both
-    /// reasons to re-resolve which display we should be following.
+    /// Fired for mouse-button transitions. The controller uses this only to
+    /// retain panel interception through a control drag that began in the live
+    /// path; it does not interpret buttons or synthesize clicks.
+    var onPointerButtonChanged: ((Bool) -> Void)? { get set }
+
+    /// Fired when app activation or screen layout should make the legacy single
+    /// controller refresh its pointer snapshot. It carries no focus geometry;
+    /// focused-window ownership belongs to FocusedWindowMonitor.
     var onActiveDisplayMayHaveChanged: (() -> Void)? { get set }
 
     /// Fired when the active Space changes — this covers both a desktop swipe
@@ -31,6 +38,16 @@ protocol EventMonitoring: AnyObject {
     var onScreenLocked  : (() -> Void)? { get set }
     var onScreenUnlocked: (() -> Void)? { get set }
 
+    /// Installs the gesture-bound file-drag signal. The first Bool is true once
+    /// for a freshly populated native drag pasteboard and false at its end. The
+    /// second Bool is a fresh, stable regular-file hint for early UI routing;
+    /// it never authorizes a drop.
+    func setFileDragRecognitionHandler(_ handler: ((Bool, CGPoint, Bool) -> Void)?)
+
     func start()
     func stop()
+}
+
+extension EventMonitoring {
+    func setFileDragRecognitionHandler(_ handler: ((Bool, CGPoint, Bool) -> Void)?) {}
 }

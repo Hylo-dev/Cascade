@@ -1,0 +1,52 @@
+{
+  "allPassed": true,
+  "first": {
+    "allocatedAfterBytes": 1753088,
+    "allocatedBeforeBytes": 2625536,
+    "pageBytes": 4096,
+    "punchedBytes": 872448,
+    "scannedPages": 640,
+    "sha256After": "sha256:b68f03264810d9bcb8ea87f5372699e013b0fe0549409b89d942376633d7d5a0",
+    "sha256Before": "sha256:b68f03264810d9bcb8ea87f5372699e013b0fe0549409b89d942376633d7d5a0",
+    "sizeBytes": 4194395,
+    "skippedHoleBytes": 1572864,
+    "status": "verified",
+    "zeroBlocks": 213
+  },
+  "second": {
+    "allocatedAfterBytes": 1753088,
+    "allocatedBeforeBytes": 1753088,
+    "pageBytes": 4096,
+    "punchedBytes": 0,
+    "scannedPages": 427,
+    "sha256After": "sha256:b68f03264810d9bcb8ea87f5372699e013b0fe0549409b89d942376633d7d5a0",
+    "sha256Before": "sha256:b68f03264810d9bcb8ea87f5372699e013b0fe0549409b89d942376633d7d5a0",
+    "sizeBytes": 4194395,
+    "skippedHoleBytes": 2445312,
+    "status": "verified",
+    "zeroBlocks": 0
+  },
+  "allHole": {
+    "allocatedAfterBytes": 0,
+    "allocatedBeforeBytes": 0,
+    "pageBytes": 4096,
+    "punchedBytes": 0,
+    "scannedPages": 0,
+    "sha256After": "sha256:de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+    "sha256Before": "sha256:de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+    "sizeBytes": 65536,
+    "skippedHoleBytes": 65536,
+    "status": "verified",
+    "zeroBlocks": 0
+  },
+  "checks": [
+    "4KiB-zero-in-mixed-64KiB-block",
+    "preexisting-holes-skipped",
+    "all-bytes-and-tail-unchanged",
+    "size-unchanged",
+    "allocation-reduced",
+    "second-pass-idempotent",
+    "all-hole-file-ENXIO",
+    "path-ack-hardlink-guards"
+  ]
+}

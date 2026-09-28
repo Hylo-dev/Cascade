@@ -1,0 +1,242 @@
+{
+  "mode": "root-crash",
+  "events": [
+    {
+      "event": "client-ready"
+    },
+    {
+      "authenticated": true,
+      "brokerGuard": 433918.384849,
+      "brokerInstance": "71A2F4D6-B64D-4850-8B04-78A4B8847A00",
+      "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-izxg04jl/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+      "brokerPID": 62439,
+      "event": "broker-info",
+      "nonce": "8CD5E58F-AF6A-4E77-B91B-A35EC99B19BD",
+      "startupPhase": "idle"
+    },
+    {
+      "authenticated": true,
+      "brokerGuard": 433918.384849,
+      "brokerInstance": "71A2F4D6-B64D-4850-8B04-78A4B8847A00",
+      "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-izxg04jl/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+      "brokerPID": 62439,
+      "event": "broker-info",
+      "nonce": "66DBBB66-6406-4D22-AD4B-50A46AD67A9A",
+      "startupPhase": "idle"
+    },
+    {
+      "authenticated": true,
+      "brokerGuard": 433918.384849,
+      "brokerInstance": "71A2F4D6-B64D-4850-8B04-78A4B8847A00",
+      "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-izxg04jl/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+      "brokerPID": 62439,
+      "event": "begin-startup",
+      "nonce": "C3D68EF7-6DC5-471F-9D70-58A61E2DB522",
+      "startupPhase": "idle"
+    },
+    {
+      "authenticated": true,
+      "brokerGuard": 433918.384849,
+      "brokerInstance": "71A2F4D6-B64D-4850-8B04-78A4B8847A00",
+      "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-izxg04jl/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+      "brokerPID": 62439,
+      "event": "broker-info",
+      "nonce": "4CF83330-17B0-4022-A465-0525561EB57B",
+      "startupPhase": "process-ready"
+    },
+    {
+      "authenticated": true,
+      "brokerGuard": 433918.384849,
+      "brokerInstance": "71A2F4D6-B64D-4850-8B04-78A4B8847A00",
+      "brokerPath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-izxg04jl/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc",
+      "brokerPID": 62439,
+      "event": "broker-info",
+      "nonce": "F8D1395A-17A2-41BD-89E7-BCE00A15CDA4",
+      "startupPhase": "process-ready"
+    },
+    {
+      "event": "crash"
+    }
+  ],
+  "launcherAdmitted": false,
+  "rootPID": 62436,
+  "registrations": [
+    {
+      "name": "broker",
+      "time": 433883.399394,
+      "events": [
+        {
+          "ident": 62439,
+          "filter": -5,
+          "flags": 16453,
+          "fflags": 2751463424,
+          "data": 0
+        }
+      ]
+    },
+    {
+      "name": "provider",
+      "time": 433883.479289,
+      "events": [
+        {
+          "ident": 62441,
+          "filter": -5,
+          "flags": 16453,
+          "fflags": 2751463424,
+          "data": 0
+        }
+      ]
+    }
+  ],
+  "authenticated": true,
+  "registered": true,
+  "confirmed": true,
+  "providerPhase": "main-image-constructor",
+  "providerIgnoresSIGTERM": true,
+  "phaseBefore": "process-ready",
+  "phaseAfter": "process-ready",
+  "brokerGuard": 433918.384849,
+  "providerGuard": 433908.47352,
+  "observerGuard": 433923.292108,
+  "trigger": 433883.48169,
+  "rootStatus": -9,
+  "rootExit": 433883.485557,
+  "kernelEvents": [
+    {
+      "time": 433883.485565,
+      "ident": 62439,
+      "filter": -5,
+      "flags": 32885,
+      "fflags": 2214592512,
+      "data": 9
+    },
+    {
+      "time": 433883.489372,
+      "ident": 62441,
+      "filter": -5,
+      "flags": 32885,
+      "fflags": 2214592512,
+      "data": 9
+    }
+  ],
+  "windowEnd": 433883.489379,
+  "exits": {
+    "broker": {
+      "time": 433883.485569,
+      "status": 9
+    },
+    "provider": {
+      "time": 433883.489377,
+      "status": 9
+    }
+  },
+  "observerAlive": true,
+  "verdict": "PASS",
+  "cleanup": {
+    "rootStatus": -9,
+    "exits": {
+      "broker": {
+        "time": 433883.485569,
+        "status": 9
+      },
+      "provider": {
+        "time": 433883.489377,
+        "status": 9
+      }
+    },
+    "complete": true
+  },
+  "identities": {
+    "broker": {
+      "pid": 62439,
+      "instance": "71A2F4D6-B64D-4850-8B04-78A4B8847A00",
+      "guardDeadline": 433918.384849,
+      "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-izxg04jl/BrokerRecovery.app/Contents/XPCServices/DiscoveryBroker.xpc"
+    },
+    "provider": {
+      "pid": 62441,
+      "instance": "12631FB7-84D8-4A15-8720-1CEBF5C195A5",
+      "guardDeadline": 433908.47352,
+      "audit": [
+        4294967295,
+        501,
+        20,
+        501,
+        20,
+        62441,
+        101785,
+        309353
+      ],
+      "phase": "main-image-constructor",
+      "ignoresSIGTERM": true
+    }
+  },
+  "observer": {
+    "events": [
+      {
+        "event": "observer-ready",
+        "pid": 62435,
+        "guardDeadline": 433923.292108
+      },
+      {
+        "event": "initializer-observed",
+        "phase": "main-image-constructor",
+        "ignoresSIGTERM": true,
+        "authenticated": true,
+        "pathVerified": true,
+        "pid": 62441,
+        "instance": "12631FB7-84D8-4A15-8720-1CEBF5C195A5",
+        "guardDeadline": 433908.47352,
+        "sequence": 0,
+        "time": 433883.479194,
+        "auditVersion": 309353,
+        "audit": [
+          4294967295,
+          501,
+          20,
+          501,
+          20,
+          62441,
+          101785,
+          309353
+        ]
+      },
+      {
+        "event": "initializer-confirmed",
+        "phase": "main-image-constructor",
+        "ignoresSIGTERM": true,
+        "authenticated": true,
+        "pathVerified": true,
+        "pid": 62441,
+        "instance": "12631FB7-84D8-4A15-8720-1CEBF5C195A5",
+        "guardDeadline": 433908.47352,
+        "sequence": 1,
+        "time": 433883.481065,
+        "auditVersion": 309353,
+        "audit": [
+          4294967295,
+          501,
+          20,
+          501,
+          20,
+          62441,
+          101785,
+          309353
+        ]
+      },
+      {
+        "event": "observer-ping",
+        "pid": 62435
+      }
+    ],
+    "cleanupStatus": 0,
+    "teardownLookups": [
+      {
+        "event": "lookup-result",
+        "status": 1102,
+        "absent": true
+      }
+    ],
+    "serviceAbsent": true
+  }
+}

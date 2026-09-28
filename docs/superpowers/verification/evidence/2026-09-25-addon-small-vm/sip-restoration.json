@@ -1,0 +1,13 @@
+{
+  "action": "csrutil enable in guest Recovery Terminal",
+  "interface": "Tart VM window via CUA",
+  "hostSettingsChanged": false,
+  "guestAccount": "public image admin",
+  "nativeProbeStarted": false,
+  "result": "verified enabled after two normal boots",
+  "recoveryOutput": "System Integrity Protection is on. Restart the machine for the changes to take effect.",
+  "normalBootEvidence": [
+    "qualified-boot-1-preflight.json",
+    "qualified-boot-2-preflight.json"
+  ]
+}

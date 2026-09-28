@@ -1,0 +1,13 @@
+{
+  "launcherAdmitted": false,
+  "observer": {
+    "events": [
+      {
+        "event": "observer-error",
+        "stage": "bind-listen",
+        "errno": 1
+      }
+    ],
+    "cleanupStatus": 90
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "unregisteredFixtureCopies": [
+    {
+      "path": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-y_395u19/Build/Build/Products/Debug/CascadeAddonProbeContainer.app",
+      "status": 1,
+      "stdout": "",
+      "stderr": "failed to scan /Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-y_395u19/Build/Build/Products/Debug/CascadeAddonProbeContainer.app: -10814\n from spotlight"
+    },
+    {
+      "path": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-hjoaeaei/Build/Build/Products/Debug/CascadeAddonProbeContainer.app",
+      "status": 1,
+      "stdout": "",
+      "stderr": "failed to scan /Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-hjoaeaei/Build/Build/Products/Debug/CascadeAddonProbeContainer.app: -10814\n from spotlight"
+    },
+    {
+      "path": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-9c3fyvob/Build/Build/Products/Debug/CascadeAddonProbeContainer.app",
+      "status": 1,
+      "stdout": "",
+      "stderr": "failed to scan /Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-9c3fyvob/Build/Build/Products/Debug/CascadeAddonProbeContainer.app: -10814\n from spotlight"
+    },
+    {
+      "path": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-qjejljsr/Build/Build/Products/Debug/CascadeAddonProbeContainer.app",
+      "status": 1,
+      "stdout": "",
+      "stderr": "failed to scan /Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-qjejljsr/Build/Build/Products/Debug/CascadeAddonProbeContainer.app: -10814\n from spotlight"
+    },
+    {
+      "path": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-7zwrmymw/Build/Build/Products/Debug/CascadeAddonProbeContainer.app",
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "path": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonPlatform/Build/Products/Debug/CascadeAddonProbeContainer.app",
+      "status": 1,
+      "stdout": "",
+      "stderr": "failed to scan /Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonPlatform/Build/Products/Debug/CascadeAddonProbeContainer.app: -10814\n from spotlight"
+    }
+  ],
+  "activeContainer": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-yz99ky5t/Build/Build/Products/Debug/CascadeAddonProbeContainer.app"
+}

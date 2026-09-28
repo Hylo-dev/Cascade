@@ -1,0 +1,7 @@
+{
+  "layer": "sha256:9dd20c3c68fd4856dea67bc9ccdd5f526ea72345df64665dd8ff3c296b56065b",
+  "layerBytes": 506074026,
+  "status": 28,
+  "metrics": "status=206 bytes=9108096 speed=227491 time=40.037039\n",
+  "error": "curl: (28) Operation timed out after 35484 milliseconds with 9108096 out of 10485760 bytes received\n"
+}

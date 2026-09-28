@@ -5,6 +5,9 @@
 # Build products and per-user state — regenerable or machine-specific.
 build/
 DerivedData/
+Config/FFmpeg/Artifacts/
+Config/FFmpeg/Build/
+Config/FFmpeg/Downloads/
 *.xcuserstate
 *.xcscmblueprint
 *.xccheckout
@@ -21,3 +24,12 @@ xcuserdata/
 # ─── Misc ───────────────────────────────────────────────────────────
 *.swp
 *~
+
+# Temporary pipeline scratch stays out of Git, but the canonical local tracker
+# under .scratch/cascade-product remains visible for review.
+.scratch/*
+!.scratch/cascade-product/
+
+# Generated profiling data and Python bytecode
+*.profraw
+__pycache__/

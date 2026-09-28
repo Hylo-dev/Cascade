@@ -1,0 +1,176 @@
+{
+  "mode": "provider-exit",
+  "launcherAdmitted": false,
+  "authenticated": true,
+  "registered": true,
+  "confirmed": true,
+  "launchNonce": "520529D7-B437-4F66-8498-0F7C9F513DD4",
+  "guardDeadline": 351393.044708,
+  "before": {
+    "event": "observation",
+    "launchNonce": "520529D7-B437-4F66-8498-0F7C9F513DD4",
+    "notifications": [],
+    "ownedReferences": {
+      "bootstrap": true,
+      "channel": true,
+      "delegate": true,
+      "listener": true,
+      "process": true
+    },
+    "releasedReferencesStillAlive": {
+      "bootstrap": false,
+      "channel": false,
+      "delegate": false,
+      "listener": false
+    },
+    "time": 351368.059975
+  },
+  "trigger": 351368.060048,
+  "after": {
+    "event": "observation",
+    "launchNonce": "520529D7-B437-4F66-8498-0F7C9F513DD4",
+    "notifications": [
+      {
+        "nonce": "520529D7-B437-4F66-8498-0F7C9F513DD4",
+        "time": 351368.063949
+      }
+    ],
+    "ownedReferences": {
+      "bootstrap": true,
+      "channel": true,
+      "delegate": true,
+      "listener": true,
+      "process": true
+    },
+    "releasedReferencesStillAlive": {
+      "bootstrap": false,
+      "channel": false,
+      "delegate": false,
+      "listener": false
+    },
+    "time": 351374.06066
+  },
+  "notifications": [
+    {
+      "nonce": "520529D7-B437-4F66-8498-0F7C9F513DD4",
+      "time": 351368.063949
+    }
+  ],
+  "windowEnd": 351374.06066,
+  "exit": {
+    "time": 351368.0609,
+    "status": 0
+  },
+  "hostAlive": true,
+  "outcome": "EXIT_AND_NOTIFICATION",
+  "participant": {
+    "events": [
+      {
+        "event": "discovery",
+        "identities": [
+          "hylo.Cascade.AddonProbeContainer.Provider"
+        ]
+      },
+      {
+        "event": "client-ready",
+        "launchNonce": "520529D7-B437-4F66-8498-0F7C9F513DD4"
+      },
+      {
+        "authenticated": true,
+        "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-yz99ky5t/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+        "event": "hello",
+        "guardDeadline": 351393.044708,
+        "instance": "642CB7A6-40F7-4594-87D2-9C20062E66F4",
+        "pid": 39800,
+        "time": 351368.059552
+      },
+      {
+        "authenticated": true,
+        "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-yz99ky5t/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex",
+        "event": "hello",
+        "guardDeadline": 351393.044708,
+        "instance": "642CB7A6-40F7-4594-87D2-9C20062E66F4",
+        "pid": 39800,
+        "time": 351368.059862
+      },
+      {
+        "event": "observation",
+        "launchNonce": "520529D7-B437-4F66-8498-0F7C9F513DD4",
+        "notifications": [],
+        "ownedReferences": {
+          "bootstrap": true,
+          "channel": true,
+          "delegate": true,
+          "listener": true,
+          "process": true
+        },
+        "releasedReferencesStillAlive": {
+          "bootstrap": false,
+          "channel": false,
+          "delegate": false,
+          "listener": false
+        },
+        "time": 351368.059975
+      },
+      {
+        "event": "provider-stop-requested",
+        "time": 351368.060071
+      },
+      {
+        "event": "stop-reply"
+      },
+      {
+        "event": "observation",
+        "launchNonce": "520529D7-B437-4F66-8498-0F7C9F513DD4",
+        "notifications": [
+          {
+            "nonce": "520529D7-B437-4F66-8498-0F7C9F513DD4",
+            "time": 351368.063949
+          }
+        ],
+        "ownedReferences": {
+          "bootstrap": true,
+          "channel": true,
+          "delegate": true,
+          "listener": true,
+          "process": true
+        },
+        "releasedReferencesStillAlive": {
+          "bootstrap": false,
+          "channel": false,
+          "delegate": false,
+          "listener": false
+        },
+        "time": 351374.06066
+      }
+    ],
+    "label": "interruption-provider-exit",
+    "hostPID": 39797,
+    "ready": {
+      "event": "client-ready",
+      "launchNonce": "520529D7-B437-4F66-8498-0F7C9F513DD4"
+    },
+    "identity": {
+      "pid": 39800,
+      "instance": "642CB7A6-40F7-4594-87D2-9C20062E66F4",
+      "guardDeadline": 351393.044708,
+      "bundlePath": "/Users/c4v4h/Library/Developer/Xcode/DerivedData/CascadeAddonRecoveryProbe/probe-yz99ky5t/Build/Build/Products/Debug/CascadeAddonProbeContainer.app/Contents/Extensions/CascadeProbeProvider.appex"
+    },
+    "authenticated": true,
+    "registered": true,
+    "sameInstance": true,
+    "exit": {
+      "time": 351368.0609,
+      "status": 0
+    },
+    "cleanup": {
+      "exit": {
+        "time": 351368.0609,
+        "status": 0
+      },
+      "hostStatus": 0,
+      "knownProviderExited": true
+    }
+  },
+  "cleanupComplete": true
+}

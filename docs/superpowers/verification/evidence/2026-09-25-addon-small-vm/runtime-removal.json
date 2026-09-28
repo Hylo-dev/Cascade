@@ -1,0 +1,15 @@
+{
+  "started": 1790417975.52624,
+  "freeBeforeBytes": 21790720000,
+  "removed": [
+    "tart.app",
+    "state",
+    "share/payload.tar.gz",
+    "guest-access",
+    "guest-access.pub",
+    "guest-askpass",
+    "known_hosts"
+  ],
+  "finished": 1790417975.530526,
+  "freeAfterBytes": 21872640000
+}

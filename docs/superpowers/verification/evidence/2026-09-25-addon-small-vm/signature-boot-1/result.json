@@ -1,0 +1,27 @@
+{
+  "command": [
+    "/private/tmp/cascade-addon-vm/tart.app/Contents/MacOS/tart",
+    "run",
+    "cascade-addon-small",
+    "--no-audio",
+    "--no-clipboard",
+    "--no-usb-accessories",
+    "--dir=probe:/private/tmp/cascade-addon-vm/share:ro"
+  ],
+  "started": 1790416305.93619,
+  "minimumFreeBytes": 3221225472,
+  "timeoutSeconds": 1800,
+  "pid": 47803,
+  "stopReason": "requested",
+  "stopRequested": 1790416437.183007,
+  "exitCode": 0,
+  "exitObserved": 1790416437.3695319,
+  "elapsedSeconds": 131.433,
+  "freeAfterStop": 4034850816,
+  "stopMessagePresent": true,
+  "listAfterExit": {
+    "status": 0,
+    "stdout": "[\n  {\n    \"Accessed\" : \"2026-09-26T09:51:45Z\",\n    \"Source\" : \"local\",\n    \"Name\" : \"cascade-addon-small\",\n    \"Disk\" : 50,\n    \"Size\" : 17,\n    \"Running\" : false,\n    \"State\" : \"stopped\"\n  }\n]\n",
+    "stderr": ""
+  }
+}
