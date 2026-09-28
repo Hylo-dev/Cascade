@@ -4,7 +4,6 @@
 //
 
 import AppKit
-import SwiftUI
 import CascadeKit
 
 /// AppDelegate owns the notch engine for the whole life of the process and
@@ -18,7 +17,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let services = CascadeServices()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-
         // Run as an accessory (agent) app: no Dock icon, no app menu, and —
         // crucially — the overlay panel is treated as a floating utility rather
         // than a managed application window, so Mission Control and Space
@@ -27,17 +25,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Unit tests load the host app too; they must not install system event
         // monitors or trigger a Bluetooth permission request as a side effect.
-        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil
+        else { return }
+
         services.start()
+
         if CommandLine.arguments.contains("--open-settings") {
             Task { @MainActor in services.openSettings() }
         }
+
         if CommandLine.arguments.contains("--calibrate-notch") {
             Task { @MainActor in services.beginSizeCalibration(from: .global) }
         }
+
         if CommandLine.arguments.contains("--preview-spotlight-droplet") {
             services.previewSpotlightDroplet(from: .global)
         }
+
         if CommandLine.arguments.contains("--open-spotlight") {
             services.openSpotlight()
         }

@@ -12,28 +12,34 @@ import os
 
 @main
 enum AudioSpectrumBehaviorChecks {
+
     static func main() async {
         await checkStartupPermissionRequest()
+
         let analyzer = AudioSpectrumAnalyzer()
-        let silence = [Float](repeating: 0, count: 2_048)
+        let silence  = [Float](repeating: 0, count: 2_048)
         check(measure(analyzer, silence) == .silence, "Silence must produce six exact zeros")
 
         // Moving a tone through the audible spectrum must move the strongest bar.
         // Canned motion, broadband RMS, or identical per-band math fails this check.
         for (frequency, band) in [(93.75, 0), (281.25, 1), (750.0, 2), (2_250.0, 3), (6_000.0, 4), (12_000.0, 5)] {
             let isolatedAnalyzer = AudioSpectrumAnalyzer()
-            let tone = signal(frequency: frequency, amplitude: 0.4)
-            var frame = AudioSpectrumFrame.silence
+            let tone             = signal(frequency: frequency, amplitude: 0.4)
+            var frame            = AudioSpectrumFrame.silence
             for _ in 0..<8 {
                 frame = measure(isolatedAnalyzer, tone)
             }
+
             let strongest = frame.bands.enumerated().max { $0.element < $1.element }?.offset
-            check(strongest == band, "Tone at \(frequency) Hz must dominate band \(band), got \(frame.bands)")
+            check(
+                strongest == band,
+                "Tone at \(frequency) Hz must dominate band \(band), got \(frame.bands)"
+            )
             check(frame.bands[band] > 0.5, "An audible tone must not be suppressed")
         }
 
         let quiet = measure(AudioSpectrumAnalyzer(), signal(frequency: 750, amplitude: 0.015))
-        let loud = measure(AudioSpectrumAnalyzer(), signal(frequency: 750, amplitude: 0.7))
+        let loud  = measure(AudioSpectrumAnalyzer(), signal(frequency: 750, amplitude: 0.7))
         check(loud.bands[2] > quiet.bands[2], "Actual amplitude must control height")
 
         let transientAnalyzer = AudioSpectrumAnalyzer()
@@ -41,20 +47,34 @@ enum AudioSpectrumBehaviorChecks {
         impulse[1_024] = 1
         let transient = measure(transientAnalyzer, impulse)
         check(transient.bands.contains { $0 > 0 }, "A real transient must register")
-        check(measure(transientAnalyzer, silence) == .silence, "Silent PCM must immediately clear old energy")
+        check(
+            measure(transientAnalyzer, silence) == .silence,
+            "Silent PCM must immediately clear old energy"
+        )
 
         let antiphaseTone = signal(frequency: 750, amplitude: 0.4)
-        let invertedTone = antiphaseTone.map { -$0 }
+        let invertedTone  = antiphaseTone.map { -$0 }
         let stereo = antiphaseTone.withUnsafeBufferPointer { left in
             invertedTone.withUnsafeBufferPointer { right in
-                AudioSpectrumAnalyzer().analyze(left: left, right: right, sampleRate: 48_000)
+                AudioSpectrumAnalyzer().analyze(
+                    left      : left,
+                    right     : right,
+                    sampleRate: 48_000
+                )
             }
         }
         check(stereo.bands[2] > 0, "Opposite stereo phases must not cancel audible energy")
 
         let invalid = [Float](repeating: .nan, count: 2_048)
-        check(measure(AudioSpectrumAnalyzer(), invalid) == .silence, "Invalid samples must not escape as NaN")
-        check(loud.bands.allSatisfy { $0.isFinite && (0...1).contains($0) }, "Bars must be finite and normalized")
+        check(
+            measure(AudioSpectrumAnalyzer(), invalid) == .silence,
+            "Invalid samples must not escape as NaN"
+        )
+        check(
+            loud.bands.allSatisfy { $0.isFinite && (0...1).contains($0) },
+            "Bars must be finite and normalized"
+        )
+
         checkPCMExchange()
         await checkMonitorLifecycle()
         print("Audio spectrum checks passed")
@@ -66,49 +86,104 @@ enum AudioSpectrumBehaviorChecks {
         signal.setEventHandler { @Sendable in }
         signal.resume()
         defer { signal.cancel() }
+
         let exchange = AudioSpectrumPCMExchange(sampleRate: 48_000, signal: signal)
-        let left = UnsafeMutablePointer<Float>.allocate(capacity: 2_048)
-        let right = UnsafeMutablePointer<Float>.allocate(capacity: 2_048)
+        let left     = UnsafeMutablePointer<Float>.allocate(capacity: 2_048)
+        let right    = UnsafeMutablePointer<Float>.allocate(capacity: 2_048)
         left.initialize(repeating: 0, count: 2_048)
         right.initialize(repeating: 0, count: 2_048)
         defer {
             left.deallocate()
             right.deallocate()
         }
+
         check(!exchange.copyLatest(left: left, right: right), "No PCM must mean no new snapshot")
-        feed(exchange, frames: 1_024, value: 0.25)
-        check(!exchange.copyLatest(left: left, right: right), "A partial initial window cannot be analyzed")
-        feed(exchange, frames: 1_024, value: 0.25)
+        feed(
+            exchange,
+            frames: 1_024,
+            value : 0.25
+        )
+        check(
+            !exchange.copyLatest(left: left, right: right),
+            "A partial initial window cannot be analyzed"
+        )
+        feed(
+            exchange,
+            frames: 1_024,
+            value : 0.25
+        )
         check(exchange.copyLatest(left: left, right: right), "A full window must become available")
         check(left[0] == 0.25 && right[0] == -0.25, "Stereo channels and signs must survive capture")
         check(!exchange.copyLatest(left: left, right: right), "Reading must consume the snapshot")
-        feed(exchange, frames: 800, value: 0.5)
-        check(!exchange.copyLatest(left: left, right: right), "Sub-cadence callbacks must not wake a new analysis")
-        feed(exchange, frames: 800, value: 0.5)
-        check(exchange.copyLatest(left: left, right: right), "Publication must resume at the PCM cadence")
-        check(left[0] == 0.25 && left[2_047] == 0.5, "The rolling window must preserve chronological PCM")
+
+        feed(
+            exchange,
+            frames: 800,
+            value : 0.5
+        )
+        check(
+            !exchange.copyLatest(left: left, right: right),
+            "Sub-cadence callbacks must not wake a new analysis"
+        )
+        feed(
+            exchange,
+            frames: 800,
+            value : 0.5
+        )
+        check(
+            exchange.copyLatest(left: left, right: right),
+            "Publication must resume at the PCM cadence"
+        )
+        check(
+            left[0] == 0.25 && left[2_047] == 0.5,
+            "The rolling window must preserve chronological PCM"
+        )
+
         for value: Float in [0.6, 0.7, 0.8, 0.9] {
-            feed(exchange, frames: 2_048, value: value)
+            feed(
+                exchange,
+                frames: 2_048,
+                value : value
+            )
         }
-        check(exchange.copyLatest(left: left, right: right), "A slow consumer must still receive bounded snapshots")
-        check(left[2_047] == 0.8, "The newest available slot must win; a full exchange drops later input")
+        check(
+            exchange.copyLatest(left: left, right: right),
+            "A slow consumer must still receive bounded snapshots"
+        )
+        check(
+            left[2_047] == 0.8,
+            "The newest available slot must win; a full exchange drops later input"
+        )
         check(!exchange.copyLatest(left: left, right: right), "Drain must reclaim all ready slots")
-        feed(exchange, frames: 2_048, value: 1)
-        check(exchange.copyLatest(left: left, right: right) && left[0] == 1, "Capture must recover after backpressure")
+
+        feed(
+            exchange,
+            frames: 2_048,
+            value : 1
+        )
+        check(
+            exchange.copyLatest(left: left, right: right) && left[0] == 1,
+            "Capture must recover after backpressure"
+        )
     }
 
-    static func feed(_ exchange: AudioSpectrumPCMExchange, frames: Int, value: Float) {
+    static func feed(
+        _ exchange: AudioSpectrumPCMExchange,
+        frames    : Int,
+        value     : Float
+    ) {
         var samples = [Float](repeating: value, count: frames * 2)
         for index in stride(from: 1, to: samples.count, by: 2) {
             samples[index] = -value
         }
+
         samples.withUnsafeMutableBytes { bytes in
             var list = AudioBufferList(
                 mNumberBuffers: 1,
-                mBuffers: AudioBuffer(
+                mBuffers      : AudioBuffer(
                     mNumberChannels: 2,
-                    mDataByteSize: UInt32(bytes.count),
-                    mData: bytes.baseAddress
+                    mDataByteSize  : UInt32(bytes.count),
+                    mData          : bytes.baseAddress
                 )
             )
             withUnsafePointer(to: &list) { exchange.receive($0) }
@@ -117,23 +192,29 @@ enum AudioSpectrumBehaviorChecks {
 
     /// checkMonitorLifecycle uses a delayed HAL substitute because real start would prompt for recording permission.
     static func checkMonitorLifecycle() async {
-        let driver = DelayedSpectrumCaptureDriver()
+        let driver  = DelayedSpectrumCaptureDriver()
         let monitor = CoreAudioSpectrumMonitor(driver: driver)
-        let first = monitor.start(sourceBundleIdentifier: "test.player.first")
+
+        let first         = monitor.start(sourceBundleIdentifier: "test.player.first")
         var firstIterator = first.makeAsyncIterator()
-        let firstSilence = await firstIterator.next()
+        let firstSilence  = await firstIterator.next()
         check(firstSilence == .silence, "A fresh source must clear the last source's waveform")
         let oldRequest = driver.latest()
 
-        let second = monitor.start(sourceBundleIdentifier: "test.player.second")
+        let second         = monitor.start(sourceBundleIdentifier: "test.player.second")
         var secondIterator = second.makeAsyncIterator()
-        let secondSilence = await secondIterator.next()
+        let secondSilence  = await secondIterator.next()
         check(secondSilence == .silence, "Replacing a capture must start from measured silence")
         let newRequest = driver.latest()
-        check(newRequest.source == "test.player.second", "Capture must target the current player's bundle")
+        check(
+            newRequest.source == "test.player.second",
+            "Capture must target the current player's bundle"
+        )
+
         newRequest.status(.capturing)
         await drainMainActor()
         check(monitor.status == .capturing, "A current capture update must reach observation")
+
         oldRequest.status(.permissionRequired)
         oldRequest.continuation.yield(AudioSpectrumFrame(bands: [1, 1, 1, 1, 1, 1]))
         await drainMainActor()
@@ -145,6 +226,7 @@ enum AudioSpectrumBehaviorChecks {
         newRequest.continuation.yield(measured)
         let currentResult = await secondIterator.next()
         check(currentResult == measured, "Current measured PCM must reach the subscriber unchanged")
+
         monitor.stop()
         newRequest.status(.capturing)
         newRequest.continuation.yield(measured)
@@ -155,21 +237,25 @@ enum AudioSpectrumBehaviorChecks {
         check(driver.stopCount >= 3, "Replacing and ending streams must release the capture driver")
 
         var shortLived: CoreAudioSpectrumMonitor? = CoreAudioSpectrumMonitor(driver: driver)
-        let orphaned = shortLived?.start(sourceBundleIdentifier: nil)
+        let orphaned          = shortLived?.start(sourceBundleIdentifier: nil)
         let stopsBeforeDeinit = driver.stopCount
         shortLived = nil
-        check(driver.stopCount == stopsBeforeDeinit + 1, "Deinitialization must release an active capture")
+        check(
+            driver.stopCount == stopsBeforeDeinit + 1,
+            "Deinitialization must release an active capture"
+        )
         _ = orphaned
     }
 
     /// A startup probe must request capture without a player, then release all
     /// resources on completion or cancellation. It must not wait for audible PCM.
     static func checkStartupPermissionRequest() async {
-        let driver = DelayedSpectrumCaptureDriver()
+        let driver    = DelayedSpectrumCaptureDriver()
         let requester = AudioCapturePermissionRequester(driver: driver)
-        let task = Task { await requester.requestAccess() }
+        let task      = Task { await requester.requestAccess() }
         await drainMainActor()
         check(driver.requestCount == 1, "Startup must request system audio even with no player running")
+
         let request = driver.latest()
         check(request.source == nil, "Startup permission must not depend on music metadata")
         request.status(.capturing)
@@ -181,7 +267,10 @@ enum AudioSpectrumBehaviorChecks {
         await drainMainActor()
         driver.latest().status(.permissionRequired)
         let denial = await denied.value
-        check(denial == .permissionRequired, "Permission denial must remain distinguishable from silence")
+        check(
+            denial == .permissionRequired,
+            "Permission denial must remain distinguishable from silence"
+        )
         check(driver.stopCount == 2, "A denied request must release its native resources")
 
         let cancelled = Task { await requester.requestAccess() }
@@ -198,15 +287,30 @@ enum AudioSpectrumBehaviorChecks {
         }
     }
 
-    static func signal(frequency: Double, amplitude: Float) -> [Float] {
+    static func signal(
+        frequency: Double,
+        amplitude: Float
+    ) -> [Float] {
         (0..<2_048).map { amplitude * Float(sin(2 * .pi * frequency * Double($0) / 48_000)) }
     }
 
-    static func measure(_ analyzer: AudioSpectrumAnalyzer, _ samples: [Float]) -> AudioSpectrumFrame {
-        samples.withUnsafeBufferPointer { analyzer.analyze(left: $0, right: nil, sampleRate: 48_000) }
+    static func measure(
+        _ analyzer: AudioSpectrumAnalyzer,
+        _ samples : [Float]
+    ) -> AudioSpectrumFrame {
+        samples.withUnsafeBufferPointer {
+            analyzer.analyze(
+                left      : $0,
+                right     : nil,
+                sampleRate: 48_000
+            )
+        }
     }
 
-    static func check(_ condition: @autoclosure () -> Bool, _ message: String) {
+    static func check(
+        _ condition: @autoclosure () -> Bool,
+        _ message  : String
+    ) {
         guard condition() else {
             fatalError(message)
         }
@@ -215,29 +319,33 @@ enum AudioSpectrumBehaviorChecks {
 
 /// DelayedSpectrumCaptureDriver preserves callbacks after stop to exercise stale-delivery defenses.
 private nonisolated final class DelayedSpectrumCaptureDriver: AudioSpectrumCaptureDriving, @unchecked Sendable {
+
     struct Request: Sendable {
-        let source: String?
+
+        let source      : String?
         let continuation: AsyncStream<AudioSpectrumFrame>.Continuation
-        let status: @Sendable (AudioSpectrumStatus) -> Void
+        let status      : @Sendable (AudioSpectrumStatus) -> Void
     }
 
     private let requests = OSAllocatedUnfairLock<[Request]>(initialState: [])
-    private let stops = OSAllocatedUnfairLock<Int>(initialState: 0)
+    private let stops    = OSAllocatedUnfairLock<Int>(initialState: 0)
 
-    var stopCount: Int { stops.withLock { $0 } }
+    var stopCount   : Int { stops.withLock { $0 } }
     var requestCount: Int { requests.withLock { $0.count } }
 
     func start(
         sourceBundleIdentifier: String?,
-        continuation: AsyncStream<AudioSpectrumFrame>.Continuation,
-        status: @escaping @Sendable (AudioSpectrumStatus) -> Void
+        continuation          : AsyncStream<AudioSpectrumFrame>.Continuation,
+        status                : @escaping @Sendable (AudioSpectrumStatus) -> Void
     ) {
         requests.withLock {
-            $0.append(Request(
-                source       : sourceBundleIdentifier,
-                continuation : continuation,
-                status       : status
-            ))
+            $0.append(
+                Request(
+                    source      : sourceBundleIdentifier,
+                    continuation: continuation,
+                    status      : status
+                )
+            )
         }
     }
 

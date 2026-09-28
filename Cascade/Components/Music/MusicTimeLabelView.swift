@@ -12,16 +12,20 @@ import SwiftUI
 /// new length is laid out again without animation.
 @MainActor
 final class MusicTimeLabelView: NSView {
-    private let font     : NSFont
-    private let color    = NSColor.white.withAlphaComponent(0.55).cgColor
-    private var glyphs   : [CATextLayer] = []
-    private var text     = ""
-    private var widths   : [Character: CGFloat] = [:]
+
+    private let font : NSFont
+    private let color = NSColor.white.withAlphaComponent(0.55).cgColor
+
+    private var glyphs: [CATextLayer] = []
+    private var text   = ""
+    private var widths: [Character: CGFloat] = [:]
+
     private var lineHeight: CGFloat { ceil(font.ascender - font.descender) }
 
     init(font: NSFont) {
         self.font = font
         super.init(frame: .zero)
+
         wantsLayer = true
         // A push transition renders outside the layer it runs on, so the
         // clip that keeps a rolling digit inside its line sits on the parent.
@@ -38,6 +42,7 @@ final class MusicTimeLabelView: NSView {
 
     override func viewDidChangeBackingProperties() {
         super.viewDidChangeBackingProperties()
+
         let scale = window?.backingScaleFactor ?? 2
         glyphs.forEach { $0.contentsScale = scale }
     }
@@ -53,33 +58,39 @@ final class MusicTimeLabelView: NSView {
         animates  : Bool
     ) {
         guard text != self.text else { return }
-        let old = Array(self.text)
-        let new = Array(text)
-        let isRelaid = old.count != new.count
+
+        let oldCharacters = Array(self.text)
+        let newCharacters = Array(text)
+        let isRelaid      = oldCharacters.count != newCharacters.count
+
         self.text = text
+
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        if glyphs.count != new.count {
+        if glyphs.count != newCharacters.count {
             glyphs.forEach { $0.removeFromSuperlayer() }
-            glyphs = new.map { _ in makeGlyph() }
+            glyphs = newCharacters.map { _ in makeGlyph() }
             glyphs.forEach { layer?.addSublayer($0) }
         }
-        for (index, character) in new.enumerated() {
+
+        for (index, character) in newCharacters.enumerated() {
             let glyph = glyphs[index]
-            guard isRelaid || old[index] != character else { continue }
+            guard isRelaid || oldCharacters[index] != character else { continue }
+
             if animates && !isRelaid {
                 let roll = CATransition()
-                roll.type = .push
+                roll.type           = .push
                 // Counting up, the next digit rises from below; counting down,
                 // it drops in from above.
-                roll.subtype = countsDown ? .fromTop : .fromBottom
-                roll.duration = 0.35
+                roll.subtype        = countsDown ? .fromTop : .fromBottom
+                roll.duration       = 0.35
                 roll.timingFunction = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.3, 1)
                 glyph.add(roll, forKey: kCATransition)
             }
             glyph.string = String(character)
         }
         CATransaction.commit()
+
         if isRelaid {
             invalidateIntrinsicContentSize()
             needsLayout = true
@@ -89,28 +100,32 @@ final class MusicTimeLabelView: NSView {
     private func placeGlyphs() {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        var x: CGFloat = 0
-        let y = ((bounds.height - lineHeight) / 2).rounded()
+
+        var originX: CGFloat = 0
+        let originY = ((bounds.height - lineHeight) / 2).rounded()
         for (glyph, character) in zip(glyphs, text) {
             let width = self.width(of: character)
-            glyph.frame = CGRect(x: x, y: y, width: width, height: lineHeight)
-            x += width
+            glyph.frame = CGRect(x: originX, y: originY, width: width, height: lineHeight)
+            originX += width
         }
+
         CATransaction.commit()
     }
 
     private func makeGlyph() -> CATextLayer {
         let glyph = CATextLayer()
-        glyph.font = font
-        glyph.fontSize = font.pointSize
+        glyph.font            = font
+        glyph.fontSize        = font.pointSize
         glyph.foregroundColor = color
-        glyph.alignmentMode = .center
-        glyph.contentsScale = window?.backingScaleFactor ?? 2
+        glyph.alignmentMode   = .center
+        glyph.contentsScale   = window?.backingScaleFactor ?? 2
+
         return glyph
     }
 
     private func width(of character: Character) -> CGFloat {
         if let width = widths[character] { return width }
+
         let width = ceil((String(character) as NSString).size(withAttributes: [.font: font]).width)
         widths[character] = width
         return width

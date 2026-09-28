@@ -13,6 +13,7 @@ import Foundation
 private enum SpotlightDropletChecks {
 
     struct Failure: Error {
+
         let message: String
     }
 
@@ -35,9 +36,9 @@ private enum SpotlightDropletChecks {
     /// checkGlobalLandingGeometry catches screen-origin loss and an inverted AppKit y axis.
     private static func checkGlobalLandingGeometry() throws {
         let layout = SpotlightDropletLayout(
-            screenFrame       : CGRect(x: -1280, y: 160, width: 1280, height: 800),
-            hardwareNotchSize : CGSize(width: 180, height: 32),
-            nativeSize        : CGSize(width: 520, height: 87)
+            screenFrame      : CGRect(x: -1280, y: 160, width: 1280, height: 800),
+            hardwareNotchSize: CGSize(width: 180, height: 32),
+            nativeSize       : CGSize(width: 520, height: 87)
         )
         try require(
             layout.landingBounds == CGRect(x: -900, y: 809, width: 520, height: 87),
@@ -50,10 +51,11 @@ private enum SpotlightDropletChecks {
                 && layout.canvasBounds.height < 220,
             "One fixed, small canvas must contain both surfaces without covering the screen"
         )
+
         let narrowLayout = SpotlightDropletLayout(
-            screenFrame       : CGRect(x: 0, y: 0, width: 320, height: 200),
-            hardwareNotchSize : CGSize(width: 180, height: 32),
-            nativeSize        : CGSize(width: 800, height: 87)
+            screenFrame      : CGRect(x: 0, y: 0, width: 320, height: 200),
+            hardwareNotchSize: CGSize(width: 180, height: 32),
+            nativeSize       : CGSize(width: 800, height: 87)
         )
         try require(
             narrowLayout.landingBounds == CGRect(x: 24, y: 49, width: 272, height: 87),
@@ -64,6 +66,7 @@ private enum SpotlightDropletChecks {
     /// checkDetachBeforeExpansion catches a field-shaped surface appearing while still tethered.
     private static func checkDetachBeforeExpansion() throws {
         let timeline = makeTimeline()
+
         for millisecond in 0...180 {
             let frame = timeline.frame(at: Double(millisecond) / 1000)
             try require(
@@ -71,10 +74,12 @@ private enum SpotlightDropletChecks {
                 "The gathering and falling drop must remain compact until detachment"
             )
         }
+
         try require(
             timeline.frame(at: 0.180).isDetached,
             "The neck must release within 180 ms so detachment feels immediate"
         )
+
         for millisecond in 0...520 {
             let frame = timeline.frame(at: Double(millisecond) / 1000)
             if frame.dropletBounds.width > 80 {
@@ -85,6 +90,7 @@ private enum SpotlightDropletChecks {
                 )
             }
         }
+
         let finalFrame = timeline.frame(at: 0.400)
         try require(
             finalFrame.isComplete && finalFrame.isDetached
@@ -101,6 +107,7 @@ private enum SpotlightDropletChecks {
     private static func checkContinuousFiniteMotion() throws {
         let timeline = makeTimeline()
         var previous = timeline.frame(at: 0)
+
         for millisecond in 1...600 {
             let frame = timeline.frame(at: Double(millisecond) / 1000)
             let coordinates = [
@@ -123,6 +130,7 @@ private enum SpotlightDropletChecks {
             )
             previous = frame
         }
+
         for elapsed in [-1.0, .nan, -.infinity, .infinity] {
             let frame = timeline.frame(at: elapsed)
             try require(
@@ -135,6 +143,7 @@ private enum SpotlightDropletChecks {
     /// checkReducedMotion catches accidental travel or the full delay with Reduce Motion enabled.
     private static func checkReducedMotion() throws {
         let timeline = makeTimeline(reducesMotion: true)
+
         for millisecond in 0...100 {
             let frame = timeline.frame(at: Double(millisecond) / 1000)
             try require(
@@ -143,6 +152,7 @@ private enum SpotlightDropletChecks {
                 "Reduce Motion must keep the surface at its final bounds from the first frame"
             )
         }
+
         try require(
             timeline.frame(at: 0.100).isComplete && timeline.duration <= 0.100,
             "Reduce Motion must hand over within 100 ms"
@@ -152,9 +162,9 @@ private enum SpotlightDropletChecks {
     /// checkInvalidNativeSize catches non-finite AX measurements reaching the overlay.
     private static func checkInvalidNativeSize() throws {
         let layout = SpotlightDropletLayout(
-            screenFrame       : CGRect(x: 0, y: 0, width: 1512, height: 982),
-            hardwareNotchSize : CGSize(width: 180, height: 32),
-            nativeSize        : CGSize(width: CGFloat.nan, height: CGFloat.infinity)
+            screenFrame      : CGRect(x: 0, y: 0, width: 1512, height: 982),
+            hardwareNotchSize: CGSize(width: 180, height: 32),
+            nativeSize       : CGSize(width: CGFloat.nan, height: CGFloat.infinity)
         )
         try require(
             layout.landingBounds == CGRect(x: 496, y: 831, width: 520, height: 87),
@@ -179,11 +189,13 @@ private enum SpotlightDropletChecks {
 
     private static func checkNativeWindowHandoff() throws {
         guard #available(macOS 26, *) else { return }
+
         _ = NSApplication.shared
         guard let screen = NSScreen.main else { return }
+
         let presenter = SpotlightDropletPanel()
         presenter.play(
-            at: SpotlightDisplayAnchor(
+            at        : SpotlightDisplayAnchor(
                 displayID    : 0,
                 screen       : screen,
                 restingBounds: CGRect(
@@ -196,31 +208,38 @@ private enum SpotlightDropletChecks {
             nativeSize: CGSize(width: 520, height: 87)
         ) { _ in }
         defer { presenter.cancel() }
+
         guard let window = NSApp.windows.compactMap({ $0 as? SpotlightDropletWindow }).first else {
             throw Failure(message: "A live droplet window is required for the handoff check")
         }
+
         presenter.yieldToNative()
-        try require(window.isVisible && window.level.rawValue < 23,
-            "Before invoking Spotlight, the glass must be underneath its window even if AX focus is delayed")
+        try require(
+            window.isVisible && window.level.rawValue < 23,
+            "Before invoking Spotlight, the glass must be underneath its window even if AX focus is delayed"
+        )
+
         presenter.revealNative()
-        try require(!window.isVisible,
-            "Once native geometry is ready the glass must disappear immediately, without another fade")
+        try require(
+            !window.isVisible,
+            "Once native geometry is ready the glass must disappear immediately, without another fade"
+        )
     }
 
     private static func makeTimeline(reducesMotion: Bool = false) -> SpotlightDropletTimeline {
         SpotlightDropletTimeline(
-            layout        : SpotlightDropletLayout(
-                screenFrame       : CGRect(x: 0, y: 0, width: 1512, height: 982),
-                hardwareNotchSize : CGSize(width: 180, height: 32),
-                nativeSize        : CGSize(width: 520, height: 87)
+            layout       : SpotlightDropletLayout(
+                screenFrame      : CGRect(x: 0, y: 0, width: 1512, height: 982),
+                hardwareNotchSize: CGSize(width: 180, height: 32),
+                nativeSize       : CGSize(width: 520, height: 87)
             ),
-            reducesMotion : reducesMotion
+            reducesMotion: reducesMotion
         )
     }
 
     private static func require(
-        _ condition : Bool,
-        _ message   : String
+        _ condition: Bool,
+        _ message  : String
     ) throws {
         if !condition {
             throw Failure(message: message)

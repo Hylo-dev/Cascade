@@ -11,19 +11,21 @@ import UniformTypeIdentifiers
 
 @MainActor
 final class FileShelfDragView: NSView, NSDraggingSource, NotchKeyboardFocusTarget {
+
     private static let dragThreshold: CGFloat = 4
 
-    private let hosting: NSHostingView<AnyView>
-    private var files: [PreparedFile]
-    private var expandsOnScroll: Bool
+    private let hosting         : NSHostingView<AnyView>
+    private var files           : [PreparedFile]
+    private var expandsOnScroll : Bool
     private var scrollNavigation: FileShelfScrollNavigation?
-    private var activate: @MainActor () -> Void
-    private var interaction: (@MainActor (FileShelfEntryInteraction) -> Void)?
+    private var activate        : @MainActor () -> Void
+    private var interaction     : (@MainActor (FileShelfEntryInteraction) -> Void)?
     private var resolveDragFiles: (@MainActor () -> [PreparedFile])?
     private var navigateByScroll: @MainActor (FileShelfScrollDirection) -> Void
-    private var copy: @Sendable (PreparedFile, URL) async throws -> Void
+    private var copy            : @Sendable (PreparedFile, URL) async throws -> Void
+
     private var downLocation: NSPoint?
-    private var beganDrag = false
+    private var beganDrag    = false
     private var scrollPolicy = FileShelfScrollGesturePolicy()
 
     init(
@@ -38,16 +40,17 @@ final class FileShelfDragView: NSView, NSDraggingSource, NotchKeyboardFocusTarge
         navigateByScroll : @escaping @MainActor (FileShelfScrollDirection) -> Void = { _ in },
         copy             : @escaping @Sendable (PreparedFile, URL) async throws -> Void
     ) {
-        hosting = NSHostingView(rootView: content)
-        self.files = files
-        self.expandsOnScroll = expandsOnScroll
+        hosting               = NSHostingView(rootView: content)
+        self.files            = files
+        self.expandsOnScroll  = expandsOnScroll
         self.scrollNavigation = scrollNavigation
-        self.activate = activate
-        self.interaction = interaction
+        self.activate         = activate
+        self.interaction      = interaction
         self.resolveDragFiles = resolveDragFiles
         self.navigateByScroll = navigateByScroll
-        self.copy = copy
+        self.copy             = copy
         super.init(frame: .zero)
+
         hosting.translatesAutoresizingMaskIntoConstraints = false
         addSubview(hosting)
         NSLayoutConstraint.activate([
@@ -56,6 +59,7 @@ final class FileShelfDragView: NSView, NSDraggingSource, NotchKeyboardFocusTarge
             hosting.topAnchor.constraint(equalTo: topAnchor),
             hosting.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
+
         setAccessibilityElement(true)
         setAccessibilityRole(.button)
         setAccessibilityLabel(accessibilityName)
@@ -67,8 +71,8 @@ final class FileShelfDragView: NSView, NSDraggingSource, NotchKeyboardFocusTarge
     override var acceptsFirstResponder: Bool { true }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
-        let local = superview.map { convert(point, from: $0) } ?? point
-        return bounds.contains(local) ? self : nil
+        let localPoint = superview.map { convert(point, from: $0) } ?? point
+        return bounds.contains(localPoint) ? self : nil
     }
 
     func update(
@@ -83,15 +87,15 @@ final class FileShelfDragView: NSView, NSDraggingSource, NotchKeyboardFocusTarge
         navigateByScroll : @escaping @MainActor (FileShelfScrollDirection) -> Void,
         copy             : @escaping @Sendable (PreparedFile, URL) async throws -> Void
     ) {
-        hosting.rootView = content
-        self.files = files
-        self.expandsOnScroll = expandsOnScroll
+        hosting.rootView      = content
+        self.files            = files
+        self.expandsOnScroll  = expandsOnScroll
         self.scrollNavigation = scrollNavigation
-        self.activate = activate
-        self.interaction = interaction
+        self.activate         = activate
+        self.interaction      = interaction
         self.resolveDragFiles = resolveDragFiles
         self.navigateByScroll = navigateByScroll
-        self.copy = copy
+        self.copy             = copy
         setAccessibilityLabel(accessibilityName)
     }
 
@@ -99,26 +103,31 @@ final class FileShelfDragView: NSView, NSDraggingSource, NotchKeyboardFocusTarge
         let responder = keyboardContainer ?? self
         window?.makeFirstResponder(responder)
         window?.makeKey()
+
         downLocation = convert(event.locationInWindow, from: nil)
-        beganDrag = false
+        beganDrag    = false
     }
 
     override func mouseDragged(with event: NSEvent) {
         guard !beganDrag, let downLocation else { return }
+
         let current = convert(event.locationInWindow, from: nil)
         guard hypot(current.x - downLocation.x, current.y - downLocation.y) >= Self.dragThreshold else {
             return
         }
-        beganDrag = true
+
+        beganDrag         = true
         self.downLocation = nil
         interaction?(.prepareDrag)
+
         let dragFiles = resolveDragFiles?() ?? files
         guard !dragFiles.isEmpty else { return }
+
         let items = dragFiles.enumerated().map { index, file -> NSDraggingItem in
             let provider = FileShelfPromiseProvider.make(file: file, copy: copy)
-            let item = NSDraggingItem(pasteboardWriter: provider)
-            let offset = CGFloat(index) * 3
-            let frame = CGRect(
+            let item     = NSDraggingItem(pasteboardWriter: provider)
+            let offset   = CGFloat(index) * 3
+            let frame    = CGRect(
                 x     : current.x - 26 + offset,
                 y     : current.y - 20 - offset,
                 width : min(max(bounds.width, 52), 118),
@@ -128,14 +137,20 @@ final class FileShelfDragView: NSView, NSDraggingSource, NotchKeyboardFocusTarge
             item.setDraggingFrame(frame, contents: icon)
             return item
         }
-        beginDraggingSession(with: items, event: event, source: self)
+        beginDraggingSession(
+            with  : items,
+            event : event,
+            source: self
+        )
     }
 
     override func mouseUp(with event: NSEvent) {
         let releaseLocation = convert(event.locationInWindow, from: nil)
-        let shouldActivate = downLocation != nil && !beganDrag && bounds.contains(releaseLocation)
+        let shouldActivate  = downLocation != nil && !beganDrag && bounds.contains(releaseLocation)
+
         downLocation = nil
-        beganDrag = false
+        beganDrag    = false
+
         if shouldActivate {
             if let interaction { interaction(.click(modifiers: event.modifierFlags)) }
             else { activate() }
@@ -146,16 +161,21 @@ final class FileShelfDragView: NSView, NSDraggingSource, NotchKeyboardFocusTarge
         let responder = keyboardContainer ?? self
         window?.makeFirstResponder(responder)
         window?.makeKey()
+
         let behavior = scrollNavigation ?? (expandsOnScroll ? .open : nil)
         guard let behavior, event.hasPreciseScrollingDeltas else {
             super.scrollWheel(with: event)
             return
         }
+
         let direction = scrollPolicy.navigation(
-            delta: CGSize(width: event.scrollingDeltaX, height: event.scrollingDeltaY),
-            phase: event.phase,
-            momentumPhase: event.momentumPhase,
-            behavior: behavior,
+            delta                    : CGSize(
+                width : event.scrollingDeltaX,
+                height: event.scrollingDeltaY
+            ),
+            phase                    : event.phase,
+            momentumPhase            : event.momentumPhase,
+            behavior                 : behavior,
             isAtHorizontalLeadingEdge: isAtHorizontalLeadingEdge
         )
         if let direction {
@@ -170,7 +190,9 @@ final class FileShelfDragView: NSView, NSDraggingSource, NotchKeyboardFocusTarge
 
     private var isAtHorizontalLeadingEdge: Bool {
         guard let scrollView = enclosingScrollView,
-              let documentView = scrollView.documentView else { return true }
+              let documentView = scrollView.documentView
+        else { return true }
+
         return scrollView.documentVisibleRect.minX <= documentView.bounds.minX + 1
     }
 
@@ -180,24 +202,25 @@ final class FileShelfDragView: NSView, NSDraggingSource, NotchKeyboardFocusTarge
             if let container = view as? FileShelfKeyboardView { return container }
             ancestor = view.superview
         }
+
         return nil
     }
 
     override func keyDown(with event: NSEvent) {
         let extend = event.modifierFlags.contains(.shift)
         switch event.keyCode {
-        case 123, 126:
-            interaction?(.moveFocus(offset: -1, extendSelection: extend))
-        case 124, 125:
-            interaction?(.moveFocus(offset: 1, extendSelection: extend))
-        case 51, 117:
-            interaction?(.delete)
-        case 0 where event.modifierFlags.contains(.command):
-            interaction?(.selectAll)
-        case 36, 49:
-            activate()
-        default:
-            super.keyDown(with: event)
+            case 123, 126:
+                interaction?(.moveFocus(offset: -1, extendSelection: extend))
+            case 124, 125:
+                interaction?(.moveFocus(offset: 1, extendSelection: extend))
+            case 51, 117:
+                interaction?(.delete)
+            case 0 where event.modifierFlags.contains(.command):
+                interaction?(.selectAll)
+            case 36, 49:
+                activate()
+            default:
+                super.keyDown(with: event)
         }
     }
 
@@ -214,7 +237,7 @@ final class FileShelfDragView: NSView, NSDraggingSource, NotchKeyboardFocusTarge
     }
 
     func draggingSession(
-        _ session: NSDraggingSession,
+        _ session                     : NSDraggingSession,
         sourceOperationMaskFor context: NSDraggingContext
     ) -> NSDragOperation {
         .copy

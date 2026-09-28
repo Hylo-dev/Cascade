@@ -22,77 +22,139 @@ enum BluetoothConnectionReducerTests {
 
     private static func audioReturnEmitsWhileBluetoothLinkRemainsConnected() throws {
         var reducer = BluetoothConnectionReducer()
-        let device = BluetoothConnectedDevice(
-            deviceID: "66-77-88-99-AA-BB", name: "AirPods", symbolName: "headphones"
+        let device  = BluetoothConnectedDevice(
+            deviceID  : "66-77-88-99-AA-BB",
+            name      : "AirPods",
+            symbolName: "headphones"
         )
         reducer.replaceBaseline(with: [device])
-        let first = reducer.recordAudioRoute(device, eventID: 1, now: 100)
+
+        let first = reducer.recordAudioRoute(
+            device,
+            eventID: 1,
+            now    : 100
+        )
         try expectBluetoothMonitorBehavior(
             first?.kind == .audioRoute && first?.isConnected == true,
             "Returning audio to a baselined Bluetooth link must emit a route notice."
         )
-        let second = reducer.recordAudioRoute(device, eventID: 2, now: 110)
-        let metadata = BluetoothDeviceMetadata(battery: nil, model: .airPodsPro, productID: 0x2024)
+
+        let second = reducer.recordAudioRoute(
+            device,
+            eventID: 2,
+            now    : 110
+        )
+        let metadata = BluetoothDeviceMetadata(
+            battery  : nil,
+            model    : .airPodsPro,
+            productID: 0x2024
+        )
         try expectBluetoothMonitorBehavior(
             second?.eventID == 2,
             "A later audio return must emit again without requiring an ACL disconnect."
         )
         try expectBluetoothMonitorBehavior(
-            reducer.enrichConnection(deviceID: device.deviceID, eventID: 1, metadata: metadata) == nil,
+            reducer.enrichConnection(
+                deviceID: device.deviceID,
+                eventID : 1,
+                metadata: metadata
+            ) == nil,
             "Metadata from the prior route must not update a newer route event."
         )
         try expectBluetoothMonitorBehavior(
-            reducer.enrichConnection(deviceID: device.deviceID, eventID: 2, metadata: metadata)?.kind == .audioRoute,
+            reducer.enrichConnection(
+                deviceID: device.deviceID,
+                eventID : 2,
+                metadata: metadata
+            )?.kind == .audioRoute,
             "Metadata enrichment must preserve the audio route meaning."
         )
     }
 
     private static func physicalConnectionAndAudioRouteCoalesce() throws {
         var reducer = BluetoothConnectionReducer()
-        let device = BluetoothConnectedDevice(
-            deviceID: "77-88-99-AA-BB-CC", name: "Headphones", symbolName: "headphones"
+        let device  = BluetoothConnectedDevice(
+            deviceID  : "77-88-99-AA-BB-CC",
+            name      : "Headphones",
+            symbolName: "headphones"
         )
-        _ = reducer.recordConnection(device, eventID: 1, now: 100)
+        _ = reducer.recordConnection(
+            device,
+            eventID: 1,
+            now    : 100
+        )
+
         try expectBluetoothMonitorBehavior(
-            reducer.recordAudioRoute(device, eventID: 2, now: 100.2) == nil,
+            reducer.recordAudioRoute(
+                device,
+                eventID: 2,
+                now    : 100.2
+            ) == nil,
             "The initial audio route must not replay the fresh physical connection notice."
         )
         try expectBluetoothMonitorBehavior(
-            reducer.recordAudioRoute(device, eventID: 3, now: 101)?.kind == .audioRoute,
+            reducer.recordAudioRoute(
+                device,
+                eventID: 3,
+                now    : 101
+            )?.kind == .audioRoute,
             "Only the first route after a physical connection may be coalesced."
         )
     }
 
     private static func routeBeforeLinkDoesNotDuplicate() throws {
         var reducer = BluetoothConnectionReducer()
-        let device = BluetoothConnectedDevice(
-            deviceID: "88-99-AA-BB-CC-DD", name: "Headphones", symbolName: "headphones"
+        let device  = BluetoothConnectedDevice(
+            deviceID  : "88-99-AA-BB-CC-DD",
+            name      : "Headphones",
+            symbolName: "headphones"
         )
-        _ = reducer.recordAudioRoute(device, eventID: 1, now: 100)
+        _ = reducer.recordAudioRoute(
+            device,
+            eventID: 1,
+            now    : 100
+        )
+
         try expectBluetoothMonitorBehavior(
-            reducer.recordConnection(device, eventID: 2, now: 100.2) == nil,
+            reducer.recordConnection(
+                device,
+                eventID: 2,
+                now    : 100.2
+            ) == nil,
             "An ACL callback after the audio route must not duplicate the notice."
         )
     }
 
     private static func audioReturnDoesNotReuseOldBatteryMeasurements() throws {
-        var reducer = BluetoothConnectionReducer()
+        var reducer   = BluetoothConnectionReducer()
         let oldDevice = BluetoothConnectedDevice(
-            deviceID: "99-AA-BB-CC-DD-EE", name: "AirPods", symbolName: "headphones",
-            battery: BluetoothBatterySnapshot(left: 83, right: 91), model: .airPodsPro,
-            productID: 0x2024
+            deviceID  : "99-AA-BB-CC-DD-EE",
+            name      : "AirPods",
+            symbolName: "headphones",
+            battery   : BluetoothBatterySnapshot(left: 83, right: 91),
+            model     : .airPodsPro,
+            productID : 0x2024
         )
         reducer.replaceBaseline(with: [oldDevice])
+
         let returned = BluetoothConnectedDevice(
-            deviceID: oldDevice.deviceID, name: oldDevice.name, symbolName: oldDevice.symbolName
+            deviceID  : oldDevice.deviceID,
+            name      : oldDevice.name,
+            symbolName: oldDevice.symbolName
         )
-        let event = reducer.recordAudioRoute(returned, eventID: 5, now: 500)
+        let event = reducer.recordAudioRoute(
+            returned,
+            eventID: 5,
+            now    : 500
+        )
         try expectBluetoothMonitorBehavior(
             event?.battery == nil && event?.productID == oldDevice.productID,
             "A new route must preserve model identity but discard old battery measurements."
         )
+
         let refreshed = reducer.enrichConnection(
-            deviceID: returned.deviceID, eventID: 5,
+            deviceID: returned.deviceID,
+            eventID : 5,
             metadata: BluetoothDeviceMetadata(battery: BluetoothBatterySnapshot(level: 35))
         )
         try expectBluetoothMonitorBehavior(
@@ -102,12 +164,11 @@ enum BluetoothConnectionReducerTests {
     }
 
     private static func baselineDoesNotEmitAnEvent() throws {
-
         var reducer = BluetoothConnectionReducer()
         let device  = BluetoothConnectedDevice(
-            deviceID   : "AA-BB-CC-DD-EE-FF",
-            name       : "Studio Headphones",
-            symbolName : "headphones"
+            deviceID  : "AA-BB-CC-DD-EE-FF",
+            name      : "Studio Headphones",
+            symbolName: "headphones"
         )
 
         reducer.replaceBaseline(with: [device])
@@ -119,12 +180,11 @@ enum BluetoothConnectionReducerTests {
     }
 
     private static func duplicateConnectionIsSuppressed() throws {
-
         var reducer = BluetoothConnectionReducer()
         let device  = BluetoothConnectedDevice(
-            deviceID   : "11-22-33-44-55-66",
-            name       : "Keyboard",
-            symbolName : "keyboard"
+            deviceID  : "11-22-33-44-55-66",
+            name      : "Keyboard",
+            symbolName: "keyboard"
         )
 
         let first     = reducer.recordConnection(device)
@@ -141,12 +201,11 @@ enum BluetoothConnectionReducerTests {
     }
 
     private static func disconnectionAndReconnectBothEmit() throws {
-
         var reducer = BluetoothConnectionReducer()
         let device  = BluetoothConnectedDevice(
-            deviceID   : "22-33-44-55-66-77",
-            name       : "Mouse",
-            symbolName : "computermouse"
+            deviceID  : "22-33-44-55-66-77",
+            name      : "Mouse",
+            symbolName: "computermouse"
         )
 
         _ = reducer.recordConnection(device)
@@ -169,17 +228,16 @@ enum BluetoothConnectionReducerTests {
     }
 
     private static func replacingBaselineAfterWakeIsSilent() throws {
-
-        var reducer = BluetoothConnectionReducer()
-        let oldDevice = BluetoothConnectedDevice(
-            deviceID   : "33-44-55-66-77-88",
-            name       : "Old Device",
-            symbolName : "antenna.radiowaves.left.and.right"
+        var reducer    = BluetoothConnectionReducer()
+        let oldDevice  = BluetoothConnectedDevice(
+            deviceID  : "33-44-55-66-77-88",
+            name      : "Old Device",
+            symbolName: "antenna.radiowaves.left.and.right"
         )
         let wakeDevice = BluetoothConnectedDevice(
-            deviceID   : "44-55-66-77-88-99",
-            name       : "Wake Device",
-            symbolName : "headphones"
+            deviceID  : "44-55-66-77-88-99",
+            name      : "Wake Device",
+            symbolName: "headphones"
         )
 
         reducer.replaceBaseline(with: [oldDevice])
@@ -196,17 +254,16 @@ enum BluetoothConnectionReducerTests {
     }
 
     private static func repeatedBaselineIdentityIsDeduplicated() throws {
-
-        var reducer = BluetoothConnectionReducer()
-        let first = BluetoothConnectedDevice(
-            deviceID   : "55-66-77-88-99-AA",
-            name       : "Old Name",
-            symbolName : "headphones"
+        var reducer   = BluetoothConnectionReducer()
+        let first     = BluetoothConnectedDevice(
+            deviceID  : "55-66-77-88-99-AA",
+            name      : "Old Name",
+            symbolName: "headphones"
         )
         let refreshed = BluetoothConnectedDevice(
-            deviceID   : first.deviceID,
-            name       : "New Name",
-            symbolName : "speaker.wave.2"
+            deviceID  : first.deviceID,
+            name      : "New Name",
+            symbolName: "speaker.wave.2"
         )
 
         reducer.replaceBaseline(with: [first, refreshed])
@@ -218,7 +275,6 @@ enum BluetoothConnectionReducerTests {
     }
 
     private static func queuedCallbackBeforeWakeIsRejected() throws {
-
         var gate = BluetoothConnectionCallbackGate()
         gate.beginSession(sessionID: 7)
         let queuedCallback = gate.identity

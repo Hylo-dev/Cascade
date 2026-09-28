@@ -15,17 +15,18 @@ import QuartzCore
 final class SpotlightDropletPanel: NSObject {
 
     private enum Animation {
+
         case droplet(SpotlightDropletTimeline)
         case dissolve(CGFloat)
     }
 
-    private var panel                    : SpotlightDropletWindow?
-    private var displayLink              : CADisplayLink?
-    private var animation                : Animation?
-    private var completion               : ((CGRect) -> Void)?
-    private var previewCompletion        : (() -> Void)?
-    private var animationStart           : CFTimeInterval = 0
-    private var hasPresentedLandingFrame : Bool = false
+    private var panel                   : SpotlightDropletWindow?
+    private var displayLink             : CADisplayLink?
+    private var animation               : Animation?
+    private var completion              : ((CGRect) -> Void)?
+    private var previewCompletion       : (() -> Void)?
+    private var animationStart          : CFTimeInterval = 0
+    private var hasPresentedLandingFrame: Bool = false
 
     override init() {
         super.init()
@@ -38,8 +39,8 @@ final class SpotlightDropletPanel: NSObject {
 
     /// makeLayout samples only public screen geometry once before the animation begins.
     private func makeLayout(
-        at anchor  : SpotlightDisplayAnchor,
-        nativeSize : CGSize
+        at anchor : SpotlightDisplayAnchor,
+        nativeSize: CGSize
     ) -> SpotlightDropletLayout {
         return SpotlightDropletLayout(
             screenFrame       : anchor.screen.frame,
@@ -50,28 +51,20 @@ final class SpotlightDropletPanel: NSObject {
 
     /// startDisplayLink follows the target screen's refresh rate only while work remains.
     private func startDisplayLink() {
-        guard let contentView = panel?.contentView else {
-            return
-        }
+        guard let contentView = panel?.contentView else { return }
 
         animationStart = CACurrentMediaTime()
-        let link = contentView.displayLink(
-            target   : self,
-            selector : #selector(tick(_:))
-        )
-        link.add(
-            to      : .main,
-            forMode : .common
-        )
+        let link = contentView.displayLink(target: self, selector: #selector(tick(_:)))
+        link.add(to: .main, forMode: .common)
         displayLink = link
     }
 
     /// stopDisplayLink breaks the target retention cycle before completion can reenter the presenter.
     private func stopDisplayLink() {
         displayLink?.invalidate()
-        displayLink = nil
-        animation = nil
-        animationStart = 0
+        displayLink              = nil
+        animation                = nil
+        animationStart           = 0
         hasPresentedLandingFrame = false
     }
 
@@ -79,10 +72,12 @@ final class SpotlightDropletPanel: NSObject {
     private func removeSurface() {
         stopDisplayLink()
         completion = nil
+
         panel?.orderOut(nil)
         panel?.contentView = nil
-        panel = nil
-        let previewCompletion = previewCompletion
+        panel              = nil
+
+        let previewCompletion  = previewCompletion
         self.previewCompletion = nil
         previewCompletion?()
     }
@@ -110,32 +105,34 @@ final class SpotlightDropletPanel: NSObject {
         }
 
         let elapsed = max(0, link.timestamp - animationStart)
+
         switch animation {
-        case .droplet(let timeline):
-            if hasPresentedLandingFrame {
-                finishHandoff(at: timeline.layout.landingBounds)
-                return
-            }
+            case .droplet(let timeline):
+                if hasPresentedLandingFrame {
+                    finishHandoff(at: timeline.layout.landingBounds)
+                    return
+                }
 
-            let frame = timeline.frame(at: elapsed)
-            if #available(macOS 26.0, *),
-               let glassView = panel?.contentView as? SpotlightDropletGlassView {
-                glassView.apply(frame)
-            }
-            if frame.isComplete && timeline.reducesMotion {
-                // Reduced Motion has occupied the landing rect since its first
-                // frame, so it needs no additional refresh before native focus.
-                finishHandoff(at: timeline.layout.landingBounds)
-            } else {
-                hasPresentedLandingFrame = frame.isComplete
-            }
+                let frame = timeline.frame(at: elapsed)
+                if #available(macOS 26.0, *),
+                   let glassView = panel?.contentView as? SpotlightDropletGlassView {
+                    glassView.apply(frame)
+                }
 
-        case .dissolve(let initialOpacity):
-            let progress = min(1, elapsed / 0.080)
-            panel?.alphaValue = initialOpacity * CGFloat(1 - progress * progress * (3 - 2 * progress))
-            if progress >= 1 {
-                removeSurface()
-            }
+                if frame.isComplete && timeline.reducesMotion {
+                    // Reduced Motion has occupied the landing rect since its first
+                    // frame, so it needs no additional refresh before native focus.
+                    finishHandoff(at: timeline.layout.landingBounds)
+                } else {
+                    hasPresentedLandingFrame = frame.isComplete
+                }
+
+            case .dissolve(let initialOpacity):
+                let progress = min(1, elapsed / 0.080)
+                panel?.alphaValue = initialOpacity * CGFloat(1 - progress * progress * (3 - 2 * progress))
+                if progress >= 1 {
+                    removeSurface()
+                }
         }
     }
 
@@ -151,15 +148,13 @@ final class SpotlightDropletPanel: NSObject {
 extension SpotlightDropletPanel: SpotlightDropletPresenting {
 
     func play(
-        at anchor  : SpotlightDisplayAnchor,
-        nativeSize : CGSize,
-        completion : @escaping (CGRect) -> Void
+        at anchor : SpotlightDisplayAnchor,
+        nativeSize: CGSize,
+        completion: @escaping (CGRect) -> Void
     ) {
         removeSurface()
-        let layout = makeLayout(
-            at         : anchor,
-            nativeSize : nativeSize
-        )
+
+        let layout = makeLayout(at: anchor, nativeSize: nativeSize)
 
         guard #available(macOS 26.0, *) else {
             // The older deployment floor has no native Liquid Glass. Preserve
@@ -169,8 +164,8 @@ extension SpotlightDropletPanel: SpotlightDropletPresenting {
         }
 
         let timeline = SpotlightDropletTimeline(
-            layout        : layout,
-            reducesMotion : NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+            layout       : layout,
+            reducesMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         )
         let panel = SpotlightDropletWindow(frame: layout.canvasBounds)
         panel.contentView = SpotlightDropletGlassView(timeline: timeline)
@@ -201,16 +196,13 @@ extension SpotlightDropletPanel: SpotlightDropletPresenting {
     }
 
     func preview(
-        at anchor  : SpotlightDisplayAnchor,
+        at anchor : SpotlightDisplayAnchor,
         completion: @escaping () -> Void
     ) {
         play(
-            at         : anchor,
-            nativeSize : CGSize(
-                width  : 520,
-                height : 87
-            ),
-            completion : { [weak self] _ in
+            at        : anchor,
+            nativeSize: CGSize(width: 520, height: 87),
+            completion: { [weak self] _ in
                 self?.previewCompletion = completion
                 self?.dissolve()
             }

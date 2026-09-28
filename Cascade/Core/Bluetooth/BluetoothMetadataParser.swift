@@ -13,9 +13,15 @@ nonisolated enum BluetoothMetadataParser {
     /// floating-point failures and the private API's 255 unknown sentinel.
     static func percentage(_ value: Any?) -> Int? {
         guard let number = value as? NSNumber,
-              CFGetTypeID(number) != CFBooleanGetTypeID() else { return nil }
+              CFGetTypeID(number) != CFBooleanGetTypeID()
+        else { return nil }
+
         let value = number.doubleValue
-        guard value.isFinite, (0...100).contains(value), value.rounded(.towardZero) == value else { return nil }
+        guard value.isFinite,
+              (0...100).contains(value),
+              value.rounded(.towardZero) == value
+        else { return nil }
+
         return Int(value)
     }
 
@@ -24,9 +30,12 @@ nonisolated enum BluetoothMetadataParser {
         let compact = address.replacingOccurrences(of: ":", with: "")
             .replacingOccurrences(of: "-", with: "")
             .uppercased()
-        guard compact.count == 12, compact.unicodeScalars.allSatisfy({
-            (48...57).contains($0.value) || (65...70).contains($0.value)
-        }) else { return nil }
+        guard compact.count == 12,
+              compact.unicodeScalars.allSatisfy({
+                  (48...57).contains($0.value) || (65...70).contains($0.value)
+              })
+        else { return nil }
+
         return compact
     }
 
@@ -38,12 +47,14 @@ nonisolated enum BluetoothMetadataParser {
             guard let value = percentage(properties[key]), value > 0 else { return nil }
             return value
         }
+
         let battery = BluetoothBatterySnapshot(
             level    : positivePercentage("batteryPercentSingle"),
             left     : positivePercentage("batteryPercentLeft"),
             right    : positivePercentage("batteryPercentRight"),
             caseLevel: positivePercentage("batteryPercentCase")
         )
+
         return battery.hasMeasurement ? battery : nil
     }
 
@@ -54,11 +65,13 @@ nonisolated enum BluetoothMetadataParser {
         deviceID: String
     ) -> BluetoothBatterySnapshot? {
         guard let expectedAddress = normalizedAddress(deviceID) else { return nil }
+
         var result: BluetoothBatterySnapshot?
         for record in records {
             let addresses = ["DeviceAddress", "BluetoothDeviceAddress", "BD_ADDR", "SerialNumber"]
                 .compactMap { record[$0] as? String }
             guard addresses.contains(where: { normalizedAddress($0) == expectedAddress }) else { continue }
+
             let battery = BluetoothBatterySnapshot(
                 level    : percentage(record["BatteryPercent"]),
                 left     : percentage(record["BatteryPercentLeft"]),
@@ -66,8 +79,10 @@ nonisolated enum BluetoothMetadataParser {
                 caseLevel: percentage(record["BatteryPercentCase"])
             )
             guard battery.hasMeasurement else { continue }
+
             result = result?.fillingMissing(from: battery) ?? battery
         }
+
         return result
     }
 
@@ -78,7 +93,10 @@ nonisolated enum BluetoothMetadataParser {
         productID: Int?
     ) -> UInt16? {
         guard vendorID == 76 || vendorID == 1452,
-              let productID, productID > 0 else { return nil }
+              let productID,
+              productID > 0
+        else { return nil }
+
         return UInt16(exactly: productID)
     }
 
@@ -90,21 +108,24 @@ nonisolated enum BluetoothMetadataParser {
         productName: String?
     ) -> BluetoothDeviceModel {
         guard vendorID == 76 || vendorID == 1452 else { return .generic }
+
         switch productID {
-        // Apple IOBluetoothUI AssetPaths.plist verifies the original AirPods IDs.
-        // Pro/Max IDs are also documented by the primary ESPHome implementation:
-        // github.com/myhomeiot/esphome-components/blob/main/examples/ble_gateway/airpods.yaml
-        // Newer families come from the installed Apple CoreBluetoothUI
-        // AssetPaths{,-B768,-B788,-B515c,-B515d}.plist product catalogs.
-        case 0x2002, 0x200F, 0x2013, 0x2019, 0x201B: return .airPods
-        case 0x200E, 0x2014, 0x2024, 0x2027: return .airPodsPro
-        case 0x200A, 0x201F, 0x202D: return .airPodsMax
-        default: break
+            // Apple IOBluetoothUI AssetPaths.plist verifies the original AirPods IDs.
+            // Pro/Max IDs are also documented by the primary ESPHome implementation:
+            // github.com/myhomeiot/esphome-components/blob/main/examples/ble_gateway/airpods.yaml
+            // Newer families come from the installed Apple CoreBluetoothUI
+            // AssetPaths{,-B768,-B788,-B515c,-B515d}.plist product catalogs.
+            case 0x2002, 0x200F, 0x2013, 0x2019, 0x201B: return .airPods
+            case 0x200E, 0x2014, 0x2024, 0x2027:         return .airPodsPro
+            case 0x200A, 0x201F, 0x202D:                 return .airPodsMax
+            default:                                     break
         }
+
         let name = productName?.lowercased() ?? ""
         if name.contains("airpods pro") { return .airPodsPro }
         if name.contains("airpods max") { return .airPodsMax }
-        if name.contains("airpods") { return .airPods }
+        if name.contains("airpods")     { return .airPods }
+
         return .generic
     }
 
@@ -115,9 +136,11 @@ nonisolated enum BluetoothMetadataParser {
         deviceID: String
     ) -> [String: Any]? {
         guard let expectedAddress = normalizedAddress(deviceID) else { return nil }
+
         for (address, value) in cache where normalizedAddress(address) == expectedAddress {
             return value as? [String: Any]
         }
+
         return nil
     }
 }

@@ -13,25 +13,30 @@ import os
 /// thread waits for CoreAudio, while observation reaches UI as Sendable values.
 /// Unchecked Sendable is limited to this queue-confined worker boundary.
 nonisolated final class VolumeMonitorWorker: @unchecked Sendable {
-    private let queue = DispatchQueue(label: "Cascade.Volume", qos: .userInitiated)
-    private let sessionID: UInt64
+
+    private let queue        = DispatchQueue(label: "Cascade.Volume", qos: .userInitiated)
+    private let sessionID   : UInt64
     private let continuation: AsyncStream<VolumeMonitorUpdate>.Continuation
+
     private var audio: CoreAudioSystemVolume?
-    private var tap: VolumeMediaKeyTap?
-    private var isRunning = false
-    private var isSuspended = false
-    private var tapIsActive = false
+    private var tap  : VolumeMediaKeyTap?
+
+    private var isRunning     = false
+    private var isSuspended   = false
+    private var tapIsActive   = false
     private var tapGeneration: UInt64 = 0
-    private var reducer = VolumeChangeReducer()
-    private var router = VolumeKeyRouter()
+
+    private var reducer    = VolumeChangeReducer()
+    private var router     = VolumeKeyRouter()
     private var lastStatus: VolumeMonitoringStatus?
+
     private let logger = Logger(subsystem: "hylo.Cascade", category: "VolumeMonitor")
 
     init(
         sessionID   : UInt64,
         continuation: AsyncStream<VolumeMonitorUpdate>.Continuation
     ) {
-        self.sessionID = sessionID
+        self.sessionID    = sessionID
         self.continuation = continuation
     }
 
@@ -39,6 +44,7 @@ nonisolated final class VolumeMonitorWorker: @unchecked Sendable {
         queue.async { [self] in
             isRunning = true
             reducer.beginSession(sessionID)
+
             let audio = CoreAudioSystemVolume(queue: queue)
             self.audio = audio
             guard audio.start(onChange: { [weak self] in self?.audioDidChange() }) else {
@@ -47,6 +53,7 @@ nonisolated final class VolumeMonitorWorker: @unchecked Sendable {
                 self.audio = nil
                 return
             }
+
             audioDidChange()
             installTap()
         }
@@ -57,10 +64,13 @@ nonisolated final class VolumeMonitorWorker: @unchecked Sendable {
             isRunning = false
             tapGeneration &+= 1
             tapIsActive = false
+
             tap?.stop()
             tap = nil
+
             audio?.stop()
             audio = nil
+
             continuation.finish()
         }
     }
@@ -69,6 +79,7 @@ nonisolated final class VolumeMonitorWorker: @unchecked Sendable {
         queue.async { [weak self] in
             guard let self, isRunning, !isSuspended else { return }
             guard !tapIsActive || !AXIsProcessTrusted() else { return }
+
             installTap()
         }
     }
@@ -76,11 +87,14 @@ nonisolated final class VolumeMonitorWorker: @unchecked Sendable {
     func suspend() {
         queue.async { [weak self] in
             guard let self, isRunning, !isSuspended else { return }
+
             isSuspended = true
             tapGeneration &+= 1
             tapIsActive = false
+
             tap?.stop()
             tap = nil
+
             router = VolumeKeyRouter()
             publishCurrentStatus()
         }
@@ -89,8 +103,10 @@ nonisolated final class VolumeMonitorWorker: @unchecked Sendable {
     func resume() {
         queue.async { [weak self] in
             guard let self, isRunning else { return }
+
             let needsInstall = isSuspended || !tapIsActive
             isSuspended = false
+
             // Audio listeners remain live during suspension so no stale volume
             // is replayed; a fresh tap is installed once per resumed session.
             if needsInstall { installTap() }
@@ -100,10 +116,12 @@ nonisolated final class VolumeMonitorWorker: @unchecked Sendable {
     private func installTap() {
         tapGeneration &+= 1
         tapIsActive = false
-        router = VolumeKeyRouter()
+        router      = VolumeKeyRouter()
+
         let currentTapGeneration = tapGeneration
         tap?.stop()
         tap = nil
+
         guard AXIsProcessTrusted() else {
             publishStatus(.permissionRequired)
             return
@@ -112,12 +130,18 @@ nonisolated final class VolumeMonitorWorker: @unchecked Sendable {
             publishStatus(.unavailable)
             return
         }
+
         let replacement = VolumeMediaKeyTap(
-            keyHandler: { [weak self] key, eligible, fineStep in
+            keyHandler         : { [weak self] key, eligible, fineStep in
                 guard let self else { return false }
+
                 return queue.sync {
-                    guard isRunning, tapIsActive, tapGeneration == currentTapGeneration,
-                          let audio else { return false }
+                    guard isRunning,
+                          tapIsActive,
+                          tapGeneration == currentTapGeneration,
+                          let audio
+                    else { return false }
+
                     let wasHandled = router.route(
                         key,
                         eligible  : eligible,
@@ -132,8 +156,10 @@ nonisolated final class VolumeMonitorWorker: @unchecked Sendable {
             },
             availabilityHandler: { [weak self] isActive in
                 guard let self else { return }
+
                 queue.async { [weak self] in
                     guard let self, isRunning, tapGeneration == currentTapGeneration else { return }
+
                     tapIsActive = isActive
                     publishCurrentStatus()
                 }
@@ -147,16 +173,18 @@ nonisolated final class VolumeMonitorWorker: @unchecked Sendable {
     /// A baseline still advances while fallback is active, preventing replay.
     private func audioDidChange(forcesFeedback: Bool = false) {
         guard isRunning, let audio else { return }
+
         audio.refreshOutput()
         if let snapshot = audio.snapshot(),
            let event = reducer.receive(
                snapshot,
-               sessionID   : sessionID,
-               allowsNotice: tapIsActive && router.allowsObservedNotice,
+               sessionID     : sessionID,
+               allowsNotice  : tapIsActive && router.allowsObservedNotice,
                forcesFeedback: forcesFeedback
            ) {
             continuation.yield(.changed(event))
         }
+
         publishCurrentStatus()
     }
 
@@ -172,6 +200,7 @@ nonisolated final class VolumeMonitorWorker: @unchecked Sendable {
 
     private func publishStatus(_ status: VolumeMonitoringStatus) {
         guard status != lastStatus else { return }
+
         lastStatus = status
         logger.notice("Volume routing status: \(String(describing: status), privacy: .public)")
         continuation.yield(.status(status))

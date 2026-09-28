@@ -11,6 +11,7 @@ import Observation
 @Observable
 @MainActor
 final class CoreAudioSpectrumMonitor: AudioSpectrumMonitoring {
+
     private(set) var status: AudioSpectrumStatus = .stopped
 
     @ObservationIgnored
@@ -29,6 +30,7 @@ final class CoreAudioSpectrumMonitor: AudioSpectrumMonitoring {
     /// start replaces the previous subscription and returns only the newest unread measured frame.
     func start(sourceBundleIdentifier: String?) -> AsyncStream<AudioSpectrumFrame> {
         stop()
+
         let currentGeneration = generation
         let pair = AsyncStream<AudioSpectrumFrame>.makeStream(bufferingPolicy: .bufferingNewest(1))
         continuation = pair.continuation
@@ -39,16 +41,18 @@ final class CoreAudioSpectrumMonitor: AudioSpectrumMonitoring {
                 self.stop()
             }
         }
+
         driver.start(
             sourceBundleIdentifier: sourceBundleIdentifier,
-            continuation: pair.continuation,
-            status: { [weak self] updatedStatus in
+            continuation          : pair.continuation,
+            status                : { [weak self] updatedStatus in
                 Task { @MainActor [weak self] in
                     guard let self, self.generation == currentGeneration else { return }
                     self.status = updatedStatus
                 }
             }
         )
+
         return pair.stream
     }
 
@@ -57,7 +61,7 @@ final class CoreAudioSpectrumMonitor: AudioSpectrumMonitoring {
         generation &+= 1
         continuation?.finish()
         continuation = nil
-        status = .stopped
+        status       = .stopped
         driver.stop()
     }
 

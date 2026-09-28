@@ -5,7 +5,6 @@
 
 import AppKit
 import IOBluetooth
-import os
 
 typealias IOBluetoothConnectionRegistrar = @Sendable (AnyObject, Selector) -> IOBluetoothUserNotification?
 
@@ -20,23 +19,23 @@ nonisolated final class IOBluetoothConnectionObserver: NSObject, @unchecked Send
 
     typealias CallbackHandler = @Sendable (IOBluetoothConnectionCallback) -> Void
 
-    private let lock                  = NSLock()
+    private let lock                   = NSLock()
     private let sessionID             : UInt64
     private let registerForConnections: IOBluetoothConnectionRegistrar
     private let callbackHandler       : CallbackHandler
 
     private var connectionNotification        : IOBluetoothUserNotification?
     private var disconnectionNotificationsByID: [String: IOBluetoothUserNotification] = [:]
-    private var isActive                        = false
-    private var baselineEpoch                   = UInt64.zero
+    private var isActive                       = false
+    private var baselineEpoch                  = UInt64.zero
     /// Non-nil while an off-main baseline is rebuilt. Transitions that race it
     /// wait here, so the main actor still applies the baseline first.
-    private var deferredCallbacks               : [IOBluetoothConnectionCallback]?
+    private var deferredCallbacks             : [IOBluetoothConnectionCallback]?
 
     init(
-        sessionID            : UInt64,
+        sessionID             : UInt64,
         registerForConnections: @escaping IOBluetoothConnectionRegistrar,
-        callbackHandler      : @escaping CallbackHandler
+        callbackHandler       : @escaping CallbackHandler
     ) {
         self.sessionID              = sessionID
         self.registerForConnections = registerForConnections
@@ -46,7 +45,6 @@ nonisolated final class IOBluetoothConnectionObserver: NSObject, @unchecked Send
     /// start activates callbacks before registering because IOBluetooth can
     /// synchronously invoke the selector from inside the registration call.
     func start() -> Bool {
-
         lock.withLock {
             isActive = true
         }
@@ -62,9 +60,7 @@ nonisolated final class IOBluetoothConnectionObserver: NSObject, @unchecked Send
         }
 
         let keepsNotification = lock.withLock {
-            guard isActive else {
-                return false
-            }
+            guard isActive else { return false }
 
             connectionNotification = notification
             return true
@@ -81,7 +77,6 @@ nonisolated final class IOBluetoothConnectionObserver: NSObject, @unchecked Send
     /// stop atomically makes queued callbacks stale before unregistering their
     /// framework tokens outside the lock.
     func stop() {
-
         let notifications = lock.withLock {
             isActive = false
 
@@ -130,16 +125,14 @@ nonisolated final class IOBluetoothConnectionObserver: NSObject, @unchecked Send
             if deferredCallbacks!.count < 64 { deferredCallbacks!.append(callback) }
             return true
         }
+
         if !isDeferred { callbackHandler(callback) }
     }
 
     /// replaceObservedDevices rebuilds per-device disconnect registrations for
     /// a silent startup or wake baseline. Old-token callbacks fail identity
     /// validation even if the framework delivers one after unregistering it.
-    func replaceObservedDevices(
-        _ devices: [IOBluetoothDevice]
-    ) {
-
+    func replaceObservedDevices(_ devices: [IOBluetoothDevice]) {
         let oldNotifications = lock.withLock {
             let notifications = Array(disconnectionNotificationsByID.values)
             disconnectionNotificationsByID.removeAll(keepingCapacity: true)
@@ -162,31 +155,22 @@ nonisolated final class IOBluetoothConnectionObserver: NSObject, @unchecked Send
         _ notification: IOBluetoothUserNotification?,
         device        : IOBluetoothDevice?
     ) {
-
         guard let notification, let device else { return }
+
         let callbackEpoch: UInt64? = lock.withLock {
-            guard isActive else {
-                return nil
-            }
+            guard isActive else { return nil }
 
             // During start the framework can call us before it returns the
             // token to store. Once stored, identity rejects old registrations.
-            guard let connectionNotification else {
-                return baselineEpoch
-            }
-
-            guard connectionNotification === notification else {
-                return nil
-            }
+            guard let connectionNotification else { return baselineEpoch }
+            guard connectionNotification === notification else { return nil }
 
             return baselineEpoch
         }
 
-        guard let callbackEpoch else {
-            return
-        }
-
+        guard let callbackEpoch else { return }
         guard let deviceSnapshot = IOBluetoothDeviceSnapshot.make(from: device) else { return }
+
         registerDisconnectionNotification(for: device)
         deliver(
             .connected(
@@ -194,7 +178,7 @@ nonisolated final class IOBluetoothConnectionObserver: NSObject, @unchecked Send
                     sessionID    : sessionID,
                     baselineEpoch: callbackEpoch
                 ),
-                device: deviceSnapshot
+                device  : deviceSnapshot
             )
         )
     }
@@ -206,22 +190,24 @@ nonisolated final class IOBluetoothConnectionObserver: NSObject, @unchecked Send
         _ notification: IOBluetoothUserNotification?,
         device        : IOBluetoothDevice?
     ) {
-
         guard let notification else { return }
+
         let acceptedCallback: (IOBluetoothUserNotification, String, UInt64)? = lock.withLock {
             // The framework may already have discarded addressString (or even
             // the device argument). The retained per-device token still owns
             // the correct address and also rejects a stale wake registration.
             guard isActive,
                   let registration = disconnectionNotificationsByID.first(where: {
-                    $0.value === notification
-                  }) else { return nil }
+                      $0.value === notification
+                  })
+            else { return nil }
 
             disconnectionNotificationsByID[registration.key] = nil
             return (registration.value, registration.key, baselineEpoch)
         }
 
         guard let acceptedCallback else { return }
+
         acceptedCallback.0.unregister()
         deliver(
             .disconnected(
@@ -236,27 +222,22 @@ nonisolated final class IOBluetoothConnectionObserver: NSObject, @unchecked Send
 
     /// registerDisconnectionNotification installs at most one retained token
     /// per address. A racing duplicate is unregistered immediately.
-    private func registerDisconnectionNotification(
-        for device: IOBluetoothDevice
-    ) {
-
+    private func registerDisconnectionNotification(for device: IOBluetoothDevice) {
         guard let deviceID = IOBluetoothDeviceSnapshot.stableIdentifier(for: device) else { return }
+
         let canRegister = lock.withLock {
             isActive && disconnectionNotificationsByID[deviceID] == nil
         }
 
         guard canRegister,
               let notification = device.register(
-                forDisconnectNotification: self,
-                selector                 : #selector(deviceDisconnected(_:device:))
-              ) else {
-            return
-        }
+                  forDisconnectNotification: self,
+                  selector                 : #selector(deviceDisconnected(_:device:))
+              )
+        else { return }
 
         let keepsNotification = lock.withLock {
-            guard isActive, disconnectionNotificationsByID[deviceID] == nil else {
-                return false
-            }
+            guard isActive, disconnectionNotificationsByID[deviceID] == nil else { return false }
 
             disconnectionNotificationsByID[deviceID] = notification
             return true

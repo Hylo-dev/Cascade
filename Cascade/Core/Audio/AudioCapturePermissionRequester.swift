@@ -3,8 +3,6 @@
 //  Cascade
 //
 
-
-
 /// AudioCapturePermissionRequester performs a short, independent capture attempt.
 /// Core Audio has no public consent-only API: starting a private tap aggregate
 /// asks macOS for system-audio access. This probe discards every sample and
@@ -13,6 +11,7 @@
 /// (the tap then delivers silence), so repeating it would only cost HAL churn.
 @MainActor
 final class AudioCapturePermissionRequester {
+
     private let driver: any AudioSpectrumCaptureDriving
 
     init(driver: any AudioSpectrumCaptureDriving = CoreAudioSpectrumCaptureDriver()) {
@@ -20,16 +19,18 @@ final class AudioCapturePermissionRequester {
     }
 
     func requestAccess() async -> AudioSpectrumStatus {
-        let status = AsyncStream<AudioSpectrumStatus>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        let status  = AsyncStream<AudioSpectrumStatus>.makeStream(bufferingPolicy: .bufferingNewest(1))
         let samples = AsyncStream<AudioSpectrumFrame>.makeStream(bufferingPolicy: .bufferingNewest(1))
-        let driver = driver
+        let driver  = driver
         defer {
             driver.stop()
             status.continuation.finish()
             samples.continuation.finish()
         }
+
         return await withTaskCancellationHandler {
             guard !Task.isCancelled else { return .stopped }
+
             driver.start(
                 sourceBundleIdentifier: nil,
                 continuation          : samples.continuation,

@@ -3,10 +3,9 @@
 //  Cascade
 //
 
-import Foundation
-
 /// BluetoothNoticeSnapshot contains only the bounded candidate window's matching data.
 nonisolated struct BluetoothNoticeSnapshot: Sendable {
+
     let ownerBundleID          : String
     let texts                  : [String]
     let isModal                : Bool
@@ -16,6 +15,6 @@ nonisolated struct BluetoothNoticeSnapshot: Sendable {
     let isFloatingWindow       : Bool
     let width                  : Double
     let height                 : Double
-    var bannerIdentifier        : String? = nil
-    var dismissButtonIdentifier : String? = nil
+    var bannerIdentifier       : String? = nil
+    var dismissButtonIdentifier: String? = nil
 }

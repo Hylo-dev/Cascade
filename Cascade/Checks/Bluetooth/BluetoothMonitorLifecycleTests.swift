@@ -19,7 +19,6 @@ enum BluetoothMonitorLifecycleTests {
 
     @MainActor
     private static func restartingFinishesThePriorStream() async throws {
-
         let monitor     = IOBluetoothConnectionMonitor()
         let firstStream = monitor.start()
 
@@ -40,7 +39,6 @@ enum BluetoothMonitorLifecycleTests {
 
     @MainActor
     private static func stoppingFinishesTheActiveStream() async throws {
-
         let monitor = IOBluetoothConnectionMonitor()
         let stream  = monitor.start()
         monitor.stop()
@@ -60,7 +58,6 @@ enum BluetoothMonitorLifecycleTests {
 
     @MainActor
     private static func unavailableRegistrationIsVisibleAndFinishesTheStream() async throws {
-
         let monitor = IOBluetoothConnectionMonitor { _, _ in nil }
         let stream  = monitor.start()
 
@@ -83,9 +80,8 @@ enum BluetoothMonitorLifecycleTests {
 
     @MainActor
     private static func objectiveCCallbacksAcceptBackgroundDelivery() async throws {
-
         let callbackProbe = BluetoothBackgroundCallbackProbe()
-        let monitor = IOBluetoothConnectionMonitor { observer, selector in
+        let monitor       = IOBluetoothConnectionMonitor { observer, selector in
             callbackProbe.register(
                 observer: observer,
                 selector: selector
@@ -101,7 +97,6 @@ enum BluetoothMonitorLifecycleTests {
         stream : AsyncStream<BluetoothConnectionEvent>,
         message: String
     ) async throws {
-
         var iterator = stream.makeAsyncIterator()
 
         guard await iterator.next() == nil else {
@@ -128,7 +123,6 @@ nonisolated private final class BluetoothBackgroundCallbackProbe: @unchecked Sen
         observer: AnyObject,
         selector: Selector
     ) -> IOBluetoothUserNotification? {
-
         let notification = IOBluetoothDevice.register(
             forConnectNotifications: observer,
             selector               : selector
@@ -144,7 +138,6 @@ nonisolated private final class BluetoothBackgroundCallbackProbe: @unchecked Sen
     }
 
     func invokeCallbacks() async throws {
-
         try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async { [self] in
                 do {
@@ -158,22 +151,34 @@ nonisolated private final class BluetoothBackgroundCallbackProbe: @unchecked Sen
     }
 
     private func invokeCallbacksOnCurrentQueue() throws {
-
         let callback = lock.withLock { (observer, notification, selector) }
 
         guard let observer = callback.0,
               let notification = callback.1,
               let selector = callback.2,
-              let device = IOBluetoothDevice(addressString: "AA-BB-CC-DD-EE-FF") else {
+              let device = IOBluetoothDevice(addressString: "AA-BB-CC-DD-EE-FF")
+        else {
             throw BluetoothMonitorTestFailure.assertion(
                 "The callback probe could not build its Objective-C fixtures."
             )
         }
 
         // Objective-C may deliver nil objects or a device whose cached address vanished.
-        _ = observer.perform(selector, with: notification, with: nil)
-        _ = observer.perform(selector, with: notification, with: IOBluetoothDevice())
-        _ = observer.perform(NSSelectorFromString("deviceDisconnected:device:"), with: notification, with: nil)
+        _ = observer.perform(
+            selector,
+            with: notification,
+            with: nil
+        )
+        _ = observer.perform(
+            selector,
+            with: notification,
+            with: IOBluetoothDevice()
+        )
+        _ = observer.perform(
+            NSSelectorFromString("deviceDisconnected:device:"),
+            with: notification,
+            with: nil
+        )
         _ = observer.perform(
             NSSelectorFromString("deviceDisconnected:device:"),
             with: notification,

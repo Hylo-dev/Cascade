@@ -3,12 +3,11 @@
 //  Cascade
 //
 
-import CoreGraphics
 import Foundation
-import ImageIO
 
 /// MusicArtworkColor keeps sampled sRGB components independent of SwiftUI.
 nonisolated struct MusicArtworkColor: Equatable, Sendable {
+
     let red  : Double
     let green: Double
     let blue : Double
@@ -16,7 +15,8 @@ nonisolated struct MusicArtworkColor: Equatable, Sendable {
     /// illuminated raises dark colors together, preserving their hue and neutrality.
     var illuminated: Self {
         let brightness = max(red, green, blue)
-        let scale = brightness > 0.02 ? max(1, 0.68 / brightness) : 1
+        let scale      = brightness > 0.02 ? max(1, 0.68 / brightness) : 1
+
         return Self(
             red  : min(1, red * scale),
             green: min(1, green * scale),

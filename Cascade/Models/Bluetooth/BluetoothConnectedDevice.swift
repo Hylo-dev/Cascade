@@ -3,8 +3,6 @@
 //  Cascade
 //
 
-import Foundation
-
 /// BluetoothConnectedDevice is the framework-free snapshot retained while a
 /// Bluetooth device is connected.
 ///

@@ -8,51 +8,59 @@ import CascadeContracts
 import CascadeKit
 import CascadePresentation
 import CascadeRuntime
-import QuickLookUI
 import SwiftUI
 import UniformTypeIdentifiers
 
 /// App-owned adapter between the durable local host and the shared shelf renderer.
 @MainActor
 final class FileShelfController: NotchContextualPage {
-    let id = "cascade.file-shelf"
+
+    let id                 = "cascade.file-shelf"
     /// Match the ordinary Music Live Activity instead of growing the notch for the shelf.
-    let contentHeight: CGFloat = 144
+    let contentHeight     : CGFloat = 144
     let accessibilityLabel = "Ripiano"
+
     var keepsExpandedPresentation: Bool { false }
 
-    private(set) var contentRevision: UInt64 = 0
+    private(set) var contentRevision  : UInt64 = 0
     private(set) var admissionSequence: UInt64 = 0
+
     private var consumedAdmissionSequence: UInt64 = 0
-    private(set) var isOccupied = false
-    private(set) var isClearing = false
+
+    private(set) var isOccupied    = false
+    private(set) var isClearing    = false
     private(set) var statusMessage: String?
     private(set) var preparedFiles: [UUID: PreparedFile] = [:]
-    private(set) var presentation: FileWorkspacePresentation
+    private(set) var presentation : FileWorkspacePresentation
 
-    private let host: FileWorkspaceHost?
-    private var contentChanged: @MainActor (Bool) -> Void
-    private let preview = FileShelfPreviewController()
-    private var snapshot: FileWorkspaceSnapshot
-    private var mode: FileWorkspaceMode = .deck
+    private let host                : FileWorkspaceHost?
+    private var contentChanged      : @MainActor (Bool) -> Void
+    private let preview              = FileShelfPreviewController()
+    private var snapshot            : FileWorkspaceSnapshot
+    private var mode                : FileWorkspaceMode = .deck
     private var scrollCloseDirection = FileShelfScrollDirection.conventionalBack
-    private var selectedIDs: [UUID] = []
+    private var selectedIDs         : [UUID] = []
+
     private(set) var focusedEntryID: UUID?
+
     private var selectionAnchorID: UUID?
-    private var allPreparedFiles: [PreparedFile] = []
-    private var interactionTask: Task<Void, Never>?
-    private var actions: [String: LocalAction] = [:]
-    private var hoverURLs: [URL]?
-    private var hoverIDs: [URL: UUID] = [:]
-    private var admissionInFlight = false
+    private var allPreparedFiles : [PreparedFile] = []
+    private var interactionTask  : Task<Void, Never>?
+    private var actions          : [String: LocalAction] = [:]
+
+    private var hoverURLs             : [URL]?
+    private var hoverIDs              : [URL: UUID] = [:]
+    private var admissionInFlight      = false
     private var deliveryFailureMessage: String?
-    private var started = false
+
+    private var started               = false
     /// Set at launch: the visible page is resolved on first display, not before.
     private var needsPresentationLoad = false
-    private var lifecycleGeneration: UInt64 = 0
-    private var isStarting = false
-    private var loadGeneration: UInt64 = 0
-    private var admissionTask: Task<Void, Never>?
+    private var lifecycleGeneration  : UInt64 = 0
+    private var isStarting            = false
+    private var loadGeneration       : UInt64 = 0
+
+    private var admissionTask      : Task<Void, Never>?
     private var deliveryRefreshTask: Task<Void, Never>?
 
     var pendingAdmissionSequence: UInt64 {
@@ -60,6 +68,7 @@ final class FileShelfController: NotchContextualPage {
     }
 
     private enum LocalAction {
+
         case openList
         case closeList
         case nextPage(String)
@@ -74,21 +83,21 @@ final class FileShelfController: NotchContextualPage {
         host             : FileWorkspaceHost,
         preferenceChanged: @escaping @MainActor (Bool) -> Void
     ) {
-        self.host = host
+        self.host      = host
         contentChanged = preferenceChanged
-        snapshot = Self.emptySnapshot
-        presentation = Self.emptyPresentation
+        snapshot       = Self.emptySnapshot
+        presentation   = Self.emptyPresentation
     }
 
     init(
         startupError     : any Error,
         preferenceChanged: @escaping @MainActor (Bool) -> Void
     ) {
-        host = nil
+        host           = nil
         contentChanged = preferenceChanged
-        snapshot = Self.emptySnapshot
-        presentation = Self.emptyPresentation
-        statusMessage = Self.message(for: startupError)
+        snapshot       = Self.emptySnapshot
+        presentation   = Self.emptyPresentation
+        statusMessage  = Self.message(for: startupError)
     }
 
     func start() async {
@@ -97,15 +106,18 @@ final class FileShelfController: NotchContextualPage {
             rebuildPresentation()
             return
         }
+
         isStarting = true
         lifecycleGeneration &+= 1
         let generation = lifecycleGeneration
+
         do {
             try await host.restore()
             guard generation == lifecycleGeneration, isStarting else {
                 try? await host.close()
                 return
             }
+
             // Launch reads the manifest only. Occupancy (which decides whether
             // the shelf is the default page) and the whole-deck drag set need no
             // bookmark; resolving the visible page waits until it is displayed.
@@ -114,15 +126,17 @@ final class FileShelfController: NotchContextualPage {
                 try? await host.close()
                 return
             }
-            isStarting = false
-            started = true
-            allPreparedFiles = prepared
-            isOccupied = !prepared.isEmpty
+
+            isStarting            = false
+            started               = true
+            allPreparedFiles      = prepared
+            isOccupied            = !prepared.isEmpty
             needsPresentationLoad = true
             rebuildPresentation()
         } catch {
             guard generation == lifecycleGeneration, isStarting else { return }
-            isStarting = false
+
+            isStarting    = false
             statusMessage = message(for: error)
             rebuildPresentation()
         }
@@ -130,19 +144,23 @@ final class FileShelfController: NotchContextualPage {
 
     func stop() {
         lifecycleGeneration &+= 1
-        loadGeneration &+= 1
-        isStarting = false
-        started = false
+        loadGeneration      &+= 1
+
+        isStarting            = false
+        started               = false
         needsPresentationLoad = false
+
         admissionTask?.cancel()
         admissionTask = nil
         interactionTask?.cancel()
         interactionTask = nil
+
         consumedAdmissionSequence = admissionSequence
-        admissionInFlight = false
-        isClearing = false
-        hoverURLs = nil
+        admissionInFlight         = false
+        isClearing                = false
+        hoverURLs                 = nil
         hoverIDs.removeAll()
+
         deliveryRefreshTask?.cancel()
         deliveryRefreshTask = nil
         preview.close()
@@ -155,18 +173,21 @@ final class FileShelfController: NotchContextualPage {
 
     func showHover(_ urls: [URL]?) {
         guard !isClearing else { return }
+
         if let urls {
             clearDeliveryFailure()
             let bounded = Array(urls.prefix(32))
             guard hoverURLs != bounded else { return }
+
             hoverURLs = bounded
-            hoverIDs = bounded.reduce(into: [:]) { result, url in
+            hoverIDs  = bounded.reduce(into: [:]) { result, url in
                 result[url] = hoverIDs[url] ?? UUID()
             }
             statusMessage = "Rilascia per aggiungere"
             rebuildPresentation()
         } else {
             guard !admissionInFlight, hoverURLs != nil else { return }
+
             hoverURLs = nil
             hoverIDs.removeAll()
             statusMessage = nil
@@ -176,6 +197,7 @@ final class FileShelfController: NotchContextualPage {
 
     func showUnsupportedDrop() {
         guard !admissionInFlight, !isClearing else { return }
+
         clearDeliveryFailure()
         hoverURLs = nil
         hoverIDs.removeAll()
@@ -184,16 +206,22 @@ final class FileShelfController: NotchContextualPage {
     }
 
     func acceptDrop(_ urls: [URL]) -> Bool {
-        guard started, !admissionInFlight, !isClearing,
-              !urls.isEmpty, urls.count <= 32 else { return false }
+        guard started,
+              !admissionInFlight,
+              !isClearing,
+              !urls.isEmpty,
+              urls.count <= 32
+        else { return false }
+
         clearDeliveryFailure()
         admissionInFlight = true
         if hoverURLs != urls {
             hoverIDs = urls.reduce(into: [:]) { result, url in result[url] = UUID() }
         }
-        hoverURLs = urls
+        hoverURLs     = urls
         statusMessage = "Aggiunta in corso…"
         rebuildPresentation()
+
         admissionTask = Task { [weak self] in await self?.acceptRegularFiles(urls) }
         return true
     }
@@ -204,26 +232,34 @@ final class FileShelfController: NotchContextualPage {
             if started { showUnsupportedDrop() }
             return
         }
+
         clearDeliveryFailure()
         admissionInFlight = true
         if hoverURLs == nil {
             hoverURLs = urls
-            hoverIDs = urls.reduce(into: [:]) { result, url in result[url] = UUID() }
+            hoverIDs  = urls.reduce(into: [:]) { result, url in result[url] = UUID() }
         }
+
         do {
             _ = try await host.addOriginals(urls)
             guard started else { return }
+
             admissionSequence &+= 1
             hoverURLs = nil
             hoverIDs.removeAll()
             admissionInFlight = false
-            await reload(cursor: nil, mode: .deck, clearsStatus: true)
+            await reload(
+                cursor      : nil,
+                mode        : .deck,
+                clearsStatus: true
+            )
         } catch {
             guard started else { return }
+
             hoverURLs = nil
             hoverIDs.removeAll()
             admissionInFlight = false
-            statusMessage = message(for: error)
+            statusMessage     = message(for: error)
             rebuildPresentation()
         }
         admissionTask = nil
@@ -231,16 +267,19 @@ final class FileShelfController: NotchContextualPage {
 
     func clearAll() async {
         guard let host, started, isOccupied, !admissionInFlight, !isClearing else { return }
+
         clearDeliveryFailure()
-        isClearing = true
+        isClearing    = true
         statusMessage = "Svuotamento in corso…"
         rebuildPresentation()
+
         let generation = lifecycleGeneration
         do {
             while true {
                 guard started, generation == lifecycleGeneration else {
                     throw FileWorkspaceError.interrupted
                 }
+
                 let page = try await host.snapshot()
                 guard page.totalCount > 0 else { break }
                 guard let entry = page.entries.first else {
@@ -249,54 +288,77 @@ final class FileShelfController: NotchContextualPage {
                 guard entry.ownership == .externalReference else {
                     throw FileWorkspaceError.unsupported
                 }
+
                 try await host.removeExternalReference(
                     id      : entry.id,
                     revision: page.revision
                 )
             }
             guard started, generation == lifecycleGeneration else { return }
-            isClearing = false
+
+            isClearing  = false
             selectedIDs = []
-            await reload(cursor: nil, mode: .deck, clearsStatus: true)
+            await reload(
+                cursor      : nil,
+                mode        : .deck,
+                clearsStatus: true
+            )
         } catch {
             guard started, generation == lifecycleGeneration else {
                 isClearing = false
                 return
             }
-            isClearing = false
+
+            isClearing    = false
             statusMessage = message(for: error)
-            await reload(cursor: nil, mode: .deck, clearsStatus: false)
+            await reload(
+                cursor      : nil,
+                mode        : .deck,
+                clearsStatus: false
+            )
         }
     }
 
     func perform(_ descriptor: ActionDescriptor) async {
         guard !isClearing else { return }
         guard let action = actions[descriptor.id] else { return }
+
         if clearDeliveryFailure() { rebuildPresentation() }
         switch action {
-        case .openList:
-            scrollCloseDirection = .conventionalBack
-            mode = .list
-            focusedEntryID = focusedEntryID ?? snapshot.entries.first?.id
-            rebuildPresentation()
-        case .closeList:
-            selectedIDs = []
-            focusedEntryID = nil
-            selectionAnchorID = nil
-            await reload(cursor: nil, mode: .deck, clearsStatus: false)
-        case .nextPage(let cursor):
-            selectedIDs = []
-            await reload(cursor: cursor, mode: .list, clearsStatus: false)
-        case .select(let id):
-            select(id, extendingRange: false)
-        case .remove(let id):
-            await remove(id)
-        case .relink(let id):
-            await relink(id)
-        case .preview(let id):
-            await showPreview(id)
-        case .reveal(let id):
-            await reveal(id)
+            case .openList:
+                scrollCloseDirection = .conventionalBack
+                mode                 = .list
+                focusedEntryID       = focusedEntryID ?? snapshot.entries.first?.id
+                rebuildPresentation()
+
+            case .closeList:
+                selectedIDs       = []
+                focusedEntryID    = nil
+                selectionAnchorID = nil
+                await reload(
+                    cursor      : nil,
+                    mode        : .deck,
+                    clearsStatus: false
+                )
+
+            case .nextPage(let cursor):
+                selectedIDs = []
+                await reload(
+                    cursor      : cursor,
+                    mode        : .list,
+                    clearsStatus: false
+                )
+
+            case .select(let id):
+                select(id, extendingRange: false)
+            case .remove(let id):
+                await remove(id)
+            case .relink(let id):
+                await relink(id)
+            case .preview(let id):
+                await showPreview(id)
+            case .reveal(let id):
+                await reveal(id)
         }
     }
 
@@ -305,8 +367,15 @@ final class FileShelfController: NotchContextualPage {
         // first call is the shelf's first display since launch.
         if needsPresentationLoad {
             needsPresentationLoad = false
-            Task { await reload(cursor: nil, mode: .deck, clearsStatus: true) }
+            Task {
+                await reload(
+                    cursor      : nil,
+                    mode        : .deck,
+                    clearsStatus: true
+                )
+            }
         }
+
         let clearAllAction: (@MainActor () -> Void)?
         if hoverURLs == nil, isOccupied {
             clearAllAction = { [weak self] in
@@ -315,80 +384,88 @@ final class FileShelfController: NotchContextualPage {
         } else {
             clearAllAction = nil
         }
+
         let workspace = try? CascadeFileWorkspace(
             presentation,
-            assets  : EmptyShelfAssets(),
-            dispatch: { [weak self] descriptor in
+            assets                          : EmptyShelfAssets(),
+            dispatch                        : { [weak self] descriptor in
                 Task { await self?.perform(descriptor) }
             },
-            thumbnail: { entry in
+            thumbnail                       : { entry in
                 guard let type = UTType(entry.typeIdentifier) else { return nil }
                 return Image(nsImage: NSWorkspace.shared.icon(for: type))
             },
-            wrapEntry: { [weak self] entry, action, content in
+            wrapEntry                       : { [weak self] entry, action, content in
                 guard let self else { return content }
-                return AnyView(FileShelfDragSource(
-                    content          : content,
-                    files            : self.filesForDrag(from: entry.id),
-                    accessibilityName: entry.name,
-                    expandsOnScroll  : self.presentation.mode == .deck,
-                    scrollNavigation : self.presentation.mode == .deck
-                        ? .open
-                        : .close(expectedDirection: self.scrollCloseDirection),
-                    activate         : { [weak self] in
-                        guard let self, let action else { return }
-                        Task { await self.perform(action) }
-                    },
-                    interaction      : { [weak self] interaction in
-                        guard let self else { return }
-                        if self.mode == .deck {
-                            if case .click = interaction, let action {
-                                Task { await self.perform(action) }
+                return AnyView(
+                    FileShelfDragSource(
+                        content          : content,
+                        files            : self.filesForDrag(from: entry.id),
+                        accessibilityName: entry.name,
+                        expandsOnScroll  : self.presentation.mode == .deck,
+                        scrollNavigation : self.presentation.mode == .deck
+                            ? .open
+                            : .close(expectedDirection: self.scrollCloseDirection),
+                        activate         : { [weak self] in
+                            guard let self, let action else { return }
+                            Task { await self.perform(action) }
+                        },
+                        interaction      : { [weak self] interaction in
+                            guard let self else { return }
+                            if self.mode == .deck {
+                                if case .click = interaction, let action {
+                                    Task { await self.perform(action) }
+                                }
+                            } else {
+                                self.handle(interaction, entryID: entry.id)
                             }
-                        } else {
-                            self.handle(interaction, entryID: entry.id)
+                        },
+                        resolveDragFiles : { [weak self] in
+                            self?.filesForDrag(from: entry.id) ?? []
+                        },
+                        navigateByScroll : { [weak self] direction in
+                            Task { await self?.navigateByScroll(direction) }
+                        },
+                        copy             : { [weak self, host] prepared, destination in
+                            guard let host else { throw FileWorkspaceError.ioFailure }
+                            do {
+                                try await host.copy(prepared, to: destination)
+                                await self?.deliveryCompleted(error: nil)
+                            } catch {
+                                await self?.deliveryCompleted(error: error)
+                                throw error
+                            }
                         }
-                    },
-                    resolveDragFiles : { [weak self] in
-                        self?.filesForDrag(from: entry.id) ?? []
-                    },
-                    navigateByScroll : { [weak self] direction in
-                        Task { await self?.navigateByScroll(direction) }
-                    },
-                    copy: { [weak self, host] prepared, destination in
-                        guard let host else { throw FileWorkspaceError.ioFailure }
-                        do {
-                            try await host.copy(prepared, to: destination)
-                            await self?.deliveryCompleted(error: nil)
-                        } catch {
-                            await self?.deliveryCompleted(error: error)
-                            throw error
-                        }
-                    }
-                ))
+                    )
+                )
             },
             conversionUnavailableExplanation: "Conversione non ancora disponibile",
-            clearAll: clearAllAction,
-            clearAllDisabled: isClearing || admissionInFlight,
-            focusedEntryID: focusedEntryID,
-            rename: { [weak self] in self?.requestRename() },
-            renameDisabled: mode == .list && selectedIDs.count > 1,
-            admissionSequence: pendingAdmissionSequence,
-            onAdmissionAnimationConsumed: { [weak self] sequence in
+            clearAll                        : clearAllAction,
+            clearAllDisabled                : isClearing || admissionInFlight,
+            focusedEntryID                  : focusedEntryID,
+            rename                          : { [weak self] in self?.requestRename() },
+            renameDisabled                  : mode == .list && selectedIDs.count > 1,
+            admissionSequence               : pendingAdmissionSequence,
+            onAdmissionAnimationConsumed    : { [weak self] sequence in
                 self?.consumeAdmissionAnimation(sequence)
             },
-            centerObstructionFrame: context.centerObstructionFrame
+            centerObstructionFrame          : context.centerObstructionFrame
         )
+
         let content = AnyView(
             VStack(spacing: 3) {
+
                 if hoverURLs != nil || (presentation.snapshot.entries.isEmpty && !isOccupied) {
                     VStack(spacing: 0) {
-                        Color.clear.frame(height: context.centerObstructionFrame.height)
+
+                        Color.clear
+                            .frame(height: context.centerObstructionFrame.height)
+
                         FileShelfDropTarget(
                             symbol: admissionInFlight
                                 ? "arrow.down.doc.fill"
                                 : hoverURLs == nil ? "tray.and.arrow.down" : "tray.and.arrow.down.fill",
-                            title: admissionInFlight
+                            title : admissionInFlight
                                 ? "Aggiunta in corso…"
                                 : hoverURLs == nil ? "Trascina qui i file" : "Rilascia per aggiungere"
                         )
@@ -399,10 +476,13 @@ final class FileShelfController: NotchContextualPage {
                     workspace
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
+
                 if hoverURLs == nil, let statusMessage {
                     Text(statusMessage)
                         .font(.caption2)
-                        .foregroundStyle(statusMessage == "Rilascia per aggiungere" ? Color.secondary : Color.orange)
+                        .foregroundStyle(
+                            statusMessage == "Rilascia per aggiungere" ? Color.secondary : Color.orange
+                        )
                         .lineLimit(1)
                         .help(statusMessage)
                         .accessibilityLabel(statusMessage)
@@ -415,45 +495,51 @@ final class FileShelfController: NotchContextualPage {
             .foregroundStyle(.white)
             .environment(\.colorScheme, .dark)
         )
-        return AnyView(FileShelfKeyboardContainer(
-            content: content,
-            interaction: { [weak self] interaction in self?.handleKeyboard(interaction) }
-        )
-        .frame(width: context.availableSize.width, height: context.availableSize.height)
-        .background {
-            FileShelfGlassLightEmitter(
-                isOccupied: isOccupied,
-                isHovering: hoverURLs != nil,
-                isAdmitting: admissionInFlight
+
+        return AnyView(
+            FileShelfKeyboardContainer(
+                content    : content,
+                interaction: { [weak self] interaction in self?.handleKeyboard(interaction) }
             )
-        })
+            .frame(width: context.availableSize.width, height: context.availableSize.height)
+            .background {
+                FileShelfGlassLightEmitter(
+                    isOccupied : isOccupied,
+                    isHovering : hoverURLs != nil,
+                    isAdmitting: admissionInFlight
+                )
+            }
+        )
     }
 
     func navigateByScroll(_ direction: FileShelfScrollDirection) async {
         guard isOccupied, !isClearing else { return }
+
         switch mode {
-        case .deck:
-            scrollCloseDirection = direction.inverse
-            mode = .list
-            focusedEntryID = snapshot.entries.first?.id
-            rebuildPresentation()
-        case .list:
-            if direction.isHorizontal {
-                let offset = direction == .horizontalPositive ? -1 : 1
-                if offset < 0,
-                   focusedEntryID == snapshot.entries.first?.id,
-                   direction == scrollCloseDirection,
-                   let close = presentation.action(for: .closeList) {
+            case .deck:
+                scrollCloseDirection = direction.inverse
+                mode                 = .list
+                focusedEntryID       = snapshot.entries.first?.id
+                rebuildPresentation()
+
+            case .list:
+                if direction.isHorizontal {
+                    let offset = direction == .horizontalPositive ? -1 : 1
+                    if offset < 0,
+                       focusedEntryID == snapshot.entries.first?.id,
+                       direction == scrollCloseDirection,
+                       let close = presentation.action(for: .closeList) {
+                        await perform(close)
+                    } else {
+                        moveFocus(offset: offset, extendSelection: false)
+                    }
+                } else if direction == scrollCloseDirection,
+                          let close = presentation.action(for: .closeList) {
                     await perform(close)
-                } else {
-                    moveFocus(offset: offset, extendSelection: false)
                 }
-            } else if direction == scrollCloseDirection,
-                      let close = presentation.action(for: .closeList) {
-                await perform(close)
-            }
-        case .conversion:
-            return
+
+            case .conversion:
+                return
         }
     }
 
@@ -463,25 +549,30 @@ final class FileShelfController: NotchContextualPage {
         clearsStatus: Bool
     ) async {
         guard let host else { return }
+
         needsPresentationLoad = false
         loadGeneration &+= 1
         let generation = loadGeneration
+
         do {
             let loaded = try await loadPage(cursor: cursor)
             guard generation == loadGeneration else { return }
+
             // Only the visible page resolves bookmarks; the drag set comes from
             // the manifest instead of re-snapshotting every page, page 1 included.
             let loadedAll = mode == .deck ? try await host.prepareAllItems() : nil
             guard generation == loadGeneration else { return }
-            snapshot = loaded.snapshot
+
+            snapshot      = loaded.snapshot
             preparedFiles = loaded.prepared
             if let loadedAll { allPreparedFiles = loadedAll }
-            self.mode = mode
-            selectedIDs = selectedIDs.filter { loaded.prepared[$0] != nil }
+            self.mode      = mode
+            selectedIDs    = selectedIDs.filter { loaded.prepared[$0] != nil }
             focusedEntryID = focusedEntryID.flatMap { id in
                 snapshot.entries.contains(where: { $0.id == id }) ? id : nil
             }
             if clearsStatus { statusMessage = nil }
+
             let occupied = snapshot.totalCount > 0
             if isOccupied, !occupied, mode == .list {
                 // Keep the last list frame mounted long enough to dissolve its final file.
@@ -494,6 +585,7 @@ final class FileShelfController: NotchContextualPage {
             rebuildPresentation()
         } catch {
             guard generation == loadGeneration else { return }
+
             statusMessage = message(for: error)
             rebuildPresentation()
         }
@@ -503,6 +595,7 @@ final class FileShelfController: NotchContextualPage {
         cursor: String?
     ) async throws -> (snapshot: FileWorkspaceSnapshot, prepared: [UUID: PreparedFile]) {
         guard let host else { throw FileWorkspaceError.ioFailure }
+
         var lastError: (any Error)?
         for _ in 0..<2 {
             let snapshot = try await host.snapshot(cursor: cursor)
@@ -514,39 +607,96 @@ final class FileShelfController: NotchContextualPage {
                 lastError = error
             }
         }
+
         throw lastError ?? FileWorkspaceError.ioFailure
     }
 
     private func rebuildPresentation() {
-        let displayed = hoverURLs.flatMap(makeHoverSnapshot) ?? snapshot
-        let displayedMode: FileWorkspaceMode = hoverURLs == nil ? mode : .deck
+        let displayed          = hoverURLs.flatMap(makeHoverSnapshot) ?? snapshot
+        let displayedMode     : FileWorkspaceMode = hoverURLs == nil ? mode : .deck
         let displayedSelection = hoverURLs == nil
             ? selectedIDs.filter { id in displayed.entries.contains(where: { $0.id == id }) }
             : []
-        var bindings: [FileWorkspaceActionBinding] = []
-        var local: [String: LocalAction] = [:]
+
+        var bindings    : [FileWorkspaceActionBinding] = []
+        var localActions: [String: LocalAction] = [:]
         if hoverURLs == nil {
             if displayedMode == .deck, !displayed.entries.isEmpty {
-                append(.openList, label: "Apri elenco file", local: .openList, to: &bindings, map: &local)
+                append(
+                    .openList,
+                    label: "Apri elenco file",
+                    local: .openList,
+                    to   : &bindings,
+                    map  : &localActions
+                )
             } else if displayedMode == .list {
-                append(.closeList, label: "Chiudi elenco", local: .closeList, to: &bindings, map: &local)
+                append(
+                    .closeList,
+                    label: "Chiudi elenco",
+                    local: .closeList,
+                    to   : &bindings,
+                    map  : &localActions
+                )
                 if let cursor = displayed.nextCursor {
-                    append(.nextPage, label: "Pagina successiva", local: .nextPage(cursor), to: &bindings, map: &local)
+                    append(
+                        .nextPage,
+                        label: "Pagina successiva",
+                        local: .nextPage(cursor),
+                        to   : &bindings,
+                        map  : &localActions
+                    )
                 }
+
                 for entry in displayed.entries {
-                    append(.select, entry: entry, label: "Seleziona \(entry.name)", local: .select(entry.id), to: &bindings, map: &local)
+                    append(
+                        .select,
+                        entry: entry,
+                        label: "Seleziona \(entry.name)",
+                        local: .select(entry.id),
+                        to   : &bindings,
+                        map  : &localActions
+                    )
                     if entry.ownership == .externalReference {
-                        append(.remove, entry: entry, label: "Rimuovi \(entry.name)", local: .remove(entry.id), to: &bindings, map: &local)
+                        append(
+                            .remove,
+                            entry: entry,
+                            label: "Rimuovi \(entry.name)",
+                            local: .remove(entry.id),
+                            to   : &bindings,
+                            map  : &localActions
+                        )
                     }
                     if entry.availability == .available {
-                        append(.preview, entry: entry, label: "Anteprima \(entry.name)", local: .preview(entry.id), to: &bindings, map: &local)
-                        append(.reveal, entry: entry, label: "Mostra \(entry.name) nel Finder", local: .reveal(entry.id), to: &bindings, map: &local)
+                        append(
+                            .preview,
+                            entry: entry,
+                            label: "Anteprima \(entry.name)",
+                            local: .preview(entry.id),
+                            to   : &bindings,
+                            map  : &localActions
+                        )
+                        append(
+                            .reveal,
+                            entry: entry,
+                            label: "Mostra \(entry.name) nel Finder",
+                            local: .reveal(entry.id),
+                            to   : &bindings,
+                            map  : &localActions
+                        )
                     } else if entry.ownership == .externalReference {
-                        append(.relink, entry: entry, label: "Ricollega \(entry.name)", local: .relink(entry.id), to: &bindings, map: &local)
+                        append(
+                            .relink,
+                            entry: entry,
+                            label: "Ricollega \(entry.name)",
+                            local: .relink(entry.id),
+                            to   : &bindings,
+                            map  : &localActions
+                        )
                     }
                 }
             }
         }
+
         do {
             presentation = try FileWorkspacePresentation(
                 snapshot        : displayed,
@@ -556,30 +706,33 @@ final class FileShelfController: NotchContextualPage {
                 selectedFormatID: nil,
                 actions         : bindings
             )
-            actions = local
+            actions = localActions
         } catch {
             statusMessage = "Il ripiano non può essere mostrato."
         }
+
         contentRevision &+= 1
         contentChanged(isOccupied)
     }
 
     private func append(
-        _ role : FileWorkspaceActionBinding.Role,
-        entry  : FileWorkspaceEntry? = nil,
-        label  : String,
-        local  : LocalAction,
+        _ role     : FileWorkspaceActionBinding.Role,
+        entry      : FileWorkspaceEntry? = nil,
+        label      : String,
+        local      : LocalAction,
         to bindings: inout [FileWorkspaceActionBinding],
-        map    : inout [String: LocalAction]
+        map        : inout [String: LocalAction]
     ) {
         let suffix = entry?.id.uuidString.lowercased() ?? String(bindings.count)
-        let id = "shelf.\(role.rawValue).\(suffix)"
+        let id     = "shelf.\(role.rawValue).\(suffix)"
         guard let descriptor = try? ActionDescriptor(id: id, label: label),
               let binding = try? FileWorkspaceActionBinding(
-                role      : role,
-                entryID   : entry?.id,
-                descriptor: descriptor
-              ) else { return }
+                  role      : role,
+                  entryID   : entry?.id,
+                  descriptor: descriptor
+              )
+        else { return }
+
         bindings.append(binding)
         map[id] = local
     }
@@ -596,6 +749,7 @@ final class FileShelfController: NotchContextualPage {
                 thumbnailAssetID: nil
             )
         }
+
         return try? FileWorkspaceSnapshot(
             revision  : 0,
             entries   : entries,
@@ -607,36 +761,45 @@ final class FileShelfController: NotchContextualPage {
 
     func filesForDrag(from entryID: UUID) -> [PreparedFile] {
         if mode == .deck { return allPreparedFiles }
+
         let ids = selectedIDs.contains(entryID) ? selectedIDs : [entryID]
         return snapshot.entries.compactMap { entry in
             ids.contains(entry.id) ? preparedFiles[entry.id] : nil
         }
     }
 
-    func handle(_ interaction: FileShelfEntryInteraction, entryID: UUID) {
+    func handle(
+        _ interaction: FileShelfEntryInteraction,
+        entryID      : UUID
+    ) {
         guard mode == .list, snapshot.entries.contains(where: { $0.id == entryID }) else { return }
+
         if statusMessage == "Seleziona un file da rinominare" { statusMessage = nil }
         switch interaction {
-        case .click(let modifiers):
-            select(entryID, extendingRange: modifiers.contains(.shift))
-        case .prepareDrag:
-            if !selectedIDs.contains(entryID) {
-                selectedIDs = [entryID]
-                focusedEntryID = entryID
-                selectionAnchorID = entryID
+            case .click(let modifiers):
+                select(entryID, extendingRange: modifiers.contains(.shift))
+
+            case .prepareDrag:
+                if !selectedIDs.contains(entryID) {
+                    selectedIDs       = [entryID]
+                    focusedEntryID    = entryID
+                    selectionAnchorID = entryID
+                    rebuildPresentation()
+                }
+
+            case .moveFocus(let offset, let extendSelection):
+                moveFocus(offset: offset, extendSelection: extendSelection)
+
+            case .delete:
+                let ids = selectedIDs.isEmpty ? [focusedEntryID ?? entryID] : selectedIDs
+                interactionTask?.cancel()
+                interactionTask = Task { [weak self] in await self?.remove(ids) }
+
+            case .selectAll:
+                selectedIDs       = snapshot.entries.map(\.id)
+                focusedEntryID    = focusedEntryID ?? selectedIDs.first
+                selectionAnchorID = selectedIDs.first
                 rebuildPresentation()
-            }
-        case .moveFocus(let offset, let extendSelection):
-            moveFocus(offset: offset, extendSelection: extendSelection)
-        case .delete:
-            let ids = selectedIDs.isEmpty ? [focusedEntryID ?? entryID] : selectedIDs
-            interactionTask?.cancel()
-            interactionTask = Task { [weak self] in await self?.remove(ids) }
-        case .selectAll:
-            selectedIDs = snapshot.entries.map(\.id)
-            focusedEntryID = focusedEntryID ?? selectedIDs.first
-            selectionAnchorID = selectedIDs.first
-            rebuildPresentation()
         }
     }
 
@@ -649,85 +812,129 @@ final class FileShelfController: NotchContextualPage {
 
     private func requestRename() {
         guard !isClearing else { return }
+
         if mode == .deck {
-            mode = .list
+            mode           = .list
             focusedEntryID = snapshot.entries.first?.id
-            statusMessage = "Seleziona un file da rinominare"
+            statusMessage  = "Seleziona un file da rinominare"
             rebuildPresentation()
             return
         }
+
         guard selectedIDs.count <= 1 else {
             statusMessage = nil
             rebuildPresentation()
             return
         }
+
         guard let id = selectedIDs.first ?? focusedEntryID,
-              let entry = snapshot.entries.first(where: { $0.id == id }) else { return }
+              let entry = snapshot.entries.first(where: { $0.id == id })
+        else { return }
+
         let alert = NSAlert()
-        alert.messageText = "Rinomina file"
+        alert.messageText     = "Rinomina file"
         alert.informativeText = "Il nome verrà modificato anche nel Finder."
         alert.addButton(withTitle: "Rinomina")
         alert.addButton(withTitle: "Annulla")
+
         let field = NSTextField(string: entry.name)
-        field.frame = CGRect(x: 0, y: 0, width: 280, height: 24)
+        field.frame = CGRect(
+            x     : 0,
+            y     : 0,
+            width : 280,
+            height: 24
+        )
         alert.accessoryView = field
         guard alert.runModal() == .alertFirstButtonReturn else { return }
+
         let name = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty, name != entry.name else { return }
+
         interactionTask?.cancel()
         interactionTask = Task { [weak self] in await self?.rename(id, to: name) }
     }
 
-    private func rename(_ id: UUID, to name: String) async {
+    private func rename(
+        _ id   : UUID,
+        to name: String
+    ) async {
         guard let host else { return }
+
         do {
-            try await host.renameExternalReference(id: id, newName: name, revision: snapshot.revision)
-            await reload(cursor: nil, mode: mode, clearsStatus: true)
+            try await host.renameExternalReference(
+                id      : id,
+                newName : name,
+                revision: snapshot.revision
+            )
+            await reload(
+                cursor      : nil,
+                mode        : mode,
+                clearsStatus: true
+            )
         } catch {
             statusMessage = message(for: error)
-            await reload(cursor: nil, mode: mode, clearsStatus: false)
+            await reload(
+                cursor      : nil,
+                mode        : mode,
+                clearsStatus: false
+            )
         }
     }
 
-    private func select(_ id: UUID, extendingRange: Bool) {
+    private func select(
+        _ id          : UUID,
+        extendingRange: Bool
+    ) {
         focusedEntryID = id
         if extendingRange,
            let anchor = selectionAnchorID,
            let anchorIndex = snapshot.entries.firstIndex(where: { $0.id == anchor }),
            let index = snapshot.entries.firstIndex(where: { $0.id == id }) {
-            selectedIDs = Array(snapshot.entries[min(anchorIndex, index)...max(anchorIndex, index)].map(\.id))
+            selectedIDs = Array(
+                snapshot.entries[min(anchorIndex, index)...max(anchorIndex, index)].map(\.id)
+            )
         } else {
             if let index = selectedIDs.firstIndex(of: id) { selectedIDs.remove(at: index) }
             else { selectedIDs.append(id) }
             selectionAnchorID = id
         }
+
         rebuildPresentation()
     }
 
-    private func moveFocus(offset: Int, extendSelection: Bool) {
+    private func moveFocus(
+        offset         : Int,
+        extendSelection: Bool
+    ) {
         guard !snapshot.entries.isEmpty else { return }
+
         let current = focusedEntryID.flatMap { id in snapshot.entries.firstIndex(where: { $0.id == id }) }
             ?? (offset < 0 ? snapshot.entries.count : -1)
         let next = min(max(current + offset, 0), snapshot.entries.count - 1)
-        let id = snapshot.entries[next].id
+        let id   = snapshot.entries[next].id
         focusedEntryID = id
         if extendSelection {
             let anchor = selectionAnchorID ?? snapshot.entries[min(max(current, 0), snapshot.entries.count - 1)].id
             selectionAnchorID = anchor
             if let anchorIndex = snapshot.entries.firstIndex(where: { $0.id == anchor }) {
-                selectedIDs = Array(snapshot.entries[min(anchorIndex, next)...max(anchorIndex, next)].map(\.id))
+                selectedIDs = Array(
+                    snapshot.entries[min(anchorIndex, next)...max(anchorIndex, next)].map(\.id)
+                )
             }
         } else {
-            selectedIDs = [id]
+            selectedIDs       = [id]
             selectionAnchorID = id
         }
+
         rebuildPresentation()
     }
 
     func consumeAdmissionAnimation(_ sequence: UInt64) {
         guard sequence != 0,
               admissionSequence == sequence,
-              consumedAdmissionSequence != sequence else { return }
+              consumedAdmissionSequence != sequence
+        else { return }
+
         consumedAdmissionSequence = sequence
         rebuildPresentation()
     }
@@ -735,58 +942,92 @@ final class FileShelfController: NotchContextualPage {
     private func remove(_ id: UUID) async {
         guard let host else { return }
         guard let entry = snapshot.entries.first(where: { $0.id == id }),
-              entry.ownership == .externalReference else { return }
+              entry.ownership == .externalReference
+        else { return }
+
         do {
             try await host.removeExternalReference(id: id, revision: snapshot.revision)
             selectedIDs.removeAll { $0 == id }
-            await reload(cursor: nil, mode: mode, clearsStatus: true)
+            await reload(
+                cursor      : nil,
+                mode        : mode,
+                clearsStatus: true
+            )
         } catch {
             statusMessage = message(for: error)
-            await reload(cursor: nil, mode: mode, clearsStatus: false)
+            await reload(
+                cursor      : nil,
+                mode        : mode,
+                clearsStatus: false
+            )
         }
     }
 
     private func remove(_ ids: [UUID]) async {
         guard let host else { return }
+
         do {
             for id in ids {
                 guard !Task.isCancelled else { return }
+
                 let current = try await host.snapshot()
                 try await host.removeExternalReference(id: id, revision: current.revision)
             }
             selectedIDs.removeAll { ids.contains($0) }
-            focusedEntryID = nil
+            focusedEntryID    = nil
             selectionAnchorID = nil
-            await reload(cursor: nil, mode: mode, clearsStatus: true)
+            await reload(
+                cursor      : nil,
+                mode        : mode,
+                clearsStatus: true
+            )
         } catch {
             statusMessage = message(for: error)
-            await reload(cursor: nil, mode: mode, clearsStatus: false)
+            await reload(
+                cursor      : nil,
+                mode        : mode,
+                clearsStatus: false
+            )
         }
     }
 
     private func relink(_ id: UUID) async {
         guard let host else { return }
-        guard snapshot.entries.contains(where: {
-            $0.id == id && $0.ownership == .externalReference
-        }) else { return }
+        guard snapshot.entries.contains(where: { $0.id == id && $0.ownership == .externalReference })
+        else { return }
+
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        panel.canChooseFiles = true
-        panel.message = "Scegli il file da ricollegare"
+        panel.canChooseDirectories    = false
+        panel.canChooseFiles          = true
+        panel.message                 = "Scegli il file da ricollegare"
         guard await panel.begin() == .OK, let url = panel.url else { return }
+
         do {
-            try await host.relinkExternalReference(id: id, to: url, revision: snapshot.revision)
-            await reload(cursor: nil, mode: mode, clearsStatus: true)
+            try await host.relinkExternalReference(
+                id      : id,
+                to      : url,
+                revision: snapshot.revision
+            )
+            await reload(
+                cursor      : nil,
+                mode        : mode,
+                clearsStatus: true
+            )
         } catch {
             statusMessage = message(for: error)
-            await reload(cursor: nil, mode: mode, clearsStatus: false)
+            await reload(
+                cursor      : nil,
+                mode        : mode,
+                clearsStatus: false
+            )
         }
     }
 
     private func showPreview(_ id: UUID) async {
         guard let host else { return }
         guard let prepared = preparedFiles[id] else { return }
+
         do {
             try await host.withCheckedURL(for: prepared) { [preview] url in
                 try await preview.present(url)
@@ -800,6 +1041,7 @@ final class FileShelfController: NotchContextualPage {
     private func reveal(_ id: UUID) async {
         guard let host else { return }
         guard let prepared = preparedFiles[id] else { return }
+
         do {
             try await host.withCheckedURL(for: prepared) { url in
                 await MainActor.run {
@@ -816,13 +1058,15 @@ final class FileShelfController: NotchContextualPage {
         if let error {
             let failure = message(for: error)
             deliveryFailureMessage = failure
-            statusMessage = failure
+            statusMessage          = failure
             rebuildPresentation()
         }
+
         deliveryRefreshTask?.cancel()
         deliveryRefreshTask = Task { [weak self] in
             await Task.yield()
             guard !Task.isCancelled, let self else { return }
+
             await self.reload(
                 cursor      : nil,
                 mode        : self.mode,
@@ -834,6 +1078,7 @@ final class FileShelfController: NotchContextualPage {
     @discardableResult
     private func clearDeliveryFailure() -> Bool {
         guard let deliveryFailureMessage else { return false }
+
         if statusMessage == deliveryFailureMessage { statusMessage = nil }
         self.deliveryFailureMessage = nil
         return true
@@ -843,13 +1088,13 @@ final class FileShelfController: NotchContextualPage {
 
     private static func message(for error: any Error) -> String {
         switch error as? FileWorkspaceError {
-        case .unsupported: "Il file non è supportato."
-        case .unavailable: "Il file non è disponibile. Puoi ricollegarlo o rimuoverlo."
-        case .permissionDenied: "Cascade non dispone più del permesso per questo file."
-        case .quotaExceeded: "Il ripiano non dispone di spazio sufficiente."
-        case .staleRevision: "Il ripiano è cambiato. Riprova."
-        case .interrupted: "L’operazione è stata interrotta."
-        case .ioFailure, .none: "Impossibile completare l’operazione sul file."
+            case .unsupported: "Il file non è supportato."
+            case .unavailable: "Il file non è disponibile. Puoi ricollegarlo o rimuoverlo."
+            case .permissionDenied: "Cascade non dispone più del permesso per questo file."
+            case .quotaExceeded: "Il ripiano non dispone di spazio sufficiente."
+            case .staleRevision: "Il ripiano è cambiato. Riprova."
+            case .interrupted: "L’operazione è stata interrotta."
+            case .ioFailure, .none: "Impossibile completare l’operazione sul file."
         }
     }
 
@@ -873,5 +1118,6 @@ final class FileShelfController: NotchContextualPage {
 
 @MainActor
 private struct EmptyShelfAssets: ContentAssetResolving {
+
     func image(for assetID: String) -> Image? { nil }
 }

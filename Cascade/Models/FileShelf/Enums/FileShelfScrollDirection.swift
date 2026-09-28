@@ -3,13 +3,8 @@
 //  Cascade
 //
 
-import AppKit
-import CascadeKit
-import CascadeRuntime
-import SwiftUI
-import UniformTypeIdentifiers
-
 nonisolated enum FileShelfScrollDirection: Equatable {
+
     case horizontalPositive
     case horizontalNegative
     case verticalPositive
@@ -19,17 +14,17 @@ nonisolated enum FileShelfScrollDirection: Equatable {
 
     var inverse: Self {
         switch self {
-        case .horizontalPositive: .horizontalNegative
-        case .horizontalNegative: .horizontalPositive
-        case .verticalPositive: .verticalNegative
-        case .verticalNegative: .verticalPositive
+            case .horizontalPositive: .horizontalNegative
+            case .horizontalNegative: .horizontalPositive
+            case .verticalPositive  : .verticalNegative
+            case .verticalNegative  : .verticalPositive
         }
     }
 
     var isHorizontal: Bool {
         switch self {
-        case .horizontalPositive, .horizontalNegative: true
-        case .verticalPositive, .verticalNegative: false
+            case .horizontalPositive, .horizontalNegative: true
+            case .verticalPositive, .verticalNegative    : false
         }
     }
 }

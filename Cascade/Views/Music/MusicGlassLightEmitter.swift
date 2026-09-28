@@ -4,9 +4,6 @@
 //
 
 import AppKit
-import CascadeContracts
-import CascadePresentation
-import Observation
 import SwiftUI
 
 /// MusicGlassLightEmitter lights the notch's glass from the cover. It sits
@@ -16,6 +13,7 @@ import SwiftUI
 /// every tick re-evaluated the view tree (measured ~1.3 % of a core more). The
 /// glass lies above the light, so it smokes and bends it like anything behind.
 struct MusicGlassLightEmitter: NSViewRepresentable {
+
     let visual   : MusicVisualState
     let isPlaying: Bool
 
@@ -28,7 +26,10 @@ struct MusicGlassLightEmitter: NSViewRepresentable {
         MusicGlassLightView(visual: visual)
     }
 
-    func updateNSView(_ view: MusicGlassLightView, context: Context) {
+    func updateNSView(
+        _ view : MusicGlassLightView,
+        context: Context
+    ) {
         view.configure(
             isPlaying    : isPlaying,
             reducesMotion: reducesMotion,
@@ -36,7 +37,10 @@ struct MusicGlassLightEmitter: NSViewRepresentable {
         )
     }
 
-    static func dismantleNSView(_ view: MusicGlassLightView, coordinator: ()) {
+    static func dismantleNSView(
+        _ view     : MusicGlassLightView,
+        coordinator: ()
+    ) {
         view.withdraw()
     }
 }

@@ -15,7 +15,9 @@ import Foundation
 /// work and scales its output by 2, which the normalization absorbs, so the bands match the
 /// former complex FFT.
 nonisolated final class AudioSpectrumAnalyzer {
+
     static let windowSize = 2_048
+
     private static let half  = windowSize / 2
     private static let log2n = vDSP_Length(11)
     private static let edges: [Double] = [40, 180, 500, 1_500, 4_000, 10_000, 24_000]
@@ -27,23 +29,26 @@ nonisolated final class AudioSpectrumAnalyzer {
     private let imaginary : UnsafeMutablePointer<Float>
     private let magnitudes: UnsafeMutablePointer<Float>
     private let powers    : UnsafeMutablePointer<Float>
-    private var smoothed  : [Float] = [0, 0, 0, 0, 0, 0]
-    private var bins      : [(first: Int, count: Int)] = []
-    private var binsRate  = 0.0
+
+    private var smoothed: [Float] = [0, 0, 0, 0, 0, 0]
+    private var bins    : [(first: Int, count: Int)] = []
+    private var binsRate = 0.0
 
     init() {
-        transform = vDSP_create_fftsetup(Self.log2n, FFTRadix(kFFTRadix2))
-        window = .allocate(capacity: Self.windowSize)
-        windowed = .allocate(capacity: Self.windowSize)
-        real = .allocate(capacity: Self.half)
-        imaginary = .allocate(capacity: Self.half)
+        transform  = vDSP_create_fftsetup(Self.log2n, FFTRadix(kFFTRadix2))
+        window     = .allocate(capacity: Self.windowSize)
+        windowed   = .allocate(capacity: Self.windowSize)
+        real       = .allocate(capacity: Self.half)
+        imaginary  = .allocate(capacity: Self.half)
         magnitudes = .allocate(capacity: Self.half)
-        powers = .allocate(capacity: Self.half)
+        powers     = .allocate(capacity: Self.half)
+
         windowed.initialize(repeating: 0, count: Self.windowSize)
         real.initialize(repeating: 0, count: Self.half)
         imaginary.initialize(repeating: 0, count: Self.half)
         magnitudes.initialize(repeating: 0, count: Self.half)
         powers.initialize(repeating: 0, count: Self.half)
+
         vDSP_hann_window(window, vDSP_Length(Self.windowSize), Int32(vDSP_HANN_NORM))
     }
 
@@ -51,6 +56,7 @@ nonisolated final class AudioSpectrumAnalyzer {
         if let transform {
             vDSP_destroy_fftsetup(transform)
         }
+
         window.deallocate()
         windowed.deallocate()
         real.deallocate()
@@ -61,24 +67,31 @@ nonisolated final class AudioSpectrumAnalyzer {
 
     /// analyze measures each stereo channel separately, then combines power so phase cannot cancel energy.
     func analyze(
-        left       : UnsafeBufferPointer<Float>,
-        right      : UnsafeBufferPointer<Float>?,
-        sampleRate : Double
+        left      : UnsafeBufferPointer<Float>,
+        right     : UnsafeBufferPointer<Float>?,
+        sampleRate: Double
     ) -> AudioSpectrumFrame {
-        guard let transform, sampleRate.isFinite, sampleRate > 0,
-              let leftBase = left.baseAddress, left.count == Self.windowSize,
-              right == nil || right?.count == Self.windowSize else {
+        guard let transform,
+              sampleRate.isFinite,
+              sampleRate > 0,
+              let leftBase = left.baseAddress,
+              left.count == Self.windowSize,
+              right == nil || right?.count == Self.windowSize
+        else {
             smoothed = AudioSpectrumFrame.silence.bands
             return .silence
         }
+
         let length = vDSP_Length(Self.windowSize)
-        let half = vDSP_Length(Self.half)
+        let half   = vDSP_Length(Self.half)
         vDSP_vclr(powers, 1, half)
+
         var peak: Float = 0
-        let rightBase = right?.baseAddress
+        let rightBase    = right?.baseAddress
         let channelCount = rightBase == nil ? 1 : 2
         for channel in 0..<channelCount {
             let samples = channel == 0 ? leftBase : rightBase ?? leftBase
+
             // A non-finite sample makes the sum non-finite; only then is the window
             // cleaned sample by sample, with the former loop's semantics.
             var sum: Float = 0
@@ -90,9 +103,11 @@ nonisolated final class AudioSpectrumAnalyzer {
                 }
                 source = UnsafePointer(windowed)
             }
+
             var channelPeak: Float = 0
             vDSP_maxmgv(source, 1, &channelPeak, length)
             peak = max(peak, channelPeak)
+
             vDSP_vmul(source, 1, window, 1, windowed, 1, length)
             var split = DSPSplitComplex(realp: real, imagp: imaginary)
             windowed.withMemoryRebound(to: DSPComplex.self, capacity: Self.half) {
@@ -102,21 +117,27 @@ nonisolated final class AudioSpectrumAnalyzer {
             vDSP_zvmags(&split, 1, magnitudes, 1, half)
             vDSP_vadd(powers, 1, magnitudes, 1, powers, 1, half)
         }
+
         // A silent PCM window is evidence that playback is quiet. Clear the envelope
         // immediately; decaying bars after the last sample would invent activity.
         guard peak > 0.000_001 else {
             smoothed = AudioSpectrumFrame.silence.bands
             return .silence
         }
+
         if binsRate != sampleRate {
             binsRate = sampleRate
             bins = (0..<6).map { band in
                 // Bin 0 packs DC and Nyquist in the real FFT; bands start at bin 1.
                 let first = max(1, Int(ceil(Self.edges[band] * Double(Self.windowSize) / sampleRate)))
-                let last = min(Self.half, Int(ceil(Self.edges[band + 1] * Double(Self.windowSize) / sampleRate)))
+                let last  = min(
+                    Self.half,
+                    Int(ceil(Self.edges[band + 1] * Double(Self.windowSize) / sampleRate))
+                )
                 return (first, max(0, last - first))
             }
         }
+
         // fft_zrip doubles each coefficient, so its power is four times the complex FFT's.
         let normalization = Float(1) / Float(Self.windowSize * Self.windowSize * channelCount)
         for (band, range) in bins.enumerated() {
@@ -124,12 +145,14 @@ nonisolated final class AudioSpectrumAnalyzer {
             if range.count > 0 {
                 vDSP_sve(powers + range.first, 1, &energy, vDSP_Length(range.count))
             }
+
             let amplitude = sqrt(energy * normalization)
-            let decibels = 20 * log10(max(amplitude, 0.000_001))
-            let target = min(1, max(0, (decibels + 60) / 60))
+            let decibels  = 20 * log10(max(amplitude, 0.000_001))
+            let target    = min(1, max(0, (decibels + 60) / 60))
             let blend: Float = target > smoothed[band] ? 0.72 : 0.3
             smoothed[band] += (target - smoothed[band]) * blend
         }
+
         return AudioSpectrumFrame(bands: smoothed)
     }
 }

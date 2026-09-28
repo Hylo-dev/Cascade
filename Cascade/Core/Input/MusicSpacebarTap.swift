@@ -19,42 +19,52 @@ import AppKit
 /// the space bar keeps its ordinary meaning.
 @MainActor
 final class MusicSpacebarTap {
+
     var onToggle: (() -> Void)?
-    private var port: CFMachPort?
+
+    private var port  : CFMachPort?
     private var thread: EventTapThread?
 
     func start() {
         guard port == nil else { return }
+
         let relay = MusicSpacebarRelay { [weak self] in
             Task { @MainActor [weak self] in self?.onToggle?() }
         }
         let context = Unmanaged.passRetained(relay)
-        let mask = (CGEventMask(1) << CGEventType.keyDown.rawValue) | (CGEventMask(1) << CGEventType.keyUp.rawValue)
+        let keyEventMask = (CGEventMask(1) << CGEventType.keyDown.rawValue)
+            | (CGEventMask(1) << CGEventType.keyUp.rawValue)
+
         guard let port = CGEvent.tapCreate(
             tap             : .cgSessionEventTap,
             place           : .headInsertEventTap,
             options         : .defaultTap,
-            eventsOfInterest: mask,
+            eventsOfInterest: keyEventMask,
             callback        : MusicSpacebarRelay.callback,
             userInfo        : context.toOpaque()
         ),
-        let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, port, 0) else {
+        let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, port, 0)
+        else {
             context.release()
             return
         }
+
         relay.port = port
-        self.port = port
+        self.port  = port
+
         // The relay is released on the tap thread once its run loop has
         // returned, when no callback is left to run.
         let thread = EventTapThread()
         thread.start(name: "Cascade.MusicSpacebar", source: source) { context.release() }
         self.thread = thread
+
         CGEvent.tapEnable(tap: port, enable: true)
     }
 
     func stop() {
         if let port { CFMachPortInvalidate(port) }
         port = nil
+
         thread?.stop()
         thread = nil
     }

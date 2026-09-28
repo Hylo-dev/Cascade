@@ -12,6 +12,7 @@ import Foundation
 /// then left the notch open until the next event. Within that window the
 /// announcement decides playback; reads still supply everything else.
 nonisolated struct NowPlayingAnnouncement: Sendable {
+
     static let settleWindow = Duration.milliseconds(1_500)
 
     let state: ScriptablePlaybackState
@@ -24,6 +25,7 @@ nonisolated struct NowPlayingAnnouncement: Sendable {
     ) -> NowPlayingSnapshot? {
         guard startedAt < time.advanced(by: Self.settleWindow) else { return snapshot }
         guard state != .stopped else { return nil }
+
         return snapshot?.announcing(isPlaying: state == .playing || state == .scrubbing, at: .now)
     }
 }

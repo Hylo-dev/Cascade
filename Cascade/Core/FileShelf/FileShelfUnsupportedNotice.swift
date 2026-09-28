@@ -4,23 +4,19 @@
 //
 
 import AppKit
-import CascadeContracts
 import CascadeKit
-import CascadePresentation
-import CascadeRuntime
-import QuickLookUI
 import SwiftUI
-import UniformTypeIdentifiers
 
 @MainActor
 final class FileShelfUnsupportedNotice: NotchTransientNotice {
-    let id = "cascade.file-shelf.unsupported"
-    let sourceID = "cascade.file-shelf"
-    let contentRevision: UInt64
-    let displayDuration: TimeInterval = 4
-    let privacy: NotchActivityPrivacy = .standard
+
+    let id                        = "cascade.file-shelf.unsupported"
+    let sourceID                  = "cascade.file-shelf"
+    let contentRevision          : UInt64
+    let displayDuration          : TimeInterval = 4
+    let privacy                  : NotchActivityPrivacy = .standard
     let compactPreferredSideWidth: CGFloat? = 148
-    let accessibilityLabel = "Solo file locali. Cartelle e file promessi non sono supportati."
+    let accessibilityLabel        = "Solo file locali. Cartelle e file promessi non sono supportati."
 
     init(revision: UInt64) { contentRevision = revision }
 

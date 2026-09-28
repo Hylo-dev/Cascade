@@ -4,12 +4,10 @@
 //
 
 import AppKit
-import CascadeKit
 import CascadeRuntime
-import SwiftUI
-import UniformTypeIdentifiers
 
 final class FileShelfPromiseDelegate: NSObject, NSFilePromiseProviderDelegate, @unchecked Sendable {
+
     private let file: PreparedFile
     private let copy: @Sendable (PreparedFile, URL) async throws -> Void
 
@@ -23,7 +21,7 @@ final class FileShelfPromiseDelegate: NSObject, NSFilePromiseProviderDelegate, @
 
     @MainActor
     func filePromiseProvider(
-        _ filePromiseProvider: NSFilePromiseProvider,
+        _ filePromiseProvider   : NSFilePromiseProvider,
         fileNameForType fileType: String
     ) -> String {
         file.name
@@ -31,12 +29,13 @@ final class FileShelfPromiseDelegate: NSObject, NSFilePromiseProviderDelegate, @
 
     nonisolated func filePromiseProvider(
         _ filePromiseProvider: NSFilePromiseProvider,
-        writePromiseTo url: URL,
-        completionHandler: @escaping ((any Error)?) -> Void
+        writePromiseTo url   : URL,
+        completionHandler    : @escaping ((any Error)?) -> Void
     ) {
-        let file = file
-        let copy = copy
+        let file       = file
+        let copy       = copy
         let completion = FilePromiseCompletion(completionHandler)
+
         Task {
             do {
                 try await copy(file, url)

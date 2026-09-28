@@ -4,10 +4,9 @@
 //
 
 #if VOLUME_MONITOR_TESTS
-import Foundation
-import AppKit
 
 enum VolumeCheckFailure: Error {
+
     case failed(String)
 }
 

@@ -9,6 +9,7 @@ import Foundation
 /// ScriptableTrackMetadata normalizes each player's documented scripting units
 /// and exposes only commands whose prerequisites are available in real data.
 nonisolated struct ScriptableTrackMetadata: Sendable {
+
     let identifier: String?
     let title     : String
     let artist    : String
@@ -28,12 +29,15 @@ nonisolated struct ScriptableTrackMetadata: Sendable {
     ) -> NowPlayingSnapshot? {
         let normalizedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard state != .stopped, !normalizedTitle.isEmpty else { return nil }
-        let seconds = duration.map { source == .spotify ? $0 / 1_000 : $0 }
-        let knownDuration = seconds.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
+
+        let seconds       = duration.map { rawDuration in source == .spotify ? rawDuration / 1_000 : rawDuration }
+        let knownDuration = seconds.flatMap { candidate in candidate.isFinite && candidate > 0 ? candidate : nil }
         let favoriteState = source == .music ? favorite : nil
+
         var capabilities: MediaCommandCapabilities = [.togglePlayback, .previousTrack, .nextTrack]
         if knownDuration != nil { capabilities.insert(.seek) }
         if favoriteState != nil { capabilities.insert(.favorite) }
+
         return NowPlayingSnapshot(
             sourceBundleIdentifier: source.bundleIdentifier,
             title                 : normalizedTitle,

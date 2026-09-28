@@ -5,19 +5,22 @@
 
 import AppKit
 import CascadeKit
-import CascadeRuntime
 import SwiftUI
-import UniformTypeIdentifiers
 
 @MainActor
 final class FileShelfKeyboardView: NSView, NotchKeyboardFocusTarget {
-    private let hosting: NSHostingView<AnyView>
+
+    private let hosting    : NSHostingView<AnyView>
     private var interaction: @MainActor (FileShelfEntryInteraction) -> Void
 
-    init(content: AnyView, interaction: @escaping @MainActor (FileShelfEntryInteraction) -> Void) {
-        hosting = NSHostingView(rootView: content)
+    init(
+        content    : AnyView,
+        interaction: @escaping @MainActor (FileShelfEntryInteraction) -> Void
+    ) {
+        hosting          = NSHostingView(rootView: content)
         self.interaction = interaction
         super.init(frame: .zero)
+
         hosting.translatesAutoresizingMaskIntoConstraints = false
         addSubview(hosting)
         NSLayoutConstraint.activate([
@@ -34,7 +37,7 @@ final class FileShelfKeyboardView: NSView, NotchKeyboardFocusTarget {
     override var acceptsFirstResponder: Bool { true }
 
     func update(
-        content: AnyView,
+        content    : AnyView,
         interaction: @escaping @MainActor (FileShelfEntryInteraction) -> Void
     ) {
         hosting.rootView = content
@@ -44,11 +47,11 @@ final class FileShelfKeyboardView: NSView, NotchKeyboardFocusTarget {
     override func keyDown(with event: NSEvent) {
         let extend = event.modifierFlags.contains(.shift)
         switch event.keyCode {
-        case 123, 126: interaction(.moveFocus(offset: -1, extendSelection: extend))
-        case 124, 125: interaction(.moveFocus(offset: 1, extendSelection: extend))
-        case 51, 117: interaction(.delete)
-        case 0 where event.modifierFlags.contains(.command): interaction(.selectAll)
-        default: super.keyDown(with: event)
+            case 123, 126: interaction(.moveFocus(offset: -1, extendSelection: extend))
+            case 124, 125: interaction(.moveFocus(offset: 1, extendSelection: extend))
+            case 51, 117: interaction(.delete)
+            case 0 where event.modifierFlags.contains(.command): interaction(.selectAll)
+            default: super.keyDown(with: event)
         }
     }
 

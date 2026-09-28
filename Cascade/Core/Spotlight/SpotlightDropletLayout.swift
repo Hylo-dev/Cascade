@@ -13,16 +13,17 @@ import Foundation
 /// exposing a second capsule beside the notch. Screen measurements are captured
 /// once at presentation time; no screen or accessibility queries enter rendering.
 nonisolated struct SpotlightDropletLayout: Equatable {
-    let hardwareNotchBounds : CGRect
-    let landingBounds       : CGRect
-    let sourceBounds        : CGRect
-    let canvasBounds        : CGRect
+
+    let hardwareNotchBounds: CGRect
+    let landingBounds      : CGRect
+    let sourceBounds       : CGRect
+    let canvasBounds       : CGRect
 
     /// init clamps unknown native dimensions before they can reach a view frame.
     init(
-        screenFrame       : CGRect,
-        hardwareNotchSize : CGSize,
-        nativeSize        : CGSize
+        screenFrame      : CGRect,
+        hardwareNotchSize: CGSize,
+        nativeSize       : CGSize
     ) {
         let notchWidth = min(
             Self.positiveDimension(hardwareNotchSize.width, fallback: 180),
@@ -32,6 +33,7 @@ nonisolated struct SpotlightDropletLayout: Equatable {
             Self.positiveDimension(hardwareNotchSize.height, fallback: 32),
             screenFrame.height
         )
+
         self.init(
             screenFrame       : screenFrame,
             restingNotchBounds: CGRect(
@@ -69,34 +71,35 @@ nonisolated struct SpotlightDropletLayout: Equatable {
             screenFrame.maxX - 24 - targetWidth
         )
         landingBounds = CGRect(
-            x      : landingX,
-            y      : hardwareNotchBounds.minY - 32 - targetHeight,
-            width  : targetWidth,
-            height : targetHeight
+            x     : landingX,
+            y     : hardwareNotchBounds.minY - 32 - targetHeight,
+            width : targetWidth,
+            height: targetHeight
         )
+
         let sourceWidth = min(88, max(1, notchWidth - 24))
         sourceBounds = CGRect(
-            x      : notchBounds.midX - sourceWidth / 2,
-            y      : hardwareNotchBounds.minY + min(4, notchHeight / 2),
-            width  : sourceWidth,
-            height : max(1, notchHeight - min(4, notchHeight / 2))
+            x     : notchBounds.midX - sourceWidth / 2,
+            y     : hardwareNotchBounds.minY + min(4, notchHeight / 2),
+            width : sourceWidth,
+            height: max(1, notchHeight - min(4, notchHeight / 2))
         )
 
         // Padding preserves the native glass rim and refraction outside its
         // nominal frame without paying for a full-screen compositing surface.
         let contentBounds = sourceBounds.union(landingBounds)
         canvasBounds = CGRect(
-            x      : contentBounds.minX - 20,
-            y      : contentBounds.minY - 20,
-            width  : contentBounds.width + 40,
-            height : screenFrame.maxY - contentBounds.minY + 20
+            x     : contentBounds.minX - 20,
+            y     : contentBounds.minY - 20,
+            width : contentBounds.width + 40,
+            height: screenFrame.maxY - contentBounds.minY + 20
         )
     }
 
     /// positiveDimension replaces unreadable AX sizes with the known native default.
     private static func positiveDimension(
-        _ dimension : CGFloat,
-        fallback    : CGFloat
+        _ dimension: CGFloat,
+        fallback   : CGFloat
     ) -> CGFloat {
         dimension.isFinite && dimension > 0 ? dimension : fallback
     }

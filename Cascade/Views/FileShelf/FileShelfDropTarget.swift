@@ -4,22 +4,19 @@
 //
 
 import AppKit
-import CascadeContracts
-import CascadeKit
-import CascadePresentation
-import CascadeRuntime
-import QuickLookUI
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct FileShelfDropTarget: View {
-    let symbol: String
-    let title: String
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let symbol: String
+    let title : String
+
+    @Environment(\.accessibilityReduceMotion)
+    private var reduceMotion
 
     var body: some View {
         VStack(spacing: 9) {
+
             MusicControlSymbol(
                 symbol      : symbol,
                 size        : 40,

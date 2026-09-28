@@ -12,7 +12,9 @@ import Foundation
 /// Automation authorization is checked silently on reads. The separate access
 /// request is used by startup setup and the menu's retry action.
 actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
+
     private struct ArtworkCache {
+
         let identity: String
         let data    : Data
     }
@@ -20,10 +22,7 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
     private var artwork: [ScriptableMusicSource: ArtworkCache] = [:]
 
     func requestAccess(_ target: ScriptablePlayerTarget) throws {
-        try authorize(
-            target,
-            request: true
-        )
+        try authorize(target, request: true)
     }
 
     func reset() {
@@ -38,11 +37,9 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
     /// artwork has its own small budget and can never discard valid playback.
     func read(_ target: ScriptablePlayerTarget) async throws -> NowPlayingSnapshot? {
         try Task.checkCancellation()
-        try authorize(
-            target,
-            request: false
-        )
-        let deadline = Date.now.addingTimeInterval(3)
+        try authorize(target, request: false)
+
+        let deadline  = Date.now.addingTimeInterval(3)
         let stateCode = try getProperty(
             "pPlS",
             target  : target,
@@ -53,6 +50,7 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
             artwork[target.source] = nil
             return nil
         }
+
         let track = try getProperty(
             "pTrk",
             target  : target,
@@ -64,10 +62,7 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
             target  : target,
             deadline: deadline
         )
-        let metadata = ScriptableMusicDescriptorDecoder.metadata(
-            properties,
-            source: target.source
-        )
+        let metadata = ScriptableMusicDescriptorDecoder.metadata(properties, source: target.source)
         let position = try getProperty(
             "pPos",
             target  : target,
@@ -83,9 +78,13 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
             deadline: deadline
         )
         guard currentTrack.data == track.data else { throw ScriptableMusicError.trackChanged }
-        var artworkData = artwork[target.source].flatMap { $0.identity == metadata.identity ? $0.data : nil }
+
+        var artworkData = artwork[target.source].flatMap {
+            $0.identity == metadata.identity ? $0.data : nil
+        }
         if artworkData == nil {
             artwork[target.source] = nil
+
             if target.source == .music {
                 let artworkDeadline = Date.now.addingTimeInterval(1)
                 if let firstArtwork = Self.element(
@@ -101,9 +100,10 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
                    ) {
                     artworkData = ScriptableMusicArtwork.thumbnail(raw.data)
                 }
-            } else if let url = properties.forKeyword( Self.code("aUrl"))?.stringValue {
+            } else if let url = properties.forKeyword(Self.code("aUrl"))?.stringValue {
                 artworkData = try? await ScriptableMusicArtwork.spotifyArtwork(url)
             }
+
             try Task.checkCancellation()
             if let artworkData {
                 artwork[target.source] = ArtworkCache(
@@ -112,6 +112,7 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
                 )
             }
         }
+
         return metadata.snapshot(
             source     : target.source,
             state      : state,
@@ -125,74 +126,85 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
     /// commands. It never updates UI optimistically; the provider performs a
     /// fresh read after a successful command even if the player emits no event.
     func send(
-        _ command: MediaCommand,
-        to target: ScriptablePlayerTarget,
+        _ command    : MediaCommand,
+        to target    : ScriptablePlayerTarget,
         expectedTrack: String?
     ) throws {
         try Task.checkCancellation()
-        try authorize(
-            target,
-            request: false
-        )
+        try authorize(target, request: false)
+
         let deadline = Date.now.addingTimeInterval(3)
         switch command {
-        case .togglePlayback:
-            _ = try perform(
-                eventClass: target.source == .music ? "hook" : "spfy",
-                eventID   : "PlPs",
-                target    : target,
-                deadline  : deadline
-            )
-        case .previousTrack:
-            _ = try perform(
-                eventClass: target.source == .music ? "hook" : "spfy",
-                eventID   : "Prev",
-                target    : target,
-                deadline  : deadline
-            )
-        case .nextTrack:
-            _ = try perform(
-                eventClass: target.source == .music ? "hook" : "spfy",
-                eventID   : "Next",
-                target    : target,
-                deadline  : deadline
-            )
-        case .seek(let seconds):
-            guard seconds.isFinite else { throw ScriptableMusicError.unavailable("Posizione di riproduzione non valida.") }
-            let (_, metadata) = try currentMetadata(
-                target,
-                deadline: deadline
-            )
-            guard expectedTrack == metadata.identity else { throw ScriptableMusicError.trackChanged }
-            let duration = metadata.duration.map { target.source == .spotify ? $0 / 1_000 : $0 }
-            guard let duration, duration.isFinite, duration > 0 else {
-                throw ScriptableMusicError.unavailable("Questo contenuto non consente di cambiare posizione.")
-            }
-            try setProperty(
-                "pPos",
-                value   : NSAppleEventDescriptor(double: min(duration, max(0, seconds))),
-                target  : target,
-                deadline: deadline
-            )
-        case .toggleFavorite:
-            guard target.source == .music else {
-                throw ScriptableMusicError.unavailable("Questo lettore non espone i preferiti.")
-            }
-            let (track, metadata) = try currentMetadata(
-                target,
-                deadline: deadline
-            )
-            guard expectedTrack == metadata.identity else { throw ScriptableMusicError.trackChanged }
-            guard let favorite = metadata.favorite else {
-                throw ScriptableMusicError.unavailable("Il lettore non ha fornito lo stato dei preferiti.")
-            }
-            try setProperty(
-                "pLov",
-                of      : track,
-                value   : NSAppleEventDescriptor(boolean: !favorite),
-                target  : target,
-                deadline: deadline
-            )
+            case .togglePlayback:
+                _ = try perform(
+                    eventClass: target.source == .music ? "hook" : "spfy",
+                    eventID   : "PlPs",
+                    target    : target,
+                    deadline  : deadline
+                )
+
+            case .previousTrack:
+                _ = try perform(
+                    eventClass: target.source == .music ? "hook" : "spfy",
+                    eventID   : "Prev",
+                    target    : target,
+                    deadline  : deadline
+                )
+
+            case .nextTrack:
+                _ = try perform(
+                    eventClass: target.source == .music ? "hook" : "spfy",
+                    eventID   : "Next",
+                    target    : target,
+                    deadline  : deadline
+                )
+
+            case .seek(let seconds):
+                guard seconds.isFinite else {
+                    throw ScriptableMusicError.unavailable("Posizione di riproduzione non valida.")
+                }
+
+                let (_, metadata) = try currentMetadata(target, deadline: deadline)
+                guard expectedTrack == metadata.identity else {
+                    throw ScriptableMusicError.trackChanged
+                }
+
+                let duration = metadata.duration.map { target.source == .spotify ? $0 / 1_000 : $0 }
+                guard let duration, duration.isFinite, duration > 0 else {
+                    throw ScriptableMusicError.unavailable(
+                        "Questo contenuto non consente di cambiare posizione."
+                    )
+                }
+
+                try setProperty(
+                    "pPos",
+                    value   : NSAppleEventDescriptor(double: min(duration, max(0, seconds))),
+                    target  : target,
+                    deadline: deadline
+                )
+
+            case .toggleFavorite:
+                guard target.source == .music else {
+                    throw ScriptableMusicError.unavailable("Questo lettore non espone i preferiti.")
+                }
+
+                let (track, metadata) = try currentMetadata(target, deadline: deadline)
+                guard expectedTrack == metadata.identity else {
+                    throw ScriptableMusicError.trackChanged
+                }
+                guard let favorite = metadata.favorite else {
+                    throw ScriptableMusicError.unavailable(
+                        "Il lettore non ha fornito lo stato dei preferiti."
+                    )
+                }
+
+                try setProperty(
+                    "pLov",
+                    of      : track,
+                    value   : NSAppleEventDescriptor(boolean: !favorite),
+                    target  : target,
+                    deadline: deadline
+                )
         }
     }
 
@@ -211,38 +223,41 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
             target  : target,
             deadline: deadline
         )
-        return (track, ScriptableMusicDescriptorDecoder.metadata(
-            properties,
-            source: target.source
-        ))
+
+        return (track, ScriptableMusicDescriptorDecoder.metadata(properties, source: target.source))
     }
 
     /// authorize never treats permission denial as an empty player. Passing
     /// false cannot display a prompt, including during application launch.
     private func authorize(
         _ target: ScriptablePlayerTarget,
-        request: Bool
+        request : Bool
     ) throws {
         let address = NSAppleEventDescriptor(processIdentifier: target.processIdentifier)
-        let result = AEDeterminePermissionToAutomateTarget(address.aeDesc, typeWildCard, typeWildCard, request)
+        let result  = AEDeterminePermissionToAutomateTarget(
+            address.aeDesc,
+            typeWildCard,
+            typeWildCard,
+            request
+        )
         guard result == noErr else {
             if result == errAEEventNotPermitted || result == errAEEventWouldRequireUserConsent {
                 throw ScriptableMusicError.permissionRequired(target.source)
             }
-            throw ScriptableMusicError.unavailable("\(target.source.displayName) non è disponibile (\(result)).")
+            throw ScriptableMusicError.unavailable(
+                "\(target.source.displayName) non è disponibile (\(result))."
+            )
         }
     }
 
     private func getProperty(
-        _ name: String,
+        _ name      : String,
         of container: NSAppleEventDescriptor? = nil,
-        target: ScriptablePlayerTarget,
-        deadline: Date
+        target      : ScriptablePlayerTarget,
+        deadline    : Date
     ) throws -> NSAppleEventDescriptor {
-        let object = try Self.property(
-            name,
-            container: container
-        )
+        let object = try Self.property(name, container: container)
+
         return try perform(
             eventClass  : "core",
             eventID     : "getd",
@@ -253,16 +268,14 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
     }
 
     private func setProperty(
-        _ name: String,
+        _ name      : String,
         of container: NSAppleEventDescriptor? = nil,
-        value: NSAppleEventDescriptor,
-        target: ScriptablePlayerTarget,
-        deadline: Date
+        value       : NSAppleEventDescriptor,
+        target      : ScriptablePlayerTarget,
+        deadline    : Date
     ) throws {
-        let object = try Self.property(
-            name,
-            container: container
-        )
+        let object = try Self.property(name, container: container)
+
         _ = try perform(
             eventClass  : "core",
             eventID     : "setd",
@@ -277,25 +290,30 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
     /// it off the main actor, and a total operation deadline bounds unresponsive
     /// players rather than multiplying a timeout by the number of properties.
     private func perform(
-        eventClass: String,
-        eventID: String,
+        eventClass  : String,
+        eventID     : String,
         directObject: NSAppleEventDescriptor? = nil,
-        value: NSAppleEventDescriptor? = nil,
-        target: ScriptablePlayerTarget,
-        deadline: Date
+        value       : NSAppleEventDescriptor? = nil,
+        target      : ScriptablePlayerTarget,
+        deadline    : Date
     ) throws -> NSAppleEventDescriptor {
         try Task.checkCancellation()
+
         let remaining = deadline.timeIntervalSinceNow
-        guard remaining > 0 else { throw ScriptableMusicError.unavailable("\(target.source.displayName) non risponde.") }
+        guard remaining > 0 else {
+            throw ScriptableMusicError.unavailable("\(target.source.displayName) non risponde.")
+        }
+
         let event = NSAppleEventDescriptor(
-            eventClass: Self.code(eventClass),
-            eventID: Self.code(eventID),
+            eventClass      : Self.code(eventClass),
+            eventID         : Self.code(eventID),
             targetDescriptor: NSAppleEventDescriptor(processIdentifier: target.processIdentifier),
-            returnID: AEReturnID(kAutoGenerateReturnID),
-            transactionID: AETransactionID(kAnyTransactionID)
+            returnID        : AEReturnID(kAutoGenerateReturnID),
+            transactionID   : AETransactionID(kAnyTransactionID)
         )
         if let directObject { event.setParam(directObject, forKeyword: keyDirectObject) }
         if let value { event.setParam(value, forKeyword: keyAEData) }
+
         let reply: NSAppleEventDescriptor
         do {
             reply = try event.sendEvent(
@@ -304,19 +322,29 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
             )
         } catch {
             let error = error as NSError
-            if error.code == Int(errAEEventNotPermitted) { throw ScriptableMusicError.permissionRequired(target.source) }
-            throw ScriptableMusicError.unavailable("\(target.source.displayName) non risponde (\(error.code)).")
+            if error.code == Int(errAEEventNotPermitted) {
+                throw ScriptableMusicError.permissionRequired(target.source)
+            }
+            throw ScriptableMusicError.unavailable(
+                "\(target.source.displayName) non risponde (\(error.code))."
+            )
         }
+
         let errorNumber = reply.paramDescriptor(forKeyword: keyErrorNumber)?.int32Value ?? 0
         guard errorNumber == 0 else {
-            if errorNumber == errAEEventNotPermitted { throw ScriptableMusicError.permissionRequired(target.source) }
-            throw ScriptableMusicError.unavailable("\(target.source.displayName) non ha completato la richiesta (\(errorNumber)).")
+            if errorNumber == errAEEventNotPermitted {
+                throw ScriptableMusicError.permissionRequired(target.source)
+            }
+            throw ScriptableMusicError.unavailable(
+                "\(target.source.displayName) non ha completato la richiesta (\(errorNumber))."
+            )
         }
+
         return reply.paramDescriptor(forKeyword: keyDirectObject) ?? NSAppleEventDescriptor.null()
     }
 
     private static func property(
-        _ name: String,
+        _ name   : String,
         container: NSAppleEventDescriptor?
     ) throws -> NSAppleEventDescriptor {
         let record = NSAppleEventDescriptor.record()
@@ -336,6 +364,7 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
             NSAppleEventDescriptor(typeCode: code(name)),
             forKeyword: AEKeyword(keyAEKeyData)
         )
+
         guard let result = record.coerce(toDescriptorType: typeObjectSpecifier) else {
             throw ScriptableMusicError.unavailable("Impossibile preparare la richiesta al lettore.")
         }
@@ -343,8 +372,8 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
     }
 
     private static func element(
-        _ name: String,
-        index: Int32,
+        _ name   : String,
+        index    : Int32,
         container: NSAppleEventDescriptor
     ) -> NSAppleEventDescriptor? {
         let record = NSAppleEventDescriptor.record()
@@ -364,6 +393,7 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
             NSAppleEventDescriptor(int32: index),
             forKeyword: AEKeyword(keyAEKeyData)
         )
+
         return record.coerce(toDescriptorType: typeObjectSpecifier)
     }
 

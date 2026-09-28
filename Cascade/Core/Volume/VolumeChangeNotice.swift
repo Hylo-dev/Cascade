@@ -10,34 +10,36 @@ import SwiftUI
 /// wings. It has no expanded content or interaction; the host owns its deadline.
 @MainActor
 final class VolumeChangeNotice: NotchTransientNotice {
-    let id = "cascade.volume.current"
-    let sourceID = "cascade.volume"
-    let privacy: NotchActivityPrivacy = .standard
+
+    let id                        = "cascade.volume.current"
+    let sourceID                  = "cascade.volume"
+    let privacy                  : NotchActivityPrivacy = .standard
     let compactPreferredSideWidth: CGFloat? = 116
-    let displayDuration: TimeInterval = 1.8
+    let displayDuration          : TimeInterval = 1.8
 
     private(set) var contentRevision: UInt64
-    private var event: VolumeChangeEvent
+    private var event               : VolumeChangeEvent
 
     var accessibilityLabel: String {
         event.isMuted ? "Audio disattivato" : "Volume, \(event.percentage) percento"
     }
 
     init(event: VolumeChangeEvent) {
-        self.event = event
+        self.event      = event
         contentRevision = event.revision
     }
 
     /// update preserves one source identity while its displayed value changes.
     /// Hardware callbacks already filtered by the reducer do not rebuild views.
     func update(_ event: VolumeChangeEvent) {
-        self.event = event
+        self.event      = event
         contentRevision = event.revision
     }
 
     func makeCompactLeadingView(in context: NotchActivityViewContext) -> AnyView {
         AnyView(
             HStack(spacing: 6) {
+
                 Image(systemName: symbolName)
                     .font(.system(size: 14, weight: .regular))
                     .frame(width: 18)
@@ -59,10 +61,14 @@ final class VolumeChangeNotice: NotchTransientNotice {
 
     func makeCompactTrailingView(in context: NotchActivityViewContext) -> AnyView {
         let percentage = event.percentage
+
         return AnyView(
             HStack(spacing: 6) {
+
                 GeometryReader { geometry in
+
                     ZStack(alignment: .leading) {
+
                         Capsule()
                             .fill(.white.opacity(0.23))
 

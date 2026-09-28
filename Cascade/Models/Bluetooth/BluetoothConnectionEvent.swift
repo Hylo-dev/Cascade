@@ -3,8 +3,6 @@
 //  Cascade
 //
 
-
-
 /// BluetoothConnectionEvent describes one real device connection transition.
 ///
 /// The model contains presentation-ready identity and naming, but no framework
@@ -15,6 +13,7 @@
 nonisolated struct BluetoothConnectionEvent: Equatable, Sendable {
 
     enum Kind: Equatable, Sendable {
+
         case connection
         case audioRoute
     }

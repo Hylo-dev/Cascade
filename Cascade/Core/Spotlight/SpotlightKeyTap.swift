@@ -15,31 +15,51 @@ import os
 /// invocation stay scheduled outside the callback.
 @MainActor
 final class SpotlightKeyTap: SpotlightKeyTapping {
+
     nonisolated static let replayMarker: Int64 = 0x4341534353504F54
+
     nonisolated let gate = SpotlightKeyGate()
-    private var port: CFMachPort?
-    private var thread: EventTapThread?
-    private var handler: ((CGEventType, CGEvent) -> Bool)?
+
+    private var port      : CFMachPort?
+    private var thread    : EventTapThread?
+    private var handler   : ((CGEventType, CGEvent) -> Bool)?
     private var onDisabled: (() -> Void)?
 
-    func start(handler: @escaping (CGEventType, CGEvent) -> Bool, onDisabled: @escaping () -> Void) -> Bool {
+    var isActive: Bool { port.map { CGEvent.tapIsEnabled(tap: $0) } ?? false }
+
+    func start(
+        handler   : @escaping (CGEventType, CGEvent) -> Bool,
+        onDisabled: @escaping () -> Void
+    ) -> Bool {
         stop()
-        self.handler = handler
+
+        self.handler    = handler
         self.onDisabled = onDisabled
-        let mask = (CGEventMask(1) << CGEventType.keyDown.rawValue) | (CGEventMask(1) << CGEventType.keyUp.rawValue)
-        guard let port = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap,
-            options: .defaultTap, eventsOfInterest: mask, callback: Self.callback,
-            userInfo: Unmanaged.passUnretained(self).toOpaque()),
-            let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, port, 0) else {
-            self.handler = nil
+
+        let keyDown = CGEventMask(1) << CGEventType.keyDown.rawValue
+        let keyUp   = CGEventMask(1) << CGEventType.keyUp.rawValue
+
+        guard let port = CGEvent.tapCreate(
+            tap             : .cgSessionEventTap,
+            place           : .headInsertEventTap,
+            options         : .defaultTap,
+            eventsOfInterest: keyDown | keyUp,
+            callback        : Self.callback,
+            userInfo        : Unmanaged.passUnretained(self).toOpaque()
+        ),
+        let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, port, 0)
+        else {
+            self.handler    = nil
             self.onDisabled = nil
             return false
         }
         self.port = port
+
         // One thread per installed tap, ended by stop.
         let thread = EventTapThread()
         thread.start(name: "Cascade.SpotlightKeys", source: source)
         self.thread = thread
+
         CGEvent.tapEnable(tap: port, enable: true)
         return CGEvent.tapIsEnabled(tap: port)
     }
@@ -51,15 +71,19 @@ final class SpotlightKeyTap: SpotlightKeyTapping {
     /// invalidates the port before clearing the handler.
     nonisolated static let callback: CGEventTapCallBack = { _, type, event, context in
         guard let context else { return Unmanaged.passUnretained(event) }
+
         let owner = Unmanaged<SpotlightKeyTap>.fromOpaque(context).takeUnretainedValue()
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             DispatchQueue.main.async { MainActor.assumeIsolated { owner.onDisabled?() } }
             return Unmanaged.passUnretained(event)
         }
+
         guard event.getIntegerValueField(.eventSourceUserData) != SpotlightKeyTap.replayMarker,
-              owner.gate.needsDecision(event) else {
+              owner.gate.needsDecision(event)
+        else {
             return Unmanaged.passUnretained(event)
         }
+
         // Main never waits on this thread (stop only invalidates), so this
         // rare synchronous hop cannot deadlock. The tap thread is blocked in
         // it, so the event is only ever touched by one thread at a time.
@@ -73,23 +97,31 @@ final class SpotlightKeyTap: SpotlightKeyTapping {
     func stop() {
         if let port { CFMachPortInvalidate(port) }
         port = nil
+
         thread?.stop()
         thread = nil
-        handler = nil
+
+        handler    = nil
         onDisabled = nil
     }
 
-    func updateGate(keyCode: CGKeyCode?, isEngaged: Bool) {
+    func updateGate(
+        keyCode  : CGKeyCode?,
+        isEngaged: Bool
+    ) {
         gate.update(keyCode: keyCode, isEngaged: isEngaged)
     }
-
-    var isActive: Bool { port.map { CGEvent.tapIsEnabled(tap: $0) } ?? false }
 
     /// invokeNative posts the configured system shortcut with a marker that
     /// prevents our own tap from delaying its replay for a second time.
     func invokeNative(_ shortcut: SpotlightShortcut) {
         for isDown in [true, false] {
-            guard let event = CGEvent(keyboardEventSource: nil, virtualKey: shortcut.keyCode, keyDown: isDown) else { continue }
+            guard let event = CGEvent(
+                keyboardEventSource: nil,
+                virtualKey         : shortcut.keyCode,
+                keyDown            : isDown
+            ) else { continue }
+
             event.flags = shortcut.flags
             event.setIntegerValueField(.eventSourceUserData, value: Self.replayMarker)
             event.post(tap: .cghidEventTap)
@@ -98,7 +130,10 @@ final class SpotlightKeyTap: SpotlightKeyTapping {
 
     /// deliver routes retained input only to the verified native process. It
     /// never releases search keystrokes globally into the previous application.
-    func deliver(_ events: [CGEvent], to processID: pid_t) {
+    func deliver(
+        _ events    : [CGEvent],
+        to processID: pid_t
+    ) {
         for event in events {
             event.setIntegerValueField(.eventSourceUserData, value: Self.replayMarker)
             event.postToPid(processID)

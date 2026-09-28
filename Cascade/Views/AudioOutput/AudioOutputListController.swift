@@ -6,7 +6,6 @@
 import AppKit
 import CascadeKit
 import CoreAudio
-import SwiftUI
 
 /// AudioOutputListController keeps native labels, checkmarks and keyboard
 /// buttons. Its stack measures the actual names, with no fixed popup dimensions.
@@ -28,10 +27,7 @@ final class AudioOutputListController: NSViewController {
         self.current   = current
         self.devices   = devices
         self.presenter = presenter
-        super.init(
-            nibName: nil,
-            bundle : nil
-        )
+        super.init(nibName: nil, bundle: nil)
     }
 
     required init?(coder: NSCoder) { nil }
@@ -49,20 +45,14 @@ final class AudioOutputListController: NSViewController {
         )
 
         let heading = NSTextField(labelWithString: "Uscita audio del Mac")
-        heading.font = .systemFont(
-            ofSize: NSFont.smallSystemFontSize,
-            weight: .semibold
-        )
+        heading.font      = .systemFont(ofSize: NSFont.smallSystemFontSize, weight: .semibold)
         heading.textColor = .secondaryLabelColor
         stack.addArrangedSubview(heading)
 
         let separator = NSBox()
         separator.boxType = .separator
         stack.addArrangedSubview(separator)
-        separator.widthAnchor.constraint(
-            equalTo : stack.widthAnchor,
-            constant: -20
-        ).isActive = true
+        separator.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -20).isActive = true
 
         for device in outputs {
             let button = AudioOutputDeviceButton(
@@ -72,10 +62,7 @@ final class AudioOutputListController: NSViewController {
                 action   : #selector(selectOutput(_:))
             )
             stack.addArrangedSubview(button)
-            button.widthAnchor.constraint(
-                equalTo : stack.widthAnchor,
-                constant: -20
-            ).isActive = true
+            button.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -20).isActive = true
         }
 
         if outputs.isEmpty {
@@ -91,6 +78,7 @@ final class AudioOutputListController: NSViewController {
     private func selectOutput(_ sender: AudioOutputDeviceButton) {
         let selected = sender.deviceID
         presenter.dismiss()
+
         Task { [devices] in
             if !(await devices.selectOutput(selected)) { NSSound.beep() }
         }

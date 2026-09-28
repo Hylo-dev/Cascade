@@ -4,15 +4,12 @@
 //
 
 import AppKit
-import CascadeKit
-import CoreImage
-import Observation
-import QuartzCore
 import SwiftUI
 
 /// A brief press response precedes the symbol's one-shot animation. Neither
 /// feedback depends on the player reply or delays command dispatch.
 struct MusicControlButtonStyle: ButtonStyle {
+
     @Environment(\.accessibilityReduceMotion)
     private var reduceMotion
 

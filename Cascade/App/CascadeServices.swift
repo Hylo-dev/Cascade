@@ -14,6 +14,7 @@ import Observation
 @MainActor
 @Observable
 final class CascadeServices {
+
     private(set) var displayDescriptors: [NotchDisplayDescriptor] = []
 
     var displayPreferences: DisplayPresentationPreferences {
@@ -23,6 +24,7 @@ final class CascadeServices {
         }
         set {
             guard displayPreferencesStore.preferences != newValue else { return }
+
             displayPreferencesStore.preferences = newValue
             displayPreferencesRevision &+= 1
             notch.setDisplayPreferences(newValue)
@@ -31,6 +33,7 @@ final class CascadeServices {
 
     func canCalibrateDisplay(from origin: AuxiliaryInvocationOrigin) -> Bool {
         guard let displayID = invocationDisplayID(for: origin) else { return false }
+
         return displayDescriptors.first(where: { $0.runtimeID == displayID })?.hasHardwareNotch == true
     }
 
@@ -45,6 +48,7 @@ final class CascadeServices {
 
     func previewSpotlightDroplet(from origin: AuxiliaryInvocationOrigin) {
         guard let anchor = spotlightAnchor(on: invocationDisplayID(for: origin)) else { return }
+
         Task { @MainActor in spotlight.preview(at: anchor) }
     }
 
@@ -111,6 +115,7 @@ final class CascadeServices {
     }
 
     var musicStatus: NowPlayingProviderStatus { mediaProvider.status }
+
     var audioSpectrumStatus: AudioSpectrumStatus {
         audioSpectrum.status == .stopped ? startupAudioStatus : audioSpectrum.status
     }
@@ -125,76 +130,85 @@ final class CascadeServices {
     }
 
     func openAudioCaptureSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+        if let url = URL(
+            string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
+        ) {
             NSWorkspace.shared.open(url)
         }
     }
 
     var suppressionStatus: BluetoothNoticeSuppressionStatus { suppressor.status }
-    var bluetoothStatus: BluetoothMonitoringStatus { bluetooth.status }
+    var bluetoothStatus  : BluetoothMonitoringStatus { bluetooth.status }
 
     @ObservationIgnored
-    private let notch: NotchEngine
+    private let notch              : NotchEngine
     @ObservationIgnored
-    private let fileShelfGovernor: ResourceGovernor
+    private let fileShelfGovernor  : ResourceGovernor
     @ObservationIgnored
     private let fileShelfController: FileShelfController
     @ObservationIgnored
-    private var settings: (any CascadeSettingsPresenting)?
+    private var settings           : (any CascadeSettingsPresenting)?
     @ObservationIgnored
-    private let spotlight: SpotlightCoordinator
+    private let spotlight          : SpotlightCoordinator
+
     @ObservationIgnored
-    private let bluetooth: any BluetoothMonitoring = IOBluetoothConnectionMonitor()
+    private let bluetooth    : any BluetoothMonitoring = IOBluetoothConnectionMonitor()
     @ObservationIgnored
-    private let suppressor = AccessibilityBluetoothNoticeSuppressor()
+    private let suppressor    = AccessibilityBluetoothNoticeSuppressor()
     @ObservationIgnored
-    private let volume: any VolumeMonitoring = CoreAudioVolumeMonitor()
+    private let volume       : any VolumeMonitoring = CoreAudioVolumeMonitor()
     @ObservationIgnored
-    private let network: any NetworkMonitoring = NetworkConnectionMonitor()
+    private let network      : any NetworkMonitoring = NetworkConnectionMonitor()
     @ObservationIgnored
-    private let power: any PowerMonitoring = IOKitPowerMonitor()
+    private let power        : any PowerMonitoring = IOKitPowerMonitor()
     @ObservationIgnored
     private let mediaProvider = SystemNowPlayingProvider()
     @ObservationIgnored
     private let audioSpectrum = CoreAudioSpectrumMonitor()
+
     @ObservationIgnored
-    private let preferences: UserDefaults
+    private let preferences            : UserDefaults
     @ObservationIgnored
     private let displayPreferencesStore: DisplayPresentationPreferencesStore
     @ObservationIgnored
     private var settingsAnchorDisplayID: CGDirectDisplayID?
+
     private var displayPreferencesRevision: UInt64 = 0
+
     @ObservationIgnored
-    private var bluetoothTask: Task<Void, Never>?
+    private var bluetoothTask          : Task<Void, Never>?
     @ObservationIgnored
-    private var bluetoothEventIDs: [String: UInt64] = [:]
+    private var bluetoothEventIDs      : [String: UInt64] = [:]
     @ObservationIgnored
-    private var mediaTask: Task<Void, Never>?
+    private var mediaTask              : Task<Void, Never>?
     @ObservationIgnored
-    private var volumeTask: Task<Void, Never>?
+    private var volumeTask             : Task<Void, Never>?
     @ObservationIgnored
-    private var networkTask: Task<Void, Never>?
+    private var networkTask            : Task<Void, Never>?
     @ObservationIgnored
-    private var powerTask: Task<Void, Never>?
+    private var powerTask              : Task<Void, Never>?
     @ObservationIgnored
     private var chargingPreviewRevision: UInt64 = 0
     @ObservationIgnored
-    private var networkBorderResetTask: Task<Void, Never>?
+    private var networkBorderResetTask : Task<Void, Never>?
     @ObservationIgnored
-    private var volumeNotice: VolumeChangeNotice?
+    private var volumeNotice           : VolumeChangeNotice?
     @ObservationIgnored
-    private var volumePreviewRevision: UInt64 = 0
+    private var volumePreviewRevision  : UInt64 = 0
     @ObservationIgnored
-    private var mediaActivity: MediaLiveActivity?
+    private var mediaActivity          : MediaLiveActivity?
     @ObservationIgnored
-    private var startupPermissionTask: Task<Void, Never>?
+    private var startupPermissionTask  : Task<Void, Never>?
     @ObservationIgnored
-    private var fileShelfStartTask: Task<Void, Never>?
+    private var fileShelfStartTask     : Task<Void, Never>?
     @ObservationIgnored
     private var fileShelfNoticeRevision: UInt64 = 0
+
     @ObservationIgnored
     private let audioPermissionRequester = AudioCapturePermissionRequester()
+
     private var startupAudioStatus: AudioSpectrumStatus = .stopped
+
     @ObservationIgnored
     private var isRunning = false
 
@@ -204,27 +218,35 @@ final class CascadeServices {
             configuration     : .default,
             displayPreferences: displayPreferencesStore.preferences
         )
-        self.notch = notch
+        self.notch                   = notch
         self.displayPreferencesStore = displayPreferencesStore
+
         let fileShelfGovernor = ResourceGovernor()
         self.fileShelfGovernor = fileShelfGovernor
         do {
             let directory = try Self.makeFileShelfDirectory()
-            let host = try FileWorkspaceHost(directory: directory, governor: fileShelfGovernor)
-            fileShelfController = FileShelfController(host: host, preferenceChanged: { _ in })
+            let host      = try FileWorkspaceHost(directory: directory, governor: fileShelfGovernor)
+            fileShelfController = FileShelfController(
+                host             : host,
+                preferenceChanged: { _ in }
+            )
         } catch {
-            fileShelfController = FileShelfController(startupError: error, preferenceChanged: { _ in })
+            fileShelfController = FileShelfController(
+                startupError     : error,
+                preferenceChanged: { _ in }
+            )
         }
+
         spotlight = SpotlightCoordinator(
-            anchor: { [weak notch] in
+            anchor             : { [weak notch] in
                 guard let notch,
                       let displayID = notch.auxiliaryDisplayID,
                       let restingBounds = notch.restingFrame,
                       let screen = NSScreen.screens.first(where: {
                           $0.cascadeRuntimeDisplayID == displayID
-                      }) else {
-                    return nil
-                }
+                      })
+                else { return nil }
+
                 return SpotlightDisplayAnchor(
                     displayID    : displayID,
                     screen       : screen,
@@ -238,18 +260,20 @@ final class CascadeServices {
                 notch?.releaseExternalSurface()
             }
         )
-        self.preferences = preferences
-        spotlightEnabled = preferences.object(forKey: "spotlightEnabled") as? Bool ?? true
-        hapticsEnabled = preferences.object(forKey: "hapticsEnabled") as? Bool ?? true
-        sensitiveContentVisible = preferences.object(forKey: "sensitiveContentVisible") as? Bool ?? false
-        bluetoothEnabled = preferences.object(forKey: "bluetoothEnabled") as? Bool ?? true
+
+        self.preferences         = preferences
+        spotlightEnabled         = preferences.object(forKey: "spotlightEnabled") as? Bool ?? true
+        hapticsEnabled           = preferences.object(forKey: "hapticsEnabled") as? Bool ?? true
+        sensitiveContentVisible  = preferences.object(forKey: "sensitiveContentVisible") as? Bool ?? false
+        bluetoothEnabled         = preferences.object(forKey: "bluetoothEnabled") as? Bool ?? true
         nativeReplacementEnabled = preferences.object(forKey: "nativeReplacementEnabled") as? Bool ?? true
-        volumeEnabled = preferences.object(forKey: "volumeEnabled") as? Bool ?? true
-        chargingEnabled = preferences.object(forKey: "chargingEnabled") as? Bool ?? true
-        musicEnabled = preferences.object(forKey: "musicEnabled") as? Bool ?? true
-        audioVisualizerEnabled = preferences.object(forKey: "audioVisualizerEnabled") as? Bool ?? true
+        volumeEnabled            = preferences.object(forKey: "volumeEnabled") as? Bool ?? true
+        chargingEnabled          = preferences.object(forKey: "chargingEnabled") as? Bool ?? true
+        musicEnabled             = preferences.object(forKey: "musicEnabled") as? Bool ?? true
+        audioVisualizerEnabled   = preferences.object(forKey: "audioVisualizerEnabled") as? Bool ?? true
+
         settings = CascadeSettingsWindowController(
-            onFocusChanged: { [weak notch] isFocused in
+            onFocusChanged       : { [weak notch] isFocused in
                 notch?.setSettingsFocused(isFocused)
             },
             onPresentationChanged: { [weak self, weak notch] isPresented in
@@ -257,17 +281,23 @@ final class CascadeServices {
                 if !isPresented { self?.settingsAnchorDisplayID = nil }
             }
         )
+
         notch.onSettingsRequested = { [weak self] in
             self?.showSettings(reanchorToCurrentOwner: false)
         }
+
         notch.onExpandedFrameChanged = { [weak self, weak notch] frame in
             guard let self,
                   self.settingsAnchorDisplayID == nil
-                    || notch?.expandedDisplayID == self.settingsAnchorDisplayID else { return }
+                    || notch?.expandedDisplayID == self.settingsAnchorDisplayID
+            else { return }
+
             self.settings?.updateNotchFrame(frame)
         }
+
         notch.onDisplaysChanged = { [weak self] displays in
             guard let self else { return }
+
             self.displayDescriptors = displays
             if let anchor = self.settingsAnchorDisplayID,
                !displays.contains(where: { $0.runtimeID == anchor }) {
@@ -275,23 +305,33 @@ final class CascadeServices {
             }
             self.spotlight.displaysDidChange(Set(displays.map(\.runtimeID)))
         }
+
         notch.onScreenLocked = { [weak self] in
             self?.spotlight.screenLocked()
         }
+
         let fileShelfController = self.fileShelfController
         fileShelfController.setContentChanged { [weak fileShelfController, weak notch] prefersDefault in
             guard let fileShelfController else { return }
+
             notch?.setContextualPage(fileShelfController, prefersDefault: prefersDefault)
         }
         notch.setContextualPage(fileShelfController, prefersDefault: false)
         notch.configureFileDrop(
-            onHover: { [weak fileShelfController] urls in fileShelfController?.showHover(urls) },
-            onDrop: { [weak fileShelfController] urls in fileShelfController?.acceptDrop(urls) ?? false },
+            onHover      : { [weak fileShelfController] urls in
+                fileShelfController?.showHover(urls)
+            },
+            onDrop       : { [weak fileShelfController] urls in
+                fileShelfController?.acceptDrop(urls) ?? false
+            },
             onUnsupported: { [weak self, weak fileShelfController] in
                 fileShelfController?.showUnsupportedDrop()
                 guard let self else { return }
+
                 self.fileShelfNoticeRevision &+= 1
-                self.notch.showNotice(FileShelfUnsupportedNotice(revision: self.fileShelfNoticeRevision))
+                self.notch.showNotice(
+                    FileShelfUnsupportedNotice(revision: self.fileShelfNoticeRevision)
+                )
             }
         )
     }
@@ -304,17 +344,18 @@ final class CascadeServices {
 
     private func showSettings(reanchorToCurrentOwner: Bool) {
         guard isRunning else { return }
+
         notch.setSettingsPresented(
             true,
             reanchorToCurrentOwner: reanchorToCurrentOwner
         )
         notch.setSettingsFocused(true)
-        guard let displayID = notch.auxiliaryDisplayID,
-              let frame = notch.expandedFrame else {
+        guard let displayID = notch.auxiliaryDisplayID, let frame = notch.expandedFrame else {
             notch.setSettingsFocused(false)
             notch.setSettingsPresented(false)
             return
         }
+
         settingsAnchorDisplayID = displayID
         refreshNativeReplacement()
         settings?.show(services: self, notchFrame: frame)
@@ -322,6 +363,7 @@ final class CascadeServices {
 
     func start() {
         guard !isRunning else { return }
+
         isRunning = true
         notch.register(ClockWidget())
         notch.setHapticsEnabled(hapticsEnabled)
@@ -329,6 +371,7 @@ final class CascadeServices {
         fileShelfStartTask = Task { [weak fileShelfController] in
             await fileShelfController?.start()
         }
+
         notch.start()
         updateSpotlight()
         startNetworkMonitoring()
@@ -337,6 +380,7 @@ final class CascadeServices {
         updatePowerMonitoring()
         updateMusicMonitoring()
         requestStartupPermissions()
+
         #if DEBUG
         // Keep the production panel expanded for compositor inspection without
         // synthesizing global pointer events or opening another window over it.
@@ -352,11 +396,13 @@ final class CascadeServices {
         startupPermissionTask?.cancel()
         startupPermissionTask = Task { [weak self] in
             guard let self, self.isRunning, !Task.isCancelled else { return }
+
             let audioConsentKey = "startupAudioCaptureRequested"
             if self.musicEnabled && self.audioVisualizerEnabled
                 && !self.preferences.bool(forKey: audioConsentKey) {
                 let result = await self.audioPermissionRequester.requestAccess()
                 guard self.isRunning, !Task.isCancelled else { return }
+
                 // Once is enough. Core Audio has no public preflight and, without
                 // consent, a tap still starts and delivers silence, so repeating
                 // the full tap/aggregate/IO probe on every launch verified nothing.
@@ -368,13 +414,16 @@ final class CascadeServices {
                 self.startupAudioStatus = result == .capturing ? .stopped : result
                 self.mediaActivity?.retryAudioCapture()
             }
+
             guard self.isRunning, !Task.isCancelled else { return }
+
             // Volume and native Bluetooth replacement use the same AX grant.
             if self.volumeEnabled {
                 self.volume.requestAccess()
             } else if self.bluetoothEnabled && self.nativeReplacementEnabled {
                 self.suppressor.requestAccess()
             }
+
             if self.musicEnabled {
                 await self.mediaProvider.requestAccess(includeInstalledPlayers: true)
             }
@@ -383,52 +432,61 @@ final class CascadeServices {
 
     func stop() {
         guard isRunning else { return }
+
         isRunning = false
         settings?.close()
         spotlight.stop()
+
         startupPermissionTask?.cancel()
         startupPermissionTask = nil
         fileShelfStartTask?.cancel()
         fileShelfStartTask = nil
         fileShelfController.stop()
         startupAudioStatus = .stopped
+
         networkTask?.cancel()
         networkTask = nil
         networkBorderResetTask?.cancel()
         networkBorderResetTask = nil
         network.stop()
+
         powerTask?.cancel()
         powerTask = nil
         power.stop()
         notch.setBorderAppearance(.neutral)
+
         bluetoothTask?.cancel()
         bluetoothTask = nil
         bluetoothEventIDs.removeAll()
         bluetooth.stop()
         suppressor.stop()
+
         volumeTask?.cancel()
         volumeTask = nil
         volume.stop()
         volumeNotice = nil
         volumeStatus = .stopped
+
         mediaTask?.cancel()
         mediaTask = nil
         mediaProvider.stop()
         if let mediaActivity { notch.endActivity(id: mediaActivity.id) }
         mediaActivity = nil
+
         notch.stop()
     }
 
     private static func makeFileShelfDirectory() throws -> URL {
-        let base = try FileManager.default.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
+        let applicationSupport = try FileManager.default.url(
+            for           : .applicationSupportDirectory,
+            in            : .userDomainMask,
             appropriateFor: nil,
-            create: true
+            create        : true
         )
-        let directory = base
+        let directory = applicationSupport
             .appendingPathComponent("Cascade", isDirectory: true)
             .appendingPathComponent("FileShelf", isDirectory: true)
+
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try FileManager.default.setAttributes(
             [.posixPermissions: 0o700],
@@ -442,10 +500,16 @@ final class CascadeServices {
     func refreshNativeReplacement() {
         if spotlightEnabled { spotlight.refresh() }
         refreshVolumePermissions()
-        guard isRunning, bluetoothEnabled, bluetooth.status == .monitoring, nativeReplacementEnabled else {
+
+        guard isRunning,
+              bluetoothEnabled,
+              bluetooth.status == .monitoring,
+              nativeReplacementEnabled
+        else {
             suppressor.stop()
             return
         }
+
         suppressor.start()
     }
 
@@ -461,7 +525,9 @@ final class CascadeServices {
     /// beginSizeCalibration opens the notch's reversible alignment tool.
     func beginSizeCalibration(from origin: AuxiliaryInvocationOrigin) {
         guard let displayID = invocationDisplayID(for: origin),
-              canCalibrateDisplay(from: origin) else { return }
+              canCalibrateDisplay(from: origin)
+        else { return }
+
         notch.beginSizeCalibration(on: displayID)
     }
 
@@ -479,9 +545,9 @@ final class CascadeServices {
               let restingBounds = notch.restingFrame(on: displayID),
               let screen = NSScreen.screens.first(where: {
                   $0.cascadeRuntimeDisplayID == displayID
-              }) else {
-            return nil
-        }
+              })
+        else { return nil }
+
         return SpotlightDisplayAnchor(
             displayID    : displayID,
             screen       : screen,
@@ -500,6 +566,7 @@ final class CascadeServices {
             notch.setTransientDisplayStyle(style, for: display.runtimeID)
             return
         }
+
         var styles = displayPreferences.styles
         styles[identity] = style
         displayPreferences = DisplayPresentationPreferences(
@@ -519,6 +586,7 @@ final class CascadeServices {
 
     func refreshVolumePermissions() {
         guard isRunning, volumeEnabled else { return }
+
         volume.refreshPermissions()
     }
 
@@ -529,6 +597,7 @@ final class CascadeServices {
     /// previewVolume never adjusts hardware or installs an input tap.
     func previewVolume() {
         volumePreviewRevision &+= 1
+
         let event = VolumeChangeEvent(
             percentage: 65,
             isMuted   : false,
@@ -545,7 +614,11 @@ final class CascadeServices {
             name       : "AirPods · Anteprima",
             symbolName : "airpodspro",
             isConnected: true,
-            battery    : BluetoothBatterySnapshot(left: 72, right: 68, caseLevel: 81),
+            battery    : BluetoothBatterySnapshot(
+                left     : 72,
+                right    : 68,
+                caseLevel: 81
+            ),
             model      : .airPodsPro,
             productID  : 0x200E
         )
@@ -556,15 +629,18 @@ final class CascadeServices {
     /// Preview changes presentation only; it never changes macOS energy settings.
     func previewCharging(lowPower: Bool) {
         chargingPreviewRevision &+= 1
-        notch.showNotice(ChargingNotice(
-            snapshot: MacPowerSnapshot(
-                percentage: 19,
-                isExternalPower: true,
-                isCharging: true,
-                isLowPowerMode: lowPower
-            ),
-            revision: chargingPreviewRevision
-        ))
+
+        notch.showNotice(
+            ChargingNotice(
+                snapshot: MacPowerSnapshot(
+                    percentage     : 19,
+                    isExternalPower: true,
+                    isCharging     : true,
+                    isLowPowerMode : lowPower
+                ),
+                revision: chargingPreviewRevision
+            )
+        )
     }
 
     private func updatePowerMonitoring() {
@@ -573,17 +649,25 @@ final class CascadeServices {
         power.stop()
         notch.dismissActivities(from: "cascade.power")
         guard chargingEnabled else { return }
+
         let stream = power.start()
         powerTask = Task { [weak self] in
             for await update in stream {
                 guard !Task.isCancelled, let self, self.isRunning else { return }
+
                 switch update {
-                case .connected(let snapshot, let revision):
-                    self.notch.showNotice(ChargingNotice(snapshot: snapshot, revision: revision))
-                case .updated(let snapshot, let revision):
-                    self.notch.updateNotice(ChargingNotice(snapshot: snapshot, revision: revision))
-                case .disconnected:
-                    self.notch.dismissActivities(from: "cascade.power")
+                    case .connected(let snapshot, let revision):
+                        self.notch.showNotice(
+                            ChargingNotice(snapshot: snapshot, revision: revision)
+                        )
+
+                    case .updated(let snapshot, let revision):
+                        self.notch.updateNotice(
+                            ChargingNotice(snapshot: snapshot, revision: revision)
+                        )
+
+                    case .disconnected:
+                        self.notch.dismissActivities(from: "cascade.power")
                 }
             }
         }
@@ -605,6 +689,7 @@ final class CascadeServices {
         bluetoothTask = Task { [weak self] in
             for await event in stream {
                 guard !Task.isCancelled, let self, self.isRunning else { return }
+
                 let activity = BluetoothConnectionActivity(event: event)
                 if event.revision == 0 {
                     self.bluetoothEventIDs[event.deviceID] = event.eventID
@@ -633,13 +718,16 @@ final class CascadeServices {
             var previousConnection: Bool?
             for await isConnected in stream {
                 guard !Task.isCancelled, let self, self.isRunning else { return }
+
                 let previous = previousConnection
                 previousConnection = isConnected
                 guard let previous, previous != isConnected else { continue }
+
                 self.networkBorderResetTask?.cancel()
                 self.networkBorderResetTask = nil
                 self.notch.setBorderAppearance(isConnected ? .connected : .neutral)
                 guard isConnected else { continue }
+
                 self.networkBorderResetTask = Task { [weak self] in
                     do {
                         try await Task.sleep(for: .seconds(4))
@@ -647,6 +735,7 @@ final class CascadeServices {
                         return
                     }
                     guard !Task.isCancelled, let self, self.isRunning else { return }
+
                     self.notch.setBorderAppearance(.neutral)
                     self.networkBorderResetTask = nil
                 }
@@ -669,6 +758,7 @@ final class CascadeServices {
                 guard !Task.isCancelled, let self, self.isRunning else { return }
                 guard let snapshot else {
                     guard let activity = self.mediaActivity else { continue }
+
                     // A stopped player keeps its last cover as the widget; one
                     // that has quit leaves the notch as it was before it played.
                     if Self.isRunning(activity.sourceBundleIdentifier) {
@@ -681,10 +771,12 @@ final class CascadeServices {
                     self.notch.endActivity(id: activity.id)
                     continue
                 }
+
                 if snapshot.isPlaying {
                     // The live monitor now owns permission/error reporting.
                     self.startupAudioStatus = .stopped
                 }
+
                 if let activity = self.mediaActivity {
                     activity.update(snapshot)
                     self.notch.setExpandedFallback(activity)
@@ -692,11 +784,12 @@ final class CascadeServices {
                     else { self.notch.endActivity(id: activity.id) }
                 } else {
                     let activity = MediaLiveActivity(
-                        snapshot: snapshot,
-                        spectrum: self.audioSpectrum,
+                        snapshot    : snapshot,
+                        spectrum    : self.audioSpectrum,
                         audioEnabled: self.audioVisualizerEnabled,
-                        send    : { [weak self] command, displayedSnapshot in
+                        send        : { [weak self] command, displayedSnapshot in
                             guard let self, self.musicEnabled else { return }
+
                             try await self.mediaProvider.send(command, matching: displayedSnapshot)
                         }
                     )
@@ -727,18 +820,20 @@ final class CascadeServices {
         volumeTask = Task { [weak self] in
             for await update in stream {
                 guard !Task.isCancelled, let self, self.isRunning else { return }
+
                 switch update {
-                case .status(let status):
-                    self.volumeStatus = status
-                case .changed(let event):
-                    if let notice = self.volumeNotice {
-                        notice.update(event)
-                        self.notch.showNotice(notice)
-                    } else {
-                        let notice = VolumeChangeNotice(event: event)
-                        self.volumeNotice = notice
-                        self.notch.showNotice(notice)
-                    }
+                    case .status(let status):
+                        self.volumeStatus = status
+
+                    case .changed(let event):
+                        if let notice = self.volumeNotice {
+                            notice.update(event)
+                            self.notch.showNotice(notice)
+                        } else {
+                            let notice = VolumeChangeNotice(event: event)
+                            self.volumeNotice = notice
+                            self.notch.showNotice(notice)
+                        }
                 }
             }
         }

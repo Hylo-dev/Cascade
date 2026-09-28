@@ -13,8 +13,10 @@ import Foundation
 /// changing audio, showing permission prompts or running an input filter.
 @main
 nonisolated private enum VolumeReadOnlyProbe {
+
     static func main() {
         print("Accessibility already authorized: \(AXIsProcessTrusted())")
+
         for location in [CGEventTapLocation.cghidEventTap, .cgSessionEventTap] {
             let tap = CGEvent.tapCreate(
                 tap             : location,
@@ -27,10 +29,12 @@ nonisolated private enum VolumeReadOnlyProbe {
             print("Tap location \(location.rawValue) can be created: \(tap != nil)")
             if let tap { CFMachPortInvalidate(tap) }
         }
+
         let queue = DispatchQueue(label: "Cascade.Volume.ReadOnlyProbe")
         queue.sync {
             let audio = CoreAudioSystemVolume(queue: queue)
             audio.refreshOutput()
+
             let snapshot = audio.snapshot()
             print("Default output has a readable, controllable snapshot: \(snapshot != nil)")
             print("Default output supports replacement: \(audio.supportsVolume)")

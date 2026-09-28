@@ -5,7 +5,6 @@
 
 import AppKit
 import CascadeKit
-import CoreAudio
 import SwiftUI
 
 /// AudioOutputPicker presents actual macOS output devices in an owned popover.
@@ -21,6 +20,7 @@ struct AudioOutputPicker: NSViewRepresentable {
             target: context.coordinator,
             action: #selector(Coordinator.showOutputs(_:))
         )
+
         button.image = NSImage(
             systemSymbolName        : "airplay.audio",
             accessibilityDescription: "Uscita audio del Mac"
@@ -28,12 +28,10 @@ struct AudioOutputPicker: NSViewRepresentable {
         button.imagePosition       = .imageOnly
         button.isBordered          = false
         button.contentTintColor    = .secondaryLabelColor
-        button.symbolConfiguration = .init(
-            pointSize: 20,
-            weight   : .regular
-        )
-        button.toolTip = "Uscita audio del Mac"
+        button.symbolConfiguration = .init(pointSize: 20, weight: .regular)
+        button.toolTip             = "Uscita audio del Mac"
         button.setAccessibilityLabel("Uscita audio del Mac")
+
         return button
     }
 
@@ -64,11 +62,14 @@ struct AudioOutputPicker: NSViewRepresentable {
                 presenter.dismiss()
                 return
             }
+
             presenter.present(from: sender) { [devices, presenter] in
                 let outputs = await devices.outputDevices()
                 guard !Task.isCancelled else { return nil }
+
                 let current = await devices.defaultOutput()
                 guard !Task.isCancelled else { return nil }
+
                 return AudioOutputListController(
                     outputs  : outputs,
                     current  : current,

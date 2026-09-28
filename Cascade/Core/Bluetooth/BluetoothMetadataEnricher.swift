@@ -30,27 +30,33 @@ final class BluetoothMetadataEnricher {
         onSnapshot: @escaping @MainActor @Sendable (BluetoothDeviceMetadata) -> Void
     ) {
         cancel(deviceID: deviceID)
+
         let token = UUID()
         tokensByID[deviceID] = token
-        let reader = reader
+
+        let reader     = reader
         let retryDelay = retryDelay
         tasksByID[deviceID] = Task { [weak self] in
             defer {
                 if self?.tokensByID[deviceID] == token {
-                    self?.tasksByID[deviceID] = nil
+                    self?.tasksByID[deviceID]  = nil
                     self?.tokensByID[deviceID] = nil
                 }
             }
+
             for attempt in 0..<2 {
                 guard !Task.isCancelled else { return }
+
                 if attempt > 0 {
                     do { try await Task.sleep(for: retryDelay) } catch { return }
                 }
                 guard !Task.isCancelled else { return }
+
                 let snapshot = await Task.detached(priority: .utility) {
                     reader.metadata(for: deviceID)
                 }.value
                 guard !Task.isCancelled, self?.tokensByID[deviceID] == token else { return }
+
                 onSnapshot(snapshot)
                 guard snapshot.needsRetry else { return }
             }

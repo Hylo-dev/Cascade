@@ -4,7 +4,6 @@
 //
 
 import AppKit
-import QuartzCore
 import SwiftUI
 
 /// MusicTimeLabel rolls only the digits that change, the way SwiftUI's
@@ -15,6 +14,7 @@ import SwiftUI
 /// digit layers that changed and a push transition moves the old digit out and
 /// the new one in; the app does nothing in between.
 struct MusicTimeLabel: NSViewRepresentable {
+
     let text      : String
     let countsDown: Bool
     let animates  : Bool
@@ -23,7 +23,10 @@ struct MusicTimeLabel: NSViewRepresentable {
         MusicTimeLabelView(font: .monospacedDigitSystemFont(ofSize: 11, weight: .regular))
     }
 
-    func updateNSView(_ view: MusicTimeLabelView, context: Context) {
+    func updateNSView(
+        _ view : MusicTimeLabelView,
+        context: Context
+    ) {
         view.show(
             text,
             countsDown: countsDown,

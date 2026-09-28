@@ -7,6 +7,7 @@ import CascadeKit
 import Foundation
 
 extension NowPlayingSnapshot {
+
     /// announcing(isPlaying:at:) is this track with the playback a player has
     /// just announced, its position frozen or resumed at `date`.
     nonisolated func announcing(
@@ -14,6 +15,7 @@ extension NowPlayingSnapshot {
         at date  : Date
     ) -> NowPlayingSnapshot {
         guard isPlaying != self.isPlaying else { return self }
+
         return NowPlayingSnapshot(
             sourceBundleIdentifier: sourceBundleIdentifier,
             title                 : title,

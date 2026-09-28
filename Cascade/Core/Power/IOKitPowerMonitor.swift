@@ -11,17 +11,20 @@ import os
 /// utility queue preserves sample order; session checks discard late results.
 @MainActor
 final class IOKitPowerMonitor: PowerMonitoring {
+
     private let reader: any MacPowerReading
-    private let queue = DispatchQueue(label: "Cascade.Power", qos: .utility)
+    private let queue  = DispatchQueue(label: "Cascade.Power", qos: .utility)
     private let logger = Logger(subsystem: "hylo.Cascade", category: "Power")
-    private var source: CFRunLoopSource?
-    private var powerObserver: NSObjectProtocol?
+
+    private var source            : CFRunLoopSource?
+    private var powerObserver     : NSObjectProtocol?
     private var workspaceObservers: [NSObjectProtocol] = []
-    private var continuation: AsyncStream<PowerConnectionUpdate>.Continuation?
-    private var reducer = PowerConnectionReducer()
-    private var generation: UInt64 = 0
+    private var continuation      : AsyncStream<PowerConnectionUpdate>.Continuation?
+
+    private var reducer     = PowerConnectionReducer()
+    private var generation : UInt64 = 0
     private var sampleEpoch: UInt64 = 0
-    private var isSleeping = false
+    private var isSleeping  = false
 
     init(reader: any MacPowerReading = SystemMacPowerReader()) {
         self.reader = reader
@@ -29,20 +32,24 @@ final class IOKitPowerMonitor: PowerMonitoring {
 
     func start() -> AsyncStream<PowerConnectionUpdate> {
         stop()
+
         let session = generation
-        let pair = AsyncStream<PowerConnectionUpdate>.makeStream()
+        let pair    = AsyncStream<PowerConnectionUpdate>.makeStream()
         continuation = pair.continuation
         guard let source = IOPSNotificationCreateRunLoopSource(
             { context in IOKitPowerMonitor.powerChanged(context) },
             Unmanaged.passUnretained(self).toOpaque()
-        )?.takeRetainedValue() else {
+        )?.takeRetainedValue()
+        else {
             logger.error("Could not register power source notifications")
             pair.continuation.finish()
             continuation = nil
             return pair.stream
         }
+
         self.source = source
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+
         powerObserver = NotificationCenter.default.addObserver(
             forName: .NSProcessInfoPowerStateDidChange,
             object : nil,
@@ -50,47 +57,67 @@ final class IOKitPowerMonitor: PowerMonitoring {
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.sample() }
         }
+
         let workspace = NSWorkspace.shared.notificationCenter
         workspaceObservers = [
-            workspace.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in
+            workspace.addObserver(
+                forName: NSWorkspace.willSleepNotification,
+                object : nil,
+                queue  : .main
+            ) { [weak self] _ in
                 MainActor.assumeIsolated {
                     guard let self else { return }
+
                     self.isSleeping = true
                     self.sampleEpoch &+= 1
                     self.reducer = PowerConnectionReducer()
                 }
             },
-            workspace.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            workspace.addObserver(
+                forName: NSWorkspace.didWakeNotification,
+                object : nil,
+                queue  : .main
+            ) { [weak self] _ in
                 MainActor.assumeIsolated {
                     self?.isSleeping = false
                     self?.sample()
                 }
             }
         ]
+
         pair.continuation.onTermination = { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self, self.generation == session else { return }
+
                 self.stop()
             }
         }
+
         sample()
         return pair.stream
     }
 
     func stop() {
         generation &+= 1
+
         if let source {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
             CFRunLoopSourceInvalidate(source)
         }
         source = nil
+
         if let powerObserver { NotificationCenter.default.removeObserver(powerObserver) }
         powerObserver = nil
-        for observer in workspaceObservers { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
+
+        for observer in workspaceObservers {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+        }
         workspaceObservers.removeAll()
+
         continuation?.finish()
         continuation = nil
-        reducer = PowerConnectionReducer()
+
+        reducer    = PowerConnectionReducer()
         isSleeping = false
     }
 
@@ -98,6 +125,7 @@ final class IOKitPowerMonitor: PowerMonitoring {
     /// the main run loop. stop/deinit invalidate it on that same actor first.
     private nonisolated static func powerChanged(_ context: UnsafeMutableRawPointer?) {
         guard let context else { return }
+
         let monitor = Unmanaged<IOKitPowerMonitor>.fromOpaque(context).takeUnretainedValue()
         MainActor.assumeIsolated {
             monitor.sample()
@@ -106,13 +134,19 @@ final class IOKitPowerMonitor: PowerMonitoring {
 
     private func sample() {
         guard continuation != nil, !isSleeping else { return }
+
         let session = generation
-        let epoch = sampleEpoch
-        let reader = reader
+        let epoch   = sampleEpoch
+        let reader  = reader
+
         queue.async { [weak self] in
             let snapshot = reader.read()
             Task { @MainActor [weak self] in
-                guard let self, self.generation == session, self.sampleEpoch == epoch else { return }
+                guard let self,
+                      self.generation == session,
+                      self.sampleEpoch == epoch
+                else { return }
+
                 if let update = self.reducer.receive(snapshot) {
                     self.continuation?.yield(update)
                 }
@@ -123,7 +157,9 @@ final class IOKitPowerMonitor: PowerMonitoring {
     isolated deinit {
         if let source { CFRunLoopSourceInvalidate(source) }
         if let powerObserver { NotificationCenter.default.removeObserver(powerObserver) }
-        for observer in workspaceObservers { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
+        for observer in workspaceObservers {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+        }
         continuation?.finish()
     }
 }

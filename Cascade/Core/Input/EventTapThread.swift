@@ -18,7 +18,9 @@ import os
 /// covered too: the thread then either sees the flag or finds its invalidated
 /// source already gone, and returns at once.
 nonisolated final class EventTapThread: @unchecked Sendable {
+
     private struct State {
+
         var runLoop  : CFRunLoop?
         var isStopped = false
     }
@@ -33,21 +35,26 @@ nonisolated final class EventTapThread: @unchecked Sendable {
         onExit: @escaping @Sendable () -> Void = {}
     ) {
         nonisolated(unsafe) let source = source
+
         let thread = Thread { [state] in
             let runLoop = CFRunLoopGetCurrent()
             let proceeds = state.withLockUnchecked { state -> Bool in
                 guard !state.isStopped else { return false }
+
                 state.runLoop = runLoop
                 return true
             }
+
             if proceeds {
                 CFRunLoopAddSource(runLoop, source, .defaultMode)
                 CFRunLoopRun()
             }
+
             state.withLockUnchecked { $0.runLoop = nil }
             onExit()
         }
-        thread.name = name
+
+        thread.name             = name
         thread.qualityOfService = .userInteractive
         thread.start()
     }
@@ -59,6 +66,7 @@ nonisolated final class EventTapThread: @unchecked Sendable {
             state.isStopped = true
             return state.runLoop
         }
+
         if let runLoop { CFRunLoopStop(runLoop) }
     }
 }

@@ -12,14 +12,15 @@ import Foundation
 /// 36 points apart, beyond the container's final 22-point merge distance. This
 /// makes detachment visible before the capsule starts resembling a search field.
 nonisolated struct SpotlightDropletTimeline {
-    let layout        : SpotlightDropletLayout
-    let reducesMotion : Bool
-    let duration      : Double
-    let mergeSpacing  : CGFloat = 44
+
+    let layout       : SpotlightDropletLayout
+    let reducesMotion: Bool
+    let duration     : Double
+    let mergeSpacing : CGFloat = 44
 
     init(
-        layout        : SpotlightDropletLayout,
-        reducesMotion : Bool
+        layout       : SpotlightDropletLayout,
+        reducesMotion: Bool
     ) {
         self.layout        = layout
         self.reducesMotion = reducesMotion
@@ -36,16 +37,16 @@ nonisolated struct SpotlightDropletTimeline {
         } else if time <= 0.070 {
             let progress = Self.smoothProgress(time / 0.070)
             bounds = dropBounds(
-                width  : Self.interpolate(44, 60, progress),
-                height : Self.interpolate(22, 42, progress),
-                top    : layout.hardwareNotchBounds.minY + Self.interpolate(20, 6, progress)
+                width : Self.interpolate(44, 60, progress),
+                height: Self.interpolate(22, 42, progress),
+                top   : layout.hardwareNotchBounds.minY + Self.interpolate(20, 6, progress)
             )
         } else if time <= 0.180 {
             let progress = Self.smoothProgress((time - 0.070) / 0.110)
             bounds = dropBounds(
-                width  : 60,
-                height : Self.interpolate(42, min(64, layout.landingBounds.height), progress),
-                top    : Self.interpolate(
+                width : 60,
+                height: Self.interpolate(42, min(64, layout.landingBounds.height), progress),
+                top   : Self.interpolate(
                     layout.hardwareNotchBounds.minY + 6,
                     layout.landingBounds.maxY,
                     progress
@@ -54,40 +55,48 @@ nonisolated struct SpotlightDropletTimeline {
         } else {
             let progress = Self.smoothProgress((time - 0.180) / 0.220)
             bounds = dropBounds(
-                width  : Self.interpolate(60, layout.landingBounds.width, progress),
-                height : Self.interpolate(min(64, layout.landingBounds.height), layout.landingBounds.height, progress),
-                top    : layout.landingBounds.maxY
+                width : Self.interpolate(60, layout.landingBounds.width, progress),
+                height: Self.interpolate(
+                    min(64, layout.landingBounds.height),
+                    layout.landingBounds.height,
+                    progress
+                ),
+                top   : layout.landingBounds.maxY
             )
         }
 
         // Keep a visible neck during descent, then release the proximity field
         // before horizontal expansion. A constant large spacing reconnects the
         // wide capsule; a constant small spacing pinches off too early.
-        let currentSpacing = Self.interpolate(mergeSpacing, 22,
-            Self.smoothProgress((time - 0.130) / 0.050))
+        let currentSpacing = Self.interpolate(
+            mergeSpacing,
+            22,
+            Self.smoothProgress((time - 0.130) / 0.050)
+        )
+
         return SpotlightDropletFrame(
-            dropletBounds : bounds,
-            sourceBounds  : layout.sourceBounds,
-            opacity       : Self.smoothProgress(time / 0.080),
-            sourceOpacity : reducesMotion ? 0 : 1,
-            mergeSpacing  : currentSpacing,
-            cornerRadius  : min(bounds.width, bounds.height) / 2,
-            isDetached    : reducesMotion || layout.sourceBounds.minY - bounds.maxY > currentSpacing,
-            isComplete    : time >= duration
+            dropletBounds: bounds,
+            sourceBounds : layout.sourceBounds,
+            opacity      : Self.smoothProgress(time / 0.080),
+            sourceOpacity: reducesMotion ? 0 : 1,
+            mergeSpacing : currentSpacing,
+            cornerRadius : min(bounds.width, bounds.height) / 2,
+            isDetached   : reducesMotion || layout.sourceBounds.minY - bounds.maxY > currentSpacing,
+            isComplete   : time >= duration
         )
     }
 
     /// dropBounds keeps the two surfaces on the hardware notch's centerline.
     private func dropBounds(
-        width  : CGFloat,
-        height : CGFloat,
-        top    : CGFloat
+        width : CGFloat,
+        height: CGFloat,
+        top   : CGFloat
     ) -> CGRect {
         CGRect(
-            x      : layout.landingBounds.midX - width / 2,
-            y      : top - height,
-            width  : width,
-            height : height
+            x     : layout.landingBounds.midX - width / 2,
+            y     : top - height,
+            width : width,
+            height: height
         )
     }
 
@@ -98,9 +107,9 @@ nonisolated struct SpotlightDropletTimeline {
     }
 
     private static func interpolate(
-        _ start    : CGFloat,
-        _ end      : CGFloat,
-        _ progress : CGFloat
+        _ start   : CGFloat,
+        _ end     : CGFloat,
+        _ progress: CGFloat
     ) -> CGFloat {
         start + (end - start) * progress
     }

@@ -9,6 +9,7 @@ import Foundation
 /// NowPlayingSourceSelection prefers audible playback, then the most recently
 /// updated player. Removing a source also removes all of its retained artwork.
 nonisolated struct NowPlayingSourceSelection {
+
     private var snapshots: [ScriptableMusicSource: NowPlayingSnapshot] = [:]
     private var recency  : [ScriptableMusicSource] = []
 
@@ -25,6 +26,7 @@ nonisolated struct NowPlayingSourceSelection {
         guard let current,
               current.sourceBundleIdentifier == expected.sourceBundleIdentifier
         else { return false }
+
         if current.trackIdentifier != nil || expected.trackIdentifier != nil {
             return current.trackIdentifier == expected.trackIdentifier
         }
@@ -37,6 +39,7 @@ nonisolated struct NowPlayingSourceSelection {
         from source   : ScriptableMusicSource
     ) {
         guard let held = snapshots[source] else { return }
+
         receive(
             announcement.applied(to: held, startedAt: announcement.time),
             from: source
@@ -44,7 +47,7 @@ nonisolated struct NowPlayingSourceSelection {
     }
 
     mutating func receive(
-        _ snapshot: NowPlayingSnapshot?,
+        _ snapshot : NowPlayingSnapshot?,
         from source: ScriptableMusicSource
     ) {
         snapshots[source] = snapshot

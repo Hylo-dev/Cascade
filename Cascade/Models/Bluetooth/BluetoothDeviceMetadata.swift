@@ -3,10 +3,9 @@
 //  Cascade
 //
 
-
-
 /// BluetoothDeviceMetadata is the Sendable result of one read-only system snapshot.
 nonisolated struct BluetoothDeviceMetadata: Equatable, Sendable {
+
     let battery  : BluetoothBatterySnapshot?
     let model    : BluetoothDeviceModel
     let productID: UInt16?
@@ -27,6 +26,7 @@ nonisolated struct BluetoothDeviceMetadata: Equatable, Sendable {
     /// needsRetry permits one delayed sample when connection metadata has not arrived.
     var needsRetry: Bool {
         guard battery?.level != nil else { return true }
+
         if model == .airPods || model == .airPodsPro {
             return battery?.left == nil || battery?.right == nil
         }

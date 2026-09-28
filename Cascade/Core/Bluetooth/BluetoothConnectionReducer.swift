@@ -14,9 +14,9 @@ import Foundation
 /// events.
 struct BluetoothConnectionReducer {
 
-    private var connectedDevicesByID : [String: BluetoothConnectedDevice] = [:]
-    private var connectionEventsByID : [String: BluetoothConnectionEvent] = [:]
-    private var pendingInitialAudioRoutes: [String: TimeInterval] = [:]
+    private var connectedDevicesByID     : [String: BluetoothConnectedDevice] = [:]
+    private var connectionEventsByID     : [String: BluetoothConnectionEvent] = [:]
+    private var pendingInitialAudioRoutes: [String: TimeInterval]             = [:]
 
     /// replaceBaseline records the devices already connected at startup or
     /// wake. Its lack of a return value is deliberate: baseline devices are
@@ -48,6 +48,7 @@ struct BluetoothConnectionReducer {
             ))
             return nil
         }
+
         connectedDevicesByID[device.deviceID] = device
         let event = BluetoothConnectionEvent(
             deviceID   : device.deviceID,
@@ -60,8 +61,9 @@ struct BluetoothConnectionReducer {
             colorID    : device.colorID,
             eventID    : eventID
         )
-        connectionEventsByID[device.deviceID] = event
+        connectionEventsByID[device.deviceID]      = event
         pendingInitialAudioRoutes[device.deviceID] = now
+
         return event
     }
 
@@ -71,39 +73,42 @@ struct BluetoothConnectionReducer {
     /// is coalesced, so subsequent returns remain visible.
     mutating func recordAudioRoute(
         _ device: BluetoothConnectedDevice,
-        eventID: UInt64,
-        now: TimeInterval = ProcessInfo.processInfo.systemUptime
+        eventID : UInt64,
+        now     : TimeInterval = ProcessInfo.processInfo.systemUptime
     ) -> BluetoothConnectionEvent? {
-        let previous = connectedDevicesByID[device.deviceID]
-        let linkedAt = pendingInitialAudioRoutes.removeValue(forKey: device.deviceID)
+        let previous                 = connectedDevicesByID[device.deviceID]
+        let linkedAt                 = pendingInitialAudioRoutes.removeValue(forKey: device.deviceID)
         let coalescesFreshConnection = linkedAt.map { now >= $0 && now - $0 < 2 } ?? false
+
         let routed = device.enriched(with: BluetoothDeviceMetadata(
             // Identity remains useful across routes, measurements do not.
             // Old earbud values must not override a new aggregate charge.
-            battery: coalescesFreshConnection
+            battery  : coalescesFreshConnection
                 ? device.battery?.fillingMissing(from: previous?.battery) ?? previous?.battery
                 : device.battery,
-            model: device.model == .generic ? previous?.model ?? .generic : device.model,
+            model    : device.model == .generic ? previous?.model ?? .generic : device.model,
             productID: device.productID ?? previous?.productID,
-            colorID: device.colorID ?? previous?.colorID
+            colorID  : device.colorID ?? previous?.colorID
         ))
         connectedDevicesByID[device.deviceID] = routed
         if coalescesFreshConnection {
             return nil
         }
+
         let event = BluetoothConnectionEvent(
-            deviceID: routed.deviceID,
-            name: routed.name,
-            symbolName: routed.symbolName,
+            deviceID   : routed.deviceID,
+            name       : routed.name,
+            symbolName : routed.symbolName,
             isConnected: true,
-            battery: routed.battery,
-            model: routed.model,
-            productID: routed.productID,
-            colorID: routed.colorID,
-            eventID: eventID,
-            kind: .audioRoute
+            battery    : routed.battery,
+            model      : routed.model,
+            productID  : routed.productID,
+            colorID    : routed.colorID,
+            eventID    : eventID,
+            kind       : .audioRoute
         )
         connectionEventsByID[device.deviceID] = event
+
         return event
     }
 
@@ -114,11 +119,18 @@ struct BluetoothConnectionReducer {
         eventID : UInt64,
         metadata: BluetoothDeviceMetadata
     ) -> BluetoothConnectionEvent? {
-        guard let current = connectionEventsByID[deviceID], current.eventID == eventID,
-              let device = connectedDevicesByID[deviceID] else { return nil }
+        guard let current = connectionEventsByID[deviceID],
+              current.eventID == eventID,
+              let device = connectedDevicesByID[deviceID]
+        else { return nil }
+
         let enriched = device.enriched(with: metadata)
-        guard enriched.battery != current.battery || enriched.model != current.model
-                || enriched.productID != current.productID || enriched.colorID != current.colorID else { return nil }
+        guard enriched.battery != current.battery
+              || enriched.model != current.model
+              || enriched.productID != current.productID
+              || enriched.colorID != current.colorID
+        else { return nil }
+
         connectedDevicesByID[deviceID] = enriched
         let event = BluetoothConnectionEvent(
             deviceID   : enriched.deviceID,
@@ -134,6 +146,7 @@ struct BluetoothConnectionReducer {
             kind       : current.kind
         )
         connectionEventsByID[deviceID] = event
+
         return event
     }
 
@@ -143,13 +156,11 @@ struct BluetoothConnectionReducer {
         deviceID: String,
         eventID : UInt64 = 0
     ) -> BluetoothConnectionEvent? {
+        guard let device = connectedDevicesByID.removeValue(forKey: deviceID) else { return nil }
 
-        guard let device = connectedDevicesByID.removeValue(forKey: deviceID) else {
-            return nil
-        }
-
-        connectionEventsByID[deviceID] = nil
+        connectionEventsByID[deviceID]      = nil
         pendingInitialAudioRoutes[deviceID] = nil
+
         return BluetoothConnectionEvent(
             deviceID   : device.deviceID,
             name       : device.name,

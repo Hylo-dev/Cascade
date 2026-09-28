@@ -9,6 +9,7 @@ import AppKit
 /// surface before focus can move to the native Spotlight window.
 @MainActor
 struct SpotlightDisplayAnchor {
+
     let displayID    : CGDirectDisplayID
     let screen       : NSScreen
     let restingBounds: CGRect

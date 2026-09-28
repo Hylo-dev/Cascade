@@ -4,10 +4,6 @@
 //
 
 import AppKit
-import CascadeKit
-import CoreImage
-import Observation
-import QuartzCore
 import SwiftUI
 
 /// MusicSpectrumBars uses one album gradient across all six measured bands.
@@ -21,9 +17,10 @@ import SwiftUI
 /// Bands reach the layers through Observation directly, so a tick never
 /// invalidates SwiftUI; only size and accessibility settings pass through it.
 struct MusicSpectrumBars: View {
-    let visual: MusicVisualState
-    let width : CGFloat
-    let height: CGFloat
+
+    let visual   : MusicVisualState
+    let width    : CGFloat
+    let height   : CGFloat
     var isCompact = false
 
     @Environment(\.displayScale)
@@ -47,6 +44,7 @@ struct MusicSpectrumBars: View {
 }
 
 struct MusicSpectrumLayerRepresentable: NSViewRepresentable {
+
     let visual   : MusicVisualState
     let size     : CGSize
     let scale    : CGFloat
@@ -57,7 +55,10 @@ struct MusicSpectrumLayerRepresentable: NSViewRepresentable {
         MusicSpectrumLayerView(visual: visual)
     }
 
-    func updateNSView(_ view: MusicSpectrumLayerView, context: Context) {
+    func updateNSView(
+        _ view : MusicSpectrumLayerView,
+        context: Context
+    ) {
         view.configure(
             size     : size,
             scale    : scale,

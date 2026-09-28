@@ -10,13 +10,15 @@ import SwiftUI
 /// whole charging session. The host owns dismissal and the contextual glow.
 @MainActor
 final class ChargingNotice: NotchTransientNotice {
-    let id                       = "cascade.power.charging"
-    let sourceID                 = "cascade.power"
+
+    let id                        = "cascade.power.charging"
+    let sourceID                  = "cascade.power"
     let privacy                  : NotchActivityPrivacy = .standard
     let displayDuration          : TimeInterval = 4
     let compactPreferredSideWidth: CGFloat? = 116
     let contentRevision          : UInt64
-    private let snapshot         : MacPowerSnapshot
+
+    private let snapshot: MacPowerSnapshot
 
     var borderAppearance: NotchBorderAppearance? {
         snapshot.isLowPowerMode ? .chargingLowPower : .charging
@@ -27,12 +29,17 @@ final class ChargingNotice: NotchTransientNotice {
             String(localized: "Battery, \($0) percent", table: "ChargingNotice")
         } ?? String(localized: "Battery unavailable", table: "ChargingNotice")
         let lowPower = snapshot.isLowPowerMode
-            ? ", " + String(localized: "Low Power Mode", table: "ChargingNotice") : ""
+            ? ", " + String(localized: "Low Power Mode", table: "ChargingNotice")
+            : ""
+
         return "\(statusText), \(battery)\(lowPower)"
     }
 
-    init(snapshot: MacPowerSnapshot, revision: UInt64) {
-        self.snapshot = snapshot
+    init(
+        snapshot: MacPowerSnapshot,
+        revision: UInt64
+    ) {
+        self.snapshot   = snapshot
         contentRevision = revision
     }
 
@@ -55,8 +62,10 @@ final class ChargingNotice: NotchTransientNotice {
 
     func makeCompactTrailingView(in context: NotchActivityViewContext) -> AnyView {
         let height = min(12, context.availableSize.height)
+
         return AnyView(
             HStack(spacing: 6) {
+
                 Text(snapshot.percentage.map { "\($0)%" } ?? "—")
                     .font(.callout)
                     .monospacedDigit()
@@ -64,8 +73,11 @@ final class ChargingNotice: NotchTransientNotice {
                     .lineLimit(1)
                     .minimumScaleFactor(10.0 / 12.0)
 
-                ChargingBatteryIcon(percentage: snapshot.percentage, isLowPowerMode: snapshot.isLowPowerMode)
-                    .frame(width: height * 2.14, height: height)
+                ChargingBatteryIcon(
+                    percentage    : snapshot.percentage,
+                    isLowPowerMode: snapshot.isLowPowerMode
+                )
+                .frame(width: height * 2.14, height: height)
             }
             .frame(
                 maxWidth : context.availableSize.width,
@@ -79,12 +91,16 @@ final class ChargingNotice: NotchTransientNotice {
 
     func makeMinimalView(in context: NotchActivityViewContext) -> AnyView {
         let height = min(12, context.availableSize.height, context.availableSize.width / 2.14)
+
         return AnyView(
-            ChargingBatteryIcon(percentage: snapshot.percentage, isLowPowerMode: snapshot.isLowPowerMode)
-                .frame(width: height * 2.14, height: height)
-                .frame(maxWidth: context.availableSize.width, maxHeight: context.availableSize.height)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(accessibilityLabel)
+            ChargingBatteryIcon(
+                percentage    : snapshot.percentage,
+                isLowPowerMode: snapshot.isLowPowerMode
+            )
+            .frame(width: height * 2.14, height: height)
+            .frame(maxWidth: context.availableSize.width, maxHeight: context.availableSize.height)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(accessibilityLabel)
         )
     }
 

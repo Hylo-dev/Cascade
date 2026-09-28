@@ -3,8 +3,6 @@
 //  Cascade
 //
 
-
-
 /// BluetoothBatterySnapshot contains only measured percentages. Its summary
 /// uses the least charged known earbud; the case never substitutes for a bud.
 nonisolated struct BluetoothBatterySnapshot: Equatable, Sendable {
@@ -42,6 +40,7 @@ nonisolated struct BluetoothBatterySnapshot: Equatable, Sendable {
 
     private static func validPercentage(_ value: Int?) -> Int? {
         guard let value, (0...100).contains(value) else { return nil }
+
         return value
     }
 }

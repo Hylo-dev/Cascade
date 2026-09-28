@@ -19,6 +19,5 @@ struct CascadeApp: App {
                 .onAppear { appDelegate.services.refreshNativeReplacement() }
         }
         .menuBarExtraStyle(.menu)
-
     }
 }

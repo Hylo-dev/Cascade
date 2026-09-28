@@ -4,15 +4,13 @@
 //
 
 import AppKit
-import CascadeKit
-import CascadeRuntime
-import SwiftUI
-import UniformTypeIdentifiers
 
 nonisolated struct FileShelfScrollGesturePolicy {
+
     private static let threshold: CGFloat = 4
-    private var distance = CGSize.zero
-    private var isTracking = false
+
+    private var distance    = CGSize.zero
+    private var isTracking  = false
     private var didNavigate = false
 
     static func exceedsIntentThreshold(_ distance: CGSize) -> Bool {
@@ -20,17 +18,19 @@ nonisolated struct FileShelfScrollGesturePolicy {
     }
 
     mutating func navigation(
-        delta                    : CGSize,
-        phase                    : NSEvent.Phase,
-        momentumPhase            : NSEvent.Phase,
-        behavior                 : FileShelfScrollNavigation,
+        delta                      : CGSize,
+        phase                      : NSEvent.Phase,
+        momentumPhase              : NSEvent.Phase,
+        behavior                   : FileShelfScrollNavigation,
         isAtHorizontalLeadingEdge _: Bool
     ) -> FileShelfScrollDirection? {
         guard momentumPhase.isEmpty else { return nil }
+
         if phase.contains(.cancelled) {
             reset()
             return nil
         }
+
         if phase.contains(.began) {
             reset()
             isTracking = true
@@ -46,7 +46,8 @@ nonisolated struct FileShelfScrollGesturePolicy {
             if phase.contains(.ended) { reset() }
         }
         guard !didNavigate else { return nil }
-        distance.width += delta.width
+
+        distance.width  += delta.width
         distance.height += delta.height
         guard Self.exceedsIntentThreshold(distance) else { return nil }
 
@@ -56,21 +57,24 @@ nonisolated struct FileShelfScrollGesturePolicy {
         } else {
             direction = distance.height >= 0 ? .verticalPositive : .verticalNegative
         }
+
         switch behavior {
-        case .open:
-            break
-        case .close(let expectedDirection):
-            // Horizontal gestures browse one item at a time. The controller
-            // decides whether a backward gesture at the first item closes.
-            guard direction.isHorizontal || direction == expectedDirection else { return nil }
+            case .open:
+                break
+
+            case .close(let expectedDirection):
+                // Horizontal gestures browse one item at a time. The controller
+                // decides whether a backward gesture at the first item closes.
+                guard direction.isHorizontal || direction == expectedDirection else { return nil }
         }
+
         didNavigate = true
         return direction
     }
 
     private mutating func reset() {
-        distance = .zero
-        isTracking = false
+        distance    = .zero
+        isTracking  = false
         didNavigate = false
     }
 }

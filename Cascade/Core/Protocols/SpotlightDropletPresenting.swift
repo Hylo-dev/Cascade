@@ -14,9 +14,9 @@ import AppKit
 protocol SpotlightDropletPresenting: AnyObject {
 
     func play(
-        at anchor  : SpotlightDisplayAnchor,
-        nativeSize : CGSize,
-        completion : @escaping (CGRect) -> Void
+        at anchor : SpotlightDisplayAnchor,
+        nativeSize: CGSize,
+        completion: @escaping (CGRect) -> Void
     )
 
     func yieldToNative()
@@ -26,7 +26,7 @@ protocol SpotlightDropletPresenting: AnyObject {
     func cancel()
 
     func preview(
-        at anchor  : SpotlightDisplayAnchor,
+        at anchor : SpotlightDisplayAnchor,
         completion: @escaping () -> Void
     )
 }

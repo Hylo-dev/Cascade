@@ -7,12 +7,13 @@
 import Foundation
 
 enum BluetoothMonitorTestFailure: Error, CustomStringConvertible {
+
     case assertion(String)
 
     var description: String {
         switch self {
-        case .assertion(let message):
-            return message
+            case .assertion(let message):
+                return message
         }
     }
 }
@@ -21,10 +22,7 @@ func expectBluetoothMonitorBehavior(
     _ condition: @autoclosure () -> Bool,
     _ message  : String
 ) throws {
-
-    guard condition() else {
-        throw BluetoothMonitorTestFailure.assertion(message)
-    }
+    guard condition() else { throw BluetoothMonitorTestFailure.assertion(message) }
 }
 
 @main

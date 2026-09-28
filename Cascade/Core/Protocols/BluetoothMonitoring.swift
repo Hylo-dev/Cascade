@@ -3,8 +3,6 @@
 //  Cascade
 //
 
-
-
 /// BluetoothMonitoring owns a Bluetooth event subscription for the app.
 ///
 /// The explicit lifecycle lets Cascade release every system notification when
