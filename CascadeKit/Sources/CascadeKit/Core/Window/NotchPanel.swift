@@ -26,6 +26,18 @@ public protocol NotchKeyboardFocusTarget: AnyObject {}
 /// alone.
 final class NotchPanel: NSPanel {
 
+    /// AppKit sends fresh window tags to WindowServer on every assignment, even
+    /// an unchanged one, and the controller reapplies interception on each morph
+    /// frame. Measured at ~15 % of a hover's main-thread time plus a window
+    /// server fence on every commit; writing only real changes removes both.
+    override var ignoresMouseEvents: Bool {
+        get { super.ignoresMouseEvents }
+        set {
+            guard newValue != super.ignoresMouseEvents else { return }
+            super.ignoresMouseEvents = newValue
+        }
+    }
+
     init(contentView: NSView) {
 
         super.init(
@@ -68,6 +80,18 @@ final class NotchPanel: NSPanel {
 /// Finder destination session, so this transparent panel forwards only native
 /// drag callbacks to the visual host's admission logic.
 final class NotchFileDropReceiverPanel: NSPanel, NSDraggingDestination {
+
+    /// AppKit sends fresh window tags to WindowServer on every assignment, even
+    /// an unchanged one, and the controller reapplies interception on each morph
+    /// frame. Measured at ~15 % of a hover's main-thread time plus a window
+    /// server fence on every commit; writing only real changes removes both.
+    override var ignoresMouseEvents: Bool {
+        get { super.ignoresMouseEvents }
+        set {
+            guard newValue != super.ignoresMouseEvents else { return }
+            super.ignoresMouseEvents = newValue
+        }
+    }
 
     private weak var fileDropDestination: NotchHostView?
     private var loggedFileDragWindowSequence: Int?

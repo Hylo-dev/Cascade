@@ -367,8 +367,11 @@ final class NotchDisplayCoordinator {
         pointerLocation = pointer()
         inventory.onChange = { [weak self] in self?.reconcileInventory() }
         focusMonitor.onChange = { [weak self] frame in
-            self?.focusedWindow = frame
-            self?.resolveFocusAndReconcile()
+            guard let self else { return }
+            self.focusedWindow = frame
+            if self.resolveFocus() {
+                self.reconcilePresentations()
+            }
         }
         activityHost.onChange = { [weak self] in self?.reconcilePresentations() }
         activityHost.onValidityChange = { [weak self] in self?.reconcilePresentations() }
@@ -1074,7 +1077,8 @@ final class NotchDisplayCoordinator {
             }
         }
 
-        resolveFocusAndReconcile()
+        resolveFocus()
+        reconcilePresentations()
         reconcilePersistentContextualPresentation(wasKeepingExpanded: false)
         activateExternalSurfaceIfReady()
         onDisplaysChanged?(displayDescriptors)
@@ -1219,18 +1223,27 @@ final class NotchDisplayCoordinator {
         }
     }
 
-    private func resolveFocusAndReconcile() {
-        let frames = Dictionary(uniqueKeysWithValues: surfaces.map {
+    /// Resolves the focused display and reports whether it moved.
+    ///
+    /// Pointer and focused-window events arrive at up to the display's
+    /// refresh rate, system-wide, even while the notch is closed. The
+    /// presentation depends on them only through `focusedDisplayID`, and
+    /// every other input of `reconcilePresentations` triggers its own
+    /// reconcile, so those callers reconcile only when this returns true.
+    @discardableResult
+    private func resolveFocus() -> Bool {
+        let previous = focusedDisplayID
+        let frames   = Dictionary(uniqueKeysWithValues: surfaces.map {
             ($0.key, $0.value.entry.snapshot.frame)
         })
         focusedDisplayID = FocusedDisplayResolver.resolve(
             window  : focusedWindow,
             pointer : pointerLocation,
             frames  : frames,
-            previous: focusedDisplayID,
+            previous: previous,
             main    : mainDisplay()
         )
-        reconcilePresentations()
+        return focusedDisplayID != previous
     }
 
     private func routedDisplayIDs() -> Set<CGDirectDisplayID> {
@@ -1362,7 +1375,9 @@ final class NotchDisplayCoordinator {
             surfaces[displayID]?.surface.handlePointer(at: point)
         }
         previousPointerDisplayID = pointed
-        resolveFocusAndReconcile()
+        if resolveFocus() {
+            reconcilePresentations()
+        }
     }
 
     private func handleRecognizedFileDrag(

@@ -1384,14 +1384,16 @@ final class NotchController: NotchDisplayPresenting {
         // Contact still carries outward velocity. Let that visible rebound
         // settle before revealing compact content or shutting the link down.
         // Point-valued axes can finish below a tenth of a point; waiting for a
-        // thousandth would leave an invisible pause before compact content.
-        let basePointThreshold: Double? = isReturningToBase ? 0.1 : nil
+        // thousandth would leave an invisible pause before compact content and
+        // keep the display link rendering ~50 invisible frames per transition
+        // (148 → 98 at 120 Hz, in step with the normalized side springs).
+        let pointThreshold = 0.1
         let settled = leadingSpring.isSettled(at: targets.leading)
             && trailingSpring.isSettled(at: targets.trailing)
-            && compactSpring.isSettled(at: targets.compact, threshold: basePointThreshold)
-            && compactTrailingSpring.isSettled(at: targets.compactTrailing, threshold: basePointThreshold)
+            && compactSpring.isSettled(at: targets.compact, threshold: pointThreshold)
+            && compactTrailingSpring.isSettled(at: targets.compactTrailing, threshold: pointThreshold)
             && bubbleSpring.isSettled(at: targets.bubble)
-            && heightSpring.isSettled(at: Double(targets.height), threshold: basePointThreshold)
+            && heightSpring.isSettled(at: Double(targets.height), threshold: pointThreshold)
             && dragHeartbeatSpring.isSettled(at: dragHeartbeatTarget)
         if settled {
 

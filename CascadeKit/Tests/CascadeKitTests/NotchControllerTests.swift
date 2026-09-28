@@ -925,11 +925,14 @@ struct NotchControllerTests {
         fixture.controller.setBorderAppearance(.connected)
         fixture.controller.showNotice(ControllerNoticeFixture(id: "headphones"))
         #expect(!border.isHidden)
-        #expect(border.alphaValue > 0 && border.alphaValue <= 0.15)
+        // The border fades through its mask, never the effect view's alpha.
+        let opacity = { border.layer?.mask?.opacity ?? -1 }
+        #expect(border.alphaValue == 1)
+        #expect(opacity() > 0 && opacity() <= 0.15)
 
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 790))
         #expect(!border.isHidden)
-        #expect(border.alphaValue == 1)
+        #expect(opacity() == 1)
 
         fixture.monitor.sendPointer(CGPoint(x: 50, y: 500))
         #expect(border.isHidden)

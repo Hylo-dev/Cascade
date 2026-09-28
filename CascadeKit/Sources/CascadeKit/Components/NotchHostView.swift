@@ -372,9 +372,12 @@ final class NotchHostView: NSView {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
 
-        shapeLayer.frame        = bounds
-        contentContainer.frame  = bounds
-        contentMaskLayer.frame  = bounds
+        // Frames change only with the window; every write still costs a commit.
+        if shapeLayer.frame != bounds {
+            shapeLayer.frame        = bounds
+            contentContainer.frame  = bounds
+            contentMaskLayer.frame  = bounds
+        }
 
         let ordinaryNotchPath = CGPath.notch(
             geometry: geometry,

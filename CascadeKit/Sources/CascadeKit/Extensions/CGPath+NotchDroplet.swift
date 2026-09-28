@@ -19,7 +19,18 @@ extension CGPath {
         guard bubble.width > 0.1, bubble.height > 0.1 else { return notch }
         let circle = CGPath(ellipseIn: bubble, transform: nil)
         guard attachment > 0, bubble.maxX > rightEdge else {
-            return attachment > 0 ? notch : notch.union(circle)
+            guard attachment == 0 else { return notch }
+            // A boolean union is a polygon clip on every frame of the bubble's
+            // spring. While the drop is clear of the notch's bounds the two
+            // shapes cannot share a seam, so adding the circle as a second
+            // subpath fills, masks and hit-tests identically for a copy.
+            guard notch.boundingBoxOfPath.intersects(bubble) else {
+                let combined = CGMutablePath()
+                combined.addPath(notch)
+                combined.addPath(circle)
+                return combined
+            }
+            return notch.union(circle)
         }
 
         let radius = bubble.height / 2

@@ -26,6 +26,7 @@ final class NotchBorderRenderer {
     private var reducesTransparency = false
     private var increasesContrast = false
     private var hasPalette = false
+    private var lastPath: CGPath?
 
     init() {
         view.wantsLayer = true
@@ -108,6 +109,7 @@ final class NotchBorderRenderer {
         chargingGlow.colors = [tint.withAlphaComponent(0).cgColor, tint.withAlphaComponent(0.22).cgColor]
         chargingGlow.isHidden = view.isHidden || reducesTransparency
             || (appearance != .charging && appearance != .chargingLowPower)
+        if !chargingGlow.isHidden, let lastPath { layoutChargingGlow(path: lastPath) }
         rimMask.lineWidth = increasesContrast ? 1.25 : 0.65
         if let layer = tintView.layer {
             let previous = layer.presentation()?.backgroundColor ?? layer.backgroundColor
@@ -127,6 +129,12 @@ final class NotchBorderRenderer {
 
     /// The effect view keeps a fixed canvas frame with room for the halo. Only
     /// its mask follows the spring, reusing the fill's path without raster images.
+    ///
+    /// Per frame this touches paths and one opacity, nothing else. Fading the
+    /// effect view's own alphaValue made NSVisualEffectView rebuild its CoreUI
+    /// material on every frame; the mask's opacity composites identically for
+    /// free. Mask frames change only with the canvas, and the charging outline
+    /// is left alone while its glow is hidden.
     func apply(
         path: CGPath,
         canvasBounds: CGRect,
@@ -140,18 +148,44 @@ final class NotchBorderRenderer {
             view.isHidden = isHidden
             view.state = isHidden ? .inactive : .active
         }
-        view.alphaValue = resolvedOpacity
-        chargingGlow.opacity = Float(resolvedOpacity)
-        chargingGlow.isHidden = isHidden || reducesTransparency
+        outlineMask.opacity = Float(resolvedOpacity)
+        let chargingHidden = isHidden || reducesTransparency
             || (appearance != .charging && appearance != .chargingLowPower)
+        if chargingGlow.isHidden != chargingHidden { chargingGlow.isHidden = chargingHidden }
         let canvas = canvasBounds.insetBy(dx: 0, dy: -Self.visualOutset)
-        if view.frame != canvas {
+        if view.frame != canvas || outlineMask.bounds != canvas || rimMask.contentsScale != scale {
             view.frame = canvas
             tintView.frame = view.bounds
+            // Translate the mask's coordinate system, not the shared CGPath:
+            // every mask spans the canvas, so its path is used unmodified.
+            outlineMask.frame = view.bounds
+            outlineMask.bounds = canvas
+            for mask in [haloMask, glowMask, rimMask] {
+                mask.frame = canvas
+                mask.bounds = canvas
+                mask.contentsScale = scale
+            }
+            bottomGlowOutline.contentsScale = scale
         }
-        // Translate the mask's coordinate system, not the shared CGPath.
-        outlineMask.frame = view.bounds
-        outlineMask.bounds = canvas
+        let pathBounds = path.boundingBoxOfPath
+        let effectBounds = pathBounds.insetBy(dx: -Self.visualOutset, dy: -Self.visualOutset)
+        topFadeMask.frame = effectBounds
+        topFadeMask.endPoint = CGPoint(
+            x: 0.5,
+            y: (pathBounds.maxY - effectBounds.minY) / max(1, effectBounds.height)
+        )
+        haloMask.path = path
+        glowMask.path = path
+        rimMask.path = path
+        lastPath = path
+        chargingGlow.opacity = Float(resolvedOpacity)
+        guard !chargingHidden else { return }
+        layoutChargingGlow(path: path)
+    }
+
+    /// layoutChargingGlow follows the outline only while the glow is shown; an
+    /// appearance change that reveals it lays it out from the last path.
+    private func layoutChargingGlow(path: CGPath) {
         let pathBounds = path.boundingBoxOfPath
         let bottomBounds = CGRect(
             x: pathBounds.minX - Self.visualOutset,
@@ -161,24 +195,9 @@ final class NotchBorderRenderer {
         )
         chargingGlow.frame = bottomBounds
         chargingGlow.bounds = bottomBounds
-        apply(path, to: bottomGlowOutline, bounds: bottomBounds, scale: scale)
-        let effectBounds = pathBounds.insetBy(dx: -Self.visualOutset, dy: -Self.visualOutset)
-        topFadeMask.frame = effectBounds
-        topFadeMask.endPoint = CGPoint(
-            x: 0.5,
-            y: (pathBounds.maxY - effectBounds.minY) / max(1, effectBounds.height)
-        )
-        let outline = pathBounds.insetBy(dx: -2, dy: -2)
-        apply(path, to: haloMask, bounds: outline, scale: scale)
-        apply(path, to: glowMask, bounds: outline, scale: scale)
-        apply(path, to: rimMask, bounds: outline, scale: scale)
-    }
-
-    private func apply(_ path: CGPath, to mask: CAShapeLayer, bounds: CGRect, scale: CGFloat) {
-        mask.frame = bounds
-        mask.bounds = bounds
-        mask.path = path
-        mask.contentsScale = scale
+        bottomGlowOutline.frame = bottomBounds
+        bottomGlowOutline.bounds = bottomBounds
+        bottomGlowOutline.path = path
     }
 }
 

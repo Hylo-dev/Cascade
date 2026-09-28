@@ -893,6 +893,25 @@ struct NotchDisplayCoordinatorTests {
     }
 
     @Test
+    func pointerMovesWithinTheFocusedDisplayDoNotReconcilePresentations() {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
+        fixture.coordinator.start()
+        let first  = fixture.entry(displayID: 10).snapshot.frame
+        let second = fixture.entry(displayID: 20).snapshot.frame
+        func appliedCount() -> Int { fixture.surfaces.values.map(\.presentations.count).reduce(0, +) }
+        fixture.monitor.sendPointer(CGPoint(x: first.midX, y: first.midY))
+        let settled = appliedCount()
+
+        for step in 1...50 {
+            fixture.monitor.sendPointer(CGPoint(x: first.minX + CGFloat(step), y: first.midY))
+        }
+        #expect(appliedCount() == settled)
+
+        fixture.monitor.sendPointer(CGPoint(x: second.midX, y: second.midY))
+        #expect(appliedCount() > settled)
+    }
+
+    @Test
     func displaySleepSuspendsActivitiesAndWakeNeverRevealsALockedScreen() {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
         let activity = CoordinatorActivityFixture(id: "music")
