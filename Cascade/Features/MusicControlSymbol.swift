@@ -59,18 +59,17 @@ struct MusicControlSymbol: View {
                 }
             }
         } else {
-            image
-                .contentTransition(replacement)
-                .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: symbol)
+            // A symbol swap is an insertion, not a content transition: SwiftUI
+            // renders a content transition, even a plain crossfade, on the GPU,
+            // holding ~50 MB of graphics memory for two seconds after every
+            // play or pause. The blurred, scaled replacement costs nothing.
+            ZStack {
+                image
+                    .id(symbol)
+                    .transition(reduceMotion ? .identity : AnyTransition(.blurReplace))
+            }
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: symbol)
         }
-    }
-
-    private var replacement: ContentTransition {
-        guard !reduceMotion else { return .identity }
-        if #available(macOS 15.0, *) {
-            return .symbolEffect(.replace.magic(fallback: .downUp.byLayer), options: .nonRepeating)
-        }
-        return .symbolEffect(.replace.downUp.byLayer, options: .nonRepeating)
     }
 }
 
