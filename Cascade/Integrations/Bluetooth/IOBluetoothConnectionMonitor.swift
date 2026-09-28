@@ -38,6 +38,24 @@ nonisolated private enum IOBluetoothDeviceSnapshot {
         )
     }
 
+    /// connectedDevices combines the framework's cached paired and recent
+    /// lists because either list alone can omit a valid Classic device. Every
+    /// call is a synchronous bluetoothd round trip, so it runs off the main
+    /// actor; these APIs read existing records and never start discovery.
+    static func connectedDevices() -> [IOBluetoothDevice] {
+
+        let pairedDevices = IOBluetoothDevice.pairedDevices() as? [IOBluetoothDevice] ?? []
+        let recentDevices = IOBluetoothDevice.recentDevices(0) as? [IOBluetoothDevice] ?? []
+        var devicesByID   : [String: IOBluetoothDevice] = [:]
+
+        for device in pairedDevices + recentDevices where device.isConnected() {
+            guard let deviceID = stableIdentifier(for: device) else { continue }
+            devicesByID[deviceID] = device
+        }
+
+        return Array(devicesByID.values)
+    }
+
     static func stableIdentifier(
         for device: IOBluetoothDevice
     ) -> String? {
@@ -108,6 +126,9 @@ nonisolated private final class IOBluetoothConnectionObserver: NSObject, @unchec
     private var disconnectionNotificationsByID: [String: IOBluetoothUserNotification] = [:]
     private var isActive                        = false
     private var baselineEpoch                   = UInt64.zero
+    /// Non-nil while an off-main baseline is rebuilt. Transitions that race it
+    /// wait here, so the main actor still applies the baseline first.
+    private var deferredCallbacks               : [IOBluetoothConnectionCallback]?
 
     init(
         sessionID            : UInt64,
@@ -168,6 +189,7 @@ nonisolated private final class IOBluetoothConnectionObserver: NSObject, @unchec
 
             connectionNotification = nil
             disconnectionNotificationsByID.removeAll(keepingCapacity: false)
+            deferredCallbacks = nil
             return notifications
         }
 
@@ -183,8 +205,29 @@ nonisolated private final class IOBluetoothConnectionObserver: NSObject, @unchec
     func beginBaselineReplacement() -> UInt64 {
         lock.withLock {
             baselineEpoch &+= 1
+            deferredCallbacks = []
             return baselineEpoch
         }
+    }
+
+    /// finishBaselineReplacement resumes live delivery and returns, in arrival
+    /// order, the transitions that raced the baseline rebuild.
+    func finishBaselineReplacement() -> [IOBluetoothConnectionCallback] {
+        lock.withLock {
+            defer { deferredCallbacks = nil }
+            return deferredCallbacks ?? []
+        }
+    }
+
+    // ponytail: bounded at 64 transitions per rebuild; a rebuild takes a few
+    // bluetoothd round trips, so a real burst that large is not expected.
+    private func deliver(_ callback: IOBluetoothConnectionCallback) {
+        let isDeferred = lock.withLock {
+            guard deferredCallbacks != nil else { return false }
+            if deferredCallbacks!.count < 64 { deferredCallbacks!.append(callback) }
+            return true
+        }
+        if !isDeferred { callbackHandler(callback) }
     }
 
     /// replaceObservedDevices rebuilds per-device disconnect registrations for
@@ -242,7 +285,7 @@ nonisolated private final class IOBluetoothConnectionObserver: NSObject, @unchec
 
         guard let deviceSnapshot = IOBluetoothDeviceSnapshot.make(from: device) else { return }
         registerDisconnectionNotification(for: device)
-        callbackHandler(
+        deliver(
             .connected(
                 identity: BluetoothConnectionCallbackIdentity(
                     sessionID    : sessionID,
@@ -277,7 +320,7 @@ nonisolated private final class IOBluetoothConnectionObserver: NSObject, @unchec
 
         guard let acceptedCallback else { return }
         acceptedCallback.0.unregister()
-        callbackHandler(
+        deliver(
             .disconnected(
                 identity: BluetoothConnectionCallbackIdentity(
                     sessionID    : sessionID,
@@ -346,6 +389,8 @@ final class IOBluetoothConnectionMonitor: NSObject, BluetoothMonitoring {
     private var continuation        : AsyncStream<BluetoothConnectionEvent>.Continuation?
     private let audioRouteMonitor = BluetoothAudioRouteMonitor()
     private var audioRouteTask: Task<Void, Never>?
+    private var baselineTask  : Task<Void, Never>?
+    private static let baselineQueue = DispatchQueue(label: "hylo.Cascade.bluetooth-baseline", qos: .utility)
     private let logger = Logger(subsystem: "hylo.Cascade", category: "BluetoothMonitor")
 
     private let metadataEnricher = BluetoothMetadataEnricher()
@@ -439,6 +484,8 @@ final class IOBluetoothConnectionMonitor: NSObject, BluetoothMonitoring {
         status    = .stopped
 
         metadataEnricher.cancelAll()
+        baselineTask?.cancel()
+        baselineTask = nil
         audioRouteTask?.cancel()
         audioRouteTask = nil
         audioRouteMonitor.stop()
@@ -458,6 +505,7 @@ final class IOBluetoothConnectionMonitor: NSObject, BluetoothMonitoring {
     }
 
     isolated deinit {
+        baselineTask?.cancel()
         audioRouteTask?.cancel()
         audioRouteMonitor.stop()
         metadataEnricher.cancelAll()
@@ -541,9 +589,11 @@ final class IOBluetoothConnectionMonitor: NSObject, BluetoothMonitoring {
         rebuildBaseline()
     }
 
-    /// rebuildBaseline enumerates cached paired and recent devices only. These
-    /// APIs read IOBluetooth's existing records; they do not perform inquiry or
-    /// BLE discovery.
+    /// rebuildBaseline enumerates cached paired and recent devices only, on a
+    /// utility queue: each call is a synchronous bluetoothd round trip and the
+    /// first one initializes IOBluetooth, which would stall launch and wake on
+    /// the main thread. Transitions that race it are held by the observer and
+    /// replayed after the baseline, preserving the synchronous ordering.
     private func rebuildBaseline() {
 
         guard let notificationObserver else {
@@ -553,13 +603,25 @@ final class IOBluetoothConnectionMonitor: NSObject, BluetoothMonitoring {
         metadataEnricher.cancelAll()
         let baselineEpoch = notificationObserver.beginBaselineReplacement()
         callbackGate.replaceBaseline(epoch: baselineEpoch)
+        let identity = callbackGate.identity
 
-        let connectedDevices = currentlyConnectedDevices()
-        notificationObserver.replaceObservedDevices(connectedDevices)
-
-        let snapshots = connectedDevices.compactMap(IOBluetoothDeviceSnapshot.make(from:))
-        reducer.replaceBaseline(with: snapshots)
-        restartAudioRouteMonitoring()
+        baselineTask?.cancel()
+        baselineTask = Task { [weak self] in
+            let snapshots = await withCheckedContinuation { continuation in
+                Self.baselineQueue.async {
+                    let connectedDevices = IOBluetoothDeviceSnapshot.connectedDevices()
+                    notificationObserver.replaceObservedDevices(connectedDevices)
+                    continuation.resume(returning: connectedDevices.compactMap(IOBluetoothDeviceSnapshot.make(from:)))
+                }
+            }
+            guard !Task.isCancelled, let self, self.isRunning,
+                  self.callbackGate.accepts(identity) else { return }
+            self.reducer.replaceBaseline(with: snapshots)
+            self.restartAudioRouteMonitoring()
+            for callback in notificationObserver.finishBaselineReplacement() {
+                self.receive(callback)
+            }
+        }
     }
 
     /// Replacing the ACL baseline must discard buffered route events too.
@@ -578,19 +640,4 @@ final class IOBluetoothConnectionMonitor: NSObject, BluetoothMonitoring {
         }
     }
 
-    /// currentlyConnectedDevices combines the framework's cached paired and
-    /// recent lists because either list alone can omit a valid Classic device.
-    private func currentlyConnectedDevices() -> [IOBluetoothDevice] {
-
-        let pairedDevices = IOBluetoothDevice.pairedDevices() as? [IOBluetoothDevice] ?? []
-        let recentDevices = IOBluetoothDevice.recentDevices(0) as? [IOBluetoothDevice] ?? []
-        var devicesByID   : [String: IOBluetoothDevice] = [:]
-
-        for device in pairedDevices + recentDevices where device.isConnected() {
-            guard let deviceID = IOBluetoothDeviceSnapshot.stableIdentifier(for: device) else { continue }
-            devicesByID[deviceID] = device
-        }
-
-        return Array(devicesByID.values)
-    }
 }
