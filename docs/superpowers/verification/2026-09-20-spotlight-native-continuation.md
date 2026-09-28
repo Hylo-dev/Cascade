@@ -12,7 +12,7 @@ Evidence limited to the local macOS27 system and to a display1470×956. The obse
 
 | Check | Local outcome |
 | --- | --- |
-| Opening from the «Apri Spotlight dal notch» command | Native field observed; settled capsule520×87. |
+| Opening from the “Open Spotlight from the Notch” command | Native field observed; settled capsule520×87. |
 | Field focus | AXFocused=true on the identified field. |
 | Synthetic calculation | AX insertion of2+2 succeeded; native result4 observed and captured. No result launched. Query cleared. |
 | Disabling with the field open | Return from(475,64) to the initial position(475,65), with native dimensions preserved. |

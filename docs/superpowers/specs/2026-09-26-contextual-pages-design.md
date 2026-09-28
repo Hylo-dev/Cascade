@@ -67,7 +67,7 @@ activities through the common contract.
 To make the requested access to Page 0 literal, the proposal places the other
 activities to the left of the primary and Page 0 immediately to the right:
 
-    [altre attività] [principale all'apertura] [Pagina 0] [altre pagine personali]
+    [other activities] [primary on opening] [Page 0] [other personal pages]
 
 From the primary, a right-to-left scroll of the content reveals
 Page 0; the opposite gesture leads to the other activities. The page labels
@@ -303,8 +303,8 @@ needed and the actions actually supported.
 
 In the "Apps in use" group the associations are readable rows, for example:
 
-    Photoshop → Comandi rapidi        Attiva
-    Player → Controlli riproduzione   Attiva
+    Photoshop → Quick Commands        On
+    Player → Playback Controls        On
 
 "Active" is a state of the association, not a second switch. The row opens
 the configuration; the activation stays the single one of the integration.

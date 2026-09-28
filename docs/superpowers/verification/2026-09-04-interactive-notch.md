@@ -66,7 +66,7 @@ by the system, a compact non-modal window and a single explicit close
 control. Pairing requests, codes, input, other actions,
 truncated or unrecognized windows are excluded. Verification on macOS 14–26 and
 in the other languages remains necessary. After a Control Center restart the
-observer can be reactivated by opening the menu or using “Riprova”.
+observer can be reactivated by opening the menu or using “Try Again”.
 
 IOBluetooth covers the Classic devices exposed by the framework; it does not guarantee
 BLE-only accessories. The reads of already present Bluetooth records
@@ -127,8 +127,8 @@ concluded with no further blockers.
 
 Launch of the exact build verified: the process runs
 `/private/tmp/cascade-notch-derived/Build/Products/Debug/Cascade.app/Contents/MacOS/Cascade`.
-The actual menu contains “Feedback aptico in hover”, “Avvisi Bluetooth”,
-“Consenti Accessibilità…”, “Anteprima Live Activity musicale” and “Prova avviso
-Bluetooth”. The previous instance in Xcode's DerivedData was closed.
+The actual menu contains “Haptic Feedback on Hover”, “Bluetooth Alerts”,
+“Allow Accessibility…”, “Music Live Activity Preview” and “Test Bluetooth
+Alert”. The previous instance in Xcode's DerivedData was closed.
 The native override remains to be validated after explicit granting of Accessibility
 and a real connection; the successful launch does not demonstrate the closing of a banner.

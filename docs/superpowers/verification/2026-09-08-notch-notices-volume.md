@@ -53,8 +53,8 @@ session taps. It does not change audio, does not post events and does not grant 
 This outcome does not prove the TCC authorization of the signed app nor the real
 suppression of the HUD while the keys are pressed.
 
-For the real test, use the Cascade menu: **Prova avviso volume** does not change
-the audio; **Consenti Accessibilità per i tasti volume…** opens the permissions
+For the real test, use the Cascade menu: **Test Volume Alert** does not change
+the audio; **Allow Accessibility for Volume Keys…** opens the permissions
 path. Replacing the keys requires the app's authorization. Unsupported
 outputs, mixed mute or errors keep the macOS behavior.
 

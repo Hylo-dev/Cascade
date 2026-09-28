@@ -24,7 +24,7 @@ public protocol NotchContextualPage: AnyObject {
 }
 ```
 
-`availableSize` lets task 89 lay out the deck without another geometry API. `accessibilityLabel` supplies the native chooser title (`Ripiano`) and can default to `id`; it does not create a page model. `contentHeight` is finite-clamped through the existing `maximumActivityExpandedHeight` ceiling (240 points by default), using the current cutout and inset calculation rather than the widget height. Width remains the current `expandedHalfWidth` (220 per side).
+`availableSize` lets task 89 lay out the deck without another geometry API. `accessibilityLabel` supplies the native chooser title (`Shelf`) and can default to `id`; it does not create a page model. `contentHeight` is finite-clamped through the existing `maximumActivityExpandedHeight` ceiling (240 points by default), using the current cutout and inset calculation rather than the widget height. Width remains the current `expandedHalfWidth` (220 per side).
 
 Coordinator API:
 
@@ -40,7 +40,7 @@ Keep one internal open-session selection (`automatic` or `contextual(id:)`). Ini
 
 Extend `DisplayPresentation` with the selected contextual page and its revision. `isExpanded` includes that page; `visibleActivityRoots` remains unchanged. `NotchController` renders the contextual page before the activity/widget branches and includes page identity/revision in `LocalPresentationKey`. `WidgetHost` is open only when widgets are actually selected.
 
-Add a small native page chooser in `NotchHostView`, placed in the existing top chrome to the left of the hardware cutout. It offers `Ripiano` and the current ordinary destination (`Musica` when an expanded activity exists, otherwise `Widget`), has a clear accessibility label/hint, and calls the explicit coordinator selection APIs. It must coexist with the settings button, not replace it, and must not add a footer or widen `hitPath` beyond the live notch silhouette.
+Add a small native page chooser in `NotchHostView`, placed in the existing top chrome to the left of the hardware cutout. It offers `Shelf` and the current ordinary destination (`Music` when an expanded activity exists, otherwise `Widget`), has a clear accessibility label/hint, and calls the explicit coordinator selection APIs. It must coexist with the settings button, not replace it, and must not add a footer or widen `hitPath` beyond the live notch silhouette.
 
 ## Incoming drag boundary
 
