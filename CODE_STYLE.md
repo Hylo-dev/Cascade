@@ -68,7 +68,7 @@ struct NotchGeometry: Equatable {
 - Align enum raw values and `OptionSet` members.
 - Align trailing comments.
 - **This applies to call sites too, not only declarations:** align the argument labels of a multi-line call or initializer.
-- **Multi-argument calls and declarations break across lines, paren-on-its-own.** When a function or initializer — at a call site *or* in its declaration — has more than one argument, the **opening parenthesis ends its line**, every argument goes on **its own indented line** (labels aligned in columns), and the **closing parenthesis sits alone** on the final line. Never crowd the first argument onto the call line and hang the rest off it.
+- **Multi-argument calls and declarations break across lines, paren-on-its-own.** A declaration with more than one parameter, and a call with three or more arguments or one that would run past 100 columns, puts the **opening parenthesis at the end of its line**, every argument on **its own indented line** (labels aligned in columns), and the **closing parenthesis alone** on the final line. Never crowd the first argument onto the call line and hang the rest off it. A call with one or two short arguments, an unlabeled C call (`vDSP_…`, `CF…`), a short SwiftUI modifier and a loop header such as `stride(from:to:by:)` stay on one line.
 
 ```swift
 @frozen
@@ -305,9 +305,66 @@ func controlPoints(for geometry: NotchGeometry) -> InlineArray<8, CGPoint> {
 - `throws` for propagatable failures; `Result` only where the API requires it.
 - Never swallow an error silently: handle it or propagate it. Log through a single logging seam (`os.Logger`).
 
+## Folder layout
+
+Each target is laid out by layer, as in the other projects (fMusic2, fEditorEngine), not by feature. Inside a layer, an area gets its own folder once it has more than a couple of files.
+
+```
+Cascade/
+├─ App/          entry point, app delegate, service composition
+├─ Components/   small reusable controls and leaf views, by area
+├─ Core/         logic by area: monitors, readers, reducers, controllers, taps
+│  ├─ Protocols/ every protocol, one per file
+│  ├─ Errors/    every Error type
+│  └─ Extensions/ Type+Capability.swift
+├─ Models/       value types by area; enums in Models/<Area>/Enums/
+├─ Views/        SwiftUI and AppKit views by feature
+├─ Resources/    asset catalog, string catalogs
+└─ Checks/       the #if-guarded checks run by scripts/test-*.sh, by area
+```
+
+A check script lists its sources explicitly; moving or splitting a file means updating the scripts that compile it.
+
+## Types per file
+
+- **One type per file**, named after it. A second type is allowed only when it is a small private helper of the first (a representable, a cell, a keyframe value); never more than two.
+- Nested types do not count, and neither do extensions of the file's own type (conformances stay in its file). An extension of another type goes to `Core/Extensions/Type+Capability.swift`.
+- Protocols, errors, value models and their enums live in their own layers (see **Folder layout**), not next to the implementation that uses them. A type that moves away from its only user loses `private`.
+
+## Vertical rhythm
+
+The code should breathe, in the manner of ReixOS:
+
+- **One blank line after the opening brace of every type, extension and protocol**, none before its closing brace, and one between members. Stored properties that belong together form one aligned group without blank lines; separate groups (constants, dependencies, state) with one.
+- Inside a function, **separate logical steps with a blank line**: the guards, the work, the result. No blank line directly after a function's opening brace; a body of one step has none at all.
+- **Attributes and property wrappers on their own line** above the declaration: `@Environment(…)`, `@State`, `@ObservationIgnored`, `@objc`, `@discardableResult`, `@available`.
+- **A guard that spans lines** puts each condition on its own line, aligned after `guard `, and `else` on a line of its own. A guard that fits on one line stays on one line.
+- **`case` is indented one level inside `switch`**, and cases whose bodies run longer than a line are separated by a blank line.
+- One enum case per line when cases carry raw or associated values; their values align.
+
+```swift
+@MainActor
+final class SpotlightKeyTap: SpotlightKeyTapping {
+
+    nonisolated let gate = SpotlightKeyGate()
+
+    private var port      : CFMachPort?
+    private var thread    : EventTapThread?
+    private var onDisabled: (() -> Void)?
+
+    func stop() {
+        if let port { CFMachPortInvalidate(port) }
+        port = nil
+
+        thread?.stop()
+        thread = nil
+    }
+}
+```
+
 ## File organization and access control
 
-- One main type per file; file name = type name. The file opens with the header banner (see **File header**).
+- One type per file; file name = type name (see **Types per file**). The file opens with the header banner (see **File header**).
 - `private` / `fileprivate` for everything that is not part of the public contract.
 - The **addon SDK surface** is limited to the public contracts, content components and provider/service clients defined in the implementation plan. Keep host engine, windows, monitors and runtime administration out of those products. Existing public notch protocols are a migration surface, not the API for future third-party or Cascade widgets.
 - `private(set)` for read-only exposed state.
