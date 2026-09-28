@@ -21,6 +21,15 @@ private enum MusicArtworkChecks {
         let cover = rgba(colorful.image)
         require(cover[0] > 200 && cover[2] < 60, "The decoded cover keeps its colors")
 
+        let glow = try require2(colorful.glow, "A decoded cover carries its compact glow")
+        require(glow.width == Int((MusicArtworkDecoder.compactGlowSize * 2).rounded(.up)) && glow.width == glow.height, "The glow is a 2x square around the compact cover")
+        let halo = rgba(glow)
+        func alpha(_ x: Int, _ y: Int) -> UInt8 { halo[(y * glow.width + x) * 4 + 3] }
+        require(alpha(0, 0) == 0, "The glow fades to nothing at its corners")
+        require(alpha(glow.width / 2, glow.width / 2) > 80, "It is strongest under the cover")
+        require(alpha(glow.width / 2, 2) > 0 && alpha(glow.width / 2, 2) < alpha(glow.width / 2, glow.width / 2), "and falls off toward its edge")
+        require(MusicArtworkDecoder.compactGlow(colors: []) == nil, "No colors, no glow")
+
         let neutral = try decodeFixture { _ in [100, 100, 100, 255] }
         require(neutral.colors.allSatisfy { abs($0.red - $0.green) < 0.01 && abs($0.green - $0.blue) < 0.01 }, "Gray artwork must not acquire an invented tint")
         let transparent = try decodeFixture { x in
@@ -72,6 +81,11 @@ private enum MusicArtworkChecks {
             throw CocoaError(.coderInvalidValue)
         }
         return decoded
+    }
+
+    private static func require2<T>(_ value: T?, _ message: String) throws -> T {
+        guard let value else { fatalError(message) }
+        return value
     }
 
     private static func require(_ condition: Bool, _ message: String) {

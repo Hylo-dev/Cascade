@@ -34,6 +34,8 @@ nonisolated struct MusicArtworkColor: Equatable, Sendable {
 nonisolated struct DecodedMusicArtwork: @unchecked Sendable {
     let image : CGImage
     let colors: [MusicArtworkColor]
+    /// The compact cover's glow, drawn once here; see `compactGlow`.
+    let glow  : CGImage?
 }
 
 /// MusicArtworkDecoder decodes one bounded thumbnail and samples its real colors.
@@ -79,7 +81,65 @@ nonisolated enum MusicArtworkDecoder {
             return true
         }
         guard sampled else { return nil }
-        return DecodedMusicArtwork(image: image, colors: palette(from: bytes))
+        let colors = palette(from: bytes)
+        return DecodedMusicArtwork(image: image, colors: colors, glow: compactGlow(colors: colors))
+    }
+
+    /// The compact artwork's side and the glow's reach around it, in points.
+    static let compactArtworkSize: CGFloat = 22
+    static let compactGlowSize = compactArtworkSize * 1.28
+
+    /// compactGlow diffuses the compact artwork's rounded-square silhouette in
+    /// the cover's colors with concentric contours whose cumulative alpha falls
+    /// smoothly to zero at the outer edge. It was a SwiftUI Canvas, and Canvas
+    /// renders on the GPU: each time the compact cover appeared, on every
+    /// resume, it held ~56 MB of transient graphics memory for about two
+    /// seconds. Drawn once per cover into a 2× bitmap it costs a few kilobytes.
+    static func compactGlow(colors: [MusicArtworkColor], scale: CGFloat = 2) -> CGImage? {
+        guard let first = colors.first else { return nil }
+        let pixels = Int((compactGlowSize * scale).rounded(.up))
+        guard let space = CGColorSpace(name: CGColorSpace.sRGB),
+              let context = CGContext(
+                data            : nil,
+                width           : pixels,
+                height          : pixels,
+                bitsPerComponent: 8,
+                bytesPerRow     : 0,
+                space           : space,
+                bitmapInfo      : CGImageAlphaInfo.premultipliedLast.rawValue
+              ) else { return nil }
+        let stops = (colors.count == 1 ? [first, first] : colors).map {
+            CGColor(srgbRed: $0.red, green: $0.green, blue: $0.blue, alpha: 1)
+        }
+        guard let gradient = CGGradient(colorsSpace: space, colors: stops as CFArray, locations: nil) else { return nil }
+        context.scaleBy(x: scale, y: scale)
+        let size = compactGlowSize
+        let spread = (size - compactArtworkSize) / 2
+        var accumulatedAlpha: CGFloat = 0
+        for index in stride(from: 31, through: 0, by: -1) {
+            let progress = CGFloat(index) / 32
+            let outset = spread * CGFloat(index + 1) / 32
+            let alpha = 0.45 * pow(1 - progress, 2)
+            let radius = compactArtworkSize * 0.2 + outset
+            let bounds = CGRect(x: 0, y: 0, width: size, height: size)
+                .insetBy(dx: spread - outset, dy: spread - outset)
+            context.saveGState()
+            context.addPath(CGPath(roundedRect: bounds, cornerWidth: radius, cornerHeight: radius, transform: nil))
+            context.clip()
+            // Compensate for source-over compositing so each contour reaches
+            // its intended opacity instead of adding a rim.
+            context.setAlpha((alpha - accumulatedAlpha) / (1 - accumulatedAlpha))
+            // Top leading to bottom trailing, as the former Canvas shaded it.
+            context.drawLinearGradient(
+                gradient,
+                start  : CGPoint(x: 0, y: size),
+                end    : CGPoint(x: size, y: 0),
+                options: []
+            )
+            context.restoreGState()
+            accumulatedAlpha = alpha
+        }
+        return context.makeImage()
     }
 
     private static func palette(from bytes: [UInt8]) -> [MusicArtworkColor] {

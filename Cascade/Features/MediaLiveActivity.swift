@@ -201,6 +201,9 @@ final class MediaLiveActivity: NotchLiveActivity {
             self.decodedArtworkData = data
             self.visual.artwork = NSImage(cgImage: decoded.image, size: NSSize(width: decoded.image.width, height: decoded.image.height))
             self.visual.artworkColors = decoded.colors
+            self.visual.compactGlow = decoded.glow.map {
+                NSImage(cgImage: $0, size: NSSize(width: MusicArtworkDecoder.compactGlowSize, height: MusicArtworkDecoder.compactGlowSize))
+            }
             let colors = decoded.colors.map {
                 Color(red: $0.red, green: $0.green, blue: $0.blue)
             }
@@ -210,6 +213,7 @@ final class MediaLiveActivity: NotchLiveActivity {
 
     private func clearArtwork() {
         visual.artwork = nil
+        visual.compactGlow = nil
         visual.palette = [.gray, .gray]
         visual.artworkColors = []
     }
@@ -220,6 +224,7 @@ final class MediaLiveActivity: NotchLiveActivity {
 @Observable
 final class MusicVisualState {
     var artwork: NSImage?
+    var compactGlow: NSImage?
     var bands = AudioSpectrumFrame.silence.bands
     var palette: [Color] = [.gray, .gray]
     var artworkColors: [MusicArtworkColor] = []
@@ -230,6 +235,7 @@ private struct MusicArtwork: View {
     let size: CGFloat
     var isCompact = false
     var isPlaying = true
+    var isStale = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         Group {
@@ -248,8 +254,14 @@ private struct MusicArtwork: View {
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: size * 0.2, style: .continuous))
         .background {
-            MusicArtworkLight(visual: visual, artworkSize: size, isCompact: isCompact)
-                .opacity(isPlaying ? 1 : 0)
+            if isCompact {
+                MusicArtworkLight(visual: visual, artworkSize: size)
+                    .opacity(isPlaying ? 1 : 0)
+            } else {
+                // The expanded cover lights the glass beneath the content
+                // rather than painting a glow over it.
+                MusicGlassLightEmitter(visual: visual, isPlaying: isPlaying && !isStale)
+            }
         }
         .scaleEffect(isPlaying ? 1 : 0.92)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isPlaying)
@@ -257,49 +269,25 @@ private struct MusicArtwork: View {
     }
 }
 
-/// MusicArtworkLight diffuses the artwork's rounded-square silhouette using
-/// concentric contours. Their cumulative alpha falls smoothly to zero at the
-/// outer edge, keeping the glow bounded and independent of layer blur clipping.
+/// MusicArtworkLight shows the compact cover's glow, drawn once per cover by
+/// MusicArtworkDecoder.compactGlow. The compact notch is solid black, with no
+/// glass to light.
 private struct MusicArtworkLight: View {
     let visual     : MusicVisualState
     let artworkSize: CGFloat
-    let isCompact  : Bool
 
     @Environment(\.accessibilityReduceTransparency)
     private var reduceTransparency
 
     var body: some View {
-        if visual.artwork != nil && !reduceTransparency {
-            let lightSize = isCompact ? artworkSize * 1.28 : artworkSize + 48
-            Canvas { context, size in
-                let spread = (lightSize - artworkSize) / 2
-                let shading = GraphicsContext.Shading.linearGradient(
-                    Gradient(colors: visual.palette),
-                    startPoint: .zero,
-                    endPoint  : CGPoint(x: size.width, y: size.height)
-                )
-                var accumulatedAlpha: CGFloat = 0
-                for index in stride(from: 31, through: 0, by: -1) {
-                    let progress = CGFloat(index) / 32
-                    let outset = spread * CGFloat(index + 1) / 32
-                    let alpha = 0.45 * pow(1 - progress, 2)
-                    // Compensate for source-over compositing so each contour
-                    // reaches its intended opacity instead of adding a rim.
-                    context.opacity = (alpha - accumulatedAlpha) / (1 - accumulatedAlpha)
-                    let bounds = CGRect(origin: .zero, size: size)
-                        .insetBy(dx: spread - outset, dy: spread - outset)
-                    let contour = RoundedRectangle(
-                        cornerRadius: artworkSize * 0.2 + outset,
-                        style       : .continuous
-                    )
-                    context.fill(contour.path(in: bounds), with: shading)
-                    accumulatedAlpha = alpha
-                }
-            }
-            .frame(width: lightSize, height: lightSize)
-            .opacity(isCompact ? 0.18 : 0.65)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
+        if let glow = visual.compactGlow, visual.artwork != nil, !reduceTransparency {
+            let lightSize = artworkSize * MusicArtworkDecoder.compactGlowSize / MusicArtworkDecoder.compactArtworkSize
+            Image(nsImage: glow)
+                .resizable()
+                .frame(width: lightSize, height: lightSize)
+                .opacity(0.18)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
     }
 }
@@ -550,7 +538,7 @@ private struct MusicActivityContent: View {
     var body: some View {
         VStack(spacing: 12) {
             HStack(spacing: 16) {
-                MusicArtwork(visual: visual, size: artworkSize, isPlaying: snapshot.isPlaying)
+                MusicArtwork(visual: visual, size: artworkSize, isPlaying: snapshot.isPlaying, isStale: isStale)
                     .frame(height: 66, alignment: .bottom)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(snapshot.title).font(.system(size: 15, weight: .medium)).foregroundStyle(.white)
@@ -585,9 +573,6 @@ private struct MusicActivityContent: View {
             }.frame(height: 36)
         }
         .foregroundStyle(.white)
-        .background {
-            MusicGlassLightEmitter(visual: visual, isPlaying: snapshot.isPlaying && !isStale)
-        }
         // The space bar plays and pauses only while this player is on screen.
         .onAppear { spacebar.start() }
         .onDisappear { spacebar.stop() }
