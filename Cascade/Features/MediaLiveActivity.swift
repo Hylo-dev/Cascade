@@ -34,6 +34,7 @@ final class MediaLiveActivity: NotchLiveActivity {
     private var decodedArtworkData: Data?
     private var audioEnabled: Bool
     private var spectrumTask: Task<Void, Never>?
+    private var spectrumPauseTask: Task<Void, Never>?
     private var artworkTask: Task<Void, Never>?
     private let spacebar = MusicSpacebarTap()
 
@@ -58,7 +59,11 @@ final class MediaLiveActivity: NotchLiveActivity {
         presentation.receive(snapshot)
         if context != nil {
             if old.artworkData != snapshot.artworkData { loadArtwork() }
-            if old.isPlaying != snapshot.isPlaying || old.sourceBundleIdentifier != snapshot.sourceBundleIdentifier { restartSpectrum() }
+            if old.sourceBundleIdentifier != snapshot.sourceBundleIdentifier {
+                restartSpectrum()
+            } else if old.isPlaying != snapshot.isPlaying {
+                spectrumFollowPlayback()
+            }
         }
         contentRevision &+= 1
         context?.invalidate()
@@ -101,6 +106,8 @@ final class MediaLiveActivity: NotchLiveActivity {
     func suspend() {
         context = nil
         spacebar.stop()
+        spectrumPauseTask?.cancel()
+        spectrumPauseTask = nil
         spectrumTask?.cancel()
         spectrumTask = nil
         spectrum?.stop()
@@ -165,7 +172,31 @@ final class MediaLiveActivity: NotchLiveActivity {
         }
     }
 
+    /// spectrumFollowPlayback keeps the capture through a short pause. Every
+    /// restart builds a private process tap, an aggregate device and an IO
+    /// callback in Core Audio; toggling from the keyboard rebuilt them on each
+    /// press. A pause now stops capture only once it has lasted a few seconds,
+    /// and resuming inside that window keeps the running capture, which has
+    /// meanwhile measured the pause's silence.
+    private func spectrumFollowPlayback() {
+        spectrumPauseTask?.cancel()
+        spectrumPauseTask = nil
+        guard !snapshot.isPlaying else {
+            if spectrumTask == nil { restartSpectrum() }
+            return
+        }
+        guard spectrumTask != nil else { return }
+        spectrumPauseTask = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(3)) } catch { return }
+            guard let self, !self.snapshot.isPlaying else { return }
+            self.spectrumPauseTask = nil
+            self.restartSpectrum()
+        }
+    }
+
     private func restartSpectrum() {
+        spectrumPauseTask?.cancel()
+        spectrumPauseTask = nil
         spectrumTask?.cancel()
         spectrumTask = nil
         spectrum?.stop()
