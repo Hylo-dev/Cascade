@@ -7,6 +7,33 @@ import Testing
 @Suite
 struct FileWorkspaceHostTests {
     @Test
+    func prepareAllItemsCoversEveryPageInOrderWithoutASnapshot() async throws {
+        let fixture = try HostFixture()
+        let host = try fixture.host()
+        try await host.restore()
+        var ids: [UUID] = []
+        for batch in 0..<2 {
+            let sources = try (0..<20).map { index in
+                try fixture.file(name: "file-\(batch)-\(index).txt", contents: "\(batch)-\(index)")
+            }
+            ids += try await host.addOriginals(sources)
+        }
+        try await host.close()
+
+        // A fresh process lifetime that never asks for a snapshot, as at launch.
+        let restored = try fixture.host()
+        try await restored.restore()
+        let prepared = try await restored.prepareAllItems()
+        #expect(prepared.map(\.itemID) == ids)
+
+        // Items past the first 12-entry page stay deliverable.
+        let last = try #require(prepared.last)
+        try await restored.copy(last, to: fixture.output.appendingPathComponent(last.name))
+        #expect(try String(contentsOf: fixture.output.appendingPathComponent(last.name), encoding: .utf8) == "1-19")
+        try await restored.close()
+    }
+
+    @Test
     func renameOriginalPreservesContentsAndIdentityAcrossRestore() async throws {
         let fixture = try HostFixture()
         let host = try fixture.host()

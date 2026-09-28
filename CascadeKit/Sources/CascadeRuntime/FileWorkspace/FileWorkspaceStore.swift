@@ -587,18 +587,33 @@ actor FileWorkspaceStore {
             let byID = Dictionary(uniqueKeysWithValues: self.manifest.entries.map { ($0.id, $0) })
             return try ids.map { id in
                 guard let entry = byID[id] else { throw FileWorkspaceError.unavailable }
-                return FileWorkspacePreparedEntry(
-                    writerID      : self.writerID,
-                    id            : entry.id,
-                    name          : entry.name,
-                    typeIdentifier: entry.typeIdentifier,
-                    ownership     : entry.ownership,
-                    identity      : entry.identity,
-                    managedName   : entry.managedName,
-                    generation    : entry.generation
-                )
+                return self.prepared(entry)
             }
         }
+    }
+
+    /// prepareAllItems is prepareItems over the whole manifest, in shelf order.
+    /// It reads only in-memory records: the shelf learns its size and its
+    /// whole-deck drag set without resolving a single bookmark. Availability
+    /// is still checked where it matters, when a delivery begins.
+    func prepareAllItems() async throws -> [FileWorkspacePreparedEntry] {
+        try await withOperation { _ in
+            try self.requireWritable()
+            return self.manifest.entries.map(self.prepared)
+        }
+    }
+
+    private func prepared(_ entry: StoredEntry) -> FileWorkspacePreparedEntry {
+        FileWorkspacePreparedEntry(
+            writerID      : writerID,
+            id            : entry.id,
+            name          : entry.name,
+            typeIdentifier: entry.typeIdentifier,
+            ownership     : entry.ownership,
+            identity      : entry.identity,
+            managedName   : entry.managedName,
+            generation    : entry.generation
+        )
     }
 
     /// beginDelivery accepts a prepared value only while its exact entry lifetime is current.

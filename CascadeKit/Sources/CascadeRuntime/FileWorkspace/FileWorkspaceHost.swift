@@ -179,6 +179,13 @@ public actor FileWorkspaceHost {
         }
     }
 
+    /// Prepares every shelf item from the manifest alone, without resolving bookmarks.
+    public func prepareAllItems() async throws -> [PreparedFile] {
+        try await withOpenExclusive {
+            try await self.requireStore().prepareAllItems().map(PreparedFile.init)
+        }
+    }
+
     /// Copies one prepared item to a new destination and removes it only after durable success.
     public func copy(
         _ prepared   : PreparedFile,

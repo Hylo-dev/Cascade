@@ -42,6 +42,8 @@ final class FileShelfController: NotchContextualPage {
     private var admissionInFlight = false
     private var deliveryFailureMessage: String?
     private var started = false
+    /// Set at launch: the visible page is resolved on first display, not before.
+    private var needsPresentationLoad = false
     private var lifecycleGeneration: UInt64 = 0
     private var isStarting = false
     private var loadGeneration: UInt64 = 0
@@ -99,9 +101,20 @@ final class FileShelfController: NotchContextualPage {
                 try? await host.close()
                 return
             }
+            // Launch reads the manifest only. Occupancy (which decides whether
+            // the shelf is the default page) and the whole-deck drag set need no
+            // bookmark; resolving the visible page waits until it is displayed.
+            let prepared = try await host.prepareAllItems()
+            guard generation == lifecycleGeneration, isStarting else {
+                try? await host.close()
+                return
+            }
             isStarting = false
             started = true
-            await reload(cursor: nil, mode: .deck, clearsStatus: true)
+            allPreparedFiles = prepared
+            isOccupied = !prepared.isEmpty
+            needsPresentationLoad = true
+            rebuildPresentation()
         } catch {
             guard generation == lifecycleGeneration, isStarting else { return }
             isStarting = false
@@ -115,6 +128,7 @@ final class FileShelfController: NotchContextualPage {
         loadGeneration &+= 1
         isStarting = false
         started = false
+        needsPresentationLoad = false
         admissionTask?.cancel()
         admissionTask = nil
         interactionTask?.cancel()
@@ -282,6 +296,12 @@ final class FileShelfController: NotchContextualPage {
     }
 
     func makeContentView(in context: NotchContextualPageContext) -> AnyView {
+        // The host builds page content only while the page is on screen, so its
+        // first call is the shelf's first display since launch.
+        if needsPresentationLoad {
+            needsPresentationLoad = false
+            Task { await reload(cursor: nil, mode: .deck, clearsStatus: true) }
+        }
         let clearAllAction: (@MainActor () -> Void)?
         if hoverURLs == nil, isOccupied {
             clearAllAction = { [weak self] in
@@ -437,13 +457,16 @@ final class FileShelfController: NotchContextualPage {
         mode        : FileWorkspaceMode,
         clearsStatus: Bool
     ) async {
-        guard host != nil else { return }
+        guard let host else { return }
+        needsPresentationLoad = false
         loadGeneration &+= 1
         let generation = loadGeneration
         do {
             let loaded = try await loadPage(cursor: cursor)
             guard generation == loadGeneration else { return }
-            let loadedAll = mode == .deck ? try await loadAllPreparedFiles() : nil
+            // Only the visible page resolves bookmarks; the drag set comes from
+            // the manifest instead of re-snapshotting every page, page 1 included.
+            let loadedAll = mode == .deck ? try await host.prepareAllItems() : nil
             guard generation == loadGeneration else { return }
             snapshot = loaded.snapshot
             preparedFiles = loaded.prepared
@@ -487,20 +510,6 @@ final class FileShelfController: NotchContextualPage {
             }
         }
         throw lastError ?? FileWorkspaceError.ioFailure
-    }
-
-    private func loadAllPreparedFiles() async throws -> [PreparedFile] {
-        guard let host else { throw FileWorkspaceError.ioFailure }
-        var cursor: String?
-        var result: [PreparedFile] = []
-        repeat {
-            let page = try await host.snapshot(cursor: cursor)
-            if !page.entries.isEmpty {
-                result += try await host.prepareItems(ids: page.entries.map(\.id))
-            }
-            cursor = page.nextCursor
-        } while cursor != nil
-        return result
     }
 
     private func rebuildPresentation() {
