@@ -7,19 +7,6 @@ import CascadeContracts
 import CascadePresentation
 import Foundation
 
-@MainActor
-protocol AddonPresentationSink: AnyObject {
-    func register(_ widget: any NotchWidget)
-    func unregisterWidget(id: WidgetIdentifier)
-    func present(_ activity: any NotchLiveActivity)
-    func showNotice(_ notice: any NotchTransientNotice)
-    func updateNotice(_ notice: any NotchTransientNotice)
-    func dismissActivity(id: String)
-    func dismissActivities(from sourceID: String)
-}
-
-extension NotchEngine: AddonPresentationSink {}
-
 /// AddonPresentationBridge converts validated, host-owned publication values
 /// into native notch surfaces. It retains no provider, executor, filesystem
 /// path, or transport object.

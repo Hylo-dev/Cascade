@@ -6,13 +6,6 @@
 import CoreGraphics
 import Foundation
 
-/// NotchSizeStoring separates saved display dimensions from a calibration draft.
-@MainActor
-protocol NotchSizeStoring: AnyObject {
-    func size(for displayID: CGDirectDisplayID) -> CGSize?
-    func setSize(_ size: CGSize, for displayID: CGDirectDisplayID)
-}
-
 /// NotchSizePreferences loads once and persists only on an explicit save.
 /// UUIDs preserve a display's settings across runtime display-ID changes.
 /// Identity resolution is cached; morphs and hovers never read preferences.

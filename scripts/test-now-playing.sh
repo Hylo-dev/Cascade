@@ -27,7 +27,8 @@ compiler_options=(
     -emit-module-path "$test_directory/CascadeKit.swiftmodule" \
     "$project_directory/CascadeKit/Sources/CascadeKit/Models/Media/NowPlayingSnapshot.swift" \
     "$project_directory/CascadeKit/Sources/CascadeKit/Models/Media/MediaCommandCapabilities.swift" \
-    "$project_directory/CascadeKit/Sources/CascadeKit/Core/Media/NowPlayingProviding.swift" \
+    "$project_directory/CascadeKit/Sources/CascadeKit/Core/Protocols/NowPlayingProviding.swift" \
+    "$project_directory/CascadeKit/Sources/CascadeKit/Models/Media/Enums/MediaCommand.swift" \
     -o "$test_directory/libCascadeKit.dylib"
 
 /usr/bin/xcrun swiftc "${compiler_options[@]}" \

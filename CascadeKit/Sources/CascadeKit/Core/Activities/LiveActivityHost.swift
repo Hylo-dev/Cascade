@@ -5,31 +5,6 @@
 
 import Foundation
 
-/// ActivitySelection describes the shared live registry independently from any
-/// one display. Compact choices survive notice overrides and expanded ownership.
-struct ActivitySelection {
-    let primary  : (any NotchLiveActivity)?
-    let secondary: (any NotchLiveActivity)?
-    let expanded : (any NotchLiveActivity)?
-    let notice   : (any NotchTransientNotice)?
-}
-
-/// ActivityExpansionSelection distinguishes a closed surface, one requested
-/// live activity, explicit fallback content, and a widget-only opening.
-enum ActivityExpansionSelection: Equatable {
-    case none
-    case activity(String)
-    case fallback
-    case widgets
-}
-
-/// VisibleActivityProjection reports which exact provider instances remain
-/// eligible after applying the coordinator's complete retained-root union.
-struct VisibleActivityProjection {
-    let accepted: [any NotchActivity]
-    let rejected: [any NotchActivity]
-}
-
 /// LiveActivityHost arbitrates finite live sessions and bounded status notices.
 /// Selection is shared state; activation follows the instance-aware union of
 /// roots that displays actually retain. One scheduler owns every deadline.
