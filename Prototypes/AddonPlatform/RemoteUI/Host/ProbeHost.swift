@@ -77,7 +77,7 @@ enum ProbeHost {
             controller.configuration = .init(appExtension: identity, sceneID: "main")
             let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 420, height: 230),
                 styleMask: [.nonactivatingPanel, .titled, .closable], backing: .buffered, defer: false)
-            panel.title = "Cascade — prova scena remota"
+            panel.title = "Cascade — remote scene probe"
             panel.contentViewController = controller
             panel.isFloatingPanel = true
             panel.center()

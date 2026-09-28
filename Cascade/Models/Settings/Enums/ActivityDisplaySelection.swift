@@ -3,6 +3,8 @@
 //  Cascade
 //
 
+import Foundation
+
 enum ActivityDisplaySelection: String, CaseIterable, Identifiable {
 
     case allDisplays
@@ -13,9 +15,9 @@ enum ActivityDisplaySelection: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-            case .allDisplays   : "Tutti gli schermi"
-            case .focusedDisplay: "Segui il focus"
-            case .fixedDisplay  : "Schermo specifico"
+            case .allDisplays   : String(localized: "All Displays")
+            case .focusedDisplay: String(localized: "Follow Focus")
+            case .fixedDisplay  : String(localized: "Specific Display")
         }
     }
 }

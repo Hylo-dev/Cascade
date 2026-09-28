@@ -611,7 +611,7 @@ final class CascadeServices {
     func previewBluetooth() {
         let event = BluetoothConnectionEvent(
             deviceID   : "demo-headphones",
-            name       : "AirPods · Anteprima",
+            name       : String(localized: "AirPods · Preview"),
             symbolName : "airpodspro",
             isConnected: true,
             battery    : BluetoothBatterySnapshot(

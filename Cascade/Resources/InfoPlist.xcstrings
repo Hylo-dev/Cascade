@@ -1,0 +1,60 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "NSAppleEventsUsageDescription" : {
+      "comment" : "Automation permission prompt for Music and Spotify.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cascade reads the track that is playing and controls Apple Music and Spotify from the notch."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cascade legge il brano in riproduzione e controlla Apple Music e Spotify dal notch."
+          }
+        }
+      }
+    },
+    "NSAudioCaptureUsageDescription" : {
+      "comment" : "System audio capture permission prompt for the music bars.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cascade analyzes the audio that is playing to move the music bars in the notch. The audio is never recorded or saved."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cascade analizza l’audio riprodotto per muovere le barre musicali nel notch. L’audio non viene registrato né salvato."
+          }
+        }
+      }
+    },
+    "NSBluetoothAlwaysUsageDescription" : {
+      "comment" : "Bluetooth permission prompt for connection notices.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cascade shows the connection notices of your Bluetooth devices in the notch."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cascade mostra nel notch gli avvisi di connessione dei tuoi dispositivi Bluetooth."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

@@ -14,28 +14,28 @@ struct CascadeMenu: View {
     var services: CascadeServices
 
     var body: some View {
-        Button("Impostazioni…") {
+        Button("Settings…") {
             Task { @MainActor in services.openSettings() }
         }
         .keyboardShortcut(",")
 
         Divider()
 
-        Toggle("Spotlight dal notch", isOn: $services.spotlightEnabled)
+        Toggle("Spotlight from the Notch", isOn: $services.spotlightEnabled)
 
-        Button("Prova il distacco Liquid Glass") {
+        Button("Test Liquid Glass Detachment") {
             services.previewSpotlightDroplet(from: .global)
         }
 
         if services.spotlightEnabled {
-            Button("Apri Spotlight dal notch") { services.openSpotlight() }
+            Button("Open Spotlight from the Notch") { services.openSpotlight() }
 
             Text(services.spotlightStatus)
         }
 
         Divider()
 
-        Button("Regola dimensioni del notch…") {
+        Button("Adjust Notch Size…") {
             // Let AppKit finish dismissing the menu before assigning key focus
             // to the calibration panel.
             Task { @MainActor in services.beginSizeCalibration(from: .global) }
@@ -44,134 +44,134 @@ struct CascadeMenu: View {
 
         Divider()
 
-        Toggle("Feedback aptico in hover", isOn: $services.hapticsEnabled)
+        Toggle("Haptic Feedback on Hover", isOn: $services.hapticsEnabled)
 
-        Toggle("Mostra contenuti sensibili", isOn: $services.sensitiveContentVisible)
+        Toggle("Show Sensitive Content", isOn: $services.sensitiveContentVisible)
 
-        Toggle("Avvisi Bluetooth", isOn: $services.bluetoothEnabled)
+        Toggle("Bluetooth Alerts", isOn: $services.bluetoothEnabled)
 
         if case .unavailable = services.bluetoothStatus {
-            Text("Monitor Bluetooth non disponibile su questo sistema.")
+            Text("Bluetooth monitoring isn’t available on this system.")
         }
 
-        Toggle("Sostituisci avvisi Bluetooth nativi", isOn: $services.nativeReplacementEnabled)
+        Toggle("Replace Native Bluetooth Alerts", isOn: $services.nativeReplacementEnabled)
             .disabled(!services.bluetoothEnabled)
 
         if services.bluetoothEnabled && services.nativeReplacementEnabled {
             switch services.suppressionStatus {
                 case .permissionRequired:
-                    Button("Consenti Accessibilità…") { services.requestAccessibility() }
-                    Text("Accessibilità necessaria per chiudere gli avvisi nativi.")
+                    Button("Allow Accessibility…") { services.requestAccessibility() }
+                    Text("Accessibility is required to dismiss native alerts.")
 
                 case .observing:
-                    Text("Monitoraggio degli avvisi nativi attivo")
-                    Text("Il banner nativo può comparire brevemente.")
+                    Text("Native alert monitoring is on")
+                    Text("The native banner may appear briefly.")
 
                 case .unsupported, .failure:
-                    Text("Sostituzione non disponibile su questo sistema.")
-                    Button("Riprova") { services.refreshNativeReplacement() }
+                    Text("Replacement isn’t available on this system.")
+                    Button("Try Again") { services.refreshNativeReplacement() }
 
                 case .stopped:
-                    Text("Sostituzione degli avvisi non attiva")
+                    Text("Alert replacement is off")
             }
         }
 
         Divider()
 
-        Toggle("Avvisi volume nel notch", isOn: $services.volumeEnabled)
+        Toggle("Volume Alerts in the Notch", isOn: $services.volumeEnabled)
 
         if services.volumeEnabled {
             switch services.volumeStatus {
                 case .active:
-                    Text("Tasti volume reindirizzati al notch")
+                    Text("Volume keys redirected to the notch")
 
                 case .permissionRequired:
-                    Button("Consenti Accessibilità per i tasti volume…") {
+                    Button("Allow Accessibility for Volume Keys…") {
                         services.requestVolumeAccessibility()
                     }
-                    Text("Senza permesso resta attivo l'indicatore di macOS.")
-                    Button("Ricontrolla il permesso volume") { services.refreshVolumePermissions() }
+                    Text("Without permission, the macOS indicator stays on.")
+                    Button("Check Volume Permission Again") { services.refreshVolumePermissions() }
 
                 case .unsupportedOutput:
-                    Text("Questa uscita audio gestisce il volume con macOS.")
+                    Text("This audio output handles volume through macOS.")
 
                 case .unavailable:
-                    Text("Indicatore volume di macOS attivo")
-                    Button("Riprova sostituzione volume") { services.refreshVolumePermissions() }
+                    Text("macOS volume indicator is on")
+                    Button("Retry Volume Replacement") { services.refreshVolumePermissions() }
 
                 case .starting:
-                    Text("Attivazione avvisi volume…")
+                    Text("Turning on volume alerts…")
                 case .stopped:
-                    Text("Avvisi volume non attivi")
+                    Text("Volume alerts are off")
             }
         }
 
-        Button("Prova avviso volume") { services.previewVolume() }
+        Button("Test Volume Alert") { services.previewVolume() }
 
         Divider()
 
-        Toggle("Avvisi ricarica nel notch", isOn: $services.chargingEnabled)
+        Toggle("Charging Alerts in the Notch", isOn: $services.chargingEnabled)
 
-        Menu("Prova avviso ricarica") {
+        Menu("Test Charging Alert") {
 
-            Button("Normale · verde") { services.previewCharging(lowPower: false) }
+            Button("Normal · Green") { services.previewCharging(lowPower: false) }
 
-            Button("Risparmio energetico · giallo") { services.previewCharging(lowPower: true) }
+            Button("Low Power Mode · Yellow") { services.previewCharging(lowPower: true) }
         }
 
         Divider()
 
-        Toggle("Live Activity musicale", isOn: $services.musicEnabled)
+        Toggle("Music Live Activity", isOn: $services.musicEnabled)
 
         if services.musicEnabled {
             switch services.musicStatus {
                 case .permissionRequired(let message):
                     Text(message)
-                    Button("Consenti accesso a Music e Spotify…") { services.requestMusicAccess() }
+                    Button("Allow Access to Music and Spotify…") { services.requestMusicAccess() }
 
                 case .unavailable(let message):
                     Text(message)
-                    Button("Riprova accesso al player…") { services.requestMusicAccess() }
+                    Button("Retry Player Access…") { services.requestMusicAccess() }
 
                 case .monitoring:
-                    Text("Apple Music e Spotify")
-                    Button("Autorizza un altro player aperto…") { services.requestMusicAccess() }
+                    Text("Apple Music and Spotify")
+                    Button("Authorize Another Open Player…") { services.requestMusicAccess() }
 
                 case .stopped:
-                    Text("Live Activity musicale non attiva")
+                    Text("Music Live Activity is off")
             }
 
-            Toggle("Barre dall’audio riprodotto", isOn: $services.audioVisualizerEnabled)
+            Toggle("Bars from Playing Audio", isOn: $services.audioVisualizerEnabled)
 
             if services.audioVisualizerEnabled {
                 switch services.audioSpectrumStatus {
                     case .capturing:
-                        Text("Visualizzatore audio attivo")
+                        Text("Audio visualizer is on")
 
                     case .permissionRequired:
-                        Button("Consenti audio di sistema nelle Impostazioni…") {
+                        Button("Allow System Audio in System Settings…") {
                             services.openAudioCaptureSettings()
                         }
-                        Button("Ricontrolla il permesso audio") { services.retryAudioCapture() }
+                        Button("Check Audio Permission Again") { services.retryAudioCapture() }
 
                     case .unsupported:
-                        Text("Le barre richiedono macOS 14.2 o successivo.")
+                        Text("The bars require macOS 14.2 or later.")
 
                     case .unavailable:
-                        Text("Audio non disponibile per il visualizzatore")
-                        Button("Riprova visualizzatore audio") { services.retryAudioCapture() }
+                        Text("Audio isn’t available to the visualizer")
+                        Button("Retry Audio Visualizer") { services.retryAudioCapture() }
 
                     case .stopped:
-                        Text("Le barre si attivano durante la riproduzione.")
+                        Text("The bars turn on during playback.")
                 }
             }
         }
 
-        Button("Prova avviso AirPods") { services.previewBluetooth() }
+        Button("Test AirPods Alert") { services.previewBluetooth() }
 
         Divider()
 
-        Button("Esci da Cascade") { NSApp.terminate(nil) }
+        Button("Quit Cascade") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
     }
 }

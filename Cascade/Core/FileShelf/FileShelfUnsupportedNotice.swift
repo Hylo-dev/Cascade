@@ -16,13 +16,13 @@ final class FileShelfUnsupportedNotice: NotchTransientNotice {
     let displayDuration          : TimeInterval = 4
     let privacy                  : NotchActivityPrivacy = .standard
     let compactPreferredSideWidth: CGFloat? = 148
-    let accessibilityLabel        = "Solo file locali. Cartelle e file promessi non sono supportati."
+    let accessibilityLabel        = String(localized: "Local files only. Folders and promised files aren’t supported.")
 
     init(revision: UInt64) { contentRevision = revision }
 
     func makeCompactLeadingView(in context: NotchActivityViewContext) -> AnyView {
         AnyView(
-            Label("Solo file locali", systemImage: "exclamationmark.triangle.fill")
+            Label("Local files only", systemImage: "exclamationmark.triangle.fill")
                 .font(.callout.weight(.semibold))
                 .foregroundStyle(.white)
                 .lineLimit(1)
@@ -34,7 +34,7 @@ final class FileShelfUnsupportedNotice: NotchTransientNotice {
 
     func makeCompactTrailingView(in context: NotchActivityViewContext) -> AnyView {
         AnyView(
-            Text("Cartelle e file promessi non supportati")
+            Text("Folders and promised files not supported")
                 .font(.caption)
                 .foregroundStyle(.white)
                 .lineLimit(2)

@@ -344,15 +344,15 @@ struct SettingsTests {
     @Test
     func searchFindsControlsByDescriptionAndPageAcrossWhitespace() {
         #expect(CascadeSetting.music.matches(" spotify "))
-        #expect(CascadeSetting.bluetoothPreview.matches("Dev auricolari"))
-        #expect(!CascadeSetting.bluetooth.matches("Dev auricolari"))
+        #expect(CascadeSetting.bluetoothPreview.matches("Dev earbuds"))
+        #expect(!CascadeSetting.bluetooth.matches("Dev earbuds"))
         #expect(CascadeSetting.haptics.matches("trackpad\nfeedback"))
-        #expect(CascadeSetting.displayStyle.matches("schermo notch"))
+        #expect(CascadeSetting.displayStyle.matches("screen notch"))
         #expect(CascadeSetting.displayStyle.matches("display Dynamic Island"))
         #expect(CascadeSetting.displayStyle.matches("style"))
-        #expect(CascadeSetting.activityDisplays.matches("attività schermi"))
+        #expect(CascadeSetting.activityDisplays.matches("activities displays"))
         #expect(CascadeSetting.activityDisplays.matches("activity"))
-        #expect(!CascadeSetting.music.matches("inesistente"))
+        #expect(!CascadeSetting.music.matches("nonexistent"))
     }
 
     @MainActor

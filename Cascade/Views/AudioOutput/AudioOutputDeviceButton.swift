@@ -36,12 +36,12 @@ final class AudioOutputDeviceButton: NSButton {
         toolTip                         = device.name
         image = isCurrent ? NSImage(
             systemSymbolName        : "checkmark",
-            accessibilityDescription: "Selezionata"
+            accessibilityDescription: String(localized: "Selected")
         ) : NSImage(size: CGSize(width: 14, height: 14))
 
         setContentCompressionResistancePriority(.required, for: .horizontal)
         setAccessibilityLabel(device.name)
-        setAccessibilityValue(isCurrent ? "Selezionata" : "")
+        setAccessibilityValue(isCurrent ? String(localized: "Selected") : "")
     }
 
     required init?(coder: NSCoder) { nil }

@@ -257,6 +257,7 @@
 			knownRegions = (
 				en,
 				Base,
+				it,
 			);
 			mainGroup = 0403125E2FE4355A00BA9823;
 			minimizedProjectReferenceProxies = 1;
@@ -505,8 +506,8 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/Cascade-Info.plist";
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Cascade legge il brano in riproduzione e controlla Apple Music e Spotify dal notch.";
-				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Cascade mostra nel notch gli avvisi di connessione dei tuoi dispositivi Bluetooth.";
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Cascade reads the track that is playing and controls Apple Music and Spotify from the notch.";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Cascade shows the connection notices of your Bluetooth devices in the notch.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -540,8 +541,8 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/Cascade-Info.plist";
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Cascade legge il brano in riproduzione e controlla Apple Music e Spotify dal notch.";
-				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Cascade mostra nel notch gli avvisi di connessione dei tuoi dispositivi Bluetooth.";
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Cascade reads the track that is playing and controls Apple Music and Spotify from the notch.";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Cascade shows the connection notices of your Bluetooth devices in the notch.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

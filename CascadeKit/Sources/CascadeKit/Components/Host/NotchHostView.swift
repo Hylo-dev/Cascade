@@ -138,12 +138,12 @@ final class NotchHostView: NSView {
 
         settingsButton.image            = NSImage(
             systemSymbolName        : "gearshape",
-            accessibilityDescription: "Impostazioni di Cascade"
+            accessibilityDescription: String(localized: "Cascade Settings", bundle: .module)
         )
         settingsButton.imagePosition    = .imageOnly
         settingsButton.isBordered       = false
         settingsButton.contentTintColor = .lightGray
-        settingsButton.toolTip          = "Impostazioni…"
+        settingsButton.toolTip          = String(localized: "Settings…", bundle: .module)
         settingsButton.setAccessibilityIdentifier("notch.settings")
         settingsButton.target   = self
         settingsButton.action   = #selector(openSettings)
@@ -332,7 +332,7 @@ final class NotchHostView: NSView {
                     .allowsHitTesting(false)
             }
             .buttonStyle(.plain)
-            .accessibilityHint("Espandi attività")
+            .accessibilityHint(Text("Expand activity", bundle: .module))
         )
 
         update(

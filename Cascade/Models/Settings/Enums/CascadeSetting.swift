@@ -41,45 +41,45 @@ enum CascadeSetting: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-            case .size            : "Dimensioni del notch hardware"
-            case .haptics         : "Feedback aptico"
-            case .privacy         : "Mostra contenuti sensibili"
-            case .displayStyle    : "Stile sugli schermi"
-            case .activityDisplays: "Mostra Live Activities"
-            case .volumePreview   : "Avviso volume"
-            case .chargingPreview : "Avviso ricarica"
-            case .lowPowerPreview : "Risparmio energetico"
-            case .bluetoothPreview: "Avviso AirPods"
-            case .spotlightPreview: "Distacco Spotlight"
-            case .music           : "Musica"
-            case .visualizer      : "Visualizzatore audio"
+            case .size            : String(localized: "Hardware notch size")
+            case .haptics         : String(localized: "Haptic feedback")
+            case .privacy         : String(localized: "Show sensitive content")
+            case .displayStyle    : String(localized: "Display style")
+            case .activityDisplays: String(localized: "Show Live Activities")
+            case .volumePreview   : String(localized: "Volume alert")
+            case .chargingPreview : String(localized: "Charging alert")
+            case .lowPowerPreview : String(localized: "Low Power Mode")
+            case .bluetoothPreview: String(localized: "AirPods alert")
+            case .spotlightPreview: String(localized: "Spotlight detachment")
+            case .music           : String(localized: "Music")
+            case .visualizer      : String(localized: "Audio visualizer")
             case .bluetooth       : "Bluetooth"
-            case .nativeBluetooth : "Sostituisci avvisi di macOS"
+            case .nativeBluetooth : String(localized: "Replace macOS alerts")
             case .volume          : "Volume"
-            case .charging        : "Ricarica"
+            case .charging        : String(localized: "Charging")
             case .spotlight       : "Spotlight"
         }
     }
 
     var subtitle: String {
         switch self {
-            case .size            : "Allinea il notch alla fotocamera del tuo Mac."
-            case .haptics         : "Un tocco del trackpad quando il notch si espande."
-            case .privacy         : "Rendi visibili anche le attività private."
-            case .displayStyle    : "Scegli Notch o Dynamic Island per ogni display senza taglio."
-            case .activityDisplays: "Scegli su quali schermi mostrare le attività."
-            case .volumePreview   : "Mostra un’anteprima senza cambiare il volume."
-            case .chargingPreview : "Anteprima della batteria in carica."
-            case .lowPowerPreview : "Anteprima della ricarica in modalità risparmio."
-            case .bluetoothPreview: "Simula la connessione degli auricolari."
-            case .spotlightPreview: "Prova l’animazione Liquid Glass."
-            case .music           : "Riproduzione e controlli di Apple Music e Spotify."
-            case .visualizer      : "Anima le barre con l’audio in riproduzione."
-            case .bluetooth       : "Mostra connessione e batteria degli accessori."
-            case .nativeBluetooth : "Usa il notch per gli avvisi Bluetooth."
-            case .volume          : "Mostra il livello quando premi i tasti volume."
-            case .charging        : "Mostra un avviso quando colleghi l’alimentazione."
-            case .spotlight       : "Apri la ricerca di sistema dal notch."
+            case .size            : String(localized: "Align the notch with your Mac’s camera.")
+            case .haptics         : String(localized: "A trackpad tap when the notch expands.")
+            case .privacy         : String(localized: "Show private activities too.")
+            case .displayStyle    : String(localized: "Choose Notch or Dynamic Island for each display without a notch.")
+            case .activityDisplays: String(localized: "Choose which displays show activities.")
+            case .volumePreview   : String(localized: "Show a preview without changing the volume.")
+            case .chargingPreview : String(localized: "Preview the battery while charging.")
+            case .lowPowerPreview : String(localized: "Preview charging in Low Power Mode.")
+            case .bluetoothPreview: String(localized: "Simulate earbuds connecting.")
+            case .spotlightPreview: String(localized: "Try the Liquid Glass animation.")
+            case .music           : String(localized: "Playback and controls for Apple Music and Spotify.")
+            case .visualizer      : String(localized: "Animate the bars with the audio that’s playing.")
+            case .bluetooth       : String(localized: "Show connection and battery for accessories.")
+            case .nativeBluetooth : String(localized: "Use the notch for Bluetooth alerts.")
+            case .volume          : String(localized: "Show the level when you press the volume keys.")
+            case .charging        : String(localized: "Show an alert when you connect power.")
+            case .spotlight       : String(localized: "Open system search from the notch.")
         }
     }
 
@@ -92,8 +92,8 @@ enum CascadeSetting: String, CaseIterable, Identifiable {
 
     private var searchKeywords: String {
         switch self {
-            case .displayStyle    : "schermo display notch Dynamic Island style"
-            case .activityDisplays: "attività schermo display activity"
+            case .displayStyle    : String(localized: "screen display notch Dynamic Island style")
+            case .activityDisplays: String(localized: "activity screen display")
             default               : ""
         }
     }

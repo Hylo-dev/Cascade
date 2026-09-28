@@ -153,7 +153,7 @@ public struct CascadeFileWorkspace: View {
                         deckHeight: deckHeight - 17
                     )
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Apri elenco file")
+                    .accessibilityLabel(Text("Open File List", bundle: .module))
                     let overflow = FileWorkspaceLayout.overflowCount(
                         totalCount: presentation.snapshot.totalCount
                     )
@@ -161,7 +161,7 @@ public struct CascadeFileWorkspace: View {
                         Text("+\(overflow)")
                             .font(.caption.weight(.semibold).monospacedDigit())
                             .foregroundStyle(.secondary)
-                            .accessibilityLabel("Altri \(overflow) file")
+                            .accessibilityLabel(Text("\(overflow) more files", bundle: .module))
                             .opacity(deckHasFanned || reduceMotion ? 1 : 0)
                     }
                 }
@@ -241,7 +241,7 @@ public struct CascadeFileWorkspace: View {
             HStack {
                 actionButton(
                     presentation.action(for: .closeList),
-                    label : "Torna al ripiano",
+                    label : String(localized: "Back to Shelf", bundle: .module),
                     symbol: "chevron.left"
                 )
                 Spacer()
@@ -268,7 +268,7 @@ public struct CascadeFileWorkspace: View {
                         if presentation.snapshot.nextCursor != nil {
                             actionButton(
                                 presentation.action(for: .nextPage),
-                                label : "Carica altri file",
+                                label : String(localized: "Load More Files", bundle: .module),
                                 symbol: "chevron.right"
                             )
                             .frame(width: 42, height: 82)
@@ -466,7 +466,7 @@ public struct CascadeFileWorkspace: View {
                         .font(.caption.weight(.semibold))
                         .symbolRenderingMode(.palette)
                         .foregroundStyle(.white, Color.accentColor)
-                        .accessibilityLabel("Selezionato")
+                        .accessibilityLabel(Text("Selected", bundle: .module))
                 }
             }
             if showsName {
@@ -570,11 +570,11 @@ public struct CascadeFileWorkspace: View {
     @ViewBuilder
     private func conversionButton(iconOnly: Bool) -> some View {
         if let action = presentation.action(for: .convert) {
-            workspaceButton(label: "converti", symbol: "arrow.triangle.2.circlepath", tint: .blue, iconOnly: iconOnly) {
+            workspaceButton(label: String(localized: "convert", bundle: .module), symbol: "arrow.triangle.2.circlepath", tint: .blue, iconOnly: iconOnly) {
                 dispatch(action)
             }
         } else if let explanation = conversionUnavailableExplanation {
-            workspaceButton(label: "converti", symbol: "arrow.triangle.2.circlepath", tint: .blue, iconOnly: iconOnly) {}
+            workspaceButton(label: String(localized: "convert", bundle: .module), symbol: "arrow.triangle.2.circlepath", tint: .blue, iconOnly: iconOnly) {}
                 .disabled(true)
                 .help(explanation)
                 .accessibilityHint(explanation)
@@ -592,16 +592,16 @@ public struct CascadeFileWorkspace: View {
         conversionButton(iconOnly: iconOnly)
             .matchedGeometryEffect(id: "file-workspace-convert", in: fileIdentity)
         if let rename {
-            workspaceButton(label: "rename", symbol: "pencil", tint: .orange, iconOnly: iconOnly, action: rename)
+            workspaceButton(label: String(localized: "rename", bundle: .module), symbol: "pencil", tint: .orange, iconOnly: iconOnly, action: rename)
                 .disabled(renameDisabled)
-                .help("Rinomina il file selezionato")
+                .help(Text("Rename the selected file", bundle: .module))
                 .matchedGeometryEffect(id: "file-workspace-rename", in: fileIdentity)
         }
         if let clearAll {
-            workspaceButton(label: "svuota", symbol: "trash", tint: .red, iconOnly: iconOnly, action: clearAll)
+            workspaceButton(label: String(localized: "clear", bundle: .module), symbol: "trash", tint: .red, iconOnly: iconOnly, action: clearAll)
                 .disabled(clearAllDisabled)
-                .help("Rimuovi tutti i file dal ripiano")
-                .accessibilityHint("I file originali restano al loro posto")
+                .help(Text("Remove all files from the shelf", bundle: .module))
+                .accessibilityHint(Text("The original files stay where they are", bundle: .module))
                 .matchedGeometryEffect(id: "file-workspace-clear", in: fileIdentity)
         }
     }
@@ -691,17 +691,17 @@ public struct CascadeFileWorkspace: View {
     @ViewBuilder
     private func entryContextActions(_ entry: FileWorkspaceEntry) -> some View {
         if let preview = presentation.action(for: .preview, entryID: entry.id) {
-            Button("Anteprima") { dispatch(preview) }
+            Button(String(localized: "Quick Look", bundle: .module)) { dispatch(preview) }
         }
         if let reveal = presentation.action(for: .reveal, entryID: entry.id) {
-            Button("Mostra nel Finder") { dispatch(reveal) }
+            Button(String(localized: "Show in Finder", bundle: .module)) { dispatch(reveal) }
         }
         if let relink = presentation.action(for: .relink, entryID: entry.id) {
-            Button("Ricollega") { dispatch(relink) }
+            Button(String(localized: "Relink", bundle: .module)) { dispatch(relink) }
         }
         if let remove = presentation.action(for: .remove, entryID: entry.id) {
             Divider()
-            Button("Rimuovi") { dispatch(remove) }
+            Button(String(localized: "Remove", bundle: .module)) { dispatch(remove) }
         }
     }
 
@@ -728,9 +728,9 @@ public struct CascadeFileWorkspace: View {
 
     private func availabilityLabel(_ availability: FileAvailability) -> String {
         switch availability {
-        case .available: "Disponibile"
-        case .unavailable: "Non disponibile"
-        case .receiving: "In ricezione"
+        case .available  : String(localized: "Available", bundle: .module)
+        case .unavailable: String(localized: "Unavailable", bundle: .module)
+        case .receiving  : String(localized: "Receiving", bundle: .module)
         }
     }
 

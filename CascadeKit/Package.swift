@@ -16,6 +16,7 @@ import PackageDescription
 /// `nonisolated` so the background-worker path can still use them.
 let package = Package(
     name: "CascadeKit",
+    defaultLocalization: "en",
     platforms: [
         .macOS(.v14)  // Floor: Sonoma. @Observable, CADisplayLink, safeAreaInsets.
     ],
@@ -57,6 +58,7 @@ let package = Package(
         .target(
             name: "CascadePresentation",
             dependencies: ["CascadeContracts"],
+            resources: [.process("Resources")],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .target(
@@ -93,6 +95,7 @@ let package = Package(
         .target(
             name: "CascadeKit",
             dependencies: ["CascadeContracts", "CascadePresentation"],
+            resources: [.process("Resources")],
             swiftSettings: [
                 .defaultIsolation(MainActor.self)
             ]

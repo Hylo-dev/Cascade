@@ -24,7 +24,9 @@ final class MediaLiveActivity: NotchLiveActivity {
     var compactPreferredSideWidth: CGFloat? { 40 }
 
     var accessibilityLabel: String {
-        "\(snapshot.title), di \(snapshot.artist), \(snapshot.isPlaying ? "in riproduzione" : "in pausa")"
+        snapshot.isPlaying
+            ? String(localized: "\(snapshot.title), by \(snapshot.artist), playing")
+            : String(localized: "\(snapshot.title), by \(snapshot.artist), paused")
     }
 
     private var snapshot: NowPlayingSnapshot

@@ -18,7 +18,7 @@ final class FileShelfController: NotchContextualPage {
     let id                 = "cascade.file-shelf"
     /// Match the ordinary Music Live Activity instead of growing the notch for the shelf.
     let contentHeight     : CGFloat = 144
-    let accessibilityLabel = "Ripiano"
+    let accessibilityLabel = String(localized: "Shelf")
 
     var keepsExpandedPresentation: Bool { false }
 
@@ -183,7 +183,7 @@ final class FileShelfController: NotchContextualPage {
             hoverIDs  = bounded.reduce(into: [:]) { result, url in
                 result[url] = hoverIDs[url] ?? UUID()
             }
-            statusMessage = "Rilascia per aggiungere"
+            statusMessage = String(localized: "Drop to add")
             rebuildPresentation()
         } else {
             guard !admissionInFlight, hoverURLs != nil else { return }
@@ -201,7 +201,7 @@ final class FileShelfController: NotchContextualPage {
         clearDeliveryFailure()
         hoverURLs = nil
         hoverIDs.removeAll()
-        statusMessage = "Sono accettati solo file locali regolari, non cartelle o file promessi."
+        statusMessage = String(localized: "Only regular local files are accepted, not folders or promised files.")
         rebuildPresentation()
     }
 
@@ -219,7 +219,7 @@ final class FileShelfController: NotchContextualPage {
             hoverIDs = urls.reduce(into: [:]) { result, url in result[url] = UUID() }
         }
         hoverURLs     = urls
-        statusMessage = "Aggiunta in corso…"
+        statusMessage = String(localized: "Adding…")
         rebuildPresentation()
 
         admissionTask = Task { [weak self] in await self?.acceptRegularFiles(urls) }
@@ -270,7 +270,7 @@ final class FileShelfController: NotchContextualPage {
 
         clearDeliveryFailure()
         isClearing    = true
-        statusMessage = "Svuotamento in corso…"
+        statusMessage = String(localized: "Clearing…")
         rebuildPresentation()
 
         let generation = lifecycleGeneration
@@ -439,7 +439,7 @@ final class FileShelfController: NotchContextualPage {
                     )
                 )
             },
-            conversionUnavailableExplanation: "Conversione non ancora disponibile",
+            conversionUnavailableExplanation: String(localized: "Conversion not available yet"),
             clearAll                        : clearAllAction,
             clearAllDisabled                : isClearing || admissionInFlight,
             focusedEntryID                  : focusedEntryID,
@@ -466,11 +466,11 @@ final class FileShelfController: NotchContextualPage {
                                 ? "arrow.down.doc.fill"
                                 : hoverURLs == nil ? "tray.and.arrow.down" : "tray.and.arrow.down.fill",
                             title : admissionInFlight
-                                ? "Aggiunta in corso…"
-                                : hoverURLs == nil ? "Trascina qui i file" : "Rilascia per aggiungere"
+                                ? String(localized: "Adding…")
+                                : hoverURLs == nil ? String(localized: "Drag files here") : String(localized: "Drop to add")
                         )
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .accessibilityHint("Rilascia file locali regolari per aggiungerli al ripiano")
+                        .accessibilityHint("Drop regular local files to add them to the shelf")
                     }
                 } else if let workspace {
                     workspace
@@ -481,7 +481,7 @@ final class FileShelfController: NotchContextualPage {
                     Text(statusMessage)
                         .font(.caption2)
                         .foregroundStyle(
-                            statusMessage == "Rilascia per aggiungere" ? Color.secondary : Color.orange
+                            statusMessage == String(localized: "Drop to add") ? Color.secondary : Color.orange
                         )
                         .lineLimit(1)
                         .help(statusMessage)
@@ -624,7 +624,7 @@ final class FileShelfController: NotchContextualPage {
             if displayedMode == .deck, !displayed.entries.isEmpty {
                 append(
                     .openList,
-                    label: "Apri elenco file",
+                    label: String(localized: "Open File List"),
                     local: .openList,
                     to   : &bindings,
                     map  : &localActions
@@ -632,7 +632,7 @@ final class FileShelfController: NotchContextualPage {
             } else if displayedMode == .list {
                 append(
                     .closeList,
-                    label: "Chiudi elenco",
+                    label: String(localized: "Close List"),
                     local: .closeList,
                     to   : &bindings,
                     map  : &localActions
@@ -640,7 +640,7 @@ final class FileShelfController: NotchContextualPage {
                 if let cursor = displayed.nextCursor {
                     append(
                         .nextPage,
-                        label: "Pagina successiva",
+                        label: String(localized: "Next Page"),
                         local: .nextPage(cursor),
                         to   : &bindings,
                         map  : &localActions
@@ -651,7 +651,7 @@ final class FileShelfController: NotchContextualPage {
                     append(
                         .select,
                         entry: entry,
-                        label: "Seleziona \(entry.name)",
+                        label: String(localized: "Select \(entry.name)"),
                         local: .select(entry.id),
                         to   : &bindings,
                         map  : &localActions
@@ -660,7 +660,7 @@ final class FileShelfController: NotchContextualPage {
                         append(
                             .remove,
                             entry: entry,
-                            label: "Rimuovi \(entry.name)",
+                            label: String(localized: "Remove \(entry.name)"),
                             local: .remove(entry.id),
                             to   : &bindings,
                             map  : &localActions
@@ -670,7 +670,7 @@ final class FileShelfController: NotchContextualPage {
                         append(
                             .preview,
                             entry: entry,
-                            label: "Anteprima \(entry.name)",
+                            label: String(localized: "Quick Look \(entry.name)"),
                             local: .preview(entry.id),
                             to   : &bindings,
                             map  : &localActions
@@ -678,7 +678,7 @@ final class FileShelfController: NotchContextualPage {
                         append(
                             .reveal,
                             entry: entry,
-                            label: "Mostra \(entry.name) nel Finder",
+                            label: String(localized: "Show \(entry.name) in Finder"),
                             local: .reveal(entry.id),
                             to   : &bindings,
                             map  : &localActions
@@ -687,7 +687,7 @@ final class FileShelfController: NotchContextualPage {
                         append(
                             .relink,
                             entry: entry,
-                            label: "Ricollega \(entry.name)",
+                            label: String(localized: "Relink \(entry.name)…"),
                             local: .relink(entry.id),
                             to   : &bindings,
                             map  : &localActions
@@ -708,7 +708,7 @@ final class FileShelfController: NotchContextualPage {
             )
             actions = localActions
         } catch {
-            statusMessage = "Il ripiano non può essere mostrato."
+            statusMessage = String(localized: "The shelf can’t be shown.")
         }
 
         contentRevision &+= 1
@@ -774,7 +774,7 @@ final class FileShelfController: NotchContextualPage {
     ) {
         guard mode == .list, snapshot.entries.contains(where: { $0.id == entryID }) else { return }
 
-        if statusMessage == "Seleziona un file da rinominare" { statusMessage = nil }
+        if statusMessage == String(localized: "Select a file to rename") { statusMessage = nil }
         switch interaction {
             case .click(let modifiers):
                 select(entryID, extendingRange: modifiers.contains(.shift))
@@ -816,7 +816,7 @@ final class FileShelfController: NotchContextualPage {
         if mode == .deck {
             mode           = .list
             focusedEntryID = snapshot.entries.first?.id
-            statusMessage  = "Seleziona un file da rinominare"
+            statusMessage  = String(localized: "Select a file to rename")
             rebuildPresentation()
             return
         }
@@ -832,10 +832,10 @@ final class FileShelfController: NotchContextualPage {
         else { return }
 
         let alert = NSAlert()
-        alert.messageText     = "Rinomina file"
-        alert.informativeText = "Il nome verrà modificato anche nel Finder."
-        alert.addButton(withTitle: "Rinomina")
-        alert.addButton(withTitle: "Annulla")
+        alert.messageText     = String(localized: "Rename File")
+        alert.informativeText = String(localized: "The name will also change in Finder.")
+        alert.addButton(withTitle: String(localized: "Rename"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
 
         let field = NSTextField(string: entry.name)
         field.frame = CGRect(
@@ -1000,7 +1000,7 @@ final class FileShelfController: NotchContextualPage {
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories    = false
         panel.canChooseFiles          = true
-        panel.message                 = "Scegli il file da ricollegare"
+        panel.message                 = String(localized: "Choose the file to relink")
         guard await panel.begin() == .OK, let url = panel.url else { return }
 
         do {
@@ -1088,13 +1088,13 @@ final class FileShelfController: NotchContextualPage {
 
     private static func message(for error: any Error) -> String {
         switch error as? FileWorkspaceError {
-            case .unsupported: "Il file non è supportato."
-            case .unavailable: "Il file non è disponibile. Puoi ricollegarlo o rimuoverlo."
-            case .permissionDenied: "Cascade non dispone più del permesso per questo file."
-            case .quotaExceeded: "Il ripiano non dispone di spazio sufficiente."
-            case .staleRevision: "Il ripiano è cambiato. Riprova."
-            case .interrupted: "L’operazione è stata interrotta."
-            case .ioFailure, .none: "Impossibile completare l’operazione sul file."
+            case .unsupported: String(localized: "The file isn’t supported.")
+            case .unavailable: String(localized: "The file isn’t available. You can relink or remove it.")
+            case .permissionDenied: String(localized: "Cascade no longer has permission to access this file.")
+            case .quotaExceeded: String(localized: "The shelf doesn’t have enough space.")
+            case .staleRevision: String(localized: "The shelf changed. Try again.")
+            case .interrupted: String(localized: "The operation was interrupted.")
+            case .ioFailure, .none: String(localized: "The file operation couldn’t be completed.")
         }
     }
 

@@ -48,14 +48,14 @@ private struct FileShelfDesignPreview: View {
     private var scrollCloseDirection = FileShelfScrollDirection.conventionalBack
 
     private static let samples: [FileWorkspaceEntry] = [
-        ("Relazione.pdf",  "com.adobe.pdf"),
-        ("Fotografia.png", "public.png"),
-        ("Demo.mp3",       "public.mp3"),
-        ("Archivio.zip",   "public.zip"),
-        ("Filmato.mov",    "public.movie"),
-        ("Appunti.txt",    "public.plain-text"),
-        ("Documento.doc",  "com.microsoft.word.doc"),
-        ("Paesaggio.jpg",  "public.jpeg"),
+        ("Report.pdf",    "com.adobe.pdf"),
+        ("Photo.png",     "public.png"),
+        ("Demo.mp3",      "public.mp3"),
+        ("Archive.zip",   "public.zip"),
+        ("Movie.mov",     "public.movie"),
+        ("Notes.txt",     "public.plain-text"),
+        ("Document.doc",  "com.microsoft.word.doc"),
+        ("Landscape.jpg", "public.jpeg"),
     ].enumerated().map { index, sample in
         try! FileWorkspaceEntry(
             id              : UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", index + 1))!,
@@ -89,7 +89,7 @@ private struct FileShelfDesignPreview: View {
             actions.append(
                 try! FileWorkspaceActionBinding(
                     role      : .openList,
-                    descriptor: ActionDescriptor(id: "preview.open", label: "Apri elenco file")
+                    descriptor: ActionDescriptor(id: "preview.open", label: String(localized: "Open File List"))
                 )
             )
         }
@@ -97,7 +97,7 @@ private struct FileShelfDesignPreview: View {
         actions.append(
             try! FileWorkspaceActionBinding(
                 role      : .closeList,
-                descriptor: ActionDescriptor(id: "preview.back", label: "Torna al ripiano")
+                descriptor: ActionDescriptor(id: "preview.back", label: String(localized: "Back to Shelf"))
             )
         )
 
@@ -108,7 +108,7 @@ private struct FileShelfDesignPreview: View {
                     entryID   : entry.id,
                     descriptor: ActionDescriptor(
                         id   : "preview.select.\(entry.id.uuidString)",
-                        label: "Seleziona \(entry.name)"
+                        label: String(localized: "Select \(entry.name)")
                     )
                 )
             )
@@ -118,7 +118,7 @@ private struct FileShelfDesignPreview: View {
                     entryID   : entry.id,
                     descriptor: ActionDescriptor(
                         id   : "preview.remove.\(entry.id.uuidString)",
-                        label: "Rimuovi \(entry.name)"
+                        label: String(localized: "Remove \(entry.name)")
                     )
                 )
             )
@@ -143,12 +143,12 @@ private struct FileShelfDesignPreview: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
 
-            Text("Anteprima ripiano · dati di esempio")
+            Text("Shelf preview · sample data")
                 .font(.headline)
 
             HStack(spacing: 16) {
 
-                Picker("File", selection: $fileCount) {
+                Picker("Files", selection: $fileCount) {
 
                     Text("0")
                         .tag(0)
@@ -174,12 +174,12 @@ private struct FileShelfDesignPreview: View {
                     mode              = .deck
                 }
 
-                Button("Rigioca ingresso") {
+                Button("Replay Entrance") {
                     mode = .deck
                     admissionSequence &+= 1
                 }
 
-                Toggle("Riduci movimento", isOn: $reduceMotion)
+                Toggle("Reduce Motion", isOn: $reduceMotion)
             }
             .controlSize(.small)
 
@@ -201,12 +201,12 @@ private struct FileShelfDesignPreview: View {
                     .frame(width: 184, height: 28)
             }
             .frame(width: 440, height: 144)
-            .accessibilityLabel("Anteprima del ripiano nella tacca")
+            .accessibilityLabel("Shelf preview in the notch")
 
             Text(
                 renameHint
-                    ? "Seleziona un file da rinominare"
-                    : "Clic sulle icone per aprire l’elenco. Prova il gesto di ritorno e la freccia nel ripiano."
+                    ? "Select a file to rename"
+                    : "Click the icons to open the list. Try the back gesture and the arrow in the shelf."
             )
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -241,7 +241,7 @@ private struct FileShelfDesignPreview: View {
                     )
                 )
             },
-            conversionUnavailableExplanation: "Conversione non ancora disponibile",
+            conversionUnavailableExplanation: String(localized: "Conversion not available yet"),
             clearAll                        : {
                 fileCount         = 0
                 mode              = .deck
@@ -423,7 +423,7 @@ private struct FileShelfDesignPreview: View {
 
         let path   = entry.name as NSString
         let suffix = path.pathExtension.isEmpty ? "" : ".\(path.pathExtension)"
-        renamedNames[id] = "\(path.deletingPathExtension) rinominato\(suffix)"
+        renamedNames[id] = "\(path.deletingPathExtension) renamed\(suffix)"
         renameHint       = false
     }
 }
@@ -434,7 +434,7 @@ private struct PreviewAssets: ContentAssetResolving {
     func image(for assetID: String) -> Image? { nil }
 }
 
-#Preview("Ripiano") {
+#Preview("Shelf") {
     FileShelfDesignPreview()
 }
 

@@ -235,7 +235,7 @@ final class SystemNowPlayingProvider: NowPlayingProviding {
     /// selection. UI actions use the matching overload with their rendered track.
     func send(_ command: MediaCommand) async throws {
         guard let snapshot = selection.current else {
-            throw ScriptableMusicError.unavailable("Nessun lettore compatibile è attivo.")
+            throw ScriptableMusicError.unavailable(String(localized: "No compatible player is active."))
         }
 
         try await send(command, matching: snapshot)
@@ -256,7 +256,7 @@ final class SystemNowPlayingProvider: NowPlayingProviding {
               ),
               let target = targets[source],
               Self.supports(command, capabilities: snapshot.capabilities)
-        else { throw ScriptableMusicError.unavailable("Nessun lettore compatibile è attivo.") }
+        else { throw ScriptableMusicError.unavailable(String(localized: "No compatible player is active.")) }
 
         let activeGeneration = generation
         do {
@@ -498,7 +498,7 @@ final class SystemNowPlayingProvider: NowPlayingProviding {
         for source in ScriptableMusicSource.allCases {
             if case .permissionRequired = errors[source] {
                 status = .permissionRequired(
-                    errors[source]?.localizedDescription ?? "Consenti l'accesso al lettore musicale."
+                    errors[source]?.localizedDescription ?? String(localized: "Allow access to the music player.")
                 )
                 return
             }

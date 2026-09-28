@@ -21,7 +21,7 @@ nonisolated enum ScriptableMusicSource: String, CaseIterable, Sendable {
 
     var displayName: String {
         switch self {
-            case .music  : "Musica"
+            case .music  : String(localized: "Music")
             case .spotify: "Spotify"
         }
     }

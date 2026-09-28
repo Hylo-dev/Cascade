@@ -26,7 +26,7 @@ final class NotchCalibrationPanel: NSPanel, NotchCalibrationPresenting {
         )
 
         contentView          = canvas
-        title                = "Regola dimensioni del notch"
+        title                = String(localized: "Adjust Notch Size", bundle: .module)
         isReleasedWhenClosed = false
         isOpaque             = false
         backgroundColor      = .clear

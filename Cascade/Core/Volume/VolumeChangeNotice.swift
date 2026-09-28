@@ -21,7 +21,7 @@ final class VolumeChangeNotice: NotchTransientNotice {
     private var event               : VolumeChangeEvent
 
     var accessibilityLabel: String {
-        event.isMuted ? "Audio disattivato" : "Volume, \(event.percentage) percento"
+        event.isMuted ? String(localized: "Audio muted") : String(localized: "Volume, \(event.percentage) percent")
     }
 
     init(event: VolumeChangeEvent) {
@@ -44,7 +44,7 @@ final class VolumeChangeNotice: NotchTransientNotice {
                     .font(.system(size: 14, weight: .regular))
                     .frame(width: 18)
 
-                Text(event.isMuted ? "Silenzioso" : "Volume")
+                Text(event.isMuted ? "Muted" : "Volume")
                     .font(.callout)
                     .lineLimit(1)
             }

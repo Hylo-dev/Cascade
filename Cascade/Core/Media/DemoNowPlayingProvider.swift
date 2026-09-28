@@ -17,7 +17,11 @@ final class DemoNowPlayingProvider: NowPlayingProviding {
     private var isPlaying    = true
     private var elapsed     : TimeInterval = 24
     private var timestamp    = Date.now
-    private let titles       = ["Un momento di calma", "Verso casa", "Luce del mattino"]
+    private let titles       = [
+        String(localized: "A Moment of Calm"),
+        String(localized: "Heading Home"),
+        String(localized: "Morning Light"),
+    ]
 
     func start() -> AsyncStream<NowPlayingSnapshot?> {
         stop()
@@ -69,7 +73,7 @@ final class DemoNowPlayingProvider: NowPlayingProviding {
         NowPlayingSnapshot(
             sourceBundleIdentifier: "hylo.Cascade.demo",
             title                 : titles[trackIndex],
-            artist                : "Anteprima musicale · Cascade",
+            artist                : String(localized: "Music Preview · Cascade"),
             isPlaying             : isPlaying,
             duration              : 204,
             elapsed               : elapsed,

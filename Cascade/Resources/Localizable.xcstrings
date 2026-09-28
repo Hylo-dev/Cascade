@@ -1,0 +1,2315 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ""
+          }
+        }
+      }
+    },
+    "%@ %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ %@"
+          }
+        }
+      }
+    },
+    "%@ didn’t complete the request (%d).": {
+      "comment": "Music player error. %@ is the player name (Music, Spotify); %d is the player’s error code.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ non ha completato la richiesta (%d)."
+          }
+        }
+      }
+    },
+    "%@ isn’t available (%d).": {
+      "comment": "Music player error. %@ is the player name (Music, Spotify); %d is a system error code.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ non è disponibile (%d)."
+          }
+        }
+      }
+    },
+    "%@ isn’t responding (%lld).": {
+      "comment": "Music player error. %@ is the player name (Music, Spotify); %lld is a system error code.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ non risponde (%lld)."
+          }
+        }
+      }
+    },
+    "%@ isn’t responding.": {
+      "comment": "Music player error. %@ is the player name (Music, Spotify).",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ non risponde."
+          }
+        }
+      }
+    },
+    "%@ · disconnected": {
+      "comment": "Settings picker item: %@ is a display name; the display is not connected",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · scollegato"
+          }
+        }
+      }
+    },
+    "%@, by %@, paused": {
+      "comment": "Accessibility label of the music activity. First %@ is the track title, second %@ is the artist.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, di %@, in pausa"
+          }
+        }
+      }
+    },
+    "%@, by %@, playing": {
+      "comment": "Accessibility label of the music activity. First %@ is the track title, second %@ is the artist.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, di %@, in riproduzione"
+          }
+        }
+      }
+    },
+    "%@: not available in this player": {
+      "comment": "Help tag on a disabled music control. %@ is the control’s name, such as Next Track.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: non disponibile in questo player"
+          }
+        }
+      }
+    },
+    "%lld%%": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%%"
+          }
+        }
+      }
+    },
+    "0": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0"
+          }
+        }
+      }
+    },
+    "1": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1"
+          }
+        }
+      }
+    },
+    "4": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4"
+          }
+        }
+      }
+    },
+    "8": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "8"
+          }
+        }
+      }
+    },
+    "A Moment of Calm": {
+      "comment": "Demo track title shown by the music preview.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un momento di calma"
+          }
+        }
+      }
+    },
+    "A trackpad tap when the notch expands.": {
+      "comment": "Settings row description: haptic feedback",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un tocco del trackpad quando il notch si espande."
+          }
+        }
+      }
+    },
+    "Accessibility": {
+      "comment": "Settings section header: the macOS Accessibility permission",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accessibilità"
+          }
+        }
+      }
+    },
+    "Accessibility is required to dismiss native alerts.": {
+      "comment": "Menu bar menu, status line (disabled item)",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accessibilità necessaria per chiudere gli avvisi nativi."
+          }
+        }
+      }
+    },
+    "activity screen display": {
+      "comment": "Hidden search keywords for the Live Activities displays setting, space separated, never shown. Keep the English words too so search works in both languages.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "attività schermo display activity screen"
+          }
+        }
+      }
+    },
+    "Add to Favorites": {
+      "comment": "Music activity button.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi ai preferiti"
+          }
+        }
+      }
+    },
+    "Adding…": {
+      "comment": "Shelf status and drop-target title while dropped files are being added.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiunta in corso…"
+          }
+        }
+      }
+    },
+    "Adjust Notch Size…": {
+      "comment": "Menu bar menu: opens the notch size calibration panel",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regola dimensioni del notch…"
+          }
+        }
+      }
+    },
+    "Adjust…": {
+      "comment": "Settings button that opens the notch size calibration panel",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regola…"
+          }
+        }
+      }
+    },
+    "AirPods alert": {
+      "comment": "Settings row title (Dev previews)",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avviso AirPods"
+          }
+        }
+      }
+    },
+    "AirPods · Preview": {
+      "comment": "Device name shown by the AirPods notice preview.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods · Anteprima"
+          }
+        }
+      }
+    },
+    "Alert replacement is off": {
+      "comment": "Menu bar menu, status line (disabled item)",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sostituzione degli avvisi non attiva"
+          }
+        }
+      }
+    },
+    "Alerts": {
+      "comment": "Settings section header",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvisi"
+          }
+        }
+      }
+    },
+    "Align the notch with your Mac’s camera.": {
+      "comment": "Settings row description",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allinea il notch alla fotocamera del tuo Mac."
+          }
+        }
+      }
+    },
+    "All Displays": {
+      "comment": "Segmented control: show Live Activities on all displays",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutti gli schermi"
+          }
+        }
+      }
+    },
+    "Allow Access to Music and Spotify…": {
+      "comment": "Menu bar menu: button",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti accesso a Music e Spotify…"
+          }
+        }
+      }
+    },
+    "Allow access to the music player.": {
+      "comment": "Music status when automation permission is missing.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti l'accesso al lettore musicale."
+          }
+        }
+      }
+    },
+    "Allow Accessibility for Spotlight from the notch": {
+      "comment": "Spotlight status line shown in the menu bar menu",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti Accessibilità per Spotlight dal notch"
+          }
+        }
+      }
+    },
+    "Allow Accessibility for Volume Keys…": {
+      "comment": "Menu bar menu: button",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti Accessibilità per i tasti volume…"
+          }
+        }
+      }
+    },
+    "Allow Accessibility…": {
+      "comment": "Menu and settings button that requests the Accessibility permission",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti Accessibilità…"
+          }
+        }
+      }
+    },
+    "Allow Cascade to control %@ in System Settings → Privacy & Security → Automation.": {
+      "comment": "Music permission error. %@ is the player name (Music, Spotify). Use the system’s own names for the settings path.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti a Cascade di controllare %@ in Impostazioni di Sistema → Privacy e sicurezza → Automazione."
+          }
+        }
+      }
+    },
+    "Allow Cascade to use the volume keys to show the alert in the notch.": {
+      "comment": "Settings explanation for the Accessibility permission",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti a Cascade di usare i tasti volume per mostrare l’avviso nel notch."
+          }
+        }
+      }
+    },
+    "Allow Player Access…": {
+      "comment": "Settings button that requests music player access",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti accesso al player…"
+          }
+        }
+      }
+    },
+    "Allow System Audio in System Settings…": {
+      "comment": "Menu bar menu: opens the System Settings audio capture pane",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti audio di sistema nelle Impostazioni…"
+          }
+        }
+      }
+    },
+    "Allow System Audio…": {
+      "comment": "Settings button that opens the System Settings audio capture pane",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti audio di sistema…"
+          }
+        }
+      }
+    },
+    "Animate the bars with the audio that’s playing.": {
+      "comment": "Settings row description",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anima le barre con l’audio in riproduzione."
+          }
+        }
+      }
+    },
+    "Apple Music and Spotify": {
+      "comment": "Menu bar menu, status line (disabled item): players being monitored",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music e Spotify"
+          }
+        }
+      }
+    },
+    "Application": {
+      "comment": "Settings section header (Dev page)",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Applicazione"
+          }
+        }
+      }
+    },
+    "Audio isn’t available to the visualizer": {
+      "comment": "Menu bar menu, status line (disabled item)",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio non disponibile per il visualizzatore"
+          }
+        }
+      }
+    },
+    "Audio muted": {
+      "comment": "Accessibility label of the volume notice when the output is muted.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio disattivato"
+          }
+        }
+      }
+    },
+    "Audio visualizer": {
+      "comment": "Settings row title",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visualizzatore audio"
+          }
+        }
+      }
+    },
+    "Audio visualizer is on": {
+      "comment": "Menu bar menu, status line (disabled item)",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visualizzatore audio attivo"
+          }
+        }
+      }
+    },
+    "Authorize Another Open Player…": {
+      "comment": "Menu bar menu: button",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autorizza un altro player aperto…"
+          }
+        }
+      }
+    },
+    "Back to Shelf": {
+      "comment": "Debug design preview of the shelf: action that closes the file list.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Torna al ripiano"
+          }
+        }
+      }
+    },
+    "Bars from Playing Audio": {
+      "comment": "Menu bar menu: toggle for the audio visualizer bars",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barre dall’audio riprodotto"
+          }
+        }
+      }
+    },
+    "Bluetooth Alerts": {
+      "comment": "Menu bar menu: toggle for Bluetooth connection alerts in the notch",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvisi Bluetooth"
+          }
+        }
+      }
+    },
+    "Bluetooth monitoring isn’t available on this system.": {
+      "comment": "Menu bar menu, status line (disabled item)",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monitor Bluetooth non disponibile su questo sistema."
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "comment": "Cancel button of the shelf’s rename alert.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annulla"
+          }
+        }
+      }
+    },
+    "Cascade": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cascade"
+          }
+        }
+      }
+    },
+    "Cascade no longer has permission to access this file.": {
+      "comment": "Shelf error.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cascade non dispone più del permesso per questo file."
+          }
+        }
+      }
+    },
+    "Cascade Settings": {
+      "comment": "Settings window title",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impostazioni di Cascade"
+          }
+        }
+      }
+    },
+    "Charging": {
+      "comment": "Settings row title: charging alerts widget",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ricarica"
+          }
+        }
+      }
+    },
+    "Charging alert": {
+      "comment": "Settings row title (Dev previews)",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avviso ricarica"
+          }
+        }
+      }
+    },
+    "Charging Alerts in the Notch": {
+      "comment": "Menu bar menu: toggle",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvisi ricarica nel notch"
+          }
+        }
+      }
+    },
+    "Check Audio Permission Again": {
+      "comment": "Menu bar menu: button",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ricontrolla il permesso audio"
+          }
+        }
+      }
+    },
+    "Check Permission Again": {
+      "comment": "Settings button that rechecks the system audio permission",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ricontrolla il permesso"
+          }
+        }
+      }
+    },
+    "Check Volume Permission Again": {
+      "comment": "Menu bar menu: button",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ricontrolla il permesso volume"
+          }
+        }
+      }
+    },
+    "Choose Notch or Dynamic Island for each display without a notch.": {
+      "comment": "Settings row description: displays without a hardware notch",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli Notch o Dynamic Island per ogni display senza taglio."
+          }
+        }
+      }
+    },
+    "Choose the file to relink": {
+      "comment": "Message of the open panel that relinks a missing shelf file.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli il file da ricollegare"
+          }
+        }
+      }
+    },
+    "Choose which displays show activities.": {
+      "comment": "Settings row description",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli su quali schermi mostrare le attività."
+          }
+        }
+      }
+    },
+    "Clearing…": {
+      "comment": "Shelf status while all files are being removed from the shelf.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Svuotamento in corso…"
+          }
+        }
+      }
+    },
+    "Click the icons to open the list. Try the back gesture and the arrow in the shelf.": {
+      "comment": "Debug design preview of the shelf: instructions.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clic sulle icone per aprire l’elenco. Prova il gesto di ritorno e la freccia nel ripiano."
+          }
+        }
+      }
+    },
+    "Close List": {
+      "comment": "Shelf action: collapses the file list back to the deck.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiudi elenco"
+          }
+        }
+      }
+    },
+    "Command failed. Try again.": {
+      "comment": "Music activity error after a playback command failed.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comando non riuscito. Riprova."
+          }
+        }
+      }
+    },
+    "Command in progress": {
+      "comment": "Accessibility value of a music control while its command runs.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comando in corso"
+          }
+        }
+      }
+    },
+    "Conversion not available yet": {
+      "comment": "Help tag on the disabled convert button in the shelf.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversione non ancora disponibile"
+          }
+        }
+      }
+    },
+    "Couldn’t prepare the request to the player.": {
+      "comment": "Music player error.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile preparare la richiesta al lettore."
+          }
+        }
+      }
+    },
+    "Disconnected Display": {
+      "comment": "Placeholder name for a saved display that is not connected",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schermo scollegato"
+          }
+        }
+      }
+    },
+    "Disconnected Display, %@": {
+      "comment": "VoiceOver label: %@ is the display's stable identifier",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schermo scollegato, %@"
+          }
+        }
+      }
+    },
+    "Display": {
+      "comment": "Settings picker label: the display chosen for Live Activities",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schermo"
+          }
+        }
+      }
+    },
+    "Display style": {
+      "comment": "Settings row title: notch style on each display",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stile sugli schermi"
+          }
+        }
+      }
+    },
+    "Displays": {
+      "comment": "Settings section header",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schermi"
+          }
+        }
+      }
+    },
+    "Drag files here": {
+      "comment": "Title of the empty shelf drop target.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascina qui i file"
+          }
+        }
+      }
+    },
+    "Drop regular local files to add them to the shelf": {
+      "comment": "Accessibility hint of the shelf drop target.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rilascia file locali regolari per aggiungerli al ripiano"
+          }
+        }
+      }
+    },
+    "Drop to add": {
+      "comment": "Shelf status and drop-target title while files are dragged over the shelf.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rilascia per aggiungere"
+          }
+        }
+      }
+    },
+    "Dynamic Island": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dynamic Island"
+          }
+        }
+      }
+    },
+    "Files": {
+      "comment": "Debug design preview of the shelf: picker for the number of sample files.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File"
+          }
+        }
+      }
+    },
+    "Focus follows the active window; if that isn’t available, it uses the pointer, then the main display. The Cascade shape stays on every display.": {
+      "comment": "Settings caption explaining the Follow Focus option",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il focus segue la finestra attiva; se non è disponibile usa il puntatore, poi lo schermo principale. La sagoma di Cascade rimane su tutti gli schermi."
+          }
+        }
+      }
+    },
+    "Folders and promised files not supported": {
+      "comment": "Second line of the notice after an unsupported drop on the shelf.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cartelle e file promessi non supportati"
+          }
+        }
+      }
+    },
+    "Follow Focus": {
+      "comment": "Segmented control: show Live Activities on the focused display",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segui il focus"
+          }
+        }
+      }
+    },
+    "Haptic feedback": {
+      "comment": "Settings row title",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feedback aptico"
+          }
+        }
+      }
+    },
+    "Haptic Feedback on Hover": {
+      "comment": "Menu bar menu: toggle",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feedback aptico in hover"
+          }
+        }
+      }
+    },
+    "Hardware notch": {
+      "comment": "Settings value: this display has a hardware notch, so its style is fixed",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notch hardware"
+          }
+        }
+      }
+    },
+    "Hardware notch size": {
+      "comment": "Settings row title",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dimensioni del notch hardware"
+          }
+        }
+      }
+    },
+    "Heading Home": {
+      "comment": "Demo track title shown by the music preview.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verso casa"
+          }
+        }
+      }
+    },
+    "Invalid playback position.": {
+      "comment": "Music player error when seeking to an invalid position.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posizione di riproduzione non valida."
+          }
+        }
+      }
+    },
+    "Live": {
+      "comment": "Music activity: shown instead of the progress bar for a live stream.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In diretta"
+          }
+        }
+      }
+    },
+    "Local files only": {
+      "comment": "Short notice in the notch after an unsupported drop on the shelf.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo file locali"
+          }
+        }
+      }
+    },
+    "Local files only. Folders and promised files aren’t supported.": {
+      "comment": "Accessibility label of the notice shown after an unsupported drop on the shelf.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo file locali. Cartelle e file promessi non sono supportati."
+          }
+        }
+      }
+    },
+    "Low Power Mode": {
+      "comment": "Settings row title (Dev previews): charging preview in Low Power Mode",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Risparmio energetico"
+          }
+        }
+      }
+    },
+    "Low Power Mode · Yellow": {
+      "comment": "Menu bar menu: charging preview submenu item, Low Power Mode shown in yellow",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Risparmio energetico · giallo"
+          }
+        }
+      }
+    },
+    "Mac Audio Output": {
+      "comment": "Heading, help tag and accessibility label of the audio output picker.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uscita audio del Mac"
+          }
+        }
+      }
+    },
+    "macOS Bluetooth Alerts": {
+      "comment": "Settings section header",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvisi Bluetooth di macOS"
+          }
+        }
+      }
+    },
+    "macOS volume indicator is on": {
+      "comment": "Menu bar menu, status line (disabled item)",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indicatore volume di macOS attivo"
+          }
+        }
+      }
+    },
+    "Morning Light": {
+      "comment": "Demo track title shown by the music preview.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luce del mattino"
+          }
+        }
+      }
+    },
+    "Music": {
+      "comment": "Settings row title and section header",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musica"
+          }
+        }
+      }
+    },
+    "Music Access": {
+      "comment": "Settings section header: music player permission",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accesso alla musica"
+          }
+        }
+      }
+    },
+    "Music Live Activity": {
+      "comment": "Menu bar menu: toggle",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live Activity musicale"
+          }
+        }
+      }
+    },
+    "Music Live Activity is off": {
+      "comment": "Menu bar menu, status line (disabled item)",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live Activity musicale non attiva"
+          }
+        }
+      }
+    },
+    "Music Preview · Cascade": {
+      "comment": "Demo artist line shown by the music preview.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anteprima musicale · Cascade"
+          }
+        }
+      }
+    },
+    "Muted": {
+      "comment": "Volume notice title when the output is muted.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Silenzioso"
+          }
+        }
+      }
+    },
+    "Native alert monitoring is on": {
+      "comment": "Menu bar menu, status line (disabled item)",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monitoraggio degli avvisi nativi attivo"
+          }
+        }
+      }
+    },
+    "Native shortcut active · Accessibility unavailable": {
+      "comment": "Spotlight status line shown in the menu bar menu",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scorciatoia nativa attiva · Accessibilità non disponibile"
+          }
+        }
+      }
+    },
+    "Native shortcut active · reopen the menu to try again": {
+      "comment": "Spotlight status line shown in the menu bar menu",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scorciatoia nativa attiva · riapri il menu per riprovare"
+          }
+        }
+      }
+    },
+    "Next Page": {
+      "comment": "Shelf action: shows the next page of files.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pagina successiva"
+          }
+        }
+      }
+    },
+    "Next Track": {
+      "comment": "Music activity button.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brano successivo"
+          }
+        }
+      }
+    },
+    "No compatible player is active.": {
+      "comment": "Music player error when neither Music nor Spotify is playing.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun lettore compatibile è attivo."
+          }
+        }
+      }
+    },
+    "No outputs available": {
+      "comment": "Audio output picker with no devices.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna uscita disponibile"
+          }
+        }
+      }
+    },
+    "Normal · Green": {
+      "comment": "Menu bar menu: charging preview submenu item, normal charging shown in green",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Normale · verde"
+          }
+        }
+      }
+    },
+    "Notch": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notch"
+          }
+        }
+      }
+    },
+    "Only regular local files are accepted, not folders or promised files.": {
+      "comment": "Shelf status after an unsupported drop.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sono accettati solo file locali regolari, non cartelle o file promessi."
+          }
+        }
+      }
+    },
+    "Open File List": {
+      "comment": "Shelf action: expands the file deck into the list.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri elenco file"
+          }
+        }
+      }
+    },
+    "Open Spotlight from the Notch": {
+      "comment": "Menu bar menu: button",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri Spotlight dal notch"
+          }
+        }
+      }
+    },
+    "Open Spotlight once to connect it to the notch": {
+      "comment": "Spotlight status line shown in the menu bar menu",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri Spotlight una volta per collegarla al notch"
+          }
+        }
+      }
+    },
+    "Open system search from the notch.": {
+      "comment": "Settings row description",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri la ricerca di sistema dal notch."
+          }
+        }
+      }
+    },
+    "Pause": {
+      "comment": "Music activity button.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pausa"
+          }
+        }
+      }
+    },
+    "Play": {
+      "comment": "Music activity button.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riproduci"
+          }
+        }
+      }
+    },
+    "Playback and controls for Apple Music and Spotify.": {
+      "comment": "Settings row description",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riproduzione e controlli di Apple Music e Spotify."
+          }
+        }
+      }
+    },
+    "Preview charging in Low Power Mode.": {
+      "comment": "Settings row description",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anteprima della ricarica in modalità risparmio."
+          }
+        }
+      }
+    },
+    "Preview the battery while charging.": {
+      "comment": "Settings row description",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anteprima della batteria in carica."
+          }
+        }
+      }
+    },
+    "Previews": {
+      "comment": "Settings section header (Dev page)",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anteprime"
+          }
+        }
+      }
+    },
+    "Previous Track": {
+      "comment": "Music activity button.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brano precedente"
+          }
+        }
+      }
+    },
+    "Privacy": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy"
+          }
+        }
+      }
+    },
+    "Quick Look %@": {
+      "comment": "Shelf action on one file; opens a Quick Look preview. %@ is the file name.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anteprima %@"
+          }
+        }
+      }
+    },
+    "Quit Cascade": {
+      "comment": "Menu bar menu: quits the app",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esci da Cascade"
+          }
+        }
+      }
+    },
+    "Reduce Motion": {
+      "comment": "Debug design preview of the shelf: toggle that simulates the Reduce Motion setting.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riduci movimento"
+          }
+        }
+      }
+    },
+    "Relink %@…": {
+      "comment": "Shelf action on a missing file; opens a panel to choose its new location. %@ is the file name.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ricollega %@"
+          }
+        }
+      }
+    },
+    "Remove %@": {
+      "comment": "Shelf action on one file; removes it from the shelf, not from disk. %@ is the file name.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi %@"
+          }
+        }
+      }
+    },
+    "Remove from Favorites": {
+      "comment": "Music activity button.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi dai preferiti"
+          }
+        }
+      }
+    },
+    "Rename": {
+      "comment": "Confirm button of the shelf’s rename alert.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rinomina"
+          }
+        }
+      }
+    },
+    "Rename File": {
+      "comment": "Title of the shelf’s rename alert.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rinomina file"
+          }
+        }
+      }
+    },
+    "Replace macOS alerts": {
+      "comment": "Settings row title: replaces the native Bluetooth banners",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sostituisci avvisi di macOS"
+          }
+        }
+      }
+    },
+    "Replace Native Bluetooth Alerts": {
+      "comment": "Menu bar menu: toggle that hides the macOS Bluetooth banner",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sostituisci avvisi Bluetooth nativi"
+          }
+        }
+      }
+    },
+    "Replacement isn’t available on this system.": {
+      "comment": "Menu bar menu, status line (disabled item): native Bluetooth alert replacement",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sostituzione non disponibile su questo sistema."
+          }
+        }
+      }
+    },
+    "Replay Entrance": {
+      "comment": "Debug design preview of the shelf: button that replays the files’ arrival animation.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rigioca ingresso"
+          }
+        }
+      }
+    },
+    "Retry Audio Visualizer": {
+      "comment": "Menu bar menu: button",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riprova visualizzatore audio"
+          }
+        }
+      }
+    },
+    "Retry Player Access…": {
+      "comment": "Menu bar menu: button",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riprova accesso al player…"
+          }
+        }
+      }
+    },
+    "Retry Volume Replacement": {
+      "comment": "Menu bar menu: button",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riprova sostituzione volume"
+          }
+        }
+      }
+    },
+    "screen display notch Dynamic Island style": {
+      "comment": "Hidden search keywords for the display style setting, space separated, never shown. Keep the English words too so search works in both languages.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "schermo display notch Dynamic Island style screen"
+          }
+        }
+      }
+    },
+    "Search": {
+      "comment": "Settings section header: Spotlight integration",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ricerca"
+          }
+        }
+      }
+    },
+    "Search Results": {
+      "comment": "Settings window title while searching",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Risultati di ricerca"
+          }
+        }
+      }
+    },
+    "Select %@": {
+      "comment": "Shelf action on one file. %@ is the file name.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seleziona %@"
+          }
+        }
+      }
+    },
+    "Select a file to rename": {
+      "comment": "Shelf status after Rename is clicked with no file selected.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seleziona un file da rinominare"
+          }
+        }
+      }
+    },
+    "Selected": {
+      "comment": "Accessibility value and checkmark description of the current audio output (Italian agrees with “uscita”, feminine).",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selezionata"
+          }
+        }
+      }
+    },
+    "session %u": {
+      "comment": "VoiceOver label part: %u is the runtime display ID, used when the display has no stable identity",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sessione %u"
+          }
+        }
+      }
+    },
+    "Settings…": {
+      "comment": "Menu bar menu: opens the Cascade settings window",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impostazioni…"
+          }
+        }
+      }
+    },
+    "Shelf": {
+      "comment": "Accessibility name of the file shelf page in the notch.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripiano"
+          }
+        }
+      }
+    },
+    "Shelf preview in the notch": {
+      "comment": "Debug design preview of the shelf: accessibility label of the notch mock-up.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anteprima del ripiano nella tacca"
+          }
+        }
+      }
+    },
+    "Shelf preview · sample data": {
+      "comment": "Debug design preview of the shelf: heading.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anteprima ripiano · dati di esempio"
+          }
+        }
+      }
+    },
+    "Show %@ in Finder": {
+      "comment": "Shelf action on one file. %@ is the file name.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra %@ nel Finder"
+          }
+        }
+      }
+    },
+    "Show a preview without changing the volume.": {
+      "comment": "Settings row description",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra un’anteprima senza cambiare il volume."
+          }
+        }
+      }
+    },
+    "Show an alert when you connect power.": {
+      "comment": "Settings row description",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra un avviso quando colleghi l’alimentazione."
+          }
+        }
+      }
+    },
+    "Show connection and battery for accessories.": {
+      "comment": "Settings row description: Bluetooth accessories",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra connessione e batteria degli accessori."
+          }
+        }
+      }
+    },
+    "Show Live Activities": {
+      "comment": "Settings row title and picker label: which displays show Live Activities",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra Live Activities"
+          }
+        }
+      }
+    },
+    "Show private activities too.": {
+      "comment": "Settings row description",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rendi visibili anche le attività private."
+          }
+        }
+      }
+    },
+    "Show sensitive content": {
+      "comment": "Settings row title",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra contenuti sensibili"
+          }
+        }
+      }
+    },
+    "Show Sensitive Content": {
+      "comment": "Menu bar menu: toggle",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra contenuti sensibili"
+          }
+        }
+      }
+    },
+    "Show the level when you press the volume keys.": {
+      "comment": "Settings row description",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra il livello quando premi i tasti volume."
+          }
+        }
+      }
+    },
+    "Simulate earbuds connecting.": {
+      "comment": "Settings row description",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Simula la connessione degli auricolari."
+          }
+        }
+      }
+    },
+    "Specific Display": {
+      "comment": "Segmented control: show Live Activities on one chosen display",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schermo specifico"
+          }
+        }
+      }
+    },
+    "Spotlight detaches from the notch": {
+      "comment": "Spotlight status line shown in the menu bar menu: the feature is active",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spotlight si stacca dal notch"
+          }
+        }
+      }
+    },
+    "Spotlight detachment": {
+      "comment": "Settings row title (Dev previews): Spotlight droplet detaching from the notch",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Distacco Spotlight"
+          }
+        }
+      }
+    },
+    "Spotlight from the Notch": {
+      "comment": "Menu bar menu: toggle that opens Spotlight from the notch",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spotlight dal notch"
+          }
+        }
+      }
+    },
+    "Spotlight from the notch is off": {
+      "comment": "Spotlight status line shown in the menu bar menu",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spotlight dal notch non attiva"
+          }
+        }
+      }
+    },
+    "Spotlight isn’t responding · try the shortcut again": {
+      "comment": "Spotlight status line shown in the menu bar menu",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spotlight non risponde · riprova la scorciatoia"
+          }
+        }
+      }
+    },
+    "Style": {
+      "comment": "Settings picker label (hidden) for a display's notch style",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stile"
+          }
+        }
+      }
+    },
+    "System Audio": {
+      "comment": "Settings section header: system audio capture permission",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio di sistema"
+          }
+        }
+      }
+    },
+    "Temporary choice for this connection": {
+      "comment": "Settings caption under a display that has no stable identity",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scelta temporanea per questa connessione"
+          }
+        }
+      }
+    },
+    "Test": {
+      "comment": "Settings button that runs a preview (Dev page)",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prova"
+          }
+        }
+      }
+    },
+    "Test AirPods Alert": {
+      "comment": "Menu bar menu: shows a preview of the AirPods connection alert",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prova avviso AirPods"
+          }
+        }
+      }
+    },
+    "Test Charging Alert": {
+      "comment": "Menu bar menu: submenu that previews the charging alert",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prova avviso ricarica"
+          }
+        }
+      }
+    },
+    "Test Liquid Glass Detachment": {
+      "comment": "Menu bar menu: plays the Spotlight droplet animation as a preview",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prova il distacco Liquid Glass"
+          }
+        }
+      }
+    },
+    "Test Volume Alert": {
+      "comment": "Menu bar menu: shows a preview of the volume alert",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prova avviso volume"
+          }
+        }
+      }
+    },
+    "The bars require macOS 14.2 or later.": {
+      "comment": "Menu bar menu, status line (disabled item)",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le barre richiedono macOS 14.2 o successivo."
+          }
+        }
+      }
+    },
+    "The bars turn on during playback.": {
+      "comment": "Menu bar menu, status line (disabled item)",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le barre si attivano durante la riproduzione."
+          }
+        }
+      }
+    },
+    "The file isn’t available. You can relink or remove it.": {
+      "comment": "Shelf error for a file that moved or was deleted.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il file non è disponibile. Puoi ricollegarlo o rimuoverlo."
+          }
+        }
+      }
+    },
+    "The file isn’t supported.": {
+      "comment": "Shelf error.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il file non è supportato."
+          }
+        }
+      }
+    },
+    "The file operation couldn’t be completed.": {
+      "comment": "Generic shelf error.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile completare l’operazione sul file."
+          }
+        }
+      }
+    },
+    "The Liquid Glass droplet requires macOS 26 or later": {
+      "comment": "Spotlight status line shown in the menu bar menu",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La goccia Liquid Glass richiede macOS 26 o successivo"
+          }
+        }
+      }
+    },
+    "The name will also change in Finder.": {
+      "comment": "Informative text of the shelf’s rename alert.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il nome verrà modificato anche nel Finder."
+          }
+        }
+      }
+    },
+    "The native banner may appear briefly.": {
+      "comment": "Menu bar menu, status line (disabled item)",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il banner nativo può comparire brevemente."
+          }
+        }
+      }
+    },
+    "The operation was interrupted.": {
+      "comment": "Shelf error.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’operazione è stata interrotta."
+          }
+        }
+      }
+    },
+    "The player didn’t report the favorite status.": {
+      "comment": "Music player error.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il lettore non ha fornito lo stato dei preferiti."
+          }
+        }
+      }
+    },
+    "The shelf can’t be shown.": {
+      "comment": "Shelf status when its content can’t be built.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il ripiano non può essere mostrato."
+          }
+        }
+      }
+    },
+    "The shelf changed. Try again.": {
+      "comment": "Shelf error when the shelf changed during the operation.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il ripiano è cambiato. Riprova."
+          }
+        }
+      }
+    },
+    "The shelf doesn’t have enough space.": {
+      "comment": "Shelf error when its storage quota is exceeded.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il ripiano non dispone di spazio sufficiente."
+          }
+        }
+      }
+    },
+    "The track changed. Try again on the current track.": {
+      "comment": "Music error when the track changed before a command ran.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il brano è cambiato. Riprova sul brano attuale."
+          }
+        }
+      }
+    },
+    "This audio output handles volume through macOS.": {
+      "comment": "Menu bar menu, status line (disabled item)",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questa uscita audio gestisce il volume con macOS."
+          }
+        }
+      }
+    },
+    "This content doesn’t allow changing the position.": {
+      "comment": "Music player error when the current item can’t be seeked.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo contenuto non consente di cambiare posizione."
+          }
+        }
+      }
+    },
+    "This player doesn’t expose favorites.": {
+      "comment": "Music player error when the player has no favorites support.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo lettore non espone i preferiti."
+          }
+        }
+      }
+    },
+    "Track Progress": {
+      "comment": "Accessibility label of the music progress slider.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avanzamento brano"
+          }
+        }
+      }
+    },
+    "Try Again": {
+      "comment": "Menu bar menu: retries native Bluetooth alert replacement",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riprova"
+          }
+        }
+      }
+    },
+    "Try the Liquid Glass animation.": {
+      "comment": "Settings row description",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prova l’animazione Liquid Glass."
+          }
+        }
+      }
+    },
+    "Try the notch’s alerts and animations.": {
+      "comment": "Settings section footer (Dev page previews)",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prova gli avvisi e le animazioni del notch."
+          }
+        }
+      }
+    },
+    "Turn on a system shortcut for Spotlight": {
+      "comment": "Spotlight status line shown in the menu bar menu",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attiva una scorciatoia di sistema per Spotlight"
+          }
+        }
+      }
+    },
+    "Turning on volume alerts…": {
+      "comment": "Menu bar menu, status line (disabled item): in progress",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attivazione avvisi volume…"
+          }
+        }
+      }
+    },
+    "Use the notch for Bluetooth alerts.": {
+      "comment": "Settings row description",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa il notch per gli avvisi Bluetooth."
+          }
+        }
+      }
+    },
+    "Version": {
+      "comment": "Settings label for the app version number",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versione"
+          }
+        }
+      }
+    },
+    "Volume": {
+      "comment": "Volume notice title.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volume"
+          }
+        }
+      }
+    },
+    "Volume alert": {
+      "comment": "Settings row title (Dev previews)",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avviso volume"
+          }
+        }
+      }
+    },
+    "Volume alerts are off": {
+      "comment": "Menu bar menu, status line (disabled item)",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvisi volume non attivi"
+          }
+        }
+      }
+    },
+    "Volume Alerts in the Notch": {
+      "comment": "Menu bar menu: toggle",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvisi volume nel notch"
+          }
+        }
+      }
+    },
+    "Volume keys redirected to the notch": {
+      "comment": "Menu bar menu, status line (disabled item)",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tasti volume reindirizzati al notch"
+          }
+        }
+      }
+    },
+    "Volume, %lld percent": {
+      "comment": "Accessibility label of the volume notice. %lld is the volume level from 0 to 100.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volume, %lld percento"
+          }
+        }
+      }
+    },
+    "Without permission, the macOS indicator stays on.": {
+      "comment": "Menu bar menu, status line (disabled item): the macOS volume indicator",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senza permesso resta attivo l'indicatore di macOS."
+          }
+        }
+      }
+    },
+    "—": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

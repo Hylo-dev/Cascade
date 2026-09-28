@@ -3,6 +3,6 @@
 <plist version="1.0">
 <dict>
     <key>NSAudioCaptureUsageDescription</key>
-    <string>Cascade analizza l’audio riprodotto per muovere le barre musicali nel notch. L’audio non viene registrato né salvato.</string>
+    <string>Cascade analyzes the audio that is playing to move the music bars in the notch. The audio is never recorded or saved.</string>
 </dict>
 </plist>

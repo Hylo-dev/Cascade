@@ -55,7 +55,7 @@ final class MusicProgressControl: NSSlider {
         target       = self
         action       = #selector(valueChanged)
 
-        setAccessibilityLabel("Avanzamento brano")
+        setAccessibilityLabel(String(localized: "Track Progress"))
         setContentHuggingPriority(.defaultLow, for: .horizontal)
     }
 

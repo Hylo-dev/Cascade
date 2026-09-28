@@ -43,7 +43,7 @@ final class CascadeSettingsWindowController: NSWindowController, CascadeSettings
                 backing    : .buffered,
                 defer      : false
             )
-            window.title                      = "Impostazioni di Cascade"
+            window.title                      = String(localized: "Cascade Settings")
             window.identifier                 = NSUserInterfaceItemIdentifier("cascade.settings")
             window.isReleasedWhenClosed       = false
             window.titlebarAppearsTransparent = true

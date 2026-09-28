@@ -18,7 +18,7 @@ struct SensitiveNotchActivityPlaceholder: View {
             isExpandedPresentation ? Color.clear : Color.black
 
             if isExpandedPresentation {
-                Label("Attività nascosta", systemImage: "lock.fill")
+                Label(String(localized: "Hidden Activity", bundle: .module), systemImage: "lock.fill")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .padding(16)
@@ -30,7 +30,7 @@ struct SensitiveNotchActivityPlaceholder: View {
         }
         .environment(\.colorScheme, .dark)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Attività sensibile nascosta")
+        .accessibilityLabel(Text("Hidden sensitive activity", bundle: .module))
     }
 
     private var isExpandedPresentation: Bool {

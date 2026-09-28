@@ -70,7 +70,7 @@ struct SharedNotchActivitySurface: View {
                 Image(systemName: "clock.badge.exclamationmark")
                     .font(.caption2)
                     .frame(width: 14)
-                    .accessibilityLabel("Aggiornamento in ritardo")
+                    .accessibilityLabel(Text("Update delayed", bundle: .module))
             }
 
             if showsOpenControl, let contentURL {
@@ -78,7 +78,7 @@ struct SharedNotchActivitySurface: View {
                     .frame(width: 8)
 
                 Link(destination: contentURL) {
-                    Label("Apri", systemImage: "arrow.up.forward.app")
+                    Label(String(localized: "Open", bundle: .module), systemImage: "arrow.up.forward.app")
                         .labelStyle(.titleAndIcon)
                 }
                 .buttonStyle(.plain)

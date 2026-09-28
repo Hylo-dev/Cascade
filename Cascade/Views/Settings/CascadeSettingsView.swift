@@ -46,7 +46,7 @@ struct CascadeSettingsView: View {
                 }
             }
             .listStyle(.sidebar)
-            .searchable(text: $query, placement: .sidebar, prompt: "Cerca")
+            .searchable(text: $query, placement: .sidebar)
             .navigationSplitViewColumnWidth(min: 190, ideal: 205, max: 240)
         } detail: {
 
@@ -58,7 +58,7 @@ struct CascadeSettingsView: View {
                     pageContent(selection ?? .appearance)
                 }
             }
-            .navigationTitle(isSearching ? "Risultati di ricerca" : (selection ?? .appearance).title)
+            .navigationTitle(isSearching ? String(localized: "Search Results") : (selection ?? .appearance).title)
             .frame(minWidth: 390)
         }
         .navigationSplitViewStyle(.balanced)
@@ -77,7 +77,7 @@ struct CascadeSettingsView: View {
                         settingRow(.haptics)
                     }
 
-                    Section("Schermi") {
+                    Section("Displays") {
 
                         settingRow(.displayStyle)
 
@@ -91,25 +91,25 @@ struct CascadeSettingsView: View {
 
                         ForEach(CascadeSetting.allCases.filter { $0.page == .dev }) { settingRow($0) }
                     } header: {
-                        Text("Anteprime")
+                        Text("Previews")
                     } footer: {
-                        Text("Prova gli avvisi e le animazioni del notch.")
+                        Text("Try the notch’s alerts and animations.")
                     }
 
-                    Section("Applicazione") {
+                    Section("Application") {
 
-                        LabeledContent("Versione", value: appVersion)
+                        LabeledContent("Version", value: appVersion)
                     }
 
                 case .widget:
-                    Section("Musica") {
+                    Section("Music") {
 
                         settingRow(.music)
 
                         settingRow(.visualizer)
                     }
 
-                    Section("Avvisi") {
+                    Section("Alerts") {
 
                         settingRow(.bluetooth)
 
@@ -120,7 +120,7 @@ struct CascadeSettingsView: View {
                         settingRow(.charging)
                     }
 
-                    Section("Ricerca") { settingRow(.spotlight) }
+                    Section("Search") { settingRow(.spotlight) }
 
                     permissions
             }
@@ -153,7 +153,7 @@ struct CascadeSettingsView: View {
     private func settingRow(_ setting: CascadeSetting) -> some View {
         switch setting {
             case .size:
-                actionRow(setting, button: "Regola…") {
+                actionRow(setting, button: String(localized: "Adjust…")) {
                     services.beginSizeCalibration(from: .settings)
                 }
                 .disabled(!services.canCalibrateDisplay(from: .settings))
@@ -207,10 +207,10 @@ struct CascadeSettingsView: View {
             ForEach(services.displayDescriptors, id: \.runtimeID) { display in
                 LabeledContent {
                     if display.hasHardwareNotch {
-                        Text("Notch hardware")
+                        Text("Hardware notch")
                             .foregroundStyle(.secondary)
                     } else {
-                        Picker("Stile", selection: displayStyleBinding(for: display)) {
+                        Picker("Style", selection: displayStyleBinding(for: display)) {
                             Text("Notch")
                                 .tag(ExternalNotchStyle.notch)
 
@@ -226,7 +226,7 @@ struct CascadeSettingsView: View {
                         Text(display.name)
 
                         if display.identity == nil {
-                            Text("Scelta temporanea per questa connessione")
+                            Text("Temporary choice for this connection")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -245,7 +245,7 @@ struct CascadeSettingsView: View {
 
             rowLabel(setting)
 
-            Picker("Mostra Live Activities", selection: activitySelectionBinding) {
+            Picker("Show Live Activities", selection: activitySelectionBinding) {
                 ForEach(ActivityDisplaySelection.allCases) { selection in
                     Text(selection.title)
                         .tag(selection)
@@ -256,9 +256,9 @@ struct CascadeSettingsView: View {
             .accessibilityIdentifier("settings.activityDisplays")
 
             if activitySelection == .fixedDisplay {
-                Picker("Schermo", selection: fixedDisplayBinding) {
+                Picker("Display", selection: fixedDisplayBinding) {
                     ForEach(activityDisplayChoices) { choice in
-                        Text(choice.isConnected ? choice.name : "\(choice.name) · scollegato")
+                        Text(choice.isConnected ? choice.name : String(localized: "\(choice.name) · disconnected"))
                             .tag(choice.identity)
                             .accessibilityLabel(choice.accessibilityLabel)
                     }
@@ -266,7 +266,7 @@ struct CascadeSettingsView: View {
                 .accessibilityIdentifier("settings.activityDisplays.fixed")
             }
 
-            Text("Il focus segue la finestra attiva; se non è disponibile usa il puntatore, poi lo schermo principale. La sagoma di Cascade rimane su tutti gli schermi.")
+            Text("Focus follows the active window; if that isn’t available, it uses the pointer, then the main display. The Cascade shape stays on every display.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -335,7 +335,7 @@ struct CascadeSettingsView: View {
     }
 
     private func displayAccessibilityLabel(_ display: NotchDisplayDescriptor) -> String {
-        let identity = display.identity?.rawValue ?? "sessione \(display.runtimeID)"
+        let identity = display.identity?.rawValue ?? String(localized: "session \(display.runtimeID)")
         return "\(display.name), \(identity)"
     }
 
@@ -352,7 +352,7 @@ struct CascadeSettingsView: View {
 
     private func actionRow(
         _ setting: CascadeSetting,
-        button   : String = "Prova",
+        button   : String = String(localized: "Test"),
         action   : @escaping () -> Void
     ) -> some View {
         HStack(spacing: 16) {
@@ -385,12 +385,12 @@ struct CascadeSettingsView: View {
         if services.musicEnabled {
             switch services.musicStatus {
                 case .permissionRequired(let message), .unavailable(let message):
-                    Section("Accesso alla musica") {
+                    Section("Music Access") {
 
                         Text(message)
                             .foregroundStyle(.secondary)
 
-                        Button("Consenti accesso al player…") { services.requestMusicAccess() }
+                        Button("Allow Player Access…") { services.requestMusicAccess() }
                     }
 
                 default:
@@ -399,32 +399,32 @@ struct CascadeSettingsView: View {
         }
 
         if services.volumeEnabled, services.volumeStatus == .permissionRequired {
-            Section("Accessibilità") {
+            Section("Accessibility") {
 
-                Text("Consenti a Cascade di usare i tasti volume per mostrare l’avviso nel notch.")
+                Text("Allow Cascade to use the volume keys to show the alert in the notch.")
                     .foregroundStyle(.secondary)
 
-                Button("Consenti Accessibilità…") { services.requestVolumeAccessibility() }
+                Button("Allow Accessibility…") { services.requestVolumeAccessibility() }
             }
         }
 
         if services.bluetoothEnabled,
            services.nativeReplacementEnabled,
            services.suppressionStatus == .permissionRequired {
-            Section("Avvisi Bluetooth di macOS") {
+            Section("macOS Bluetooth Alerts") {
 
-                Button("Consenti Accessibilità…") { services.requestAccessibility() }
+                Button("Allow Accessibility…") { services.requestAccessibility() }
             }
         }
 
         if services.musicEnabled,
            services.audioVisualizerEnabled,
            services.audioSpectrumStatus == .permissionRequired {
-            Section("Audio di sistema") {
+            Section("System Audio") {
 
-                Button("Consenti audio di sistema…") { services.openAudioCaptureSettings() }
+                Button("Allow System Audio…") { services.openAudioCaptureSettings() }
 
-                Button("Ricontrolla il permesso") { services.retryAudioCapture() }
+                Button("Check Permission Again") { services.retryAudioCapture() }
             }
         }
     }

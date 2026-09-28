@@ -38,9 +38,9 @@ nonisolated enum DisplaySettingsModel {
         if let selected, !choices.contains(where: { $0.identity == selected }) {
             choices.append(ActivityDisplayChoice(
                 identity          : selected,
-                name              : "Schermo scollegato",
+                name              : String(localized: "Disconnected Display"),
                 isConnected       : false,
-                accessibilityLabel: "Schermo scollegato, \(selected.rawValue)"
+                accessibilityLabel: String(localized: "Disconnected Display, \(selected.rawValue)")
             ))
         }
 

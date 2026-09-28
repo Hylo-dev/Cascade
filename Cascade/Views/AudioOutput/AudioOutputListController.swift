@@ -44,7 +44,7 @@ final class AudioOutputListController: NSViewController {
             right : 10
         )
 
-        let heading = NSTextField(labelWithString: "Uscita audio del Mac")
+        let heading = NSTextField(labelWithString: String(localized: "Mac Audio Output"))
         heading.font      = .systemFont(ofSize: NSFont.smallSystemFontSize, weight: .semibold)
         heading.textColor = .secondaryLabelColor
         stack.addArrangedSubview(heading)
@@ -66,7 +66,7 @@ final class AudioOutputListController: NSViewController {
         }
 
         if outputs.isEmpty {
-            let empty = NSTextField(labelWithString: "Nessuna uscita disponibile")
+            let empty = NSTextField(labelWithString: String(localized: "No outputs available"))
             empty.textColor = .secondaryLabelColor
             stack.addArrangedSubview(empty)
         }

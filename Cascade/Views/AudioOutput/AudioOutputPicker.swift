@@ -23,14 +23,14 @@ struct AudioOutputPicker: NSViewRepresentable {
 
         button.image = NSImage(
             systemSymbolName        : "airplay.audio",
-            accessibilityDescription: "Uscita audio del Mac"
+            accessibilityDescription: String(localized: "Mac Audio Output")
         )
         button.imagePosition       = .imageOnly
         button.isBordered          = false
         button.contentTintColor    = .secondaryLabelColor
         button.symbolConfiguration = .init(pointSize: 20, weight: .regular)
-        button.toolTip             = "Uscita audio del Mac"
-        button.setAccessibilityLabel("Uscita audio del Mac")
+        button.toolTip             = String(localized: "Mac Audio Output")
+        button.setAccessibilityLabel(String(localized: "Mac Audio Output"))
 
         return button
     }

@@ -15,7 +15,7 @@ import os
 @Observable
 final class SpotlightCoordinator {
 
-    private(set) var status = "Spotlight dal notch non attiva"
+    private(set) var status = String(localized: "Spotlight from the notch is off")
 
     @ObservationIgnored
     private let droplet: any SpotlightDropletPresenting
@@ -144,13 +144,13 @@ final class SpotlightCoordinator {
         guard isEnabled, !handoff.shouldBufferInput else { return }
 
         guard #available(macOS 26, *) else {
-            status = "La goccia Liquid Glass richiede macOS 26 o successivo"
+            status = String(localized: "The Liquid Glass droplet requires macOS 26 or later")
             return
         }
 
         guard AXIsProcessTrusted() else {
             disconnectNative()
-            status = "Consenti Accessibilità per Spotlight dal notch"
+            status = String(localized: "Allow Accessibility for Spotlight from the notch")
             return
         }
 
@@ -160,14 +160,14 @@ final class SpotlightCoordinator {
               let shortcut = SpotlightShortcut(preference: binding)
         else {
             disconnectNative()
-            status = "Attiva una scorciatoia di sistema per Spotlight"
+            status = String(localized: "Turn on a system shortcut for Spotlight")
             return
         }
 
         guard let host = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.campo").first
         else {
             disconnectNative()
-            status = "Apri Spotlight una volta per collegarla al notch"
+            status = String(localized: "Open Spotlight once to connect it to the notch")
             return
         }
 
@@ -191,13 +191,13 @@ final class SpotlightCoordinator {
                     self?.log.error("Spotlight shortcut tap was disabled by the system")
                     self?.cancelHandoff()
                     self?.tap.stop()
-                    self?.status = "Scorciatoia nativa attiva · riapri il menu per riprovare"
+                    self?.status = String(localized: "Native shortcut active · reopen the menu to try again")
                 }
             }
         )
         status = installed
-            ? "Spotlight si stacca dal notch"
-            : "Scorciatoia nativa attiva · Accessibilità non disponibile"
+            ? String(localized: "Spotlight detaches from the notch")
+            : String(localized: "Native shortcut active · Accessibility unavailable")
     }
 
     private func disconnectNative() {
@@ -223,7 +223,7 @@ final class SpotlightCoordinator {
         for token in workspaceTokens { NSWorkspace.shared.notificationCenter.removeObserver(token) }
         workspaceTokens.removeAll()
 
-        status = "Spotlight dal notch non attiva"
+        status = String(localized: "Spotlight from the notch is off")
     }
 
     func preview(at requestedAnchor: SpotlightDisplayAnchor? = nil) {
@@ -474,7 +474,7 @@ final class SpotlightCoordinator {
 
             self.log.error("Native Spotlight did not become ready within the handoff deadline")
             self.cancelHandoff()
-            self.status = "Spotlight non risponde · riprova la scorciatoia"
+            self.status = String(localized: "Spotlight isn’t responding · try the shortcut again")
         }
 
         droplet.play(
@@ -570,7 +570,7 @@ final class SpotlightCoordinator {
         tap.deliver(bufferedEvents, to: snapshot.processID)
         bufferedEvents.removeAll(keepingCapacity: true)
         droplet.revealNative()
-        status = "Spotlight si stacca dal notch"
+        status = String(localized: "Spotlight detaches from the notch")
     }
 
     private func cancelHandoff() {

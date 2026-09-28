@@ -126,7 +126,7 @@ struct FileShelfControllerTests {
         #expect(controller.presentation.snapshot.entries.count == 5)
         #expect(controller.presentation.snapshot.totalCount == 5)
         #expect(controller.presentation.actions.isEmpty)
-        #expect(controller.statusMessage == "Rilascia per aggiungere")
+        #expect(controller.statusMessage == "Drop to add")
 
         controller.showHover(nil)
         let clearedRevision = controller.contentRevision
@@ -170,7 +170,7 @@ struct FileShelfControllerTests {
 
         controller.showUnsupportedDrop()
 
-        #expect(controller.statusMessage == "Sono accettati solo file locali regolari, non cartelle o file promessi.")
+        #expect(controller.statusMessage == "Only regular local files are accepted, not folders or promised files.")
         #expect(!controller.isOccupied)
         #expect(!controller.keepsExpandedPresentation)
     }
@@ -181,7 +181,7 @@ struct FileShelfControllerTests {
         let fixture = try FileShelfFixture()
         let controller = FileShelfController(host: fixture.host, preferenceChanged: { _ in })
         await controller.start()
-        let source = try fixture.file(name: "originale.txt", contents: "resta")
+        let source = try fixture.file(name: "original.txt", contents: "stays")
         await controller.acceptRegularFiles([source])
         let id = try #require(controller.presentation.snapshot.entries.first?.id)
         await controller.perform(try #require(controller.presentation.action(for: .openList)))
@@ -190,7 +190,7 @@ struct FileShelfControllerTests {
         ))
 
         #expect(controller.presentation.snapshot.entries.isEmpty)
-        #expect(try String(contentsOf: source, encoding: .utf8) == "resta")
+        #expect(try String(contentsOf: source, encoding: .utf8) == "stays")
     }
 
     @MainActor
@@ -293,8 +293,8 @@ struct FileShelfControllerTests {
     func promiseDelegateOutlivesVisualDragAndReceiptsStayPerItem() async throws {
         let fixture = try FileShelfFixture()
         try await fixture.host.restore()
-        let first = try fixture.file(name: "primo.txt", contents: "primo")
-        let second = try fixture.file(name: "secondo.txt", contents: "secondo")
+        let first = try fixture.file(name: "first.txt", contents: "first")
+        let second = try fixture.file(name: "second.txt", contents: "second")
         let ids = try await fixture.host.addOriginals([first, second])
         let prepared = try await fixture.host.prepareItems(ids: ids)
         let providers = prepared.map { item in
@@ -305,16 +305,16 @@ struct FileShelfControllerTests {
         let retainedDelegate = WeakObjectReference(providers[0].delegate as AnyObject?)
         #expect(retainedDelegate.value != nil)
 
-        let collision = fixture.output.appendingPathComponent("primo.txt")
-        try Data("esiste".utf8).write(to: collision)
+        let collision = fixture.output.appendingPathComponent("first.txt")
+        try Data("exists".utf8).write(to: collision)
         let firstError = await write(providers[0], to: collision)
         #expect(firstError != nil)
 
         await Task.yield() // The promise remains valid after the visual drag session has ended.
-        let destination = fixture.output.appendingPathComponent("secondo.txt")
+        let destination = fixture.output.appendingPathComponent("second.txt")
         let secondError = await write(providers[1], to: destination)
         #expect(secondError == nil)
-        #expect(try String(contentsOf: destination, encoding: .utf8) == "secondo")
+        #expect(try String(contentsOf: destination, encoding: .utf8) == "second")
         #expect(try await fixture.host.snapshot().entries.map(\.id) == [ids[0]])
 
         providers[0].userInfo = nil

@@ -216,12 +216,12 @@ struct ProbeScene: View {
     @ObservedObject private var model = ProbeCounterModel.shared
     var body: some View {
         VStack(spacing: 12) {
-            Text("Cascade — scena remota").font(.headline)
-            Text("Conteggio: \(model.count)")
-            Button("Incrementa") { model.increment() }
+            Text("Cascade — remote scene").font(.headline)
+            Text("Count: \(model.count)")
+            Button("Increment") { model.increment() }
                 .disabled(!model.canIncrement)
-            Menu("Menu di prova") {
-                Button("Azzera") { model.reset() }
+            Menu("Test Menu") {
+                Button("Reset") { model.reset() }
             }
             .disabled(!model.enabled)
         }

@@ -108,7 +108,7 @@ final class MusicPlaybackPresentation {
         guard token == id else { return }
 
         clear()
-        commandError = "Comando non riuscito. Riprova."
+        commandError = String(localized: "Command failed. Try again.")
     }
 
     private var isConfirmed: Bool {

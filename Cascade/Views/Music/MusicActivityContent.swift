@@ -100,7 +100,7 @@ struct MusicActivityContent: View {
                 }
                 .frame(height: 18)
             } else {
-                Text("In diretta")
+                Text("Live")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .frame(height: 18)
@@ -110,7 +110,9 @@ struct MusicActivityContent: View {
 
                 control(
                     snapshot.isFavorite == true ? "star.fill" : "star",
-                    label     : snapshot.isFavorite == true ? "Rimuovi dai preferiti" : "Aggiungi ai preferiti",
+                    label     : snapshot.isFavorite == true
+                        ? String(localized: "Remove from Favorites")
+                        : String(localized: "Add to Favorites"),
                     command   : .toggleFavorite,
                     capability: .favorite,
                     size      : 19,
@@ -121,7 +123,7 @@ struct MusicActivityContent: View {
 
                 control(
                     "backward.fill",
-                    label     : "Brano precedente",
+                    label     : String(localized: "Previous Track"),
                     command   : .previousTrack,
                     capability: .previousTrack,
                     size      : 25
@@ -131,7 +133,7 @@ struct MusicActivityContent: View {
 
                 control(
                     snapshot.isPlaying ? "pause.fill" : "play.fill",
-                    label     : snapshot.isPlaying ? "Pausa" : "Riproduci",
+                    label     : snapshot.isPlaying ? String(localized: "Pause") : String(localized: "Play"),
                     command   : .togglePlayback,
                     capability: .togglePlayback,
                     size      : 30
@@ -141,7 +143,7 @@ struct MusicActivityContent: View {
 
                 control(
                     "forward.fill",
-                    label     : "Brano successivo",
+                    label     : String(localized: "Next Track"),
                     command   : .nextTrack,
                     capability: .nextTrack,
                     size      : 25
@@ -195,8 +197,8 @@ struct MusicActivityContent: View {
         .buttonStyle(MusicControlButtonStyle())
         .disabled(!supported || isSending)
         .accessibilityLabel(label)
-        .accessibilityValue(isPending ? "Comando in corso" : "")
-        .help(supported ? label : "\(label): non disponibile in questo player")
+        .accessibilityValue(isPending ? "Command in progress" : "")
+        .help(supported ? label : String(localized: "\(label): not available in this player"))
     }
 
     private func progress(

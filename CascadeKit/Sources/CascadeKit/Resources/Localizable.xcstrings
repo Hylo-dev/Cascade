@@ -1,0 +1,215 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Adjust Notch Size": {
+      "comment": "Window title of the notch size calibration panel.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regola dimensioni del notch"
+          }
+        }
+      }
+    },
+    "Adjust the notch base": {
+      "comment": "Title of the notch size calibration overlay.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regola la base del notch"
+          }
+        }
+      }
+    },
+    "Cancel Adjustment": {
+      "comment": "Accessibility label of the calibration cancel button.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annulla regolazione"
+          }
+        }
+      }
+    },
+    "Cancel · Esc": {
+      "comment": "Calibration button that discards the adjustment; Esc is its key.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annulla · Esc"
+          }
+        }
+      }
+    },
+    "Cascade Settings": {
+      "comment": "Accessibility description of the settings button in the expanded notch.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impostazioni di Cascade"
+          }
+        }
+      }
+    },
+    "Decrease Height": {
+      "comment": "Accessibility label of the calibration button that makes the notch shorter.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riduci altezza"
+          }
+        }
+      }
+    },
+    "Decrease Width": {
+      "comment": "Accessibility label of the calibration button that narrows the notch.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riduci larghezza"
+          }
+        }
+      }
+    },
+    "Expand activity": {
+      "comment": "Accessibility hint of a compact activity in the notch.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Espandi attività"
+          }
+        }
+      }
+    },
+    "Hidden Activity": {
+      "comment": "Placeholder shown instead of a sensitive activity's content.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attività nascosta"
+          }
+        }
+      }
+    },
+    "Hidden sensitive activity": {
+      "comment": "Accessibility label of the sensitive activity placeholder.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attività sensibile nascosta"
+          }
+        }
+      }
+    },
+    "Increase Height": {
+      "comment": "Accessibility label of the calibration button that makes the notch taller.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aumenta altezza"
+          }
+        }
+      }
+    },
+    "Increase Width": {
+      "comment": "Accessibility label of the calibration button that widens the notch.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aumenta larghezza"
+          }
+        }
+      }
+    },
+    "Open": {
+      "comment": "Button that opens the app behind an activity.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri"
+          }
+        }
+      }
+    },
+    "Save Size": {
+      "comment": "Accessibility label of the calibration save button.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salva dimensioni"
+          }
+        }
+      }
+    },
+    "Save · Return": {
+      "comment": "Calibration button that saves the size; Return is its key.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salva · Invio"
+          }
+        }
+      }
+    },
+    "Settings…": {
+      "comment": "Tooltip of the settings button in the expanded notch.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impostazioni…"
+          }
+        }
+      }
+    },
+    "Update delayed": {
+      "comment": "Accessibility label of the badge shown when an activity's content is stale.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiornamento in ritardo"
+          }
+        }
+      }
+    },
+    "Width %lld pt   ×   Height %lld pt": {
+      "comment": "Current notch size in the calibration overlay, in points.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Larghezza %lld pt   ×   Altezza %lld pt"
+          }
+        }
+      }
+    },
+    "← → Width   ·   ↑ ↓ Height   ·   Shift: 5 pt": {
+      "comment": "Keyboard help in the calibration overlay; Shift moves 5 points at a time.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "← → Larghezza   ·   ↑ ↓ Altezza   ·   Maiusc: 5 pt"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

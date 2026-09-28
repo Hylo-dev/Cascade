@@ -39,7 +39,7 @@ final class CalibrationCanvas: NSView {
         instructions.appearance             = NSAppearance(named: .darkAqua)
         addSubview(instructions)
 
-        let title = NSTextField(labelWithString: "Regola la base del notch")
+        let title = NSTextField(labelWithString: String(localized: "Adjust the notch base", bundle: .module))
         title.font      = .systemFont(ofSize: 16, weight: .semibold)
         title.textColor = .white
         instructions.addArrangedSubview(title)
@@ -49,22 +49,30 @@ final class CalibrationCanvas: NSView {
         instructions.addArrangedSubview(dimensions)
 
         let controls = NSStackView(views: [
-            button("←", action: #selector(narrower), label: "Riduci larghezza"),
-            button("→", action: #selector(wider), label: "Aumenta larghezza"),
-            button("↑", action: #selector(shorter), label: "Riduci altezza"),
-            button("↓", action: #selector(taller), label: "Aumenta altezza")
+            button("←", action: #selector(narrower), label: String(localized: "Decrease Width", bundle: .module)),
+            button("→", action: #selector(wider), label: String(localized: "Increase Width", bundle: .module)),
+            button("↑", action: #selector(shorter), label: String(localized: "Decrease Height", bundle: .module)),
+            button("↓", action: #selector(taller), label: String(localized: "Increase Height", bundle: .module))
         ])
         controls.spacing = 10
         instructions.addArrangedSubview(controls)
 
-        let help = NSTextField(labelWithString: "← → Larghezza   ·   ↑ ↓ Altezza   ·   Maiusc: 5 pt")
+        let help = NSTextField(labelWithString: String(localized: "← → Width   ·   ↑ ↓ Height   ·   Shift: 5 pt", bundle: .module))
         help.font      = .systemFont(ofSize: 12)
         help.textColor = .lightGray
         instructions.addArrangedSubview(help)
 
         let actions = NSStackView(views: [
-            button("Annulla · Esc", action: #selector(cancelCalibration), label: "Annulla regolazione"),
-            button("Salva · Invio", action: #selector(saveCalibration), label: "Salva dimensioni")
+            button(
+                String(localized: "Cancel · Esc", bundle: .module),
+                action: #selector(cancelCalibration),
+                label : String(localized: "Cancel Adjustment", bundle: .module)
+            ),
+            button(
+                String(localized: "Save · Return", bundle: .module),
+                action: #selector(saveCalibration),
+                label : String(localized: "Save Size", bundle: .module)
+            )
         ])
         actions.spacing = 12
         instructions.addArrangedSubview(actions)
@@ -87,7 +95,10 @@ final class CalibrationCanvas: NSView {
     }
 
     func update(size: CGSize) {
-        dimensions.stringValue = "Larghezza \(Int(size.width)) pt   ×   Altezza \(Int(size.height)) pt"
+        dimensions.stringValue = String(
+            localized: "Width \(Int(size.width)) pt   ×   Height \(Int(size.height)) pt",
+            bundle   : .module
+        )
         needsLayout            = true
     }
 

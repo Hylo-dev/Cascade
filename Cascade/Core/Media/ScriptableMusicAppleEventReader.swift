@@ -161,7 +161,7 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
 
             case .seek(let seconds):
                 guard seconds.isFinite else {
-                    throw ScriptableMusicError.unavailable("Posizione di riproduzione non valida.")
+                    throw ScriptableMusicError.unavailable(String(localized: "Invalid playback position."))
                 }
 
                 let (_, metadata) = try currentMetadata(target, deadline: deadline)
@@ -172,7 +172,7 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
                 let duration = metadata.duration.map { target.source == .spotify ? $0 / 1_000 : $0 }
                 guard let duration, duration.isFinite, duration > 0 else {
                     throw ScriptableMusicError.unavailable(
-                        "Questo contenuto non consente di cambiare posizione."
+                        String(localized: "This content doesn’t allow changing the position.")
                     )
                 }
 
@@ -185,7 +185,7 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
 
             case .toggleFavorite:
                 guard target.source == .music else {
-                    throw ScriptableMusicError.unavailable("Questo lettore non espone i preferiti.")
+                    throw ScriptableMusicError.unavailable(String(localized: "This player doesn’t expose favorites."))
                 }
 
                 let (track, metadata) = try currentMetadata(target, deadline: deadline)
@@ -194,7 +194,7 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
                 }
                 guard let favorite = metadata.favorite else {
                     throw ScriptableMusicError.unavailable(
-                        "Il lettore non ha fornito lo stato dei preferiti."
+                        String(localized: "The player didn’t report the favorite status.")
                     )
                 }
 
@@ -245,7 +245,7 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
                 throw ScriptableMusicError.permissionRequired(target.source)
             }
             throw ScriptableMusicError.unavailable(
-                "\(target.source.displayName) non è disponibile (\(result))."
+                String(localized: "\(target.source.displayName) isn’t available (\(result)).")
             )
         }
     }
@@ -301,7 +301,7 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
 
         let remaining = deadline.timeIntervalSinceNow
         guard remaining > 0 else {
-            throw ScriptableMusicError.unavailable("\(target.source.displayName) non risponde.")
+            throw ScriptableMusicError.unavailable(String(localized: "\(target.source.displayName) isn’t responding."))
         }
 
         let event = NSAppleEventDescriptor(
@@ -326,7 +326,7 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
                 throw ScriptableMusicError.permissionRequired(target.source)
             }
             throw ScriptableMusicError.unavailable(
-                "\(target.source.displayName) non risponde (\(error.code))."
+                String(localized: "\(target.source.displayName) isn’t responding (\(error.code)).")
             )
         }
 
@@ -336,7 +336,7 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
                 throw ScriptableMusicError.permissionRequired(target.source)
             }
             throw ScriptableMusicError.unavailable(
-                "\(target.source.displayName) non ha completato la richiesta (\(errorNumber))."
+                String(localized: "\(target.source.displayName) didn’t complete the request (\(errorNumber)).")
             )
         }
 
@@ -366,7 +366,7 @@ actor ScriptableMusicAppleEventReader: ScriptableMusicReading {
         )
 
         guard let result = record.coerce(toDescriptorType: typeObjectSpecifier) else {
-            throw ScriptableMusicError.unavailable("Impossibile preparare la richiesta al lettore.")
+            throw ScriptableMusicError.unavailable(String(localized: "Couldn’t prepare the request to the player."))
         }
         return result
     }
