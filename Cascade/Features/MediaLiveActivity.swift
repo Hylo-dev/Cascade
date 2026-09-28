@@ -625,8 +625,13 @@ private struct MusicActivityContent: View {
 
     private func progress(at date: Date, duration: TimeInterval) -> some View {
         let position = isScrubbing ? scrubPosition : snapshot.position(at: date)
+        // Only the digits that change roll, up for the elapsed time and down
+        // for the remaining one, once a second; never while scrubbing.
+        let rolls = !isScrubbing && !reduceMotion
         return HStack(spacing: 8) {
-            Text(timestamp(position)).frame(minWidth: 32, alignment: .leading)
+            MusicTimeLabel(text: timestamp(position), countsDown: false, animates: rolls)
+                .frame(minWidth: 32, alignment: .leading)
+                .accessibilityLabel(timestamp(position))
             MusicProgressSlider(
                 position : position,
                 duration : duration,
@@ -642,7 +647,9 @@ private struct MusicActivityContent: View {
                 onCancel: { isScrubbing = false },
                 trackIdentity: [snapshot.sourceBundleIdentifier, snapshot.trackIdentifier ?? "", snapshot.title, snapshot.artist]
             )
-            Text("−" + timestamp(duration - position)).frame(minWidth: 38, alignment: .trailing)
+            MusicTimeLabel(text: "−" + timestamp(duration - position), countsDown: true, animates: rolls)
+                .frame(minWidth: 38, alignment: .trailing)
+                .accessibilityLabel("−" + timestamp(duration - position))
         }
         .font(.system(size: 11, weight: .regular)).monospacedDigit()
         .foregroundStyle(.white.opacity(0.55))
