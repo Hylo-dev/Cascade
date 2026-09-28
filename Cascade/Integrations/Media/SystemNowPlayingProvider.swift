@@ -122,6 +122,8 @@ final class SystemNowPlayingProvider: NowPlayingProviding {
     /// setup can launch an installed player in the background; metadata reads
     /// never launch applications. A saved attempt prevents reopening idle
     /// players on every subsequent Cascade launch, without caching permission.
+    /// A player launched only for consent is quit again once the prompt is
+    /// answered, unless the user has brought it forward in the meantime.
     func requestAccess(includeInstalledPlayers: Bool = false) async {
         guard !isRequestingAccess else { return }
         isRequestingAccess = true
@@ -131,6 +133,12 @@ final class SystemNowPlayingProvider: NowPlayingProviding {
             guard generation == activeGeneration, continuation != nil, !Task.isCancelled else { return }
             let attemptKey = "startupAutomationRequested.\(source.bundleIdentifier)"
             var target = resolveTargets()[source]
+            var launchedForConsent: NSRunningApplication?
+            defer {
+                if let launchedForConsent, launchedForConsent.isHidden, !launchedForConsent.isActive {
+                    launchedForConsent.terminate()
+                }
+            }
             if target == nil, includeInstalledPlayers, !preferences.bool(forKey: attemptKey),
                let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: source.bundleIdentifier) {
                 let configuration = NSWorkspace.OpenConfiguration()
@@ -141,6 +149,7 @@ final class SystemNowPlayingProvider: NowPlayingProviding {
                         at           : url,
                         configuration: configuration
                     )
+                    launchedForConsent = application
                     guard generation == activeGeneration, continuation != nil, !Task.isCancelled else { return }
                     target = ScriptablePlayerTarget(
                         source           : source,
@@ -158,8 +167,12 @@ final class SystemNowPlayingProvider: NowPlayingProviding {
                 guard generation == activeGeneration, continuation != nil, !Task.isCancelled else { return }
                 preferences.set(true, forKey: attemptKey)
                 errors[source] = nil
-                reconcileRunningPlayers(refreshExisting: false)
-                requestRefresh(source)
+                // A player launched only for consent is about to quit and has
+                // nothing playing, so reading it would be wasted AppleEvents.
+                if launchedForConsent == nil {
+                    reconcileRunningPlayers(refreshExisting: false)
+                    requestRefresh(source)
+                }
             } catch {
                 guard generation == activeGeneration, continuation != nil, !Task.isCancelled else { return }
                 errors[source] = Self.sourceError(error)
