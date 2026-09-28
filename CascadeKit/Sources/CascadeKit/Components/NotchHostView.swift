@@ -4,6 +4,8 @@
 //
 
 import AppKit
+import CascadeContracts
+import CascadePresentation
 import OSLog
 import QuartzCore
 import SwiftUI
@@ -56,6 +58,8 @@ final class NotchHostView: NSView {
     private var glassBody   = NotchGlassBody.zero
     private var glassTarget = NotchGlassBody.zero
     private var glassLightSources = NotchGlassLightSources()
+    private var glassLightEmitters: [ObjectIdentifier: GlassLightEmitter] = [:]
+    private(set) var glassLightBounds = CGRect.zero
     private var isFileDropEnabled = false
     private var fileDropExclusionFrame: CGRect = .zero
     private var fileDropIntakeFrame: CGRect?
@@ -328,6 +332,12 @@ final class NotchHostView: NSView {
         frame: CGRect
     ) {
         let token = glassLightSources.replace(source: ObjectIdentifier(host))
+        // Emitters inside the outgoing root go with it, before SwiftUI tears
+        // their views down, exactly like its preference contribution.
+        for (source, emitter) in glassLightEmitters where emitter.view.map({ $0.isDescendant(of: host) }) ?? true {
+            glassLightEmitters[source] = nil
+            glassLightSources.remove(source: source)
+        }
         if let view {
             host.rootView = AnyView(NotchGlassLightObserver(content: view, token: token) { [weak self, weak host] emission in
                 guard let self, let host, !host.isHidden,
@@ -440,6 +450,7 @@ final class NotchHostView: NSView {
         shapeLayer.path       = path
         glassBody   = NotchGlassBody(geometry: geometry, centerX: centerX, topY: topY)
         glassTarget = NotchGlassBody(geometry: targetGeometry ?? geometry, centerX: centerX, topY: topY)
+        glassLightBounds = Self.outlineBounds(of: targetGeometry ?? geometry, centerX: centerX, topY: topY)
         self.isChromeVisible  = isChromeVisible
         self.materialProgress = materialProgress.isFinite ? min(1, max(0, materialProgress)) : 0
         updateChromeMaterial()
@@ -676,9 +687,57 @@ final class NotchHostView: NSView {
         onUnsupportedFileDrop?()
     }
 
+    /// outlineBounds is `CGPath.notch(...).boundingBoxOfPath` without building
+    /// the path: the body plus the concave shoulders flaring out at the top.
+    private static func outlineBounds(
+        of geometry: NotchGeometry,
+        centerX    : CGFloat,
+        topY       : CGFloat
+    ) -> CGRect {
+        let shoulder = max(0, min(geometry.topCornerRadius, geometry.height / 2, geometry.width / 2))
+        return CGRect(
+            x     : centerX - geometry.leftExtent - shoulder,
+            y     : topY - geometry.height,
+            width : geometry.width + shoulder * 2,
+            height: geometry.height
+        )
+    }
+
     isolated deinit {
         if let accessibilityObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(accessibilityObserver)
         }
+    }
+}
+
+/// GlassLightEmitter remembers an AppKit emitter without retaining its view.
+@MainActor
+private final class GlassLightEmitter {
+    let token: NotchGlassLightSources.Token
+    weak var view: NSView?
+
+    init(token: NotchGlassLightSources.Token, view: NSView) {
+        self.token = token
+        self.view  = view
+    }
+}
+
+extension NotchHostView: NotchGlassLightReceiving {
+    /// setGlassLights merges an AppKit emitter with the SwiftUI contributions.
+    /// Each emitter is its own source; an empty array, or an emitter that is
+    /// hidden, forgets it.
+    func setGlassLights(_ lights: [GlassLight], from emitter: NSView) {
+        let source = ObjectIdentifier(emitter)
+        guard !lights.isEmpty, !emitter.isHiddenOrHasHiddenAncestor, emitter.isDescendant(of: self) else {
+            guard glassLightEmitters.removeValue(forKey: source) != nil else { return }
+            glassLightSources.remove(source: source)
+            glassRenderer.setLights(glassLightSources.lights)
+            return
+        }
+        let entry = glassLightEmitters[source]
+            ?? GlassLightEmitter(token: glassLightSources.replace(source: source), view: emitter)
+        glassLightEmitters[source] = entry
+        guard glassLightSources.update(lights, for: entry.token) else { return }
+        glassRenderer.setLights(glassLightSources.lights)
     }
 }

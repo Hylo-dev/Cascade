@@ -26,6 +26,14 @@ nonisolated struct NotchGlassLightSources {
         return Token(source: source, generation: generation)
     }
 
+    /// remove forgets a source that will never contribute again, so emitters
+    /// that come and go leave no entries behind.
+    mutating func remove(source: ObjectIdentifier) {
+        generations[source] = nil
+        contributions[source] = nil
+        order.removeAll { $0 == source }
+    }
+
     @discardableResult
     mutating func update(_ lights: [GlassLight], for token: Token) -> Bool {
         guard generations[token.source] == token.generation else { return false }

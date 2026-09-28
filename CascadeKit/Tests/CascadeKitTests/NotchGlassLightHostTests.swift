@@ -51,6 +51,48 @@ struct NotchGlassLightHostTests {
         try await expectLights([light], from: host, renderer: renderer)
     }
 
+    @Test
+    func anAppKitEmitterReachesTheGlassDirectlyAndWithdrawsWithAnEmptyArray() throws {
+        let renderer = RecordingGlassRenderer()
+        let host = NotchHostView(frame: CGRect(x: 0, y: 0, width: 600, height: 260), glassRenderer: renderer)
+        let geometry = NotchGeometry(leftExtent: 200, rightExtent: 200, height: 150, bottomCornerRadius: 40, topCornerRadius: 16)
+        host.apply(geometry: geometry, centerX: 300, topY: 260, isChromeVisible: true)
+        let receiver: any NotchGlassLightReceiving = host
+        let light = try makeLight()
+        let emitter = NSView()
+        host.addSubview(emitter)
+
+        receiver.setGlassLights([light], from: emitter)
+        #expect(renderer.lights == [light])
+        // Normalized to the same outline the renderer lays lights out in.
+        #expect(receiver.glassLightBounds == CGPath.notch(geometry: geometry, centerX: 300, topY: 260).boundingBoxOfPath)
+
+        receiver.setGlassLights([], from: emitter)
+        #expect(renderer.lights.isEmpty)
+
+        // A view outside the notch cannot light it.
+        receiver.setGlassLights([light], from: NSView())
+        #expect(renderer.lights.isEmpty)
+    }
+
+    @Test
+    func replacingTheContentWithdrawsItsEmitterAtOnce() throws {
+        let renderer = RecordingGlassRenderer()
+        let frame = CGRect(x: 0, y: 0, width: 320, height: 160)
+        let host = NotchHostView(frame: frame, glassRenderer: renderer)
+        host.setExpandedActivityContent(AnyView(Text("Album")), frame: frame)
+        func descendants(_ view: NSView) -> [NSView] { view.subviews + view.subviews.flatMap(descendants) }
+        let hosting = try #require(descendants(host).first { $0 is NSHostingView<AnyView> && !$0.isHidden })
+        let emitter = NSView()
+        hosting.addSubview(emitter)
+        (host as any NotchGlassLightReceiving).setGlassLights([try makeLight()], from: emitter)
+        #expect(!renderer.lights.isEmpty)
+
+        host.setExpandedActivityContent(AnyView(Text("Contenuto nascosto").privacySensitive()), frame: frame)
+
+        #expect(renderer.lights.isEmpty)
+    }
+
     private func expectLights(
         _ lights: [GlassLight],
         from host: NotchHostView,
