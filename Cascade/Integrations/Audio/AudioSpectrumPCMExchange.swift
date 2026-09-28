@@ -3,6 +3,7 @@
 //  Cascade
 //
 
+import Accelerate
 import CoreAudio
 import AudioToolbox
 import Dispatch
@@ -58,25 +59,42 @@ nonisolated final class AudioSpectrumPCMExchange: @unchecked Sendable {
 
         // An unusual device buffer must not turn the audio callback into unbounded work.
         // Retain the most recent part; any skipped prefix is simply absent from the visualizer.
+        // The ring is written in at most two contiguous runs per call, each a single copy
+        // or de-interleave: a per-sample Swift loop on this real-time thread cost ~0.9 % of a
+        // core in a debug build.
         let firstFrame = max(0, frameCount - 8_192)
-        for frame in firstFrame..<frameCount {
-            let sample = firstSamples[frame * firstChannels]
-            left[cursor] = sample
-            right[cursor] = secondSamples?[frame] ?? (firstChannels == 2 ? firstSamples[frame * 2 + 1] : sample)
-            cursor = (cursor + 1) & 2_047
-            received = min(2_048, received + 1)
+        var written = 0
+        while written < frameCount - firstFrame {
+            let run = min(frameCount - firstFrame - written, 2_048 - cursor)
+            let frame = firstFrame + written
+            if let secondSamples {
+                (left + cursor).update(from: firstSamples + frame, count: run)
+                (right + cursor).update(from: secondSamples + frame, count: run)
+            } else if firstChannels == 2 {
+                var split = DSPSplitComplex(realp: left + cursor, imagp: right + cursor)
+                UnsafeRawPointer(firstSamples + frame * 2)
+                    .withMemoryRebound(to: DSPComplex.self, capacity: run) {
+                        vDSP_ctoz($0, 2, &split, 1, vDSP_Length(run))
+                    }
+            } else {
+                (left + cursor).update(from: firstSamples + frame, count: run)
+                (right + cursor).update(from: firstSamples + frame, count: run)
+            }
+            cursor = (cursor + run) & 2_047
+            written += run
         }
+        received = min(2_048, received + written)
         sincePublish += frameCount
         guard received == 2_048, sincePublish >= publishStep else { return }
         sincePublish = 0
-
         for slot in slots {
             guard slot.transition(from: 0, to: 1) else { continue }
-            for index in 0..<2_048 {
-                let ringIndex = (cursor + index) & 2_047
-                slot.left[index] = left[ringIndex]
-                slot.right[index] = right[ringIndex]
-            }
+            // Oldest sample first: the run from the cursor to the end, then the start.
+            let tail = 2_048 - cursor
+            slot.left.update(from: left + cursor, count: tail)
+            slot.right.update(from: right + cursor, count: tail)
+            (slot.left + tail).update(from: left, count: cursor)
+            (slot.right + tail).update(from: right, count: cursor)
             sequence &+= 1
             slot.sequence = sequence
             slot.release(as: 2)
