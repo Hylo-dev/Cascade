@@ -8,6 +8,8 @@ DerivedData/
 Config/FFmpeg/Artifacts/
 Config/FFmpeg/Build/
 Config/FFmpeg/Downloads/
+# Per-developer signing team, see Config/Signing.xcconfig.
+Config/Signing.local.xcconfig
 *.xcuserstate
 *.xcscmblueprint
 *.xccheckout

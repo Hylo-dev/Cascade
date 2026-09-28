@@ -9,40 +9,12 @@
 /* Begin PBXBuildFile section */
 		CA5CADE10CA10CA10CA1A003 /* CascadeKit in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE10CA10CA10CA1A002 /* CascadeKit */; };
 		CA5CADE10CA10CA10CA1A004 /* CascadeRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE10CA10CA10CA1A005 /* CascadeRuntime */; };
-		CA5CADE20000000000000001 /* ffmpeg in Embed FFmpeg Helpers */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000011 /* ffmpeg */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		CA5CADE20000000000000002 /* ffprobe in Embed FFmpeg Helpers */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000012 /* ffprobe */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		CA5CADE20000000000000003 /* FFmpeg-LICENSE.md in Copy FFmpeg Notices */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000013 /* FFmpeg-LICENSE.md */; };
-		CA5CADE20000000000000004 /* COPYING.LGPLv2.1 in Copy FFmpeg Notices */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000014 /* COPYING.LGPLv2.1 */; };
-		CA5CADE20000000000000005 /* NOTICE.txt in Copy FFmpeg Notices */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000015 /* NOTICE.txt */; };
+		CA5CADE20000000000000001 /* Config/FFmpeg/Artifacts/arm64/ffmpeg in Embed FFmpeg Helpers */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000011 /* Config/FFmpeg/Artifacts/arm64/ffmpeg */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		CA5CADE20000000000000002 /* Config/FFmpeg/Artifacts/arm64/ffprobe in Embed FFmpeg Helpers */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000012 /* Config/FFmpeg/Artifacts/arm64/ffprobe */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		CA5CADE20000000000000003 /* Config/FFmpeg/Notices/FFmpeg-LICENSE.md in Copy FFmpeg Notices */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000013 /* Config/FFmpeg/Notices/FFmpeg-LICENSE.md */; };
+		CA5CADE20000000000000004 /* Config/FFmpeg/Notices/COPYING.LGPLv2.1 in Copy FFmpeg Notices */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000014 /* Config/FFmpeg/Notices/COPYING.LGPLv2.1 */; };
+		CA5CADE20000000000000005 /* Config/FFmpeg/Notices/NOTICE.txt in Copy FFmpeg Notices */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000015 /* Config/FFmpeg/Notices/NOTICE.txt */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		CA5CADE20000000000000021 /* Copy FFmpeg Notices */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = ThirdParty/FFmpeg;
-			dstSubfolderSpec = 7;
-			files = (
-				CA5CADE20000000000000003 /* FFmpeg-LICENSE.md in Copy FFmpeg Notices */,
-				CA5CADE20000000000000004 /* COPYING.LGPLv2.1 in Copy FFmpeg Notices */,
-				CA5CADE20000000000000005 /* NOTICE.txt in Copy FFmpeg Notices */,
-			);
-			name = "Copy FFmpeg Notices";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		CA5CADE20000000000000022 /* Embed FFmpeg Helpers */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = Contents/Helpers/FFmpeg;
-			dstSubfolderSpec = 1;
-			files = (
-				CA5CADE20000000000000001 /* ffmpeg in Embed FFmpeg Helpers */,
-				CA5CADE20000000000000002 /* ffprobe in Embed FFmpeg Helpers */,
-			);
-			name = "Embed FFmpeg Helpers";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXContainerItemProxy section */
 		040312752FE4355A00BA9823 /* PBXContainerItemProxy */ = {
@@ -61,15 +33,44 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		CA5CADE20000000000000021 /* Copy FFmpeg Notices */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = ThirdParty/FFmpeg;
+			dstSubfolderSpec = 7;
+			files = (
+				CA5CADE20000000000000003 /* Config/FFmpeg/Notices/FFmpeg-LICENSE.md in Copy FFmpeg Notices */,
+				CA5CADE20000000000000004 /* Config/FFmpeg/Notices/COPYING.LGPLv2.1 in Copy FFmpeg Notices */,
+				CA5CADE20000000000000005 /* Config/FFmpeg/Notices/NOTICE.txt in Copy FFmpeg Notices */,
+			);
+			name = "Copy FFmpeg Notices";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CA5CADE20000000000000022 /* Embed FFmpeg Helpers */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Contents/Helpers/FFmpeg;
+			dstSubfolderSpec = 1;
+			files = (
+				CA5CADE20000000000000001 /* Config/FFmpeg/Artifacts/arm64/ffmpeg in Embed FFmpeg Helpers */,
+				CA5CADE20000000000000002 /* Config/FFmpeg/Artifacts/arm64/ffprobe in Embed FFmpeg Helpers */,
+			);
+			name = "Embed FFmpeg Helpers";
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		040312672FE4355A00BA9823 /* Cascade.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Cascade.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		040312742FE4355A00BA9823 /* CascadeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CascadeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0403127E2FE4355A00BA9823 /* CascadeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CascadeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		CA5CADE20000000000000011 /* ffmpeg */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Config/FFmpeg/Artifacts/arm64/ffmpeg; sourceTree = SOURCE_ROOT; };
-		CA5CADE20000000000000012 /* ffprobe */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Config/FFmpeg/Artifacts/arm64/ffprobe; sourceTree = SOURCE_ROOT; };
-		CA5CADE20000000000000013 /* FFmpeg-LICENSE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = Config/FFmpeg/Notices/FFmpeg-LICENSE.md; sourceTree = SOURCE_ROOT; };
-		CA5CADE20000000000000014 /* COPYING.LGPLv2.1 */ = {isa = PBXFileReference; lastKnownFileType = text; path = Config/FFmpeg/Notices/COPYING.LGPLv2.1; sourceTree = SOURCE_ROOT; };
-		CA5CADE20000000000000015 /* NOTICE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Config/FFmpeg/Notices/NOTICE.txt; sourceTree = SOURCE_ROOT; };
+		CA5CADE20000000000000011 /* Config/FFmpeg/Artifacts/arm64/ffmpeg */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Config/FFmpeg/Artifacts/arm64/ffmpeg; sourceTree = SOURCE_ROOT; };
+		CA5CADE20000000000000012 /* Config/FFmpeg/Artifacts/arm64/ffprobe */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Config/FFmpeg/Artifacts/arm64/ffprobe; sourceTree = SOURCE_ROOT; };
+		CA5CADE20000000000000013 /* Config/FFmpeg/Notices/FFmpeg-LICENSE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "Config/FFmpeg/Notices/FFmpeg-LICENSE.md"; sourceTree = SOURCE_ROOT; };
+		CA5CADE20000000000000014 /* Config/FFmpeg/Notices/COPYING.LGPLv2.1 */ = {isa = PBXFileReference; lastKnownFileType = text; path = Config/FFmpeg/Notices/COPYING.LGPLv2.1; sourceTree = SOURCE_ROOT; };
+		CA5CADE20000000000000015 /* Config/FFmpeg/Notices/NOTICE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Config/FFmpeg/Notices/NOTICE.txt; sourceTree = SOURCE_ROOT; };
+		CA5CADE30000000000000001 /* Config/Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Signing.xcconfig; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -120,24 +121,13 @@
 		0403125E2FE4355A00BA9823 = {
 			isa = PBXGroup;
 			children = (
+				CA5CADE30000000000000001 /* Config/Signing.xcconfig */,
 				040312692FE4355A00BA9823 /* Cascade */,
 				CA5CADE20000000000000031 /* FFmpeg Bundle Inputs */,
 				040312772FE4355A00BA9823 /* CascadeTests */,
 				040312812FE4355A00BA9823 /* CascadeUITests */,
 				040312682FE4355A00BA9823 /* Products */,
 			);
-			sourceTree = "<group>";
-		};
-		CA5CADE20000000000000031 /* FFmpeg Bundle Inputs */ = {
-			isa = PBXGroup;
-			children = (
-				CA5CADE20000000000000011 /* ffmpeg */,
-				CA5CADE20000000000000012 /* ffprobe */,
-				CA5CADE20000000000000013 /* FFmpeg-LICENSE.md */,
-				CA5CADE20000000000000014 /* COPYING.LGPLv2.1 */,
-				CA5CADE20000000000000015 /* NOTICE.txt */,
-			);
-			name = "FFmpeg Bundle Inputs";
 			sourceTree = "<group>";
 		};
 		040312682FE4355A00BA9823 /* Products */ = {
@@ -148,6 +138,18 @@
 				0403127E2FE4355A00BA9823 /* CascadeUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		CA5CADE20000000000000031 /* FFmpeg Bundle Inputs */ = {
+			isa = PBXGroup;
+			children = (
+				CA5CADE20000000000000011 /* Config/FFmpeg/Artifacts/arm64/ffmpeg */,
+				CA5CADE20000000000000012 /* Config/FFmpeg/Artifacts/arm64/ffprobe */,
+				CA5CADE20000000000000013 /* Config/FFmpeg/Notices/FFmpeg-LICENSE.md */,
+				CA5CADE20000000000000014 /* Config/FFmpeg/Notices/COPYING.LGPLv2.1 */,
+				CA5CADE20000000000000015 /* Config/FFmpeg/Notices/NOTICE.txt */,
+			);
+			name = "FFmpeg Bundle Inputs";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -234,7 +236,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2630;
-				LastUpgradeCheck = 2630;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					040312662FE4355A00BA9823 = {
 						CreatedOnToolsVersion = 26.3;
@@ -300,7 +302,6 @@
 /* Begin PBXShellScriptBuildPhase section */
 		CA5CADE20000000000000023 /* Verify FFmpeg Inputs */ = {
 			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
@@ -321,7 +322,7 @@
 			outputPaths = (
 				"$(DERIVED_FILE_DIR)/ffmpeg-verified.stamp",
 			);
-			runOnlyForDeploymentPostprocessing = 0;
+			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/sh;
 			shellScript = "set -eu\nfor architecture in $ARCHS; do\n    CASCADE_FFMPEG_VERIFY_SCRATCH=\"$TARGET_TEMP_DIR/FFmpegVerification\" /bin/zsh \"$SRCROOT/scripts/verify-ffmpeg.sh\" \"$SRCROOT/Config/FFmpeg/Artifacts/arm64\" --arch \"$architecture\" --manifest \"$SRCROOT/Config/FFmpeg/manifest.json\"\ndone\n/usr/bin/touch \"$DERIVED_FILE_DIR/ffmpeg-verified.stamp\"\n";
 		};
@@ -367,6 +368,7 @@
 /* Begin XCBuildConfiguration section */
 		040312862FE4355A00BA9823 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = CA5CADE30000000000000001 /* Config/Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -399,8 +401,8 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = 8KZQJ4JUGS;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -424,6 +426,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -431,6 +434,7 @@
 		};
 		040312872FE4355A00BA9823 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = CA5CADE30000000000000001 /* Config/Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -463,8 +467,8 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = 8KZQJ4JUGS;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -481,6 +485,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;
@@ -490,20 +495,18 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_ENTITLEMENTS = Cascade/Cascade.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = A6A5HQL6K4;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = NO;
-				CODE_SIGN_ENTITLEMENTS = Cascade/Cascade.entitlements;
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Cascade legge il brano in riproduzione e controlla Apple Music e Spotify dal notch.";
-				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Cascade mostra nel notch gli avvisi di connessione dei tuoi dispositivi Bluetooth.";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/Cascade-Info.plist";
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Cascade legge il brano in riproduzione e controlla Apple Music e Spotify dal notch.";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Cascade mostra nel notch gli avvisi di connessione dei tuoi dispositivi Bluetooth.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -527,19 +530,18 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_ENTITLEMENTS = Cascade/Cascade.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = NO;
-				CODE_SIGN_ENTITLEMENTS = Cascade/Cascade.entitlements;
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Cascade legge il brano in riproduzione e controlla Apple Music e Spotify dal notch.";
-				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Cascade mostra nel notch gli avvisi di connessione dei tuoi dispositivi Bluetooth.";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/Cascade-Info.plist";
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Cascade legge il brano in riproduzione e controlla Apple Music e Spotify dal notch.";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Cascade mostra nel notch gli avvisi di connessione dei tuoi dispositivi Bluetooth.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -562,9 +564,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8KZQJ4JUGS;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/Cascade-Info.plist";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
@@ -584,9 +585,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8KZQJ4JUGS;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/Cascade-Info.plist";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
@@ -605,9 +605,8 @@
 		0403128F2FE4355A00BA9823 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8KZQJ4JUGS;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/Cascade-Info.plist";
 				MARKETING_VERSION = 1.0;
@@ -625,9 +624,8 @@
 		040312902FE4355A00BA9823 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8KZQJ4JUGS;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/Cascade-Info.plist";
 				MARKETING_VERSION = 1.0;

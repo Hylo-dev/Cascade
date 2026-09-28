@@ -36,9 +36,16 @@ pinned official source inputs when absent, builds in temporary directories,
 and verifies a candidate helper pair before replacing the previous pair.
 `Config/FFmpeg/Artifacts` and the source cache are ignored because they are
 generated and large. An ordinary Xcode build never downloads or compiles
-FFmpeg. Its `Verify FFmpeg Inputs` phase re-runs the local verifier before
-embedding and rejects every app architecture for which the helper has no
-matching thin slice.
+FFmpeg.
+
+The `Verify FFmpeg Inputs` and `Embed FFmpeg Helpers` phases run only when
+installing (`DEPLOYMENT_POSTPROCESSING = YES`, i.e. Product ▸ Archive or
+`xcodebuild archive`). A plain Debug build or Run therefore works on a fresh
+clone without the helpers, and the app bundle simply has no
+`Contents/Helpers/FFmpeg`. An archive still requires the staged pair: the
+verifier runs before embedding and rejects every app architecture for which
+the helper has no matching thin slice. It re-runs only when one of its declared
+inputs changes, not on every build, because it performs a real H.264 encode.
 
 The `--arch x86_64` build path is available for producing a separate Intel
 candidate, but the delivered and tested artifact is arm64 only. Do not claim or
