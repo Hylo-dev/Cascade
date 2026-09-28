@@ -50,19 +50,17 @@ final class SkyLightWindowPinner: WindowPinning {
 
     private let connection: Int32
     private let space     : Int32
-    private let addToSpace : AddWindowsAndRemoveFromSpaces?
+    private let addToSpace: AddWindowsAndRemoveFromSpaces?
 
     private let log = Logger(subsystem: "hylo.Cascade", category: "SkyLight")
 
     init() {
-
-        guard
-            let handle  = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/Versions/A/SkyLight", RTLD_NOW),
-            let pConn   = dlsym(handle, "SLSMainConnectionID"),
-            let pCreate = dlsym(handle, "SLSSpaceCreate"),
-            let pLevel  = dlsym(handle, "SLSSpaceSetAbsoluteLevel"),
-            let pShow   = dlsym(handle, "SLSShowSpaces"),
-            let pAdd    = dlsym(handle, "SLSSpaceAddWindowsAndRemoveFromSpaces")
+        guard let handle = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/Versions/A/SkyLight", RTLD_NOW),
+              let mainConnectionIDSymbol = dlsym(handle, "SLSMainConnectionID"),
+              let spaceCreateSymbol      = dlsym(handle, "SLSSpaceCreate"),
+              let setAbsoluteLevelSymbol = dlsym(handle, "SLSSpaceSetAbsoluteLevel"),
+              let showSpacesSymbol       = dlsym(handle, "SLSShowSpaces"),
+              let addWindowsSymbol       = dlsym(handle, "SLSSpaceAddWindowsAndRemoveFromSpaces")
         else {
             self.connection = 0
             self.space      = 0
@@ -70,10 +68,10 @@ final class SkyLightWindowPinner: WindowPinning {
             return
         }
 
-        let mainConnectionID = unsafeBitCast(pConn,   to: MainConnectionID.self)
-        let spaceCreate      = unsafeBitCast(pCreate, to: SpaceCreate.self)
-        let setAbsoluteLevel = unsafeBitCast(pLevel,  to: SpaceSetAbsoluteLevel.self)
-        let showSpaces       = unsafeBitCast(pShow,   to: ShowSpaces.self)
+        let mainConnectionID = unsafeBitCast(mainConnectionIDSymbol, to: MainConnectionID.self)
+        let spaceCreate      = unsafeBitCast(spaceCreateSymbol,      to: SpaceCreate.self)
+        let setAbsoluteLevel = unsafeBitCast(setAbsoluteLevelSymbol, to: SpaceSetAbsoluteLevel.self)
+        let showSpaces       = unsafeBitCast(showSpacesSymbol,       to: ShowSpaces.self)
 
         let connection = mainConnectionID()
         let space      = spaceCreate(connection, 1, 0)
@@ -83,11 +81,10 @@ final class SkyLightWindowPinner: WindowPinning {
 
         self.connection = connection
         self.space      = space
-        self.addToSpace = unsafeBitCast(pAdd, to: AddWindowsAndRemoveFromSpaces.self)
+        self.addToSpace = unsafeBitCast(addWindowsSymbol, to: AddWindowsAndRemoveFromSpaces.self)
     }
 
     func pin(_ window: NSWindow) {
-
         guard let addToSpace, space != 0 else {
             log.error("SkyLight unavailable — overlay left on ordinary window levels")
             return

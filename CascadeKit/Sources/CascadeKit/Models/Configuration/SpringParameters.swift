@@ -3,8 +3,6 @@
 //  CascadeKit
 //
 
-import Foundation
-
 /// SpringParameters tunes the damped spring that drives the morph. It is pure
 /// data — the integrator lives in `Spring` (Core) — so the numbers can be
 /// stored, themed and unit-tested without pulling in any framework.

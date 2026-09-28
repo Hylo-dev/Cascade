@@ -4,7 +4,6 @@
 //
 
 import AppKit
-import OSLog
 
 /// NotchPanel is the always-on overlay window.
 ///
@@ -28,12 +27,12 @@ final class NotchPanel: NSPanel {
         get { super.ignoresMouseEvents }
         set {
             guard newValue != super.ignoresMouseEvents else { return }
+
             super.ignoresMouseEvents = newValue
         }
     }
 
     init(contentView: NSView) {
-
         super.init(
             contentRect: contentView.bounds,
             styleMask  : [.borderless, .nonactivatingPanel],
@@ -45,9 +44,10 @@ final class NotchPanel: NSPanel {
         // bottom gutter. A separate root lets its halo extend outside the canvas
         // while remaining inside the window, without changing hit-test geometry.
         let rootView = NSView(frame: contentView.bounds)
-        rootView.wantsLayer = true
+        rootView.wantsLayer    = true
         rootView.clipsToBounds = false
         rootView.addSubview(contentView)
+
         self.contentView            = rootView
         isFloatingPanel             = true
         isOpaque                    = false

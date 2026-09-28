@@ -3,8 +3,6 @@
 //  CascadeKit
 //
 
-import Foundation
-
 /// WidgetKind identifies a widget *type* (not an instance). While each placed
 /// widget has its own unique `WidgetIdentifier`, the kind is what persistence
 /// stores and what a factory uses to recreate the right widget on load — many

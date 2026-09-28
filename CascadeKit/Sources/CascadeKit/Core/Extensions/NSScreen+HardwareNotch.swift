@@ -16,8 +16,8 @@ extension NSScreen {
 
     /// The CoreGraphics display id, used to tell screens apart cheaply.
     var displayID: CGDirectDisplayID {
-        let key = NSDeviceDescriptionKey("NSScreenNumber")
-        return (deviceDescription[key] as? NSNumber)?.uint32Value ?? 0
+        let screenNumberKey = NSDeviceDescriptionKey("NSScreenNumber")
+        return (deviceDescription[screenNumberKey] as? NSNumber)?.uint32Value ?? 0
     }
 
     /// hardwareNotch measures the compact footprint, or `.absent` without a
@@ -29,7 +29,6 @@ extension NSScreen {
     /// scaled resolutions too. "Regola dimensioni del notch…" overrides it per
     /// display.
     var hardwareNotch: HardwareNotch {
-
         guard safeAreaInsets.top > 0 else {
             return .absent
         }

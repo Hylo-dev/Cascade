@@ -10,6 +10,7 @@ import AppKit
 /// without recreating global input, activity or widget services.
 @MainActor
 public final class NotchEngine {
+
     private let coordinator: NotchDisplayCoordinator
 
     public var onSettingsRequested: (() -> Void)? {
@@ -61,67 +62,83 @@ public final class NotchEngine {
             makeSurface : { display in
                 let hostView = NotchHostView(frame: .zero)
                 let panel    = NotchPanel(contentView: hostView)
+
                 return NotchController(
-                    configuration : configuration,
-                    display       : display,
-                    morphEngine   : DisplayLinkMorphEngine(view: hostView),
-                    panel         : panel,
-                    hostView      : hostView,
-                    windowPinner  : SkyLightWindowPinner(),
-                    hoverFeedback : HoverFeedback(performer: AppKitHapticPerformer()),
+                    configuration  : configuration,
+                    display        : display,
+                    morphEngine    : DisplayLinkMorphEngine(view: hostView),
+                    panel          : panel,
+                    hostView       : hostView,
+                    windowPinner   : SkyLightWindowPinner(),
+                    hoverFeedback  : HoverFeedback(performer: AppKitHapticPerformer()),
                     sizeCalibration: NotchSizeCalibration(
                         presenter: NotchCalibrationPanel(),
                         store    : NotchSizePreferences()
                     ),
-                    activityHost: activityHost,
-                    widgetHost  : widgetHost
+                    activityHost   : activityHost,
+                    widgetHost     : widgetHost
                 )
             }
         )
     }
 
     public func register(_ widget: NotchWidget) { coordinator.register(widget) }
+
     public func unregisterWidget(id: WidgetIdentifier) { coordinator.unregisterWidget(id: id) }
+
     public func setContextualPage(
-        _ page: (any NotchContextualPage)?,
+        _ page        : (any NotchContextualPage)?,
         prefersDefault: Bool
     ) {
         coordinator.setContextualPage(page, prefersDefault: prefersDefault)
     }
+
     public func showContextualPage(on displayID: CGDirectDisplayID? = nil) {
         coordinator.showContextualPage(on: displayID)
     }
+
     public func showOrdinaryPage(on displayID: CGDirectDisplayID? = nil) {
         coordinator.showOrdinaryPage(on: displayID)
     }
+
     public func configureFileDrop(
-        onHover: (@MainActor ([URL]?) -> Void)?,
-        onDrop: (@MainActor ([URL]) -> Bool)?,
+        onHover      : (@MainActor ([URL]?) -> Void)?,
+        onDrop       : (@MainActor ([URL]) -> Bool)?,
         onUnsupported: (@MainActor () -> Void)?
     ) {
         coordinator.configureFileDrop(
-            onHover: onHover,
-            onDrop: onDrop,
+            onHover      : onHover,
+            onDrop       : onDrop,
             onUnsupported: onUnsupported
         )
     }
+
     public func present(_ activity: any NotchLiveActivity) { coordinator.present(activity) }
+
     public func setExpandedFallback(_ activity: (any NotchLiveActivity)?) {
         coordinator.setExpandedFallback(activity)
     }
+
     public func showNotice(_ notice: any NotchTransientNotice) { coordinator.showNotice(notice) }
+
     public func updateNotice(_ notice: any NotchTransientNotice) { coordinator.updateNotice(notice) }
+
     public func endActivity(id: String) { coordinator.endActivity(id: id) }
+
     public func dismissActivity(id: String) { coordinator.dismissActivity(id: id) }
+
     public func dismissActivities(from sourceID: String) {
         coordinator.dismissActivities(from: sourceID)
     }
+
     public func beginSizeCalibration(on displayID: CGDirectDisplayID? = nil) {
         coordinator.beginSizeCalibration(on: displayID)
     }
+
     public func setSettingsFocused(_ isFocused: Bool) {
         coordinator.setSettingsFocused(isFocused)
     }
+
     public func setSettingsPresented(
         _ isPresented         : Bool,
         reanchorToCurrentOwner: Bool = false
@@ -131,36 +148,46 @@ public final class NotchEngine {
             reanchorToCurrentOwner: reanchorToCurrentOwner
         )
     }
+
     public func setHapticsEnabled(_ isEnabled: Bool) {
         coordinator.setHapticsEnabled(isEnabled)
     }
+
     public func setBorderAppearance(_ appearance: NotchBorderAppearance) {
         coordinator.setBorderAppearance(appearance)
     }
+
     public func setSensitiveContentVisible(_ isVisible: Bool) {
         coordinator.setSensitiveContentVisible(isVisible)
     }
+
     public func setExternalSurfacePresented(_ isPresented: Bool) {
         coordinator.setExternalSurfacePresented(isPresented)
     }
+
     public func reserveExternalSurface(
         on displayID: CGDirectDisplayID,
         ready       : @escaping () -> Void
     ) {
         coordinator.reserveExternalSurface(on: displayID, ready: ready)
     }
+
     public func releaseExternalSurface() {
         coordinator.releaseExternalSurface()
     }
+
     public func setDisplayPreferences(_ preferences: DisplayPresentationPreferences) {
         coordinator.updatePreferences(preferences)
     }
+
     public func setTransientDisplayStyle(
-        _ style       : ExternalNotchStyle,
-        for runtimeID : CGDirectDisplayID
+        _ style      : ExternalNotchStyle,
+        for runtimeID: CGDirectDisplayID
     ) {
         coordinator.setTransientDisplayStyle(style, for: runtimeID)
     }
+
     public func start() { coordinator.start() }
+
     public func stop() { coordinator.stop() }
 }

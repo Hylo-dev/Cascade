@@ -9,6 +9,7 @@ import AppKit
 /// logical display. Runtime IDs address the current session; only `identity`
 /// may be persisted across reconnects.
 public nonisolated struct NotchDisplayDescriptor: Equatable, Sendable {
+
     public let runtimeID       : CGDirectDisplayID
     public let identity        : DisplayIdentity?
     public let name            : String

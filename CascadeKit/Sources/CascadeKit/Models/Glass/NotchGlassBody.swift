@@ -3,11 +3,7 @@
 //  CascadeKit
 //
 
-import AppKit
-import CascadeContracts
-import CoreImage
 import QuartzCore
-import SwiftUI
 
 /// NotchGlassBody is the rectangle the native glass covers: the notch body with
 /// its convex bottom corners, extended one radius above the top edge so only
@@ -15,20 +11,29 @@ import SwiftUI
 /// outside it, under the near-opaque top of the tint gradient, where the old
 /// full-outline glass was hidden anyway.
 nonisolated struct NotchGlassBody: Equatable, Sendable {
+
     static let zero = NotchGlassBody(rect: .zero, cornerRadius: 0)
 
     let rect        : CGRect
     let cornerRadius: CGFloat
 
-    init(rect: CGRect, cornerRadius: CGFloat) {
+    init(
+        rect        : CGRect,
+        cornerRadius: CGFloat
+    ) {
         self.rect         = rect
         self.cornerRadius = cornerRadius
     }
 
-    init(geometry: NotchGeometry, centerX: CGFloat, topY: CGFloat) {
+    init(
+        geometry: NotchGeometry,
+        centerX : CGFloat,
+        topY    : CGFloat
+    ) {
         let radius = max(0, min(geometry.bottomCornerRadius, geometry.height / 2, geometry.width / 2))
+
         self.init(
-            rect: CGRect(
+            rect        : CGRect(
                 x     : centerX - geometry.leftExtent,
                 y     : topY - geometry.height,
                 width : geometry.width,
@@ -47,11 +52,14 @@ nonisolated struct NotchGlassBody: Equatable, Sendable {
         anchor        : CGPoint
     ) -> CGAffineTransform {
         let source = reference.rect
+
         guard source.width > 0, source.height > 0 else { return .identity }
-        let scaleX = rect.width / source.width
-        let scaleY = rect.height / source.height
+
+        let scaleX  = rect.width / source.width
+        let scaleY  = rect.height / source.height
         let anchorX = anchor.x * source.width
         let anchorY = anchor.y * source.height
+
         return CGAffineTransform(
             a : scaleX,
             b : 0,

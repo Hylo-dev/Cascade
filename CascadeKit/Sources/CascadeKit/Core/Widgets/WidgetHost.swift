@@ -24,13 +24,13 @@ final class WidgetHost {
     /// Fired when a widget asks for a content refresh; the controller re-renders.
     var onContentChanged: (() -> Void)?
 
-    private var widgets : [WidgetIdentifier: NotchWidget] = [:]
-    private var screens : [NotchScreen] = [NotchScreen(id: 0)]
+    private var widgets           : [WidgetIdentifier: NotchWidget] = [:]
+    private var screens           : [NotchScreen] = [NotchScreen(id: 0)]
     private var currentScreenIndex = 0
 
-    private var contexts      : [WidgetIdentifier: WidgetContext] = [:]
-    private var activeWidgets : Set<WidgetIdentifier> = []
-    private var cachedViews   : [WidgetIdentifier: AnyView] = [:]
+    private var contexts     : [WidgetIdentifier: WidgetContext] = [:]
+    private var activeWidgets: Set<WidgetIdentifier> = []
+    private var cachedViews  : [WidgetIdentifier: AnyView] = [:]
 
     private let resolver: NotchLayoutResolver
 
@@ -46,13 +46,10 @@ final class WidgetHost {
     /// register adds a widget instance and, if it isn't placed yet, auto-places
     /// it into the first free block of the current screen's main rows.
     func register(_ widget: NotchWidget) {
-
         widgets[widget.id] = widget
         cachedViews.removeValue(forKey: widget.id)
 
-        guard currentScreen.arrangement[widget.id] == nil else {
-            return
-        }
+        guard currentScreen.arrangement[widget.id] == nil else { return }
 
         if let placement = autoPlacement(for: widget.size) {
             currentScreen.arrangement[widget.id] = placement
@@ -64,8 +61,10 @@ final class WidgetHost {
     func unregister(id: WidgetIdentifier) {
         contexts.removeValue(forKey: id)?.revoke()
         cachedViews.removeValue(forKey: id)
+
         if activeWidgets.remove(id) != nil { widgets[id]?.suspend() }
         widgets.removeValue(forKey: id)
+
         for index in screens.indices { screens[index].arrangement.removeValue(forKey: id) }
         onContentChanged?()
     }
@@ -74,7 +73,6 @@ final class WidgetHost {
     /// suspends them all when it closes. (Per-screen activation; switching
     /// screens will re-run this once paging exists.)
     func update(state: NotchState) {
-
         guard !state.isClosed else {
             activeWidgets.forEach {
                 contexts.removeValue(forKey: $0)?.revoke()
@@ -86,10 +84,7 @@ final class WidgetHost {
         }
 
         for id in currentScreen.arrangement.keys {
-
-            guard let widget = widgets[id] else {
-                continue
-            }
+            guard let widget = widgets[id] else { continue }
 
             if activeWidgets.contains(id) {
                 if contexts[id]?.state != state { cachedViews.removeValue(forKey: id) }
@@ -115,7 +110,6 @@ final class WidgetHost {
         topBandHeight: CGFloat,
         hostHeight   : CGFloat
     ) -> AnyView {
-
         let layout = resolver.resolve(
             interior     : interior,
             notchWidth   : notchWidth,
@@ -125,9 +119,14 @@ final class WidgetHost {
 
         let placed = layout.frames.compactMap { id, rect -> PositionedWidget? in
             guard let widget = widgets[id] else { return nil }
+
             let view = cachedViews[id] ?? widget.makeContentView()
             cachedViews[id] = view
-            return PositionedWidget(id: id, view: view, rect: rect)
+            return PositionedWidget(
+                id  : id,
+                view: view,
+                rect: rect
+            )
         }
 
         return AnyView(
@@ -145,6 +144,7 @@ final class WidgetHost {
 
     private func refresh(id: WidgetIdentifier) {
         guard activeWidgets.contains(id), let widget = widgets[id] else { return }
+
         cachedViews[id] = widget.makeContentView()
         onContentChanged?()
     }
@@ -152,6 +152,7 @@ final class WidgetHost {
     /// PositionedWidget pairs a widget's resolved view with its frame, ready to
     /// position in the `ZStack`.
     private struct PositionedWidget: Identifiable {
+
         let id  : WidgetIdentifier
         let view: AnyView
         let rect: CGRect
@@ -162,7 +163,6 @@ final class WidgetHost {
     /// band) is reserved for explicit / drag-and-drop placement, since its
     /// availability depends on the live notch geometry.
     private func autoPlacement(for span: GridSpan) -> WidgetPlacement? {
-
         let columns = resolver.metrics.columns
 
         var occupied: Set<GridPosition> = []
@@ -180,10 +180,10 @@ final class WidgetHost {
 
         for row in originRows {
             for column in 0 ... max(0, columns - span.columns) {
-
                 var fits = true
-                for c in column ..< column + span.columns {
-                    for r in row ..< row + span.rows where occupied.contains(GridPosition(column: c, row: r)) {
+                for cellColumn in column ..< column + span.columns {
+                    for cellRow in row ..< row + span.rows
+                        where occupied.contains(GridPosition(column: cellColumn, row: cellRow)) {
                         fits = false
                     }
                 }

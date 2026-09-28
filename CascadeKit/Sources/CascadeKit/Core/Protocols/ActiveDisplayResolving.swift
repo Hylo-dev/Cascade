@@ -3,8 +3,6 @@
 //  CascadeKit
 //
 
-import Foundation
-
 /// ActiveDisplayResolving is the legacy single-surface display bridge.
 ///
 /// It predates the display coordinator, which now owns display snapshots

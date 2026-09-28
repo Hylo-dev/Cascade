@@ -3,8 +3,6 @@
 //  CascadeKit
 //
 
-import Foundation
-
 /// WidgetIdentifier is the stable identity of a widget type.
 ///
 /// It is a thin typed wrapper over a string so the host can register, look up

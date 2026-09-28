@@ -33,33 +33,37 @@ final class NotchHostView: NSView {
 
     let auxiliaryInteraction = NotchAuxiliaryInteraction()
 
-    var onSettingsRequested: (() -> Void)?
+    var onSettingsRequested   : (() -> Void)?
     var onFileDragHoverChanged: (([URL]?) -> Void)?
-    var onFileDrop: (([URL]) -> Bool)?
-    var onUnsupportedFileDrop: (() -> Void)?
+    var onFileDrop            : (([URL]) -> Bool)?
+    var onUnsupportedFileDrop : (() -> Void)?
+
     private let settingsButton = NSButton()
 
     private let shapeLayer       = CAShapeLayer()
     private let contentMaskLayer = CAShapeLayer()
-    private let contentContainer  = NSView(frame: .zero)
-    private let borderRenderer    = NotchBorderRenderer()
-    private let glassRenderer: any NotchGlassRendering
+    private let contentContainer = NSView(frame: .zero)
+    private let borderRenderer   = NotchBorderRenderer()
+    private let glassRenderer   : any NotchGlassRendering
+
     private var accessibilityObserver: NSObjectProtocol?
-    private var isChromeVisible = false
-    private var materialProgress: CGFloat = 0
-    private var glassBody   = NotchGlassBody.zero
-    private var glassTarget = NotchGlassBody.zero
-    private var glassLightSources = NotchGlassLightSources()
-    private var glassLightEmitters: [ObjectIdentifier: GlassLightEmitter] = [:]
+    private var isChromeVisible       = false
+    private var materialProgress     : CGFloat = 0
+
+    private var glassBody             = NotchGlassBody.zero
+    private var glassTarget           = NotchGlassBody.zero
+    private var glassLightSources     = NotchGlassLightSources()
+    private var glassLightEmitters   : [ObjectIdentifier: GlassLightEmitter] = [:]
     private(set) var glassLightBounds = CGRect.zero
-    private var isFileDropEnabled = false
+
+    private var isFileDropEnabled      = false
     private var fileDropExclusionFrame: CGRect = .zero
-    private var fileDropIntakeFrame: CGRect?
-    private var cachedFileOffer: (sequence: Int, changeCount: Int, urls: [URL])?
-    private var hoveredFileOfferKey: (sequence: Int, changeCount: Int)?
-    private var rejectedFileOfferKey: (sequence: Int, changeCount: Int)?
-    private var loggedEnteredSequence: Int?
-    private var loggedUpdatedSequence: Int?
+    private var fileDropIntakeFrame   : CGRect?
+    private var cachedFileOffer       : (sequence: Int, changeCount: Int, urls: [URL])?
+    private var hoveredFileOfferKey   : (sequence: Int, changeCount: Int)?
+    private var rejectedFileOfferKey  : (sequence: Int, changeCount: Int)?
+    private var loggedEnteredSequence : Int?
+    private var loggedUpdatedSequence : Int?
 
     var borderAppearance: NotchBorderAppearance { borderRenderer.appearance }
 
@@ -83,7 +87,10 @@ final class NotchHostView: NSView {
         self.init(frame: frameRect, glassRenderer: NotchGlassRenderer())
     }
 
-    init(frame frameRect: NSRect, glassRenderer: any NotchGlassRendering) {
+    init(
+        frame frameRect: NSRect,
+        glassRenderer  : any NotchGlassRendering
+    ) {
         self.glassRenderer = glassRenderer
         super.init(frame: frameRect)
         commonInit()
@@ -96,9 +103,8 @@ final class NotchHostView: NSView {
     }
 
     private func commonInit() {
-
-        wantsLayer = true
-        clipsToBounds = false
+        wantsLayer           = true
+        clipsToBounds        = false
         layer?.masksToBounds = false
 
         shapeLayer.fillColor   = NSColor.black.cgColor
@@ -116,27 +122,37 @@ final class NotchHostView: NSView {
         contentContainer.layer?.mask = contentMaskLayer
         addSubview(contentContainer)
 
-        for hostingView in [contentHost, compactLeadingHost, compactTrailingHost, expandedActivityHost, detachedActivityHost] {
+        for hostingView in [
+            contentHost,
+            compactLeadingHost,
+            compactTrailingHost,
+            expandedActivityHost,
+            detachedActivityHost
+        ] {
             // Decorative light may cross the content margins. The shared
             // contentMaskLayer, not each rectangular host, owns the final clip.
             hostingView.clipsToBounds = false
-            hostingView.isHidden = true
+            hostingView.isHidden      = true
             contentContainer.addSubview(hostingView)
         }
 
-        settingsButton.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: "Impostazioni di Cascade")
-        settingsButton.imagePosition = .imageOnly
-        settingsButton.isBordered = false
+        settingsButton.image            = NSImage(
+            systemSymbolName        : "gearshape",
+            accessibilityDescription: "Impostazioni di Cascade"
+        )
+        settingsButton.imagePosition    = .imageOnly
+        settingsButton.isBordered       = false
         settingsButton.contentTintColor = .lightGray
-        settingsButton.toolTip = "Impostazioni…"
+        settingsButton.toolTip          = "Impostazioni…"
         settingsButton.setAccessibilityIdentifier("notch.settings")
-        settingsButton.target = self
-        settingsButton.action = #selector(openSettings)
+        settingsButton.target   = self
+        settingsButton.action   = #selector(openSettings)
         settingsButton.isHidden = true
         contentContainer.addSubview(settingsButton)
 
         addSubview(borderRenderer.view)
         setBorderAppearance(.neutral, animated: false)
+
         accessibilityObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
             object : nil,
@@ -144,6 +160,7 @@ final class NotchHostView: NSView {
         ) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
+
                 self.setBorderAppearance(self.borderAppearance, animated: false)
             }
         }
@@ -171,11 +188,12 @@ final class NotchHostView: NSView {
         frame    : CGRect,
         isVisible: Bool
     ) {
-        settingsButton.frame = frame
+        settingsButton.frame    = frame
         settingsButton.isHidden = !isVisible || onSettingsRequested == nil
     }
 
-    @objc private func openSettings() { onSettingsRequested?() }
+    @objc
+    private func openSettings() { onSettingsRequested?() }
 
     func setFileDropExclusionFrame(_ frame: CGRect) {
         fileDropExclusionFrame = frame
@@ -183,15 +201,17 @@ final class NotchHostView: NSView {
 
     func setFileDropEnabled(_ isEnabled: Bool) {
         guard isFileDropEnabled != isEnabled else { return }
+
         isFileDropEnabled = isEnabled
         if isEnabled {
             registerForDraggedTypes(Self.fileDropTypes)
         } else {
             unregisterDraggedTypes()
             clearFileDragHover()
-            cachedFileOffer = nil
+            cachedFileOffer      = nil
             rejectedFileOfferKey = nil
         }
+
         fileDropLog.notice(
             "phase=readiness enabled=\(isEnabled) registered=\(self.registeredDraggedTypes.count) windowAttached=\(self.window != nil)"
         )
@@ -219,9 +239,9 @@ final class NotchHostView: NSView {
         isVisible: Bool
     ) {
         update(
-            host     : contentHost,
-            view     : isVisible ? view : nil,
-            frame    : frame
+            host : contentHost,
+            view : isVisible ? view : nil,
+            frame: frame
         )
     }
 
@@ -308,17 +328,28 @@ final class NotchHostView: NSView {
     ) {
         let button = AnyView(
             Button(action: onSelect) {
-                view.allowsHitTesting(false)
+                view
+                    .allowsHitTesting(false)
             }
             .buttonStyle(.plain)
             .accessibilityHint("Espandi attività")
         )
-        update(host: detachedActivityHost, view: button, frame: frame)
+
+        update(
+            host : detachedActivityHost,
+            view : button,
+            frame: frame
+        )
     }
 
     func clearDetachedActivityContent() {
         guard !detachedActivityHost.isHidden else { return }
-        update(host: detachedActivityHost, view: nil, frame: .zero)
+
+        update(
+            host : detachedActivityHost,
+            view : nil,
+            frame: .zero
+        )
     }
 
     private func update(
@@ -333,15 +364,23 @@ final class NotchHostView: NSView {
             glassLightEmitters[source] = nil
             glassLightSources.remove(source: source)
         }
+
         if let view {
-            host.rootView = AnyView(NotchGlassLightObserver(content: view, token: token) { [weak self, weak host] emission in
-                guard let self, let host, !host.isHidden,
-                      self.glassLightSources.update(emission.lights, for: emission.token) else { return }
-                self.glassRenderer.setLights(self.glassLightSources.lights)
-            })
+            host.rootView = AnyView(
+                NotchGlassLightObserver(content: view, token: token) { [weak self, weak host] emission in
+                    guard let self,
+                          let host,
+                          !host.isHidden,
+                          self.glassLightSources.update(emission.lights, for: emission.token)
+                    else { return }
+
+                    self.glassRenderer.setLights(self.glassLightSources.lights)
+                }
+            )
         } else {
             host.rootView = AnyView(EmptyView())
         }
+
         glassRenderer.setLights(glassLightSources.lights)
         host.frame    = frame
         host.isHidden = view == nil
@@ -359,21 +398,20 @@ final class NotchHostView: NSView {
     /// tracks the interactive zone so input routing and content clipping remain
     /// correct even when the chrome itself is hidden.
     func apply(
-        geometry       : NotchGeometry,
-        targetGeometry : NotchGeometry? = nil,
-        centerX        : CGFloat,
-        topY           : CGFloat,
-        isChromeVisible: Bool,
-        borderOpacity  : CGFloat = 1,
+        geometry        : NotchGeometry,
+        targetGeometry  : NotchGeometry? = nil,
+        centerX         : CGFloat,
+        topY            : CGFloat,
+        isChromeVisible : Bool,
+        borderOpacity   : CGFloat = 1,
         materialProgress: CGFloat = 1,
-        detachedFrame  : CGRect = .zero,
+        detachedFrame   : CGRect = .zero,
         detachedProgress: CGFloat = 0,
-        isAttaching    : Bool = false,
-        softwareDroplet: Bool = false,
-        dropletProgress: CGFloat = 0,
-        softwareMetrics: SoftwareNotchMetrics = SoftwareNotchMetrics()
+        isAttaching     : Bool = false,
+        softwareDroplet : Bool = false,
+        dropletProgress : CGFloat = 0,
+        softwareMetrics : SoftwareNotchMetrics = SoftwareNotchMetrics()
     ) {
-
         // Per-frame geometry changes must not animate implicitly — the spring is
         // already the animation. A no-action transaction stops Core Animation
         // from adding its own quarter-second fade to every path swap.
@@ -382,9 +420,9 @@ final class NotchHostView: NSView {
 
         // Frames change only with the window; every write still costs a commit.
         if shapeLayer.frame != bounds {
-            shapeLayer.frame        = bounds
-            contentContainer.frame  = bounds
-            contentMaskLayer.frame  = bounds
+            shapeLayer.frame       = bounds
+            contentContainer.frame = bounds
+            contentMaskLayer.frame = bounds
         }
 
         let ordinaryNotchPath = CGPath.notch(
@@ -422,8 +460,8 @@ final class NotchHostView: NSView {
         }
 
         let progress = min(1.18, max(0, detachedProgress))
-        let travel = isAttaching ? (1 - min(1, progress)) * 28 : 0
-        let bubble = CGRect(
+        let travel   = isAttaching ? (1 - min(1, progress)) * 28 : 0
+        let bubble   = CGRect(
             x     : detachedFrame.midX - detachedFrame.width * progress / 2 - travel,
             y     : detachedFrame.midY - detachedFrame.height * progress / 2,
             width : detachedFrame.width * progress,
@@ -442,20 +480,35 @@ final class NotchHostView: NSView {
         ))
         detachedActivityHost.alphaValue = min(1, progress)
 
-        shapeLayer.path       = path
-        glassBody   = NotchGlassBody(geometry: geometry, centerX: centerX, topY: topY)
-        glassTarget = NotchGlassBody(geometry: targetGeometry ?? geometry, centerX: centerX, topY: topY)
-        glassLightBounds = Self.outlineBounds(of: targetGeometry ?? geometry, centerX: centerX, topY: topY)
+        shapeLayer.path = path
+
+        glassBody = NotchGlassBody(
+            geometry: geometry,
+            centerX : centerX,
+            topY    : topY
+        )
+        glassTarget = NotchGlassBody(
+            geometry: targetGeometry ?? geometry,
+            centerX : centerX,
+            topY    : topY
+        )
+        glassLightBounds = Self.outlineBounds(
+            of     : targetGeometry ?? geometry,
+            centerX: centerX,
+            topY   : topY
+        )
+
         self.isChromeVisible  = isChromeVisible
         self.materialProgress = materialProgress.isFinite ? min(1, max(0, materialProgress)) : 0
         updateChromeMaterial()
+
         contentMaskLayer.path = path
         borderRenderer.apply(
-            path     : path,
+            path        : path,
             canvasBounds: bounds,
-            isVisible: isChromeVisible,
-            opacity  : borderOpacity,
-            scale    : window?.backingScaleFactor ?? 2
+            isVisible   : isChromeVisible,
+            opacity     : borderOpacity,
+            scale       : window?.backingScaleFactor ?? 2
         )
 
         CATransaction.commit()
@@ -467,6 +520,7 @@ final class NotchHostView: NSView {
     /// fallback keeps the configured solid color and the exact same silhouette.
     private func updateChromeMaterial() {
         guard let path = shapeLayer.path else { return }
+
         let usesGlass = glassRenderer.isSupported && materialProgress > 0
             && !NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
         shapeLayer.isHidden = !isChromeVisible || usesGlass
@@ -489,9 +543,8 @@ final class NotchHostView: NSView {
             // destination. Child content cannot steal the destination lookup.
             return self
         }
-        guard containsInteractivePoint(localPoint) else {
-            return nil
-        }
+
+        guard containsInteractivePoint(localPoint) else { return nil }
 
         return super.hitTest(point) ?? self
     }
@@ -511,6 +564,7 @@ final class NotchHostView: NSView {
                 "phase=nativeEntered enabled=\(self.isFileDropEnabled) inside=\(self.containsFileDropPoint(point)) registered=\(self.registeredDraggedTypes.count) windowAttached=\(self.window != nil)"
             )
         }
+
         return resolveFileOffer(sender)
     }
 
@@ -522,33 +576,38 @@ final class NotchHostView: NSView {
                 "phase=nativeUpdated inside=\(self.containsFileDropPoint(point)) enabled=\(self.isFileDropEnabled)"
             )
         }
+
         guard containsFileDropPoint(point) else {
             clearFileDragHover()
             return []
         }
+
         return resolveFileOffer(sender)
     }
 
     override func draggingExited(_ sender: (any NSDraggingInfo)?) {
         clearFileDragHover()
-        cachedFileOffer = nil
+        cachedFileOffer      = nil
         rejectedFileOfferKey = nil
     }
 
     override func draggingEnded(_ sender: any NSDraggingInfo) {
         clearFileDragHover()
-        cachedFileOffer = nil
+        cachedFileOffer      = nil
         rejectedFileOfferKey = nil
     }
 
     override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
         let point = fileDropPoint(for: sender)
-        guard containsFileDropPoint(point), resolveFileOffer(sender) == .copy,
-              let offer = cachedFileOffer else {
+        guard containsFileDropPoint(point),
+              resolveFileOffer(sender) == .copy,
+              let offer = cachedFileOffer
+        else {
             fileDropLog.notice("phase=drop error=invalidDestination")
             clearFileDragHover()
             return false
         }
+
         let accepted = onFileDrop?(offer.urls) ?? false
         clearFileDragHover()
         cachedFileOffer = nil
@@ -562,38 +621,45 @@ final class NotchHostView: NSView {
 
     override func concludeDragOperation(_ sender: (any NSDraggingInfo)?) {
         clearFileDragHover()
-        cachedFileOffer = nil
+        cachedFileOffer      = nil
         rejectedFileOfferKey = nil
     }
 
     private func resolveFileOffer(_ sender: any NSDraggingInfo) -> NSDragOperation {
         guard isFileDropEnabled else { return [] }
+
         let point = fileDropPoint(for: sender)
         guard containsFileDropPoint(point) else { return [] }
+
         let changeCount = sender.draggingPasteboard.changeCount
         guard sender.draggingSourceOperationMask.contains(.copy) else {
             rejectFileOffer(
-                sequence: sender.draggingSequenceNumber,
+                sequence   : sender.draggingSequenceNumber,
                 changeCount: changeCount,
-                reason: .sourceDoesNotCopy
+                reason     : .sourceDoesNotCopy
             )
             return []
         }
+
         if let cachedFileOffer,
            cachedFileOffer.sequence == sender.draggingSequenceNumber,
            cachedFileOffer.changeCount == changeCount {
             publishFileDragHover(cachedFileOffer)
             return .copy
         }
+
         guard let items = sender.draggingPasteboard.pasteboardItems,
-              !items.isEmpty, items.count <= 32 else {
+              !items.isEmpty,
+              items.count <= 32
+        else {
             rejectFileOffer(
-                sequence: sender.draggingSequenceNumber,
+                sequence   : sender.draggingSequenceNumber,
                 changeCount: changeCount,
-                reason: .oversizedBatch
+                reason     : .oversizedBatch
             )
             return []
         }
+
         let promiseTypes: Set<NSPasteboard.PasteboardType> = [
             .init("com.apple.pasteboard.promised-file-url"),
             .init("com.apple.pasteboard.promised-file-content-type")
@@ -603,34 +669,40 @@ final class NotchHostView: NSView {
         for item in items {
             guard promiseTypes.isDisjoint(with: item.types) else {
                 rejectFileOffer(
-                    sequence: sender.draggingSequenceNumber,
+                    sequence   : sender.draggingSequenceNumber,
                     changeCount: changeCount,
-                    reason: .promisedFile
+                    reason     : .promisedFile
                 )
                 return []
             }
+
             guard item.types.contains(.fileURL),
                   let value = item.string(forType: .fileURL),
-                  let url = URL(string: value), url.isFileURL else {
+                  let url = URL(string: value),
+                  url.isFileURL
+            else {
                 rejectFileOffer(
-                    sequence: sender.draggingSequenceNumber,
+                    sequence   : sender.draggingSequenceNumber,
                     changeCount: changeCount,
-                    reason: .unsupportedItem
+                    reason     : .unsupportedItem
                 )
                 return []
             }
+
             guard (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true else {
                 rejectFileOffer(
-                    sequence: sender.draggingSequenceNumber,
+                    sequence   : sender.draggingSequenceNumber,
                     changeCount: changeCount,
-                    reason: .unreadableFile
+                    reason     : .unreadableFile
                 )
                 return []
             }
+
             urls.append(url)
         }
-        let offer = (sender.draggingSequenceNumber, changeCount, urls)
-        cachedFileOffer = offer
+
+        let offer                        = (sender.draggingSequenceNumber, changeCount, urls)
+        cachedFileOffer                  = offer
         sender.numberOfValidItemsForDrop = urls.count
         publishFileDragHover(offer)
         return .copy
@@ -639,12 +711,12 @@ final class NotchHostView: NSView {
     private func fileDropPoint(for sender: any NSDraggingInfo) -> CGPoint {
         guard let destinationWindow = sender.draggingDestinationWindow,
               let hostWindow = window,
-              destinationWindow !== hostWindow else {
+              destinationWindow !== hostWindow
+        else {
             return convert(sender.draggingLocation, from: nil)
         }
-        let screenPoint = destinationWindow.convertPoint(
-            toScreen: sender.draggingLocation
-        )
+
+        let screenPoint = destinationWindow.convertPoint(toScreen: sender.draggingLocation)
         return convert(hostWindow.convertPoint(fromScreen: screenPoint), from: nil)
     }
 
@@ -652,31 +724,38 @@ final class NotchHostView: NSView {
         if let fileDropIntakeFrame {
             return fileDropIntakeFrame.contains(point)
         }
+
         return containsInteractivePoint(point) && !fileDropExclusionFrame.contains(point)
     }
 
     private func publishFileDragHover(_ offer: (sequence: Int, changeCount: Int, urls: [URL])) {
         guard hoveredFileOfferKey?.sequence != offer.sequence
-                || hoveredFileOfferKey?.changeCount != offer.changeCount else { return }
+              || hoveredFileOfferKey?.changeCount != offer.changeCount
+        else { return }
+
         hoveredFileOfferKey = (offer.sequence, offer.changeCount)
         onFileDragHoverChanged?(offer.urls)
     }
 
     private func clearFileDragHover() {
         guard hoveredFileOfferKey != nil else { return }
+
         hoveredFileOfferKey = nil
         onFileDragHoverChanged?(nil)
     }
 
     private func rejectFileOffer(
-        sequence: Int,
+        sequence   : Int,
         changeCount: Int,
-        reason: FileDropRejection
+        reason     : FileDropRejection
     ) {
         clearFileDragHover()
         cachedFileOffer = nil
+
         guard rejectedFileOfferKey?.sequence != sequence
-                || rejectedFileOfferKey?.changeCount != changeCount else { return }
+              || rejectedFileOfferKey?.changeCount != changeCount
+        else { return }
+
         rejectedFileOfferKey = (sequence, changeCount)
         fileDropLog.notice("phase=offer error=\(reason.rawValue, privacy: .public)")
         onUnsupportedFileDrop?()
@@ -690,6 +769,7 @@ final class NotchHostView: NSView {
         topY       : CGFloat
     ) -> CGRect {
         let shoulder = max(0, min(geometry.topCornerRadius, geometry.height / 2, geometry.width / 2))
+
         return CGRect(
             x     : centerX - geometry.leftExtent - shoulder,
             y     : topY - geometry.height,
@@ -708,31 +788,42 @@ final class NotchHostView: NSView {
 /// GlassLightEmitter remembers an AppKit emitter without retaining its view.
 @MainActor
 private final class GlassLightEmitter {
-    let token: NotchGlassLightSources.Token
+
+    let token    : NotchGlassLightSources.Token
     weak var view: NSView?
 
-    init(token: NotchGlassLightSources.Token, view: NSView) {
+    init(
+        token: NotchGlassLightSources.Token,
+        view : NSView
+    ) {
         self.token = token
         self.view  = view
     }
 }
 
 extension NotchHostView: NotchGlassLightReceiving {
+
     /// setGlassLights merges an AppKit emitter with the SwiftUI contributions.
     /// Each emitter is its own source; an empty array, or an emitter that is
     /// hidden, forgets it.
-    func setGlassLights(_ lights: [GlassLight], from emitter: NSView) {
+    func setGlassLights(
+        _ lights    : [GlassLight],
+        from emitter: NSView
+    ) {
         let source = ObjectIdentifier(emitter)
         guard !lights.isEmpty, !emitter.isHiddenOrHasHiddenAncestor, emitter.isDescendant(of: self) else {
             guard glassLightEmitters.removeValue(forKey: source) != nil else { return }
+
             glassLightSources.remove(source: source)
             glassRenderer.setLights(glassLightSources.lights)
             return
         }
+
         let entry = glassLightEmitters[source]
             ?? GlassLightEmitter(token: glassLightSources.replace(source: source), view: emitter)
         glassLightEmitters[source] = entry
         guard glassLightSources.update(lights, for: entry.token) else { return }
+
         glassRenderer.setLights(glassLightSources.lights)
     }
 }

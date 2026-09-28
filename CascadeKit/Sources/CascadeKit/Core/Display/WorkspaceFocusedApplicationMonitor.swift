@@ -10,33 +10,33 @@ import AppKit
 /// into cheap invalidations. The AX worker remains responsible for real trust.
 @MainActor
 final class WorkspaceFocusedApplicationMonitor: NSObject, FocusedApplicationMonitoring {
+
     var onChange: (() -> Void)?
 
     private let workspace: NSWorkspace
+
     private var isStarted = false
 
     init(workspace: NSWorkspace = .shared) {
         self.workspace = workspace
+
         super.init()
     }
 
     var frontmostApplication: FocusedApplication? {
-        guard let application = workspace.frontmostApplication else {
-            return nil
-        }
+        guard let application = workspace.frontmostApplication else { return nil }
 
         return FocusedApplication(
-            processID      : application.processIdentifier,
+            processID       : application.processIdentifier,
             bundleIdentifier: application.bundleIdentifier
         )
     }
 
     func start() {
-        guard !isStarted else {
-            return
-        }
+        guard !isStarted else { return }
 
         isStarted = true
+
         workspace.notificationCenter.addObserver(
             self,
             selector: #selector(applicationActivated),
@@ -52,9 +52,7 @@ final class WorkspaceFocusedApplicationMonitor: NSObject, FocusedApplicationMoni
     }
 
     func stop() {
-        guard isStarted else {
-            return
-        }
+        guard isStarted else { return }
 
         workspace.notificationCenter.removeObserver(self)
         isStarted = false
@@ -69,9 +67,8 @@ final class WorkspaceFocusedApplicationMonitor: NSObject, FocusedApplicationMoni
     private func applicationDeactivated(_ notification: Notification) {
         let application = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
             as? NSRunningApplication
-        guard application?.bundleIdentifier == "com.apple.systempreferences" else {
-            return
-        }
+        guard application?.bundleIdentifier == "com.apple.systempreferences" else { return }
+
         onChange?()
     }
 

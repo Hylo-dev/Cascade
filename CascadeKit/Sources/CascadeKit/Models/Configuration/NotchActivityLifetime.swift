@@ -10,19 +10,22 @@ import Foundation
 /// cap, independently of ActivityKit. End the activity earlier whenever the
 /// actual task ends.
 public nonisolated struct NotchActivityLifetime: Sendable, Equatable {
+
     public static let maximumDuration: TimeInterval = 8 * 60 * 60
+
     public let startedAt: Date
     public let expiresAt: Date
     public let staleDate: Date?
 
     public init(
         startedAt: Date = .now,
-        duration: TimeInterval = maximumDuration,
+        duration : TimeInterval = maximumDuration,
         staleDate: Date? = nil
     ) {
-        let start = startedAt.timeIntervalSince1970.isFinite ? startedAt : .now
+        let start    = startedAt.timeIntervalSince1970.isFinite ? startedAt : .now
         let duration = duration.isFinite ? min(Self.maximumDuration, max(0, duration)) : 0
-        let end = start.addingTimeInterval(duration)
+        let end      = start.addingTimeInterval(duration)
+
         self.startedAt = start
         self.expiresAt = end
         self.staleDate = staleDate.flatMap { date in

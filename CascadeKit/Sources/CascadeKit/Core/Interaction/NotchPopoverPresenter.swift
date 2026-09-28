@@ -20,6 +20,7 @@ public final class NotchPopoverPresenter {
     /// reliable toggle instead of starting overlapping asynchronous requests.
     public var isPresented: Bool {
         guard let sessionID else { return false }
+
         return interaction?.sessionID == sessionID
     }
 
@@ -35,21 +36,25 @@ public final class NotchPopoverPresenter {
         while let view = ancestor {
             if let host = view as? NotchHostView {
                 if interaction !== host.auxiliaryInteraction { dismiss() }
+
                 let surface = AppKitNotchAuxiliaryPopover(
                     anchor       : anchor,
                     host         : host,
                     preferredEdge: preferredEdge
                 )
                 guard surface.anchorFrame != nil else { return false }
+
                 interaction = host.auxiliaryInteraction
-                sessionID = host.auxiliaryInteraction.present(
+                sessionID   = host.auxiliaryInteraction.present(
                     using      : surface,
                     makeContent: makeContent
                 )
                 return isPresented
             }
+
             ancestor = view.superview
         }
+
         dismiss()
         return false
     }
@@ -59,6 +64,7 @@ public final class NotchPopoverPresenter {
         let session  = sessionID
         interaction  = nil
         sessionID    = nil
+
         if let session, previous?.sessionID == session { previous?.dismiss() }
     }
 

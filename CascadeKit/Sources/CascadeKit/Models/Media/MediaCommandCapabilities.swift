@@ -6,8 +6,12 @@
 /// MediaCommandCapabilities prevents the UI from advertising commands that the
 /// current source cannot perform. Providers publish changes with the snapshot.
 public nonisolated struct MediaCommandCapabilities: OptionSet, Sendable {
+
     public let rawValue: UInt8
-    public init(rawValue: UInt8) { self.rawValue = rawValue }
+
+    public init(rawValue: UInt8) {
+        self.rawValue = rawValue
+    }
 
     public static let togglePlayback = Self(rawValue: 1 << 0)
     public static let previousTrack  = Self(rawValue: 1 << 1)

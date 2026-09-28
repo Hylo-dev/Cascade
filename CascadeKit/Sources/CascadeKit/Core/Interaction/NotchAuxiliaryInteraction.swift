@@ -17,6 +17,7 @@ final class NotchAuxiliaryInteraction: NSObject {
     /// the grace expires while the pointer is stationary. State and resources
     /// are cleared before delivery; replacing a session does not emit this event.
     var onDismiss: (() -> Void)?
+
     /// onActiveChanged lets the display coordinator retain the invocation
     /// anchor for the complete pending-or-visible popover session.
     var onActiveChanged: ((Bool) -> Void)?
@@ -25,11 +26,12 @@ final class NotchAuxiliaryInteraction: NSObject {
 
     private let leaveGrace     : Duration
     private let pointerLocation: @MainActor () -> CGPoint
-    private var presentation   : (any NotchAuxiliaryPopoverHosting)?
-    private var openingTask    : Task<Void, Never>?
-    private var exitTask       : Task<Void, Never>?
-    private var exitDeadline   : ContinuousClock.Instant?
-    private var lastPointer    : CGPoint?
+
+    private var presentation: (any NotchAuxiliaryPopoverHosting)?
+    private var openingTask : Task<Void, Never>?
+    private var exitTask    : Task<Void, Never>?
+    private var exitDeadline: ContinuousClock.Instant?
+    private var lastPointer : CGPoint?
 
     init(
         leaveGrace     : Duration = .milliseconds(180),
@@ -37,6 +39,7 @@ final class NotchAuxiliaryInteraction: NSObject {
     ) {
         self.leaveGrace      = leaveGrace
         self.pointerLocation = pointerLocation
+
         super.init()
     }
 
@@ -46,6 +49,7 @@ final class NotchAuxiliaryInteraction: NSObject {
     func contains(_ screenPoint: CGPoint) -> Bool {
         guard isActive, presentation?.anchorFrame != nil else { return false }
         if containsGeometry(screenPoint) { return true }
+
         return exitDeadline.map { ContinuousClock.now < $0 } ?? false
     }
 
@@ -53,31 +57,41 @@ final class NotchAuxiliaryInteraction: NSObject {
     /// not extend the original deadline, and a detached anchor closes at once.
     func updatePointer(at screenPoint: CGPoint) {
         guard isActive else { return }
+
         lastPointer = screenPoint
+
         guard presentation?.anchorFrame != nil else {
             dismiss()
             return
         }
+
         if containsGeometry(screenPoint) {
             exitTask?.cancel()
             exitTask     = nil
             exitDeadline = nil
             return
         }
+
         guard exitTask == nil else { return }
+
         let deadline = ContinuousClock.now.advanced(by: leaveGrace)
         let session  = sessionID
+
         exitDeadline = deadline
-        exitTask = Task { [weak self] in
+        exitTask     = Task { [weak self] in
             do { try await Task.sleep(until: deadline, clock: .continuous) }
             catch { return } // Cancellation is the normal re-entry path.
+
             guard !Task.isCancelled,
                   let self,
                   self.sessionID == session,
-                  self.exitDeadline == deadline else { return }
+                  self.exitDeadline == deadline
+            else { return }
+
             self.exitTask     = nil
             self.exitDeadline = nil
             if let point = self.lastPointer, self.containsGeometry(point) { return }
+
             self.dismiss()
         }
     }
@@ -97,28 +111,37 @@ final class NotchAuxiliaryInteraction: NSObject {
     ) -> UUID {
         let wasActive = isActive
         endSession(notify: false)
+
         let session       = UUID()
         sessionID         = session
         self.presentation = presentation
         if !wasActive { onActiveChanged?(true) }
+
         openingTask = Task { [weak self] in
             let content = await makeContent()
             guard !Task.isCancelled, let self, self.sessionID == session else { return }
+
             self.openingTask = nil
+
             guard let content,
                   let presentation = self.presentation,
                   presentation.anchorFrame != nil,
-                  self.exitDeadline.map({ ContinuousClock.now < $0 }) ?? true else {
+                  self.exitDeadline.map({ ContinuousClock.now < $0 }) ?? true
+            else {
                 self.dismiss()
                 return
             }
+
             guard presentation.show(content, delegate: self) else {
                 self.dismiss()
                 return
             }
+
             guard self.sessionID == session else { return }
+
             self.updatePointer(at: self.lastPointer ?? self.pointerLocation())
         }
+
         updatePointer(at: pointerLocation())
         return session
     }
@@ -129,11 +152,13 @@ final class NotchAuxiliaryInteraction: NSObject {
         sessionID     = nil
         presentation  = nil
         lastPointer   = nil
+
         openingTask?.cancel()
         exitTask?.cancel()
         openingTask  = nil
         exitTask     = nil
         exitDeadline = nil
+
         previous?.close()
         if wasActive && notify {
             onActiveChanged?(false)
@@ -144,13 +169,14 @@ final class NotchAuxiliaryInteraction: NSObject {
     private func containsGeometry(_ point: CGPoint) -> Bool {
         guard let presentation, let anchor = presentation.anchorFrame else { return false }
         if presentation.containsNotch(point) { return true }
+
         guard let popup = presentation.popoverFrame else { return false }
         if popup.contains(point) { return true }
 
         // Use the shortest segment between the actual rectangles, so a popup
         // flipped above or beside its anchor gets the same narrow passage. A
         // detached/centered AppKit placement must not bridge half the display.
-        let popupEnd = CGPoint(
+        let popupEnd  = CGPoint(
             x: min(max(anchor.midX, popup.minX), popup.maxX),
             y: min(max(anchor.midY, popup.minY), popup.maxY)
         )
@@ -158,16 +184,19 @@ final class NotchAuxiliaryInteraction: NSObject {
             x: min(max(popupEnd.x, anchor.minX), anchor.maxX),
             y: min(max(popupEnd.y, anchor.minY), anchor.maxY)
         )
+
         let deltaX        = popupEnd.x - anchorEnd.x
         let deltaY        = popupEnd.y - anchorEnd.y
         let lengthSquared = deltaX * deltaX + deltaY * deltaY
         guard lengthSquared > 0, lengthSquared <= 64 * 64 else { return false }
+
         let projection = min(max(
             ((point.x - anchorEnd.x) * deltaX + (point.y - anchorEnd.y) * deltaY) / lengthSquared,
             0
         ), 1)
-        let distanceX = point.x - (anchorEnd.x + projection * deltaX)
-        let distanceY = point.y - (anchorEnd.y + projection * deltaY)
+        let distanceX  = point.x - (anchorEnd.x + projection * deltaX)
+        let distanceY  = point.y - (anchorEnd.y + projection * deltaY)
+
         return distanceX * distanceX + distanceY * distanceY <= 8 * 8
     }
 
@@ -179,9 +208,12 @@ final class NotchAuxiliaryInteraction: NSObject {
 }
 
 extension NotchAuxiliaryInteraction: NSPopoverDelegate {
+
     func popoverDidClose(_ notification: Notification) {
         guard let popover = notification.object as? NSPopover,
-              popover === presentation?.popover else { return }
+              popover === presentation?.popover
+        else { return }
+
         dismiss()
     }
 

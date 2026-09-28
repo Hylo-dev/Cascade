@@ -9,8 +9,9 @@ import SwiftUI
 
 @MainActor
 final class ScopedAssetResolver: ContentAssetResolving {
-    private weak var base: (any AddonPresentationAssetResolving)?
-    private let publicationID: PublicationID
+
+    private weak var base          : (any AddonPresentationAssetResolving)?
+    private let publicationID      : PublicationID
     private let publicationRevision: UInt64
 
     init(
@@ -18,8 +19,8 @@ final class ScopedAssetResolver: ContentAssetResolving {
         publicationID      : PublicationID,
         publicationRevision: UInt64
     ) {
-        self.base = base
-        self.publicationID = publicationID
+        self.base                = base
+        self.publicationID       = publicationID
         self.publicationRevision = publicationRevision
     }
 

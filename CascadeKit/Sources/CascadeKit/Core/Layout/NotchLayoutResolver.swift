@@ -33,10 +33,9 @@ nonisolated struct NotchLayoutResolver {
     func resolve(
         interior     : CGRect,
         notchWidth   : CGFloat,
-        topBandHeight : CGFloat,
+        topBandHeight: CGFloat,
         placements   : [WidgetIdentifier: WidgetPlacement]
     ) -> NotchLayout {
-
         let columns = max(1, metrics.columns)
         let gutter  = metrics.cellGutter
 
@@ -55,9 +54,9 @@ nonisolated struct NotchLayoutResolver {
         // y grows upward, so row 0 sits at the top of the interior.
         func rowOriginY(_ row: Int) -> CGFloat {
             switch row {
-            case 0:  return interior.maxY - topBandHeight
-            case 1:  return interior.maxY - topBandHeight - gutter - mainRowHeight
-            default: return interior.maxY - topBandHeight - gutter * 2 - mainRowHeight * 2
+                case 0:  return interior.maxY - topBandHeight
+                case 1:  return interior.maxY - topBandHeight - gutter - mainRowHeight
+                default: return interior.maxY - topBandHeight - gutter * 2 - mainRowHeight * 2
             }
         }
 
@@ -71,10 +70,7 @@ nonisolated struct NotchLayoutResolver {
 
         // Row 0 only offers the trailing cells; rows 1–2 are fully available.
         func isAvailable(column: Int, row: Int) -> Bool {
-
-            guard column >= 0, column < columns, row >= 0, row <= 2 else {
-                return false
-            }
+            guard column >= 0, column < columns, row >= 0, row <= 2 else { return false }
 
             if row == 0 {
                 return column >= trailingStart && column < trailingStart + trailingCells
@@ -86,7 +82,6 @@ nonisolated struct NotchLayoutResolver {
         var frames: [WidgetIdentifier: CGRect] = [:]
 
         for (id, placement) in placements {
-
             let firstColumn = placement.position.column
             let firstRow    = placement.position.row
             let lastColumn  = firstColumn + placement.span.columns - 1
@@ -101,18 +96,16 @@ nonisolated struct NotchLayoutResolver {
                 }
             }
 
-            guard fits else {
-                continue
-            }
+            guard fits else { continue }
 
-            let x      = cellOriginX(firstColumn)
-            let width  = cellWidth * CGFloat(placement.span.columns)
-                       + gutter * CGFloat(placement.span.columns - 1)
+            let originX = cellOriginX(firstColumn)
+            let width   = cellWidth * CGFloat(placement.span.columns)
+                        + gutter * CGFloat(placement.span.columns - 1)
 
             let top    = rowOriginY(firstRow) + rowHeight(firstRow)
             let bottom = rowOriginY(lastRow)
 
-            frames[id] = CGRect(x: x, y: bottom, width: width, height: top - bottom)
+            frames[id] = CGRect(x: originX, y: bottom, width: width, height: top - bottom)
         }
 
         return NotchLayout(

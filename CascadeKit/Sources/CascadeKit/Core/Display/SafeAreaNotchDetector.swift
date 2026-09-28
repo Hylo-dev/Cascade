@@ -14,7 +14,6 @@ import AppKit
 final class SafeAreaNotchDetector: ActiveDisplayResolving {
 
     func resolveActiveDisplay() -> ActiveDisplay? {
-
         let pointer = NSEvent.mouseLocation
         let screen  = NSScreen.screens.first { NSMouseInRect(pointer, $0.frame, false) }
                    ?? NSScreen.main

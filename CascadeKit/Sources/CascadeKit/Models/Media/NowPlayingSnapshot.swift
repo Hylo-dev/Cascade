@@ -10,6 +10,7 @@ import Foundation
 /// player. Missing duration denotes a stream; invalid timing is normalized at
 /// this boundary so it never reaches layout or progress calculations.
 public nonisolated struct NowPlayingSnapshot: Equatable, Sendable {
+
     public let sourceBundleIdentifier: String
     public let title                 : String
     public let artist                : String
@@ -52,9 +53,10 @@ public nonisolated struct NowPlayingSnapshot: Equatable, Sendable {
     }
 
     public func position(at date: Date) -> TimeInterval {
-        let delta = date.timeIntervalSince(timestamp)
-        let advance = isPlaying && delta.isFinite ? max(0, delta) * playbackRate : 0
+        let delta    = date.timeIntervalSince(timestamp)
+        let advance  = isPlaying && delta.isFinite ? max(0, delta) * playbackRate : 0
         let position = elapsed + advance
+
         return duration.map { min(position, $0) } ?? position
     }
 }

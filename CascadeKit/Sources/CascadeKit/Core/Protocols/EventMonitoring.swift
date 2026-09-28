@@ -56,5 +56,6 @@ protocol EventMonitoring: AnyObject {
 }
 
 extension EventMonitoring {
+
     func setFileDragRecognitionHandler(_ handler: ((Bool, CGPoint, Bool) -> Void)?) {}
 }

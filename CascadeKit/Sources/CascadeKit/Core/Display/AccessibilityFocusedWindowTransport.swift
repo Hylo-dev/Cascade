@@ -9,12 +9,14 @@ import AppKit
 /// AccessibilityFocusedWindowTransport owns the AX observer and all remote
 /// reads. Its methods are called only by FocusedWindowMonitor's serial worker.
 nonisolated final class AccessibilityFocusedWindowTransport: FocusedWindowTransport, @unchecked Sendable {
+
     private let messageTimeout: Float
-    private var changeHandler : (@Sendable () -> Void)?
-    private var processID     : pid_t?
-    private var application   : AXUIElement?
-    private var observer      : AXObserver?
-    private var observedWindow: AXUIElement?
+
+    private var changeHandler  : (@Sendable () -> Void)?
+    private var processID      : pid_t?
+    private var application    : AXUIElement?
+    private var observer       : AXObserver?
+    private var observedWindow : AXUIElement?
     private var callbackContext: FocusedWindowAXCallbackContext?
     private var callbackPointer: UnsafeMutableRawPointer?
 
@@ -27,7 +29,7 @@ nonisolated final class AccessibilityFocusedWindowTransport: FocusedWindowTransp
     }
 
     func requestSnapshot(
-        processID: pid_t?,
+        processID : pid_t?,
         completion: @escaping @Sendable (FocusedWindowTransportResult) -> Void
     ) {
         guard AXIsProcessTrusted() else {
@@ -48,11 +50,13 @@ nonisolated final class AccessibilityFocusedWindowTransport: FocusedWindowTransp
 
         guard let application,
               let windowValue = attribute(application, kAXFocusedWindowAttribute),
-              CFGetTypeID(windowValue) == AXUIElementGetTypeID() else {
+              CFGetTypeID(windowValue) == AXUIElementGetTypeID()
+        else {
             clearWindowObservation()
             completion(.unavailable)
             return
         }
+
         // CoreFoundation erases the concrete reference type to `AnyObject`.
         // The runtime type-ID guard above is the checked boundary for this cast.
         let window = unsafeBitCast(windowValue, to: AXUIElement.self)
@@ -67,15 +71,13 @@ nonisolated final class AccessibilityFocusedWindowTransport: FocusedWindowTransp
         guard let position = pointAttribute(window, kAXPositionAttribute),
               let size = sizeAttribute(window, kAXSizeAttribute),
               size.width > 0,
-              size.height > 0 else {
+              size.height > 0
+        else {
             completion(.unavailable)
             return
         }
 
-        completion(.frameInAXCoordinates(CGRect(
-            origin: position,
-            size  : size
-        )))
+        completion(.frameInAXCoordinates(CGRect(origin: position, size: size)))
     }
 
     func stop() {
@@ -93,20 +95,19 @@ nonisolated final class AccessibilityFocusedWindowTransport: FocusedWindowTransp
         guard AXObserverCreate(
             processID,
             { _, _, _, contextPointer in
-                guard let contextPointer else {
-                    return
-                }
+                guard let contextPointer else { return }
+
                 let context = Unmanaged<FocusedWindowAXCallbackContext>
                     .fromOpaque(contextPointer)
                     .takeUnretainedValue()
                 context.signal()
             },
             &observer
-        ) == .success, let observer else {
-            return
-        }
+        ) == .success,
+        let observer
+        else { return }
 
-        let context = FocusedWindowAXCallbackContext(handler: changeHandler)
+        let context        = FocusedWindowAXCallbackContext(handler: changeHandler)
         let contextPointer = Unmanaged.passRetained(context).toOpaque()
 
         self.processID       = processID
@@ -137,9 +138,8 @@ nonisolated final class AccessibilityFocusedWindowTransport: FocusedWindowTransp
         }
 
         clearWindowObservation()
-        guard let observer, let callbackPointer else {
-            return
-        }
+
+        guard let observer, let callbackPointer else { return }
 
         for notification in Self.windowNotifications {
             addNotification(
@@ -149,6 +149,7 @@ nonisolated final class AccessibilityFocusedWindowTransport: FocusedWindowTransp
                 contextPointer: callbackPointer
             )
         }
+
         observedWindow = window
     }
 
@@ -165,6 +166,7 @@ nonisolated final class AccessibilityFocusedWindowTransport: FocusedWindowTransp
                 notification as CFString
             )
         }
+
         self.observedWindow = nil
     }
 
@@ -183,8 +185,9 @@ nonisolated final class AccessibilityFocusedWindowTransport: FocusedWindowTransp
 
         callbackContext?.cancel()
         if let observer, let callbackPointer {
-            let source = AXObserverGetRunLoopSource(observer)
+            let source  = AXObserverGetRunLoopSource(observer)
             let runLoop = CFRunLoopGetMain()
+
             CFRunLoopPerformBlock(runLoop, CFRunLoopMode.commonModes.rawValue) {
                 CFRunLoopRemoveSource(runLoop, source, .commonModes)
                 Unmanaged<FocusedWindowAXCallbackContext>
@@ -194,12 +197,12 @@ nonisolated final class AccessibilityFocusedWindowTransport: FocusedWindowTransp
             CFRunLoopWakeUp(runLoop)
         }
 
-        processID        = nil
-        application      = nil
-        observer         = nil
-        observedWindow   = nil
-        callbackContext  = nil
-        callbackPointer  = nil
+        processID       = nil
+        application     = nil
+        observer        = nil
+        observedWindow  = nil
+        callbackContext = nil
+        callbackPointer = nil
     }
 
     private func addNotification(
@@ -222,6 +225,7 @@ nonisolated final class AccessibilityFocusedWindowTransport: FocusedWindowTransp
         _ name   : String
     ) -> CFTypeRef? {
         configureTimeout(element)
+
         var value: CFTypeRef?
         return AXUIElementCopyAttributeValue(element, name as CFString, &value) == .success
             ? value
@@ -233,19 +237,15 @@ nonisolated final class AccessibilityFocusedWindowTransport: FocusedWindowTransp
         _ name   : String
     ) -> CGPoint? {
         guard let value = attribute(element, name),
-              CFGetTypeID(value) == AXValueGetTypeID() else {
-            return nil
-        }
+              CFGetTypeID(value) == AXValueGetTypeID()
+        else { return nil }
+
         // CoreFoundation erases AXValue behind CFTypeRef; the type-ID check is
         // the runtime proof required before recovering the concrete reference.
         let axValue = unsafeBitCast(value, to: AXValue.self)
 
         var point = CGPoint.zero
-        return AXValueGetValue(
-            axValue,
-            .cgPoint,
-            &point
-        ) ? point : nil
+        return AXValueGetValue(axValue, .cgPoint, &point) ? point : nil
     }
 
     private func sizeAttribute(
@@ -253,19 +253,15 @@ nonisolated final class AccessibilityFocusedWindowTransport: FocusedWindowTransp
         _ name   : String
     ) -> CGSize? {
         guard let value = attribute(element, name),
-              CFGetTypeID(value) == AXValueGetTypeID() else {
-            return nil
-        }
+              CFGetTypeID(value) == AXValueGetTypeID()
+        else { return nil }
+
         // CoreFoundation erases AXValue behind CFTypeRef; the type-ID check is
         // the runtime proof required before recovering the concrete reference.
         let axValue = unsafeBitCast(value, to: AXValue.self)
 
         var size = CGSize.zero
-        return AXValueGetValue(
-            axValue,
-            .cgSize,
-            &size
-        ) ? size : nil
+        return AXValueGetValue(axValue, .cgSize, &size) ? size : nil
     }
 
     private func configureTimeout(_ element: AXUIElement) {
@@ -292,7 +288,8 @@ nonisolated final class AccessibilityFocusedWindowTransport: FocusedWindowTransp
 /// run-loop source is removed. Cancelling first makes already queued callbacks
 /// harmless during app replacement, stop and owner deallocation.
 nonisolated final class FocusedWindowAXCallbackContext: @unchecked Sendable {
-    private let lock = NSLock()
+
+    private let lock    = NSLock()
     private var handler: (@Sendable () -> Void)?
 
     init(handler: (@Sendable () -> Void)?) {

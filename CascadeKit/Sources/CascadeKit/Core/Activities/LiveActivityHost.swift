@@ -10,7 +10,8 @@ import Foundation
 /// roots that displays actually retain. One scheduler owns every deadline.
 @MainActor
 final class LiveActivityHost {
-    var onChange: (() -> Void)?
+
+    var onChange        : (() -> Void)?
     /// onValidityChange reports terminal retained-root invalidation even when
     /// compact and expanded selection remain unchanged.
     var onValidityChange: (() -> Void)?
@@ -23,42 +24,49 @@ final class LiveActivityHost {
     )
 
     var pendingNoticeCount: Int { notices.count }
+
     /// presentationValidityRevision advances once per terminal invalidation
     /// transaction so a coordinator can coalesce redundant callbacks.
     private(set) var presentationValidityRevision: UInt64 = 0
+
     /// retainedOutgoingActivityCount exposes the bounded replacement handoff
     /// state to internal verification.
     var retainedOutgoingActivityCount: Int { retainedOutgoingActivities.count }
 
     private struct LiveEntry {
-        let activity: any NotchLiveActivity
-        var revision: UInt64
-        var lifetime: NotchActivityLifetime
-        var relevance: Double
-        let order: UInt64
+
+        let activity       : any NotchLiveActivity
+        var revision       : UInt64
+        var lifetime       : NotchActivityLifetime
+        var relevance      : Double
+        let order          : UInt64
         let sessionDeadline: Date
 
         var expiresAt: Date { min(lifetime.expiresAt, sessionDeadline) }
     }
 
     private struct Notice {
+
         let activity: any NotchTransientNotice
         var revision: UInt64
-        let expires: Date
+        let expires : Date
     }
 
     private struct Activation {
+
         let activity: any NotchActivity
-        let context: LiveActivityContext
+        let context : LiveActivityContext
     }
 
     private struct ContentKey: Equatable {
+
         let identity: ObjectIdentifier
         let revision: UInt64
-        let isStale: Bool
+        let isStale : Bool
     }
 
     private struct SelectionKey: Equatable {
+
         let primary  : ContentKey?
         let secondary: ContentKey?
         let expanded : ContentKey?
@@ -66,11 +74,12 @@ final class LiveActivityHost {
         let expansion: ActivityExpansionSelection
     }
 
-    private var persistent: [LiveEntry] = []
-    private var notices: [Notice] = []
-    private var activations: [ObjectIdentifier: Activation] = [:]
-    private var desiredVisibleActivities: [ObjectIdentifier: any NotchActivity] = [:]
+    private var persistent                : [LiveEntry] = []
+    private var notices                   : [Notice] = []
+    private var activations               : [ObjectIdentifier: Activation] = [:]
+    private var desiredVisibleActivities  : [ObjectIdentifier: any NotchActivity] = [:]
     private var retainedOutgoingActivities: [ObjectIdentifier: any NotchActivity] = [:]
+
     private var selectionKey = SelectionKey(
         primary  : nil,
         secondary: nil,
@@ -78,12 +87,16 @@ final class LiveActivityHost {
         notice   : nil,
         expansion: .none
     )
+
     private(set) var expansionSelection: ActivityExpansionSelection = .none
-    private var expandedFallback: (any NotchLiveActivity)?
+    private var expandedFallback       : (any NotchLiveActivity)?
+
     private var isVisible = false
     private var nextOrder: UInt64 = 0
-    private var deadlineTask: Task<Void, Never>?
+
+    private var deadlineTask     : Task<Void, Never>?
     private var scheduledDeadline: Date?
+
     private let now: () -> Date
 
     init(now: @escaping () -> Date = Date.init) { self.now = now }
@@ -91,26 +104,34 @@ final class LiveActivityHost {
     /// setExpandedFallback registers widget-like expanded content without adding
     /// it to compact ranking or the live-session deadline scheduler.
     func setExpandedFallback(_ activity: (any NotchLiveActivity)?) {
-        let outgoing = expandedFallback
+        let outgoing     = expandedFallback
         expandedFallback = activity
+
         if let outgoing, let activity, outgoing !== activity {
             retainOutgoingIfPresented(outgoing)
         }
+
         reconcileSelection()
     }
 
     func present(_ activity: any NotchLiveActivity) {
         expireNotices()
+
         let lifetime = activity.lifetime
         guard !lifetime.hasEnded(at: now()) else {
             end(id: activity.id)
             return
         }
+
         let relevance = normalizedRelevance(activity.relevanceScore)
         if let index = persistent.firstIndex(where: { $0.activity.id == activity.id }) {
             let old = persistent[index]
-            guard old.activity !== activity || old.revision != activity.contentRevision
-                    || old.lifetime != lifetime || old.relevance != relevance else { return }
+            guard old.activity !== activity
+                  || old.revision != activity.contentRevision
+                  || old.lifetime != lifetime
+                  || old.relevance != relevance
+            else { return }
+
             if old.activity !== activity { retainOutgoingIfPresented(old.activity) }
             persistent[index] = LiveEntry(
                 activity       : activity,
@@ -134,15 +155,18 @@ final class LiveActivityHost {
                 )
             )
         }
+
         notices.removeAll { $0.activity.id == activity.id }
         expireNotices()
     }
 
     func showNotice(_ notice: any NotchTransientNotice) {
         guard expansionSelection == .none else { return }
+
         expireNotices()
         let duration = notice.displayDuration
         guard duration.isFinite, duration > 0 else { return }
+
         let entry = Notice(
             activity: notice,
             revision: notice.contentRevision,
@@ -151,6 +175,7 @@ final class LiveActivityHost {
         if let index = notices.firstIndex(where: { $0.activity.id == notice.id }) {
             let old = notices[index]
             guard old.activity !== notice || old.revision != notice.contentRevision else { return }
+
             if old.activity !== notice { retainOutgoingIfPresented(old.activity) }
             notices.remove(at: index)
             notices.append(entry)
@@ -158,6 +183,7 @@ final class LiveActivityHost {
             if notices.count == 8 { notices.removeFirst() }
             notices.append(entry)
         }
+
         persistent.removeAll { $0.activity.id == notice.id }
         expireNotices()
     }
@@ -166,13 +192,18 @@ final class LiveActivityHost {
     /// deadline. A dismissed event cannot be recreated by a late result.
     func updateNotice(_ notice: any NotchTransientNotice) {
         guard expansionSelection == .none else { return }
+
         expireNotices()
         guard let index = notices.firstIndex(where: {
-            $0.activity.id == notice.id && $0.activity.sourceID == notice.sourceID
-        }), notice.contentRevision > notices[index].revision else { return }
+                  $0.activity.id == notice.id && $0.activity.sourceID == notice.sourceID
+              }),
+              notice.contentRevision > notices[index].revision
+        else { return }
+
         if notices[index].activity !== notice {
             retainOutgoingIfPresented(notices[index].activity)
         }
+
         notices[index] = Notice(
             activity: notice,
             revision: notice.contentRevision,
@@ -185,6 +216,7 @@ final class LiveActivityHost {
     /// for animation. The coordinator releases that retained root separately.
     func end(id: String) {
         guard persistent.contains(where: { $0.activity.id == id }) else { return }
+
         dismiss(id: id)
     }
 
@@ -194,15 +226,17 @@ final class LiveActivityHost {
             .map(\.activity)
         persistent.removeAll { $0.activity.id == id }
         notices.removeAll { $0.activity.id == id }
+
         var preservedFallbackIdentity: ObjectIdentifier?
         if case .activity(id) = expansionSelection,
            let fallback = expandedFallback,
            removedLive.contains(where: { $0 === fallback }) {
-            expansionSelection = .fallback
+            expansionSelection        = .fallback
             preservedFallbackIdentity = ObjectIdentifier(fallback)
         } else if expansionSelection == .fallback, let fallback = expandedFallback {
             preservedFallbackIdentity = ObjectIdentifier(fallback)
         }
+
         revokeRetainedActivities(
             where     : { $0.id == id },
             preserving: preservedFallbackIdentity
@@ -215,6 +249,7 @@ final class LiveActivityHost {
         persistent.removeAll { $0.activity.sourceID == sourceID }
         notices.removeAll { $0.activity.sourceID == sourceID }
         if expandedFallback?.sourceID == sourceID { expandedFallback = nil }
+
         revokeRetainedActivities { $0.sourceID == sourceID }
         reconcileSelection()
         scheduleExpiration()
@@ -225,11 +260,13 @@ final class LiveActivityHost {
     /// reveals a globally registered activity by accident.
     func setExpansion(_ expansion: ActivityExpansionSelection) {
         guard expansionSelection != expansion else { return }
+
         expansionSelection = expansion
         if expansion != .none {
             notices.removeAll()
             revokeRetainedActivities { $0 is any NotchTransientNotice }
         }
+
         reconcileSelection()
         scheduleExpiration()
     }
@@ -239,32 +276,34 @@ final class LiveActivityHost {
     /// Omitting a valid outgoing replacement acknowledges the cleared root and
     /// releases its eligibility; later replay is rejected unless republished.
     @discardableResult
-    func setVisibleActivities(
-        _ activities: [any NotchActivity]
-    ) -> VisibleActivityProjection {
-        let submittedIdentities = Set(activities.map(ObjectIdentifier.init))
+    func setVisibleActivities(_ activities: [any NotchActivity]) -> VisibleActivityProjection {
+        let submittedIdentities    = Set(activities.map(ObjectIdentifier.init))
         retainedOutgoingActivities = retainedOutgoingActivities.filter {
             submittedIdentities.contains($0.key)
         }
 
-        var desired: [ObjectIdentifier: any NotchActivity] = [:]
+        var desired : [ObjectIdentifier: any NotchActivity] = [:]
         var accepted: [any NotchActivity] = []
         var rejected: [any NotchActivity] = []
-        var seen: Set<ObjectIdentifier> = []
+        var seen    : Set<ObjectIdentifier> = []
         for activity in activities {
             let identity = ObjectIdentifier(activity)
             guard seen.insert(identity).inserted else { continue }
+
             if !isRegistered(activity), retainedOutgoingActivities[identity] == nil {
                 rejected.append(activity)
                 continue
             }
+
             desired[identity] = activity
             accepted.append(activity)
         }
+
         if desired.keys != desiredVisibleActivities.keys {
             desiredVisibleActivities = desired
             reconcileActivations()
         }
+
         return VisibleActivityProjection(accepted: accepted, rejected: rejected)
     }
 
@@ -279,6 +318,7 @@ final class LiveActivityHost {
     /// instance union survives so unlock can reactivate it once.
     func setVisible(_ visible: Bool) {
         guard isVisible != visible else { return }
+
         isVisible = visible
         if !visible {
             notices.removeAll()
@@ -286,6 +326,7 @@ final class LiveActivityHost {
             expansionSelection = .none
             reconcileSelection()
         }
+
         reconcileActivations()
     }
 
@@ -298,8 +339,8 @@ final class LiveActivityHost {
     /// expireNotices performs one-shot deadline reconciliation. Expiration
     /// updates every selection field immediately and never resurrects a handle.
     func expireNotices() {
-        let instant = now()
-        let expiredLive = persistent
+        let instant        = now()
+        let expiredLive    = persistent
             .filter { $0.expiresAt <= instant }
             .map(\.activity)
         let expiredNotices = notices
@@ -307,19 +348,22 @@ final class LiveActivityHost {
             .map(\.activity)
         persistent.removeAll { $0.expiresAt <= instant }
         notices.removeAll { $0.expires <= instant }
+
         if case let .activity(id) = expansionSelection,
            expiredLive.contains(where: { $0.id == id }),
            let fallback = expandedFallback,
            expiredLive.contains(where: { $0 === fallback }) {
             expansionSelection = .fallback
         }
-        let expiredLiveIDs = Set(expiredLive.map(\.id))
-        let expiredNoticeIDs = Set(expiredNotices.map(\.id))
+
+        let expiredLiveIDs            = Set(expiredLive.map(\.id))
+        let expiredNoticeIDs          = Set(expiredNotices.map(\.id))
         let preservedFallbackIdentity = expansionSelection == .fallback
             ? expandedFallback.map(ObjectIdentifier.init)
             : nil
+
         revokeRetainedActivities(
-            where: { activity in
+            where     : { activity in
                 if activity is any NotchTransientNotice {
                     return expiredNoticeIDs.contains(activity.id)
                 }
@@ -333,15 +377,17 @@ final class LiveActivityHost {
 
     func stop() {
         deadlineTask?.cancel()
-        deadlineTask = nil
+        deadlineTask      = nil
         scheduledDeadline = nil
+
         persistent.removeAll()
         notices.removeAll()
-        expandedFallback = nil
+        expandedFallback   = nil
         expansionSelection = .none
         desiredVisibleActivities.removeAll()
         retainedOutgoingActivities.removeAll()
         isVisible = false
+
         reconcileSelection()
         reconcileActivations()
     }
@@ -358,14 +404,14 @@ final class LiveActivityHost {
 
         let expanded: (any NotchLiveActivity)?
         switch expansionSelection {
-        case .none:
-            expanded = nil
-        case let .activity(id):
-            expanded = persistent.first { $0.activity.id == id }?.activity
-        case .fallback:
-            expanded = expandedFallback
-        case .widgets:
-            expanded = nil
+            case .none:
+                expanded = nil
+            case let .activity(id):
+                expanded = persistent.first { $0.activity.id == id }?.activity
+            case .fallback:
+                expanded = expandedFallback
+            case .widgets:
+                expanded = nil
         }
 
         let next = ActivitySelection(
@@ -383,6 +429,7 @@ final class LiveActivityHost {
         )
         selection = next
         guard nextKey != selectionKey else { return }
+
         selectionKey = nextKey
         onChange?()
     }
@@ -406,12 +453,13 @@ final class LiveActivityHost {
             // later entry instead of reviving an object removed by an earlier
             // activation callback.
             guard desiredVisibleActivities[identity] === activity,
-                  isRegistered(activity) || retainedOutgoingActivities[identity] != nil else {
-                continue
-            }
+                  isRegistered(activity) || retainedOutgoingActivities[identity] != nil
+            else { continue }
+
             let logicalID = activity.id
-            let context = LiveActivityContext { [weak self, weak activity] in
+            let context   = LiveActivityContext { [weak self, weak activity] in
                 guard let activity else { return }
+
                 self?.invalidate(
                     identity : identity,
                     logicalID: logicalID,
@@ -429,6 +477,7 @@ final class LiveActivityHost {
     private func retainOutgoingIfPresented(_ activity: any NotchActivity) {
         let identity = ObjectIdentifier(activity)
         guard desiredVisibleActivities[identity] != nil || activations[identity] != nil else { return }
+
         retainedOutgoingActivities[identity] = activity
     }
 
@@ -444,7 +493,7 @@ final class LiveActivityHost {
     /// valid when its finite live-session role ends.
     @discardableResult
     private func revokeRetainedActivities(
-        where predicate       : (any NotchActivity) -> Bool,
+        where predicate              : (any NotchActivity) -> Bool,
         preserving identityToPreserve: ObjectIdentifier? = nil
     ) -> Bool {
         var revoked: Set<ObjectIdentifier> = []
@@ -461,10 +510,12 @@ final class LiveActivityHost {
             revoked.insert(identity)
         }
         guard !revoked.isEmpty else { return false }
+
         for identity in revoked {
             desiredVisibleActivities.removeValue(forKey: identity)
             retainedOutgoingActivities.removeValue(forKey: identity)
         }
+
         reconcileActivations()
         presentationValidityRevision &+= 1
         onValidityChange?()
@@ -479,28 +530,33 @@ final class LiveActivityHost {
         activity : any NotchActivity
     ) {
         guard activations[identity]?.activity === activity else { return }
+
         if let index = persistent.firstIndex(where: {
             $0.activity.id == logicalID && $0.activity === activity
         }) {
-            let live = persistent[index].activity
-            let revision = live.contentRevision
-            let lifetime = live.lifetime
+            let live      = persistent[index].activity
+            let revision  = live.contentRevision
+            let lifetime  = live.lifetime
             let relevance = normalizedRelevance(live.relevanceScore)
             guard persistent[index].revision != revision
-                    || persistent[index].lifetime != lifetime
-                    || persistent[index].relevance != relevance else { return }
-            persistent[index].revision = revision
-            persistent[index].lifetime = lifetime
+                  || persistent[index].lifetime != lifetime
+                  || persistent[index].relevance != relevance
+            else { return }
+
+            persistent[index].revision  = revision
+            persistent[index].lifetime  = lifetime
             persistent[index].relevance = relevance
         } else if let index = notices.firstIndex(where: {
             $0.activity.id == logicalID && $0.activity === activity
         }) {
             let revision = notices[index].activity.contentRevision
             guard notices[index].revision != revision else { return }
+
             notices[index].revision = revision
         } else if expandedFallback !== activity {
             return
         }
+
         expireNotices()
     }
 
@@ -526,26 +582,29 @@ final class LiveActivityHost {
 
     private func scheduleExpiration() {
         let instant = now()
-        var next = notices.map(\.expires).min()
+        var next    = notices.map(\.expires).min()
         for entry in persistent {
             let end = entry.expiresAt
-            next = next.map { min($0, end) } ?? end
+            next    = next.map { min($0, end) } ?? end
             if let stale = entry.lifetime.staleDate, stale > instant {
                 next = next.map { min($0, stale) } ?? stale
             }
         }
+
         guard next != scheduledDeadline else { return }
+
         deadlineTask?.cancel()
-        deadlineTask = nil
+        deadlineTask      = nil
         scheduledDeadline = next
         guard let next else { return }
-        let delay = max(0, next.timeIntervalSince(instant))
+
+        let delay    = max(0, next.timeIntervalSince(instant))
         deadlineTask = Task { [weak self] in
-            do { try await Task.sleep(for: .seconds(delay)) }
-            catch { return }
+            do { try await Task.sleep(for: .seconds(delay)) } catch { return }
             guard !Task.isCancelled, let self else { return }
+
             self.scheduledDeadline = nil
-            self.deadlineTask = nil
+            self.deadlineTask      = nil
             self.expireNotices()
         }
     }

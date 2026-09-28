@@ -8,6 +8,7 @@
 /// reaches an activity after another activity has taken its place.
 @MainActor
 public final class LiveActivityContext {
+
     private var onInvalidate: (() -> Void)?
 
     init(onInvalidate: @escaping () -> Void) {

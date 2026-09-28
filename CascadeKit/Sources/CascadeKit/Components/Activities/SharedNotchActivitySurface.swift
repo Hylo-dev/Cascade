@@ -3,16 +3,13 @@
 //  CascadeKit
 //
 
-import AppKit
-import Observation
-import OSLog
-import QuartzCore
 import SwiftUI
 
 /// SharedNotchActivitySurface applies the host-owned appearance and behavior
 /// around standard provider content. Providers keep control of their own view,
 /// while Cascade supplies safe insets, stale status, accessibility, and links.
 struct SharedNotchActivitySurface: View {
+
     let content           : AnyView
     let contentSize       : CGSize
     let contentURL        : URL?
@@ -23,9 +20,11 @@ struct SharedNotchActivitySurface: View {
 
     var body: some View {
         ZStack {
+
             // The host owns expanded chrome, including glass and the opaque
             // accessibility fallback. A provider wrapper must not cover it.
             isExpandedPresentation ? Color.clear : Color.black
+
             linkedContent
                 .padding(insets)
         }
@@ -51,6 +50,7 @@ struct SharedNotchActivitySurface: View {
 
     private func row(showsOpenControl: Bool) -> some View {
         HStack(spacing: 0) {
+
             content
                 .frame(
                     width : contentSize.width,
@@ -64,7 +64,9 @@ struct SharedNotchActivitySurface: View {
                 .padding(-40)
 
             if isStale {
-                Spacer().frame(width: 4)
+                Spacer()
+                    .frame(width: 4)
+
                 Image(systemName: "clock.badge.exclamationmark")
                     .font(.caption2)
                     .frame(width: 14)
@@ -72,7 +74,9 @@ struct SharedNotchActivitySurface: View {
             }
 
             if showsOpenControl, let contentURL {
-                Spacer().frame(width: 8)
+                Spacer()
+                    .frame(width: 8)
+
                 Link(destination: contentURL) {
                     Label("Apri", systemImage: "arrow.up.forward.app")
                         .labelStyle(.titleAndIcon)
@@ -85,6 +89,7 @@ struct SharedNotchActivitySurface: View {
 
     private var isExpandedPresentation: Bool {
         if case .expanded = presentation { return true }
+
         return false
     }
 }

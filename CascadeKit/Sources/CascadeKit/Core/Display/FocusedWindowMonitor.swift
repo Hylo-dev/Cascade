@@ -11,6 +11,7 @@ import AppKit
 /// main actor only captures app/display metadata and delivers immutable frames.
 @MainActor
 final class FocusedWindowMonitor: FocusedWindowMonitoring {
+
     var onChange: ((CGRect?) -> Void)?
 
     private let applicationMonitor: any FocusedApplicationMonitoring
@@ -18,11 +19,12 @@ final class FocusedWindowMonitor: FocusedWindowMonitoring {
     private let desktopTop        : @MainActor () -> CGFloat
     private let worker            : DispatchQueue
     private let coalescingDelay   : TimeInterval
-    private var pendingRequest    : FocusedWindowRequestToken?
-    private var generation        : UInt64 = 0
-    private var isStarted         = false
-    private var hasPublished      = false
-    private var publishedFrame    : CGRect?
+
+    private var pendingRequest: FocusedWindowRequestToken?
+    private var generation    : UInt64 = 0
+    private var isStarted      = false
+    private var hasPublished   = false
+    private var publishedFrame: CGRect?
 
     convenience init() {
         self.init(
@@ -44,7 +46,7 @@ final class FocusedWindowMonitor: FocusedWindowMonitoring {
             label: "hylo.Cascade.FocusedWindowAX",
             qos  : .userInitiated
         ),
-        coalescingDelay: TimeInterval = 0.012
+        coalescingDelay   : TimeInterval = 0.012
     ) {
         self.applicationMonitor = applicationMonitor
         self.transport          = transport
@@ -54,13 +56,12 @@ final class FocusedWindowMonitor: FocusedWindowMonitoring {
     }
 
     func start() {
-        guard !isStarted else {
-            return
-        }
+        guard !isStarted else { return }
 
         isStarted      = true
         hasPublished   = false
         publishedFrame = nil
+
         applicationMonitor.onChange = { [weak self] in
             self?.scheduleRefresh()
         }
@@ -72,21 +73,23 @@ final class FocusedWindowMonitor: FocusedWindowMonitoring {
                 self?.scheduleRefresh()
             }
         }
+
         worker.async {
             transport.start(onChange: observedChange)
         }
+
         scheduleRefresh()
     }
 
     func stop() {
-        guard isStarted else {
-            return
-        }
+        guard isStarted else { return }
 
         isStarted = false
         generation &+= 1
+
         pendingRequest?.cancel()
         pendingRequest = nil
+
         applicationMonitor.onChange = nil
         applicationMonitor.stop()
 
@@ -103,22 +106,21 @@ final class FocusedWindowMonitor: FocusedWindowMonitoring {
     }
 
     private func scheduleRefresh() {
-        guard isStarted else {
-            return
-        }
+        guard isStarted else { return }
 
         generation &+= 1
         let requestGeneration = generation
-        let token = FocusedWindowRequestToken()
+        let token             = FocusedWindowRequestToken()
+
         pendingRequest?.cancel()
         pendingRequest = token
 
         let application = applicationMonitor.frontmostApplication
-        let processID = application?.processID == ProcessInfo.processInfo.processIdentifier
+        let processID   = application?.processID == ProcessInfo.processInfo.processIdentifier
             ? nil
             : application?.processID
-        let desktopTop = desktopTop()
-        let transport  = transport
+        let desktopTop  = desktopTop()
+        let transport   = transport
 
         let deliver: @Sendable (FocusedWindowTransportResult) -> Void = { [weak self] result in
             Task { @MainActor [weak self] in
@@ -132,14 +134,9 @@ final class FocusedWindowMonitor: FocusedWindowMonitoring {
         }
 
         worker.asyncAfter(deadline: .now() + coalescingDelay) {
-            guard !token.isCancelled else {
-                return
-            }
+            guard !token.isCancelled else { return }
 
-            transport.requestSnapshot(
-                processID: processID,
-                completion: deliver
-            )
+            transport.requestSnapshot(processID: processID, completion: deliver)
         }
     }
 
@@ -151,24 +148,22 @@ final class FocusedWindowMonitor: FocusedWindowMonitoring {
     ) {
         guard isStarted,
               self.generation == generation,
-              !token.isCancelled else {
-            return
-        }
+              !token.isCancelled
+        else { return }
 
         let frame: CGRect?
         switch result {
-        case .frameInAXCoordinates(let rawFrame):
-            frame = FocusedWindowCoordinateSpace.appKitFrame(
-                fromAXFrame: rawFrame,
-                desktopTop : desktopTop
-            )
-        case .unavailable, .permissionDenied:
-            frame = nil
+            case .frameInAXCoordinates(let rawFrame):
+                frame = FocusedWindowCoordinateSpace.appKitFrame(
+                    fromAXFrame: rawFrame,
+                    desktopTop : desktopTop
+                )
+
+            case .unavailable, .permissionDenied:
+                frame = nil
         }
 
-        guard !hasPublished || frame != publishedFrame else {
-            return
-        }
+        guard !hasPublished || frame != publishedFrame else { return }
 
         hasPublished   = true
         publishedFrame = frame
@@ -179,7 +174,8 @@ final class FocusedWindowMonitor: FocusedWindowMonitoring {
 /// FocusedWindowRequestToken cancels coalesced work before it enters the AX
 /// transport while generation checks reject work already in flight.
 nonisolated private final class FocusedWindowRequestToken: @unchecked Sendable {
-    private let lock = NSLock()
+
+    private let lock      = NSLock()
     private var cancelled = false
 
     var isCancelled: Bool {

@@ -13,14 +13,16 @@ import SwiftUI
 /// continuous animation.
 @MainActor
 public protocol NotchActivity: AnyObject {
-    var id: String { get }
+
+    var id      : String { get }
     var sourceID: String { get }
 
     /// Change only with displayed content/state. Re-publishing the same instance
     /// and revision leaves its views and deadlines untouched.
     var contentRevision: UInt64 { get }
+
     var accessibilityLabel: String { get }
-    var privacy: NotchActivityPrivacy { get }
+    var privacy           : NotchActivityPrivacy { get }
 
     /// Optional contextual rim tint while this activity is visible. Nil inherits
     /// the engine's current status; hidden sensitive content cannot override it.
@@ -29,15 +31,18 @@ public protocol NotchActivity: AnyObject {
     /// One relevant destination shared by both compact halves and minimal.
     /// Nil is appropriate when no real destination exists, including previews.
     var contentURL: URL? { get }
+
     /// Optional outer width of each compact side. The renderer clamps it to
     /// safe display bounds and ignores it when sensitive content is hidden.
     var compactPreferredSideWidth: CGFloat? { get }
+
     /// Content height excluding the cutout and host margins; bounded by the host.
     var expandedContentHeight: CGFloat { get }
 
     func makeCompactLeadingView(in context: NotchActivityViewContext) -> AnyView
     func makeCompactTrailingView(in context: NotchActivityViewContext) -> AnyView
     func makeMinimalView(in context: NotchActivityViewContext) -> AnyView
+
     /// Hooks own visible resources only. Publish/end through the engine even
     /// while suspended; a hidden provider must not depend on a visible context.
     func activate(in context: LiveActivityContext)
@@ -45,10 +50,13 @@ public protocol NotchActivity: AnyObject {
 }
 
 public extension NotchActivity {
-    var borderAppearance: NotchBorderAppearance? { nil }
-    var contentURL: URL? { nil }
+
+    var borderAppearance         : NotchBorderAppearance? { nil }
+    var contentURL               : URL? { nil }
     var compactPreferredSideWidth: CGFloat? { nil }
-    var expandedContentHeight: CGFloat { 88 }
+    var expandedContentHeight    : CGFloat { 88 }
+
     func activate(in context: LiveActivityContext) {}
+
     func suspend() {}
 }

@@ -25,7 +25,6 @@ extension CGRect {
         segmentFrom p0: CGPoint,
         to          p1: CGPoint
     ) -> Bool {
-
         let dx = p1.x - p0.x
         let dy = p1.y - p0.y
 
@@ -44,7 +43,6 @@ extension CGRect {
             p: CGFloat,
             q: CGFloat
         ) -> Bool {
-
             if p == 0 {
                 return q >= 0 // Parallel to the edge: inside it iff q >= 0.
             }

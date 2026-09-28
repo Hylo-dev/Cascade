@@ -3,8 +3,6 @@
 //  CascadeKit
 //
 
-import Foundation
-
 /// GridSpan is a widget's footprint on the notch grid, in cells.
 ///
 /// The grid is two rows tall, so `rows` is clamped to `1...2`; `columns` is free

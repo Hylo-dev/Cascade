@@ -45,26 +45,26 @@ nonisolated struct NotchGeometry: Equatable, Sendable {
         leadingProgress         : CGFloat,
         trailingProgress        : CGFloat
     ) -> NotchGeometry {
-
-        let boundedCompactProgress = min(1, max(0, compactProgress))
-        let compactHalfWidth = compactCenterHalfWidth ?? restingHalfWidth
+        let boundedCompactProgress  = min(1, max(0, compactProgress))
+        let compactHalfWidth        = compactCenterHalfWidth ?? restingHalfWidth
         let resolvedCenterHalfWidth = restingHalfWidth
             + (compactHalfWidth - restingHalfWidth) * boundedCompactProgress
-        let leadingRest  = resolvedCenterHalfWidth + compactLeadingExtension
-        let trailingRest = resolvedCenterHalfWidth + compactTrailingExtension
+
+        let leadingRest   = resolvedCenterHalfWidth + compactLeadingExtension
+        let trailingRest  = resolvedCenterHalfWidth + compactTrailingExtension
         let expandedWidth = expandedHalfWidth ?? configuration.expandedHalfWidth
-        let leftExtent = leadingRest + (expandedWidth - leadingRest) * leadingProgress
-        let rightExtent = trailingRest + (expandedWidth - trailingRest) * trailingProgress
+        let leftExtent    = leadingRest + (expandedWidth - leadingRest) * leadingProgress
+        let rightExtent   = trailingRest + (expandedWidth - trailingRest) * trailingProgress
 
         let openness = max(leadingProgress, trailingProgress)
-        let height = resolvedHeight
+        let height   = resolvedHeight
             ?? restingHeight + (configuration.expandedHeight - restingHeight) * openness
 
         // Round the continuous corners ahead of the size change, then retain
         // that softness on the way back to the hardware. Clamping only this
         // curve keeps the opening overshoot without reversing the roundness.
-        let cornerProgress = min(1, max(0, openness))
-        let roundness = cornerProgress * (2 - cornerProgress)
+        let cornerProgress     = min(1, max(0, openness))
+        let roundness          = cornerProgress * (2 - cornerProgress)
         let bottomCornerRadius = configuration.restingBottomCornerRadius
             + (configuration.expandedBottomCornerRadius - configuration.restingBottomCornerRadius) * roundness
 

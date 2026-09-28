@@ -4,7 +4,6 @@
 //
 
 import AppKit
-@preconcurrency import ApplicationServices
 
 /// FocusedWindowCoordinateSpace converts Accessibility's top-left, downward-y
 /// desktop space into AppKit's global bottom-left, upward-y space.
@@ -14,7 +13,7 @@ nonisolated enum FocusedWindowCoordinateSpace {
     /// horizontal origin and reflects y around that display's AppKit top edge.
     static func appKitFrame(
         fromAXFrame frame: CGRect,
-        desktopTop         : CGFloat
+        desktopTop       : CGFloat
     ) -> CGRect? {
         guard desktopTop.isFinite,
               !frame.isNull,
@@ -24,9 +23,8 @@ nonisolated enum FocusedWindowCoordinateSpace {
               frame.width.isFinite,
               frame.height.isFinite,
               frame.width > 0,
-              frame.height > 0 else {
-            return nil
-        }
+              frame.height > 0
+        else { return nil }
 
         return CGRect(
             x     : frame.minX,

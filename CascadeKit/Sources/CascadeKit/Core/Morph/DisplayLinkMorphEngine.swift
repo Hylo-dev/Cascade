@@ -17,10 +17,10 @@ import QuartzCore
 /// and on battery that is not acceptable.
 final class DisplayLinkMorphEngine: MorphEngineDriving {
 
-    private weak var view     : NSView?
-    private var link          : CADisplayLink?
-    private var onFrame       : ((CFTimeInterval) -> Void)?
-    private var lastTimestamp : CFTimeInterval = 0
+    private weak var view    : NSView?
+    private var link         : CADisplayLink?
+    private var onFrame      : ((CFTimeInterval) -> Void)?
+    private var lastTimestamp: CFTimeInterval = 0
 
     init(view: NSView) {
         self.view = view
@@ -31,10 +31,7 @@ final class DisplayLinkMorphEngine: MorphEngineDriving {
     }
 
     func start(onFrame: @escaping (CFTimeInterval) -> Void) {
-
-        guard link == nil, let view else {
-            return
-        }
+        guard link == nil, let view else { return }
 
         self.onFrame       = onFrame
         self.lastTimestamp = 0
@@ -57,7 +54,6 @@ final class DisplayLinkMorphEngine: MorphEngineDriving {
 
     @objc
     private func tick(_ link: CADisplayLink) {
-
         // The first tick after a (re)start has no previous timestamp; assume a
         // nominal 120 Hz frame so the spring takes a sane first step.
         let delta = lastTimestamp == 0

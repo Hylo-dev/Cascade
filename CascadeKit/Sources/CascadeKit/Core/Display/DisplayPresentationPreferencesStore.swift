@@ -13,13 +13,13 @@ import Foundation
 /// the value until the user changes it.
 @MainActor
 public final class DisplayPresentationPreferencesStore {
+
     public static let defaultsKey = "displayPresentationPreferencesV1"
 
     public var preferences: DisplayPresentationPreferences {
         didSet {
-            guard let payload = try? JSONEncoder().encode(preferences) else {
-                return
-            }
+            guard let payload = try? JSONEncoder().encode(preferences) else { return }
+
             defaults.set(payload, forKey: Self.defaultsKey)
         }
     }
@@ -31,9 +31,10 @@ public final class DisplayPresentationPreferencesStore {
 
         guard let payload = defaults.data(forKey: Self.defaultsKey),
               let decoded = try? JSONDecoder().decode(
-                DisplayPresentationPreferences.self,
-                from: payload
-              ) else {
+                  DisplayPresentationPreferences.self,
+                  from: payload
+              )
+        else {
             preferences = DisplayPresentationPreferences()
             return
         }

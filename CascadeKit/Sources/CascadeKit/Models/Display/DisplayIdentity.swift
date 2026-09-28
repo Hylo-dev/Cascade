@@ -3,8 +3,6 @@
 //  CascadeKit
 //
 
-import Foundation
-
 /// DisplayIdentity is the stable UUID-backed identity of a physical display.
 ///
 /// CoreGraphics display identifiers only last for the current session. Keeping
@@ -12,6 +10,7 @@ import Foundation
 /// style survive reconnection without exposing CoreGraphics in persisted data.
 @frozen
 public nonisolated struct DisplayIdentity: RawRepresentable, Hashable, Codable, Sendable {
+
     public let rawValue: String
 
     public init(rawValue: String) {

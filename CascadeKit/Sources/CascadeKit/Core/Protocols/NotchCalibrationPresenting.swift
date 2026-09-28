@@ -10,9 +10,15 @@ import CoreGraphics
 /// or additional system permission is needed.
 @MainActor
 protocol NotchCalibrationPresenting: AnyObject {
-    var onStep: ((CGFloat, CGFloat) -> Void)? { get set }
+
+    var onStep  : ((CGFloat, CGFloat) -> Void)? { get set }
     var onFinish: ((Bool) -> Void)? { get set }
-    func show(on display: ActiveDisplay, size: CGSize)
+
+    func show(
+        on display: ActiveDisplay,
+        size      : CGSize
+    )
+
     func update(size: CGSize)
     func update(geometry: NotchGeometry)
     func hide()

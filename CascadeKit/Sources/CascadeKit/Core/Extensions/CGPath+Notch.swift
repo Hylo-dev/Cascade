@@ -31,7 +31,6 @@ extension CGPath {
         centerX : CGFloat,
         topY    : CGFloat
     ) -> CGPath {
-
         let left   = centerX - geometry.leftExtent
         let right  = centerX + geometry.rightExtent
         let top    = topY

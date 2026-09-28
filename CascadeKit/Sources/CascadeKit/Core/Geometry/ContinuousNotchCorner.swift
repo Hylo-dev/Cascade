@@ -64,52 +64,52 @@ enum ContinuousNotchCorner {
         nativePath.forEach { element in
             let segment: CubicSegment
             switch element {
-            case let .move(to: point):
-                currentPoint = point
-                return
+                case let .move(to: point):
+                    currentPoint = point
+                    return
 
-            case let .line(to: point):
-                segment = CubicSegment(
-                    start   : currentPoint,
-                    control1: interpolate(
-                        from    : currentPoint,
-                        to      : point,
-                        fraction: 1 / 3
-                    ),
-                    control2: interpolate(
-                        from    : currentPoint,
-                        to      : point,
-                        fraction: 2 / 3
-                    ),
-                    end     : point
-                )
+                case let .line(to: point):
+                    segment = CubicSegment(
+                        start   : currentPoint,
+                        control1: interpolate(
+                            from    : currentPoint,
+                            to      : point,
+                            fraction: 1 / 3
+                        ),
+                        control2: interpolate(
+                            from    : currentPoint,
+                            to      : point,
+                            fraction: 2 / 3
+                        ),
+                        end     : point
+                    )
 
-            case let .quadCurve(to: point, control: control):
-                segment = CubicSegment(
-                    start   : currentPoint,
-                    control1: interpolate(
-                        from    : currentPoint,
-                        to      : control,
-                        fraction: 2 / 3
-                    ),
-                    control2: interpolate(
-                        from    : point,
-                        to      : control,
-                        fraction: 2 / 3
-                    ),
-                    end     : point
-                )
+                case let .quadCurve(to: point, control: control):
+                    segment = CubicSegment(
+                        start   : currentPoint,
+                        control1: interpolate(
+                            from    : currentPoint,
+                            to      : control,
+                            fraction: 2 / 3
+                        ),
+                        control2: interpolate(
+                            from    : point,
+                            to      : control,
+                            fraction: 2 / 3
+                        ),
+                        end     : point
+                    )
 
-            case let .curve(to: point, control1: first, control2: second):
-                segment = CubicSegment(
-                    start   : currentPoint,
-                    control1: first,
-                    control2: second,
-                    end     : point
-                )
+                case let .curve(to: point, control1: first, control2: second):
+                    segment = CubicSegment(
+                        start   : currentPoint,
+                        control1: first,
+                        control2: second,
+                        end     : point
+                    )
 
-            case .closeSubpath:
-                return
+                case .closeSubpath:
+                    return
             }
 
             currentPoint = segment.end
@@ -125,11 +125,8 @@ enum ContinuousNotchCorner {
             preconditionFailure("A native continuous rounded rectangle must contain a corner.")
         }
 
-        let span = max(first.start.x, first.start.y, last.end.x, last.end.y)
-        let scale = CGAffineTransform(
-            scaleX: 1 / span,
-            y     : 1 / span
-        )
+        let span  = max(first.start.x, first.start.y, last.end.x, last.end.y)
+        let scale = CGAffineTransform(scaleX: 1 / span, y: 1 / span)
 
         // Normalize direction as well: the outline can begin on any edge and
         // a future native renderer may reverse its winding direction.
@@ -169,6 +166,7 @@ enum ContinuousNotchCorner {
 
     /// CubicSegment owns the copied control points of one native path segment.
     private struct CubicSegment {
+
         let start   : CGPoint
         let control1: CGPoint
         let control2: CGPoint

@@ -5,9 +5,9 @@
 
 import AppKit
 import CoreGraphics
-import OSLog
 
 nonisolated struct FileDragTopEdgeFilter: Sendable {
+
     private var geometry: FileDragTopEdgeGeometry?
 
     init(geometry: FileDragTopEdgeGeometry) {
@@ -22,12 +22,16 @@ nonisolated struct FileDragTopEdgeFilter: Sendable {
         geometry = nil
     }
 
-    mutating func process(_ type: CGEventType, at location: CGPoint) -> FileDragTopEdgeDecision {
+    mutating func process(
+        _ type     : CGEventType,
+        at location: CGPoint
+    ) -> FileDragTopEdgeDecision {
         if type == .leftMouseUp {
             geometry = nil
             return .stop
         }
         guard type == .leftMouseDragged, let geometry else { return .pass }
+
         let clamped = geometry.clamped(location)
         return clamped == location ? .pass : .move(to: clamped)
     }

@@ -3,8 +3,6 @@
 //  CascadeKit
 //
 
-import Foundation
-
 /// NotchScreen is one "page" of the notch — the home-screen-style screens the
 /// top-leading slider pages through.
 ///
@@ -16,7 +14,7 @@ import Foundation
 /// on-screen place is the `GridPosition`, not insertion order.
 nonisolated struct NotchScreen: Identifiable, Sendable {
 
-    let id: Int
+    let id         : Int
     var arrangement: [WidgetIdentifier: WidgetPlacement]
 
     init(

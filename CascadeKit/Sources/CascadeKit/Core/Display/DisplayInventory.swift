@@ -4,7 +4,6 @@
 //
 
 import AppKit
-import ColorSync
 
 /// DisplayInventory observes AppKit's screen-parameter notification and emits
 /// only changes that affect surface topology, geometry, scale or notch metrics.
@@ -16,14 +15,17 @@ import ColorSync
 /// independent.
 @MainActor
 final class DisplayInventory: NSObject, DisplayInventoryProviding {
+
     private(set) var displays: [DisplayInventoryEntry] = []
+
     var onChange: (() -> Void)?
 
     private let notificationCenter: NotificationCenter
-    private let screens            : @MainActor () -> [DisplayInventoryScreen]
-    private let identityResolver   : (CGDirectDisplayID) -> DisplayIdentity?
-    private let mirrorResolver     : (CGDirectDisplayID) -> CGDirectDisplayID
-    private var isStarted          = false
+    private let screens           : @MainActor () -> [DisplayInventoryScreen]
+    private let identityResolver  : (CGDirectDisplayID) -> DisplayIdentity?
+    private let mirrorResolver    : (CGDirectDisplayID) -> CGDirectDisplayID
+
+    private var isStarted = false
 
     init(
         notificationCenter: NotificationCenter = .default,
@@ -35,10 +37,10 @@ final class DisplayInventory: NSObject, DisplayInventoryProviding {
                 )
             }
         },
-        identityResolver: @escaping (CGDirectDisplayID) -> DisplayIdentity? = {
+        identityResolver  : @escaping (CGDirectDisplayID) -> DisplayIdentity? = {
             DisplayIdentityResolver.resolve(displayID: $0)
         },
-        mirrorResolver: @escaping (CGDirectDisplayID) -> CGDirectDisplayID = {
+        mirrorResolver    : @escaping (CGDirectDisplayID) -> CGDirectDisplayID = {
             CGDisplayMirrorsDisplay($0)
         }
     ) {
@@ -46,16 +48,16 @@ final class DisplayInventory: NSObject, DisplayInventoryProviding {
         self.screens            = screens
         self.identityResolver   = identityResolver
         self.mirrorResolver     = mirrorResolver
+
         super.init()
     }
 
     func start() {
-        guard !isStarted else {
-            return
-        }
+        guard !isStarted else { return }
 
         isStarted = true
         refresh()
+
         notificationCenter.addObserver(
             self,
             selector: #selector(screenParametersDidChange),
@@ -65,9 +67,7 @@ final class DisplayInventory: NSObject, DisplayInventoryProviding {
     }
 
     func stop() {
-        guard isStarted else {
-            return
-        }
+        guard isStarted else { return }
 
         notificationCenter.removeObserver(self)
         isStarted = false
@@ -118,9 +118,9 @@ final class DisplayInventory: NSObject, DisplayInventoryProviding {
         while visited.insert(current).inserted {
             let mirroredDisplayID = mirrorResolver(current)
             guard mirroredDisplayID != kCGNullDirectDisplay,
-                  mirroredDisplayID != current else {
-                return current
-            }
+                  mirroredDisplayID != current
+            else { return current }
+
             current = mirroredDisplayID
         }
 
@@ -131,9 +131,7 @@ final class DisplayInventory: NSObject, DisplayInventoryProviding {
         _ lhs: [DisplayInventoryEntry],
         _ rhs: [DisplayInventoryEntry]
     ) -> Bool {
-        guard lhs.count == rhs.count else {
-            return false
-        }
+        guard lhs.count == rhs.count else { return false }
 
         return zip(lhs, rhs).allSatisfy { previous, current in
             previous.snapshot == current.snapshot && previous.identity == current.identity

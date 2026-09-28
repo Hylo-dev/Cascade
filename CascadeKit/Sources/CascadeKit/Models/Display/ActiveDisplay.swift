@@ -14,10 +14,10 @@ import CoreGraphics
 /// the panel from being re-placed on every mouse twitch).
 nonisolated struct ActiveDisplay: Equatable, Sendable {
 
-    let displayID    : CGDirectDisplayID
-    let frame        : CGRect        // Full screen frame, AppKit global coordinates.
-    let backingScale : CGFloat
-    let notch        : HardwareNotch
+    let displayID   : CGDirectDisplayID
+    let frame       : CGRect // Full screen frame, AppKit global coordinates.
+    let backingScale: CGFloat
+    let notch       : HardwareNotch
 
     /// Whether the followed screen has a physical notch — and therefore whether
     /// we draw the chrome. The interactive zone exists regardless of this.

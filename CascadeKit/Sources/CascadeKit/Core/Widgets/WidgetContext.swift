@@ -40,6 +40,7 @@ public final class WidgetContext {
     /// Internal: the host calls it, widgets only ever read `state`.
     func update(state: NotchState) {
         guard requestContent != nil else { return }
+
         self.state = state
     }
 

@@ -4,10 +4,7 @@
 //
 
 import AppKit
-import CascadeContracts
-import CoreImage
 import QuartzCore
-import SwiftUI
 
 /// NotchGlassLens turns back on the lens that macOS leaves off on a glass the
 /// size of an open notch. Past a certain size NSGlassEffectView frosts its
@@ -26,16 +23,19 @@ import SwiftUI
 /// ~20 layers a few times per rebuild, nothing per frame.
 @MainActor
 enum NotchGlassLens {
+
     static let tuning: [String: Double] = [
         "inputBlurRadius"          : 0,
         "inputRefractionOpacity"   : 1,
         "inputFaceColorMatrixBlack": 0,
         "inputFaceColorMatrixWhite": 1,
     ]
+
     static let faceFillKey = "inputFaceColorMatrixFillColor"
     static let faceFill    = CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 0)
 
     enum Outcome: Equatable {
+
         /// The glass has not built its filter yet.
         case missing
         case opened
@@ -53,18 +53,23 @@ enum NotchGlassLens {
                   let keys = filter.perform(NSSelectorFromString("inputKeys"))?
                     .takeUnretainedValue() as? [String]
             else { continue }
+
             if outcome == .missing { outcome = .alreadyOpen }
+
             for (key, value) in tuning where keys.contains(key) {
                 guard (filter.value(forKey: key) as? Double) != value else { continue }
+
                 layer.setValue(value, forKeyPath: "filters.glassBackground.\(key)")
                 outcome = .opened
             }
+
             if keys.contains(faceFillKey),
                filter.value(forKey: faceFillKey).map({ !CFEqual($0 as AnyObject, faceFill) }) ?? true {
                 layer.setValue(faceFill, forKeyPath: "filters.glassBackground.\(faceFillKey)")
                 outcome = .opened
             }
         }
+
         return outcome
     }
 
@@ -74,6 +79,7 @@ enum NotchGlassLens {
 
     private static func backdrops(in layer: CALayer) -> [CALayer] {
         let own = NSStringFromClass(type(of: layer)) == "CABackdropLayer" ? [layer] : []
+
         return own + (layer.sublayers ?? []).flatMap { backdrops(in: $0) }
     }
 }

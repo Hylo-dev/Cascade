@@ -5,14 +5,13 @@
 
 import AppKit
 import CascadeContracts
-import CoreImage
-import QuartzCore
 import SwiftUI
 
 /// NotchGlassRendering keeps native material updates separate from widget layout.
 @MainActor
 protocol NotchGlassRendering {
-    var view: NSView { get }
+
+    var view       : NSView { get }
     var isSupported: Bool { get }
 
     func setColor(_ color: Color)

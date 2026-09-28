@@ -3,21 +3,20 @@
 //  CascadeKit
 //
 
-import AppKit
-import Observation
-import OSLog
-import QuartzCore
 import SwiftUI
 
 /// SensitiveNotchActivityPlaceholder is constructed without consulting the
 /// provider, so private text, URLs, freshness, and accessibility labels cannot
 /// enter the hidden SwiftUI tree.
 struct SensitiveNotchActivityPlaceholder: View {
+
     let presentation: NotchActivityPresentation
 
     var body: some View {
         ZStack {
+
             isExpandedPresentation ? Color.clear : Color.black
+
             if isExpandedPresentation {
                 Label("Attività nascosta", systemImage: "lock.fill")
                     .font(.callout)
@@ -36,6 +35,7 @@ struct SensitiveNotchActivityPlaceholder: View {
 
     private var isExpandedPresentation: Bool {
         if case .expanded = presentation { return true }
+
         return false
     }
 }

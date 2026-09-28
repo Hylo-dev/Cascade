@@ -32,7 +32,8 @@ import SwiftUI
 /// glass only a solid shade stands in for the tint while the notch opens.
 @MainActor
 final class NotchGlassRenderer: NotchGlassRendering {
-    let view: NSView = PassiveNotchGlassView(frame: .zero)
+
+    let view       : NSView = PassiveNotchGlassView(frame: .zero)
     let isSupported: Bool
 
     private let outlineMask = CAShapeLayer()
@@ -43,6 +44,7 @@ final class NotchGlassRenderer: NotchGlassRendering {
     private let shadeLayer  = CALayer()
     private let tintLayer   = CAGradientLayer()
     private let lightsFade  = CAGradientLayer()
+
     private var lightLayers : [CAGradientLayer] = []
     private var lights      : [GlassLight] = []
     private var color       : Color = .black
@@ -53,23 +55,24 @@ final class NotchGlassRenderer: NotchGlassRendering {
     private var lensAttempts = 0
 
     init() {
-        view.wantsLayer = true
+        view.wantsLayer    = true
         view.clipsToBounds = false
-        view.isHidden = true
+        view.isHidden      = true
         view.setAccessibilityElement(false)
         view.layer?.mask = outlineMask
 
         // Layer-hosting views keep AppKit from reordering these sublayers
         // around the glass view's own layer.
         for hosted in [backingView, lightsView, overlayView] {
-            hosted.layer = CALayer()
-            hosted.wantsLayer = true
+            hosted.layer            = CALayer()
+            hosted.wantsLayer       = true
             hosted.autoresizingMask = [.width, .height]
         }
         lightsView.layerUsesCoreImageFilters = true
         lightsView.layer?.addSublayer(lightsLayer)
         backingView.layer?.addSublayer(tintLayer)
         overlayView.layer?.addSublayer(shadeLayer)
+
         for gradient in [tintLayer, lightsFade] {
             gradient.startPoint = CGPoint(x: 0.5, y: 1)
             gradient.endPoint   = CGPoint(x: 0.5, y: 0)
@@ -78,7 +81,7 @@ final class NotchGlassRenderer: NotchGlassRendering {
         // Light is gone over the hardware cutout's depth and returns along a
         // smootherstep: a linear ramp leaves a visible band where it starts.
         lightsFade.locations = [0, 0.14, 0.24, 0.34, 0.44, 0.56]
-        lightsFade.colors = [0, 0.03, 0.18, 0.46, 0.78, 1].map {
+        lightsFade.colors    = [0, 0.03, 0.18, 0.46, 0.78, 1].map {
             NSColor.black.withAlphaComponent($0).cgColor
         }
         lightsLayer.mask = lightsFade
@@ -87,10 +90,10 @@ final class NotchGlassRenderer: NotchGlassRendering {
         view.addSubview(lightsView)
         if #available(macOS 26, *) {
             isSupported = true
-            let glass = NSGlassEffectView()
+            let glass   = NSGlassEffectView()
             // Layer-backed before it joins a window: placement uses its layer.
             glass.wantsLayer = true
-            glass.style = .clear
+            glass.style      = .clear
             view.addSubview(glass)
             self.glass = glass
             // An appearance change rebuilds the glass's filter at its defaults.
@@ -101,11 +104,13 @@ final class NotchGlassRenderer: NotchGlassRendering {
             isSupported = false
         }
         view.addSubview(overlayView)
+
         applyColor()
     }
 
     func setColor(_ color: Color) {
         guard self.color != color else { return }
+
         self.color = color
         applyColor()
     }
@@ -118,9 +123,11 @@ final class NotchGlassRenderer: NotchGlassRendering {
     func setLights(_ lights: [GlassLight]) {
         let bounded = Array(lights.prefix(GlassLight.maximumCount))
         guard self.lights != bounded else { return }
+
         // Only reused layers carry the previous colors; new ones start bare.
         let previous = lightLayers.count == bounded.count ? self.lights : []
-        self.lights = bounded
+        self.lights  = bounded
+
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         if lightLayers.count != bounded.count {
@@ -128,30 +135,36 @@ final class NotchGlassRenderer: NotchGlassRendering {
             lightLayers = bounded.map { _ in Self.makeLightLayer() }
             lightLayers.forEach(lightsLayer.addSublayer)
         }
+
         for (index, light) in bounded.enumerated() {
             let layer = lightLayers[index]
-            let old = previous.indices.contains(index) ? previous[index] : nil
-            guard old.map({ ($0.red, $0.green, $0.blue) != (light.red, light.green, light.blue) }) ?? true else { continue }
+            let old   = previous.indices.contains(index) ? previous[index] : nil
+            guard old.map({ ($0.red, $0.green, $0.blue) != (light.red, light.green, light.blue) }) ?? true
+            else { continue }
+
             let colors = Self.colors(of: light)
             if old != nil {
                 // A new hue, such as the next track's cover, crossfades with it.
-                let fade = CABasicAnimation(keyPath: "colors")
-                fade.fromValue = layer.presentation()?.colors ?? layer.colors
-                fade.toValue = colors
-                fade.duration = 0.45
+                let fade            = CABasicAnimation(keyPath: "colors")
+                fade.fromValue      = layer.presentation()?.colors ?? layer.colors
+                fade.toValue        = colors
+                fade.duration       = 0.45
                 fade.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
                 layer.add(fade, forKey: "colors")
             }
             layer.colors = colors
         }
+
         if previous.count == bounded.count {
             CATransaction.setDisableActions(false)
             CATransaction.setAnimationDuration(1.0 / 30)
             CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .linear))
         }
+
         for (layer, light) in zip(lightLayers, bounded) {
             layer.opacity = Float(light.intensity)
         }
+
         layoutLights()
         CATransaction.commit()
     }
@@ -169,12 +182,13 @@ final class NotchGlassRenderer: NotchGlassRendering {
         isVisible   : Bool
     ) {
         if view.frame != canvasBounds {
-            view.frame = canvasBounds
-            let local = CGRect(origin: .zero, size: canvasBounds.size)
+            view.frame        = canvasBounds
+            let local         = CGRect(origin: .zero, size: canvasBounds.size)
             outlineMask.frame = local
             shadeLayer.frame  = local
         }
         outlineMask.path = path
+
         let isVisible = isSupported && isVisible
         if view.isHidden == isVisible {
             view.isHidden = !isVisible
@@ -185,10 +199,12 @@ final class NotchGlassRenderer: NotchGlassRendering {
             reference = nil
             return
         }
+
         placeGlass(body: body, target: target)
 
         let outline = path.boundingBoxOfPath
-        let reveal = min(1, max(0, (progress - 0.3) / 0.7))
+        let reveal  = min(1, max(0, (progress - 0.3) / 0.7))
+
         shadeLayer.opacity  = Float(0.95 * (1 - reveal))
         tintLayer.frame     = outline
         lightsLayer.opacity = Float(reveal)
@@ -205,6 +221,7 @@ final class NotchGlassRenderer: NotchGlassRendering {
     /// on the target lays it out exactly, leaving an identity transform at rest.
     private func placeGlass(body: NotchGlassBody, target: NotchGlassBody) {
         guard let glass, let layer = glass.layer else { return }
+
         if body == target || reference == nil || target.rect.height >= body.rect.height,
            reference != target {
             reference = target
@@ -220,7 +237,9 @@ final class NotchGlassRenderer: NotchGlassRendering {
             // A new size rebuilds the glass's filter, back to its defaults.
             reopenLens()
         }
+
         guard let reference else { return }
+
         layer.setAffineTransform(body.transform(from: reference, anchor: layer.anchorPoint))
     }
 
@@ -232,8 +251,9 @@ final class NotchGlassRenderer: NotchGlassRendering {
     /// change, nothing per frame and nothing while the notch rests.
     private func reopenLens() {
         let isSettling = lensAttempts > 0
-        lensAttempts = 6
+        lensAttempts   = 6
         guard !isSettling else { return }
+
         DispatchQueue.main.async { [weak self] in self?.settleLens() }
     }
 
@@ -242,17 +262,20 @@ final class NotchGlassRenderer: NotchGlassRendering {
             lensAttempts = 0
             return
         }
+
         lensAttempts -= 1
         glass.layoutSubtreeIfNeeded()
         guard NotchGlassLens.open(in: layer) != .alreadyOpen, lensAttempts > 0 else {
             lensAttempts = 0
             return
         }
+
         DispatchQueue.main.async { [weak self] in self?.settleLens() }
     }
 
     private func applyColor() {
         let base = NSColor(color)
+
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         shadeLayer.backgroundColor = base.cgColor
@@ -266,6 +289,7 @@ final class NotchGlassRenderer: NotchGlassRendering {
             base.withAlphaComponent(0)
         ].map(\.cgColor)
         CATransaction.commit()
+
         if #available(macOS 26, *), let glass = glass as? NSGlassEffectView {
             // A smoked glass at full reveal: darker, not frosted. The shade
             // layer darkens it further while opening.
@@ -280,7 +304,7 @@ final class NotchGlassRenderer: NotchGlassRendering {
     private func layoutLights() {
         let size = lightsLayer.bounds.size
         for (layer, light) in zip(lightLayers, lights) {
-            let radius = CGFloat(light.radius) * size.width
+            let radius  = CGFloat(light.radius) * size.width
             layer.frame = CGRect(
                 x     : CGFloat(light.x) * size.width - radius,
                 y     : (1 - CGFloat(light.y)) * size.height - radius,
@@ -291,13 +315,14 @@ final class NotchGlassRenderer: NotchGlassRendering {
     }
 
     private static func makeLightLayer() -> CAGradientLayer {
-        let layer = CAGradientLayer()
-        layer.type = .radial
+        let layer        = CAGradientLayer()
+        layer.type       = .radial
         layer.startPoint = CGPoint(x: 0.5, y: 0.5)
         layer.endPoint   = CGPoint(x: 1, y: 1)
-        layer.locations = [0, 0.25, 0.65, 1]
+        layer.locations  = [0, 0.25, 0.65, 1]
         // The former Canvas blended lights with plusLighter.
         layer.compositingFilter = CIFilter(name: "CIAdditionCompositing")
+
         return layer
     }
 
@@ -309,6 +334,7 @@ final class NotchGlassRenderer: NotchGlassRendering {
             blue   : CGFloat(light.blue),
             alpha  : 1
         )
+
         return [1, 0.55, 0.12, 0].map { color.withAlphaComponent($0).cgColor }
     }
 }
@@ -316,6 +342,7 @@ final class NotchGlassRenderer: NotchGlassRendering {
 /// PassiveNotchGlassView never intercepts the controls hosted above the material.
 @MainActor
 private final class PassiveNotchGlassView: NSView {
+
     var onAppearanceChange: (() -> Void)?
 
     override func hitTest(_ point: NSPoint) -> NSView? { nil }

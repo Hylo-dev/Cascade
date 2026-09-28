@@ -13,8 +13,10 @@ final class AppKitNotchAuxiliaryPopover: NotchAuxiliaryPopoverHosting {
 
     private weak var anchor: NSView?
     private weak var host  : NotchHostView?
+
     private let preferredEdge: NSRectEdge
-    private(set) var popover  : NSPopover?
+
+    private(set) var popover: NSPopover?
 
     init(
         anchor       : NSView,
@@ -34,7 +36,9 @@ final class AppKitNotchAuxiliaryPopover: NotchAuxiliaryPopoverHosting {
               window.isVisible,
               !anchor.isHiddenOrHasHiddenAncestor,
               anchor.isDescendant(of: host),
-              !anchor.visibleRect.isEmpty else { return nil }
+              !anchor.visibleRect.isEmpty
+        else { return nil }
+
         return window.convertToScreen(anchor.convert(anchor.bounds, to: nil))
     }
 
@@ -42,13 +46,18 @@ final class AppKitNotchAuxiliaryPopover: NotchAuxiliaryPopoverHosting {
         guard let popover,
               popover.isShown,
               let window = popover.contentViewController?.view.window,
-              window.isVisible else { return nil }
+              window.isVisible
+        else { return nil }
+
         return window.frame
     }
 
     func containsNotch(_ point: CGPoint) -> Bool {
         guard let host, let window = host.window else { return false }
-        return host.containsInteractivePoint(host.convert(window.convertPoint(fromScreen: point), from: nil))
+
+        return host.containsInteractivePoint(
+            host.convert(window.convertPoint(fromScreen: point), from: nil)
+        )
     }
 
     func show(
@@ -56,15 +65,21 @@ final class AppKitNotchAuxiliaryPopover: NotchAuxiliaryPopoverHosting {
         delegate : any NSPopoverDelegate
     ) -> Bool {
         guard let anchor, anchorFrame != nil else { return false }
+
         content.view.layoutSubtreeIfNeeded()
+
         let preferred = content.preferredContentSize
         let fitting   = content.view.fittingSize
-        let size = CGSize(
+        let size      = CGSize(
             width : preferred.width > 0 ? preferred.width : fitting.width,
             height: preferred.height > 0 ? preferred.height : fitting.height
         )
-        guard size.width.isFinite, size.height.isFinite,
-              size.width > 0, size.height > 0 else { return false }
+        guard size.width.isFinite,
+              size.height.isFinite,
+              size.width > 0,
+              size.height > 0
+        else { return false }
+
         let popover                   = NSPopover()
         self.popover                  = popover
         popover.delegate              = delegate
@@ -73,6 +88,7 @@ final class AppKitNotchAuxiliaryPopover: NotchAuxiliaryPopoverHosting {
         popover.appearance            = anchor.effectiveAppearance
         popover.contentViewController = content
         popover.contentSize           = size
+
         popover.show(
             relativeTo   : anchor.bounds,
             of           : anchor,
@@ -84,6 +100,7 @@ final class AppKitNotchAuxiliaryPopover: NotchAuxiliaryPopoverHosting {
     func close() {
         let previous = popover
         popover      = nil
+
         previous?.delegate = nil
         previous?.close()
         previous?.contentViewController = nil

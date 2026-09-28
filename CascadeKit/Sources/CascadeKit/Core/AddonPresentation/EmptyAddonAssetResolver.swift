@@ -9,6 +9,7 @@ import SwiftUI
 
 @MainActor
 final class EmptyAddonAssetResolver: AddonPresentationAssetResolving {
+
     func image(
         for assetID        : String,
         publicationID      : PublicationID,

@@ -22,35 +22,43 @@ final class NotchFileDropReceiverPanel: NSPanel, NSDraggingDestination {
         get { super.ignoresMouseEvents }
         set {
             guard newValue != super.ignoresMouseEvents else { return }
+
             super.ignoresMouseEvents = newValue
         }
     }
 
     private weak var fileDropDestination: NotchHostView?
+
     private var loggedFileDragWindowSequence: Int?
+
     private(set) var fileDropDestinationTypeCount = 0
 
     init() {
         super.init(
             contentRect: .zero,
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
+            styleMask  : [.borderless, .nonactivatingPanel],
+            backing    : .buffered,
+            defer      : false
         )
-        contentView = NSView(frame: .zero)
-        isFloatingPanel = true
-        isOpaque = false
-        backgroundColor = .clear
-        hasShadow = false
-        level = .statusBar
-        ignoresMouseEvents = true
-        hidesOnDeactivate = false
+
+        contentView                 = NSView(frame: .zero)
+        isFloatingPanel             = true
+        isOpaque                    = false
+        backgroundColor             = .clear
+        hasShadow                   = false
+        level                       = .statusBar
+        ignoresMouseEvents          = true
+        hidesOnDeactivate           = false
         isMovableByWindowBackground = false
-        collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
+        collectionBehavior          = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
     }
 
-    func setFileDropDestination(_ destination: NotchHostView?, enabled: Bool) {
+    func setFileDropDestination(
+        _ destination: NotchHostView?,
+        enabled      : Bool
+    ) {
         fileDropDestination = enabled ? destination : nil
+
         if enabled, destination != nil {
             registerForDraggedTypes(NotchHostView.fileDropTypes)
             fileDropDestinationTypeCount = NotchHostView.fileDropTypes.count
@@ -65,6 +73,7 @@ final class NotchFileDropReceiverPanel: NSPanel, NSDraggingDestination {
         if self.frame != frame {
             setFrame(frame, display: false)
         }
+
         ignoresMouseEvents = false
     }
 
@@ -79,6 +88,7 @@ final class NotchFileDropReceiverPanel: NSPanel, NSDraggingDestination {
                 "phase=windowEntered enabled=\(self.fileDropDestination != nil) registered=\(self.fileDropDestinationTypeCount)"
             )
         }
+
         return fileDropDestination?.draggingEntered(sender) ?? []
     }
 
@@ -97,6 +107,7 @@ final class NotchFileDropReceiverPanel: NSPanel, NSDraggingDestination {
 
     func prepareForDragOperation(_ sender: any NSDraggingInfo) -> Bool {
         let prepared = fileDropDestination?.prepareForDragOperation(sender) ?? false
+
         fileDropLog.notice(
             "phase=windowPrepare sequence=\(sender.draggingSequenceNumber) prepared=\(prepared)"
         )
@@ -105,6 +116,7 @@ final class NotchFileDropReceiverPanel: NSPanel, NSDraggingDestination {
 
     func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
         let accepted = fileDropDestination?.performDragOperation(sender) ?? false
+
         fileDropLog.notice(
             "phase=windowDrop sequence=\(sender.draggingSequenceNumber) accepted=\(accepted)"
         )

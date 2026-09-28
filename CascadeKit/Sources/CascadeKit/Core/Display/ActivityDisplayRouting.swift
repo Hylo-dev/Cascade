@@ -17,12 +17,12 @@ nonisolated enum ActivityDisplayRouting {
         focused  : DisplayIdentity?
     ) -> Set<DisplayIdentity> {
         switch mode {
-        case .allDisplays:
-            connected
-        case .focusedDisplay:
-            focused.flatMap { connected.contains($0) ? [$0] : [] } ?? []
-        case let .fixedDisplay(identity):
-            connected.contains(identity) ? [identity] : []
+            case .allDisplays:
+                connected
+            case .focusedDisplay:
+                focused.flatMap { connected.contains($0) ? [$0] : [] } ?? []
+            case let .fixedDisplay(identity):
+                connected.contains(identity) ? [identity] : []
         }
     }
 }

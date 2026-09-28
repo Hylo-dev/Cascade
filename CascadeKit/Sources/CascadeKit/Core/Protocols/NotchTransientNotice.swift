@@ -11,6 +11,7 @@ import Foundation
 /// attention only when useful.
 @MainActor
 public protocol NotchTransientNotice: NotchActivity {
+
     /// Short duration, capped at ten seconds by Cascade (not an Apple limit).
     var displayDuration: TimeInterval { get }
 }

@@ -27,9 +27,7 @@ nonisolated enum FocusedDisplayResolver {
 
         if let window, Self.isValid(window) {
             let intersections = orderedIDs.compactMap { displayID -> (CGDirectDisplayID, CGFloat)? in
-                guard let displayFrame = validFrames[displayID] else {
-                    return nil
-                }
+                guard let displayFrame = validFrames[displayID] else { return nil }
 
                 let area = Self.positiveIntersectionArea(window, displayFrame)
                 return area > 0 ? (displayID, area) : nil
@@ -63,9 +61,8 @@ nonisolated enum FocusedDisplayResolver {
         _ rhs: CGRect
     ) -> CGFloat {
         let intersection = lhs.intersection(rhs)
-        guard Self.isValid(intersection) else {
-            return 0
-        }
+        guard Self.isValid(intersection) else { return 0 }
+
         return intersection.width * intersection.height
     }
 
