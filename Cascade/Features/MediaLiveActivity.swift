@@ -33,6 +33,7 @@ final class MediaLiveActivity: NotchLiveActivity {
     private var audioEnabled: Bool
     private var spectrumTask: Task<Void, Never>?
     private var artworkTask: Task<Void, Never>?
+    private let spacebar = MusicSpacebarTap()
 
     init(snapshot: NowPlayingSnapshot,
          lifetime: NotchActivityLifetime = NotchActivityLifetime(),
@@ -45,6 +46,7 @@ final class MediaLiveActivity: NotchLiveActivity {
         self.spectrum = spectrum
         self.audioEnabled = audioEnabled
         self.send = send
+        spacebar.onToggle = { [weak self] in self?.toggleFromSpacebar() }
     }
 
     func update(_ snapshot: NowPlayingSnapshot) {
@@ -96,6 +98,7 @@ final class MediaLiveActivity: NotchLiveActivity {
 
     func suspend() {
         context = nil
+        spacebar.stop()
         spectrumTask?.cancel()
         spectrumTask = nil
         spectrum?.stop()
@@ -136,11 +139,28 @@ final class MediaLiveActivity: NotchLiveActivity {
         // Reference: 198 px artwork / 33 px title glyphs. The same title at
         // 15 pt renders 22 px tall at 2×, so its matching artwork is 66 pt.
         let artworkSize = max(0, min(66, (context.availableSize.width - (context.hardwareNotchWidth ?? 0)) / 2))
-        return AnyView(MusicActivityContent(presentation: presentation, visual: visual, artworkSize: artworkSize, isStale: context.isStale, send: { [send] command in
+        return AnyView(MusicActivityContent(presentation: presentation, visual: visual, artworkSize: artworkSize, isStale: context.isStale, spacebar: spacebar, send: { [send] command in
             try await send(command, displayed)
         })
             .frame(width: context.availableSize.width, height: context.availableSize.height, alignment: .top)
             .accessibilityElement(children: .contain).accessibilityLabel(accessibilityLabel))
+    }
+
+    /// toggleFromSpacebar is the play/pause button pressed from the keyboard:
+    /// the same immediate feedback, sent for the track shown right now rather
+    /// than the one the view last rendered.
+    private func toggleFromSpacebar() {
+        let displayed = presentation.displayed
+        guard displayed.capabilities.contains(.togglePlayback),
+              let id = presentation.begin(.togglePlayback, capability: .togglePlayback) else { return }
+        Task(priority: .userInitiated) { [weak self, send] in
+            do {
+                try await send(.togglePlayback, displayed)
+                self?.presentation.succeed(id)
+            } catch {
+                self?.presentation.fail(id)
+            }
+        }
     }
 
     private func restartSpectrum() {
@@ -333,6 +353,7 @@ private struct MusicActivityContent: View {
     let visual: MusicVisualState
     let artworkSize: CGFloat
     let isStale: Bool
+    let spacebar: MusicSpacebarTap
     let send: (MediaCommand) async throws -> Void
     private var pendingCapability: MediaCommandCapabilities? { presentation.pendingCapability }
     @Environment(\.accessibilityReduceMotion)
@@ -386,6 +407,9 @@ private struct MusicActivityContent: View {
         .background {
             MusicGlassLightEmitter(visual: visual, isPlaying: snapshot.isPlaying && !isStale)
         }
+        // The space bar plays and pauses only while this player is on screen.
+        .onAppear { spacebar.start() }
+        .onDisappear { spacebar.stop() }
         .overlay(alignment: .bottom) {
             if let commandError {
                 Text(commandError).font(.caption).foregroundStyle(.orange)
