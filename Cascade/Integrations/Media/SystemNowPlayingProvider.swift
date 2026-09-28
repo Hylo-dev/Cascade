@@ -24,6 +24,8 @@ nonisolated enum NowPlayingProviderStatus: Equatable, Sendable {
 /// A source has at most one read in flight; bursts coalesce into one refresh.
 /// Playback events and completed commands get two bounded follow-up reads to
 /// cover Music acknowledging a transition before its scripting state settles.
+/// The state a player's notification carries is applied at once, with no
+/// AppleEvent round trip, and outranks reads begun just after it.
 @Observable
 @MainActor
 final class SystemNowPlayingProvider: NowPlayingProviding {
@@ -55,6 +57,8 @@ final class SystemNowPlayingProvider: NowPlayingProviding {
     private var revisions = NowPlayingRefreshRevisions()
     @ObservationIgnored
     private var selection = NowPlayingSourceSelection()
+    @ObservationIgnored
+    private var announcements: [ScriptableMusicSource: NowPlayingAnnouncement] = [:]
     @ObservationIgnored
     private var lastPublished: NowPlayingSnapshot?
     @ObservationIgnored
@@ -107,6 +111,7 @@ final class SystemNowPlayingProvider: NowPlayingProviding {
         settlingTasks.removeAll()
         targets.removeAll()
         errors.removeAll()
+        announcements.removeAll()
         revisions.reset()
         selection = NowPlayingSourceSelection()
         lastPublished = nil
@@ -238,11 +243,10 @@ final class SystemNowPlayingProvider: NowPlayingProviding {
                 forName: source.notificationName,
                 object : nil,
                 queue  : .main
-            ) { [weak self] _ in
+            ) { [weak self] notification in
+                let state = ScriptablePlaybackState(playerInfo: notification.userInfo)
                 Task { @MainActor [weak self] in
-                    guard let self, self.continuation != nil else { return }
-                    self.reconcileRunningPlayers(refreshExisting: false)
-                    self.refreshAfterPlaybackChange(source)
+                    self?.receivePlayerNotification(state, from: source)
                 }
             }
             distributedObservers.append(observer)
@@ -267,6 +271,23 @@ final class SystemNowPlayingProvider: NowPlayingProviding {
             }
             workspaceObservers.append(observer)
         }
+    }
+
+    /// receivePlayerNotification publishes the announced playback before any
+    /// read, so pausing from the keyboard releases the notch immediately.
+    func receivePlayerNotification(
+        _ state: ScriptablePlaybackState?,
+        from source: ScriptableMusicSource
+    ) {
+        guard continuation != nil else { return }
+        reconcileRunningPlayers(refreshExisting: false)
+        if let state, targets[source] != nil {
+            let announcement = NowPlayingAnnouncement(state: state, time: .now)
+            announcements[source] = announcement
+            selection.announce(announcement, from: source)
+            publish()
+        }
+        refreshAfterPlaybackChange(source)
     }
 
     private func reconcileRunningPlayers(refreshExisting: Bool) {
@@ -295,6 +316,7 @@ final class SystemNowPlayingProvider: NowPlayingProviding {
         settlingTasks[source] = nil
         targets[source] = nil
         errors[source] = nil
+        announcements[source] = nil
         revisions.remove(source)
         selection.receive(
             nil,
@@ -350,6 +372,7 @@ final class SystemNowPlayingProvider: NowPlayingProviding {
         guard let target = targets[source] else { return }
         let activeGeneration = generation
         let reader = reader
+        let startedAt = ContinuousClock.now
         tasks[source] = Task { [weak self] in
             let result: Result<NowPlayingSnapshot?, Error>
             do { result = .success(try await reader.read(target)) }
@@ -375,7 +398,7 @@ final class SystemNowPlayingProvider: NowPlayingProviding {
             case .success(let snapshot):
                 self.errors[source] = nil
                 self.selection.receive(
-                    snapshot,
+                    self.announcements[source].map { $0.applied(to: snapshot, startedAt: startedAt) } ?? snapshot,
                     from: source
                 )
             case .failure(let error):

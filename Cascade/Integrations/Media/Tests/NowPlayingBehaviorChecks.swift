@@ -22,6 +22,8 @@ private enum NowPlayingBehaviorChecks {
         try await checkCommandsDuringRefresh()
         try await checkPreviousTrackSettles()
         try await checkPreviousTrackSettlesAfterSlowRead()
+        try checkPlayerInfoParsing()
+        try await checkAnnouncedPauseOutranksStaleReads()
         print("Now Playing behavior checks passed")
         if CommandLine.arguments.contains("--probe") { await probeAuthorizedPlayers() }
     }
@@ -320,6 +322,38 @@ private enum NowPlayingBehaviorChecks {
         try await waitUntil("A slow pre-command read must not consume every playback confirmation") {
             received.latest == playing
         }
+    }
+
+    private static func checkPlayerInfoParsing() throws {
+        try expect(ScriptablePlaybackState(playerInfo: ["Player State": "Paused"]) == .paused, "Music and Spotify announce a pause")
+        try expect(ScriptablePlaybackState(playerInfo: ["Player State": "Playing"]) == .playing, "They announce playback")
+        try expect(ScriptablePlaybackState(playerInfo: ["Player State": "Stopped"]) == .stopped, "They announce a stop")
+        try expect(ScriptablePlaybackState(playerInfo: ["Name": "Song"]) == nil, "A notification without a state changes nothing")
+        try expect(ScriptablePlaybackState(playerInfo: nil) == nil, "Nor does one without a payload")
+    }
+
+    /// Music answers "playing" for a while after the spacebar paused it. The
+    /// announced pause must publish at once and survive the confirmation reads.
+    private static func checkAnnouncedPauseOutranksStaleReads() async throws {
+        let playing = sample(source: .music, title: "A", playing: true, identifier: "A")
+        let target = ScriptablePlayerTarget(source: .music, processIdentifier: 459)
+        let reader = TransitionMusicReader(target: target, original: playing, transition: .success(playing), settled: playing)
+        let provider = SystemNowPlayingProvider(reader: reader, commandSender: reader, resolveTargets: { [.music: target] })
+        let received = SnapshotRecorder()
+        let stream = provider.start()
+        let observation = Task { for await snapshot in stream { received.latest = snapshot } }
+        defer { provider.stop(); observation.cancel() }
+        try await waitUntil("Initial playback must be available") { received.latest == playing }
+        let readsBefore = await reader.readCount
+
+        provider.receivePlayerNotification(.paused, from: .music)
+        try await Task.sleep(for: .milliseconds(20))
+        try expect(received.latest?.isPlaying == false, "An announced pause must publish before any read")
+        try expect(received.latest?.trackIdentifier == "A", "It keeps the track it paused")
+        try await Task.sleep(for: .milliseconds(1_100))
+        let readsAfter = await reader.readCount
+        try expect(readsAfter > readsBefore, "The notification still confirms with reads")
+        try expect(received.latest?.isPlaying == false, "Stale 'playing' replies inside the settle window must not reopen the notch")
     }
 
     private final class SnapshotRecorder {

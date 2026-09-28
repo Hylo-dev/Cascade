@@ -47,6 +47,64 @@ nonisolated enum ScriptablePlaybackState: Sendable {
     case paused
     case playing
     case scrubbing
+
+    /// init(playerInfo:) reads the state both players put in their playback
+    /// notification, the same key and values for Music and Spotify.
+    init?(playerInfo: [AnyHashable: Any]?) {
+        switch playerInfo?["Player State"] as? String {
+        case "Playing": self = .playing
+        case "Paused" : self = .paused
+        case "Stopped": self = .stopped
+        default       : return nil
+        }
+    }
+}
+
+extension NowPlayingSnapshot {
+    /// announcing(isPlaying:at:) is this track with the playback a player has
+    /// just announced, its position frozen or resumed at `date`.
+    nonisolated func announcing(
+        isPlaying: Bool,
+        at date  : Date
+    ) -> NowPlayingSnapshot {
+        guard isPlaying != self.isPlaying else { return self }
+        return NowPlayingSnapshot(
+            sourceBundleIdentifier: sourceBundleIdentifier,
+            title                 : title,
+            artist                : artist,
+            isPlaying             : isPlaying,
+            duration              : duration,
+            elapsed               : position(at: date),
+            timestamp             : date,
+            capabilities          : capabilities,
+            artworkData           : artworkData,
+            trackIdentifier       : trackIdentifier,
+            isFavorite            : isFavorite,
+            playbackRate          : playbackRate
+        )
+    }
+}
+
+/// NowPlayingAnnouncement is the playback a player's own notification carried.
+/// Music posts it before its scripting state settles: for about a second a
+/// read can still answer "playing" after a pause, and the confirmation reads
+/// then left the notch open until the next event. Within that window the
+/// announcement decides playback; reads still supply everything else.
+nonisolated struct NowPlayingAnnouncement: Sendable {
+    static let settleWindow = Duration.milliseconds(1_500)
+
+    let state: ScriptablePlaybackState
+    let time : ContinuousClock.Instant
+
+    /// applied(to:startedAt:) corrects a read begun inside the window.
+    func applied(
+        to snapshot: NowPlayingSnapshot?,
+        startedAt  : ContinuousClock.Instant
+    ) -> NowPlayingSnapshot? {
+        guard startedAt < time.advanced(by: Self.settleWindow) else { return snapshot }
+        guard state != .stopped else { return nil }
+        return snapshot?.announcing(isPlaying: state == .playing || state == .scrubbing, at: .now)
+    }
 }
 
 /// ScriptableTrackMetadata normalizes each player's documented scripting units
@@ -117,6 +175,18 @@ nonisolated struct NowPlayingSourceSelection {
             return current.trackIdentifier == expected.trackIdentifier
         }
         return current.title == expected.title && current.artist == expected.artist
+    }
+
+    /// announce applies a player's own notification to the track it holds.
+    mutating func announce(
+        _ announcement: NowPlayingAnnouncement,
+        from source   : ScriptableMusicSource
+    ) {
+        guard let held = snapshots[source] else { return }
+        receive(
+            announcement.applied(to: held, startedAt: announcement.time),
+            from: source
+        )
     }
 
     mutating func receive(
