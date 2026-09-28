@@ -18,15 +18,8 @@ private enum MusicArtworkChecks {
         require(colorful.colors.contains { $0.blue > 0.7 && $0.red < 0.3 }, "A blue cover region must survive instead of averaging into purple")
         require((1...3).contains(colorful.colors.count), "Artwork palette must remain bounded")
 
-        let paused = rgba(colorful.pausedImage)
-        require(colorful.pausedImage.width == colorful.image.width && colorful.pausedImage.height == colorful.image.height, "Paused artwork must preserve the thumbnail bounds")
-        for index in stride(from: 0, to: paused.count, by: 4) {
-            require(abs(Int(paused[index]) - Int(paused[index + 1])) <= 1 && abs(Int(paused[index + 1]) - Int(paused[index + 2])) <= 1, "Paused artwork must really be monochrome in native rendering")
-        }
-        let edge = try decodeFixture { $0 < 16 ? [0, 0, 0, 255] : [255, 255, 255, 255] }
-        let softened = rgba(edge.pausedImage)
-        let edgePixel = (16 * edge.pausedImage.width + 15) * 4
-        require(softened[edgePixel] > 0 && softened[edgePixel] < 128, "Paused artwork must soften a sharp boundary without washing out the image")
+        let cover = rgba(colorful.image)
+        require(cover[0] > 200 && cover[2] < 60, "The decoded cover keeps its colors")
 
         let neutral = try decodeFixture { _ in [100, 100, 100, 255] }
         require(neutral.colors.allSatisfy { abs($0.red - $0.green) < 0.01 && abs($0.green - $0.blue) < 0.01 }, "Gray artwork must not acquire an invented tint")

@@ -180,27 +180,38 @@ final class MediaLiveActivity: NotchLiveActivity {
         }
     }
 
+    /// loadArtwork keeps the previous cover, palette and light until the next
+    /// one is decoded, so a track change crossfades cover to cover rather than
+    /// flashing the placeholder for the few milliseconds of a decode.
     private func loadArtwork() {
         guard decodedArtworkData != snapshot.artworkData || visual.artwork == nil else { return }
         artworkTask?.cancel()
         decodedArtworkData = nil
-        visual.artwork = nil
-        visual.pausedArtwork = nil
-        visual.palette = [.gray, .gray]
-        visual.artworkColors = []
-        guard let data = snapshot.artworkData else { return }
+        guard let data = snapshot.artworkData else {
+            clearArtwork()
+            return
+        }
         artworkTask = Task { [weak self] in
             let decoded = await Task.detached(priority: .utility) { MusicArtworkDecoder.decode(data) }.value
-            guard !Task.isCancelled, let self, self.context != nil, let decoded else { return }
+            guard !Task.isCancelled, let self, self.context != nil else { return }
+            guard let decoded else {
+                self.clearArtwork()
+                return
+            }
             self.decodedArtworkData = data
             self.visual.artwork = NSImage(cgImage: decoded.image, size: NSSize(width: decoded.image.width, height: decoded.image.height))
-            self.visual.pausedArtwork = NSImage(cgImage: decoded.pausedImage, size: NSSize(width: decoded.pausedImage.width, height: decoded.pausedImage.height))
             self.visual.artworkColors = decoded.colors
             let colors = decoded.colors.map {
                 Color(red: $0.red, green: $0.green, blue: $0.blue)
             }
             self.visual.palette = colors.count == 1 ? colors + colors : colors
         }
+    }
+
+    private func clearArtwork() {
+        visual.artwork = nil
+        visual.palette = [.gray, .gray]
+        visual.artworkColors = []
     }
 }
 
@@ -209,7 +220,6 @@ final class MediaLiveActivity: NotchLiveActivity {
 @Observable
 final class MusicVisualState {
     var artwork: NSImage?
-    var pausedArtwork: NSImage?
     var bands = AudioSpectrumFrame.silence.bands
     var palette: [Color] = [.gray, .gray]
     var artworkColors: [MusicArtworkColor] = []
@@ -223,7 +233,8 @@ private struct MusicArtwork: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         Group {
-            if let artwork = isPlaying ? visual.artwork : visual.pausedArtwork {
+            // A paused cover keeps its colors; only its size and light respond.
+            if let artwork = visual.artwork {
                 Image(nsImage: artwork).resizable().scaledToFill()
             } else {
                 RoundedRectangle(cornerRadius: size * 0.2).fill(.white.opacity(0.10))

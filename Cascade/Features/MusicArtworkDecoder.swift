@@ -4,7 +4,6 @@
 //
 
 import CoreGraphics
-import CoreImage
 import Foundation
 import ImageIO
 
@@ -34,7 +33,6 @@ nonisolated struct MusicArtworkColor: Equatable, Sendable {
 /// the decoder worker. No NSImage or SwiftUI objects cross that actor boundary.
 nonisolated struct DecodedMusicArtwork: @unchecked Sendable {
     let image : CGImage
-    let pausedImage: CGImage
     let colors: [MusicArtworkColor]
 }
 
@@ -81,16 +79,7 @@ nonisolated enum MusicArtworkDecoder {
             return true
         }
         guard sampled else { return nil }
-        // Bake the paused variant once on the decoder worker. Layer filters
-        // are unreliable in the notch's AppKit hosting surface and would add
-        // compositing work to every playback transition.
-        let original = CIImage(cgImage: image)
-        let paused = original.applyingFilter("CIColorControls", parameters: [kCIInputSaturationKey: 0])
-            .clampedToExtent()
-            .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: Double(image.width) * 0.7 / 66])
-        let renderer = CIContext(options: [.useSoftwareRenderer: true, .cacheIntermediates: false])
-        guard let pausedImage = renderer.createCGImage(paused, from: original.extent) else { return nil }
-        return DecodedMusicArtwork(image: image, pausedImage: pausedImage, colors: palette(from: bytes))
+        return DecodedMusicArtwork(image: image, colors: palette(from: bytes))
     }
 
     private static func palette(from bytes: [UInt8]) -> [MusicArtworkColor] {
