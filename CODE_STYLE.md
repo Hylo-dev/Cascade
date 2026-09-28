@@ -330,6 +330,7 @@ A check script lists its sources explicitly; moving or splitting a file means up
 - **One type per file**, named after it. A second type is allowed only when it is a small private helper of the first (a representable, a cell, a keyframe value); never more than two.
 - Nested types do not count, and neither do extensions of the file's own type (conformances stay in its file). An extension of another type goes to `Core/Extensions/Type+Capability.swift`.
 - Protocols, errors, value models and their enums live in their own layers (see **Folder layout**), not next to the implementation that uses them. A type that moves away from its only user loses `private`.
+- The exception is a type that only one other type may create or read: a token, ticket or capability whose initializer or fields are `fileprivate` so that its minter alone can make it. It stays in its minter's file, however many of them there are, because moving it out would mean widening that access. Working types with short names that serve a single type (`State`, `Outcome`) are nested inside it instead of living at the top of the file.
 
 ## Vertical rhythm
 
