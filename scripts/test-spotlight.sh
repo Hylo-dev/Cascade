@@ -12,6 +12,8 @@ DEVELOPER_DIR="$developer_directory" /usr/bin/xcrun swiftc \
     "$project_directory/Cascade/Integrations/Spotlight/SpotlightHandoffState.swift" \
     "$project_directory/Cascade/Integrations/Spotlight/SpotlightShortcut.swift" \
     "$project_directory/Cascade/Integrations/Spotlight/SpotlightAXOperationGate.swift" \
+    "$project_directory/Cascade/Integrations/Spotlight/SpotlightKeyTap.swift" \
+    "$project_directory/Cascade/Integrations/Input/EventTapThread.swift" \
     "$project_directory/Cascade/Integrations/Spotlight/Tests/SpotlightBehaviorChecks.swift" \
     -o /private/tmp/cascade-spotlight-behavior-tests
 /private/tmp/cascade-spotlight-behavior-tests

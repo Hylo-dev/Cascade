@@ -4,6 +4,7 @@
 //
 
 #if SPOTLIGHT_BEHAVIOR_TESTS
+import AppKit
 import Foundation
 
 @main
@@ -113,7 +114,25 @@ struct SpotlightBehaviorChecks {
         precondition(workerGate.remaining(workerGate.operation(revision: freshRevision)) > 0)
         precondition(workerGate.remaining(workerGate.operation(revision: freshRevision, budget: 0)) == 0,
                      "The entire inspection must stop at its deadline")
-        print("Spotlight handoff, shortcut, and AX cancellation checks passed")
+        // The key tap calls its C callback on its own thread. It must run
+        // there without a main-actor assertion; it once trapped on the first
+        // key. An idle gate lets the key through without touching the main actor.
+        let tap = SpotlightKeyTap()
+        let key = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: true)!
+        nonisolated(unsafe) let offMainKey = key
+        let context = Unmanaged.passUnretained(tap).toOpaque()
+        nonisolated(unsafe) let offMainContext = context
+        let done = DispatchSemaphore(value: 0)
+        nonisolated(unsafe) var passedThrough = false
+        let tapThread = Thread {
+            passedThrough = SpotlightKeyTap.callback(OpaquePointer(bitPattern: 1)!, .keyDown, offMainKey, offMainContext) != nil
+            done.signal()
+        }
+        tapThread.start()
+        done.wait()
+        precondition(passedThrough, "Ordinary typing passes the tap thread untouched")
+        withExtendedLifetime(tap) {}
+        print("Spotlight handoff, shortcut, AX cancellation, and key tap checks passed")
     }
 }
 #endif

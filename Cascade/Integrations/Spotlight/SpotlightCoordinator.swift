@@ -18,8 +18,11 @@ final class SpotlightCoordinator {
     @ObservationIgnored private let droplet: any SpotlightDropletPresenting
     @ObservationIgnored private let tap: any SpotlightKeyTapping
     @ObservationIgnored private var monitor: (any SpotlightAccessibilityMonitoring)?
-    @ObservationIgnored private var handoff = SpotlightHandoffState()
-    @ObservationIgnored private var shortcut: SpotlightShortcut?
+    // Every mutation of these two, including mutating calls on the handoff
+    // struct, refreshes the key tap's off-main gate, so no call site can leave
+    // it stale.
+    @ObservationIgnored private var handoff = SpotlightHandoffState() { didSet { syncKeyGate() } }
+    @ObservationIgnored private var shortcut: SpotlightShortcut? { didSet { syncKeyGate() } }
     @ObservationIgnored private var bufferedEvents: [CGEvent] = []
     @ObservationIgnored private var timeout: Task<Void, Never>?
     @ObservationIgnored private var pendingToggleGeneration: UInt64?
@@ -68,6 +71,16 @@ final class SpotlightCoordinator {
         monitor = SpotlightAccessibilityMonitor { [weak self] snapshot in
             Task { @MainActor [weak self] in self?.receive(snapshot) }
         }
+        syncKeyGate()
+    }
+
+    /// syncKeyGate publishes what `handle` reads for non-shortcut keys: they
+    /// matter only while input is buffered or the native field is visible.
+    private func syncKeyGate() {
+        tap.updateGate(
+            keyCode  : shortcut?.keyCode,
+            isEngaged: handoff.shouldBufferInput || handoff.nativeIsVisible
+        )
     }
 
     func start() {
