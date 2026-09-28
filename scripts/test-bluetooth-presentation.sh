@@ -48,14 +48,17 @@ SWIFT_MODULE_CACHE_PATH="$module_cache" \
     -parse-as-library \
     -profile-generate \
     -I "$build_products" \
-    "$project_directory/Cascade/Integrations/Bluetooth/BluetoothDeviceModel.swift" \
-    "$project_directory/Cascade/Integrations/Bluetooth/BluetoothConnectionEvent.swift" \
-    "$project_directory/Cascade/Integrations/Bluetooth/BluetoothBatterySnapshot.swift" \
-    "$project_directory/Cascade/Features/OfficialHeadphoneAssetResolver.swift" \
-    "$project_directory/Cascade/Features/OfficialHeadphoneArtwork.swift" \
-    "$project_directory/Cascade/Features/AirPodsModelView.swift" \
-    "$project_directory/Cascade/Features/BluetoothBatteryRing.swift" \
-    "$project_directory/Cascade/Features/BluetoothConnectionActivity.swift" \
+    "$project_directory/Cascade/Models/Bluetooth/Enums/BluetoothDeviceModel.swift" \
+    "$project_directory/Cascade/Models/Bluetooth/BluetoothConnectionEvent.swift" \
+    "$project_directory/Cascade/Models/Bluetooth/BluetoothBatterySnapshot.swift" \
+    "$project_directory/Cascade/Models/Bluetooth/OfficialHeadphoneAsset.swift" \
+    "$project_directory/Cascade/Core/Protocols/OfficialHeadphoneAssetResolving.swift" \
+    "$project_directory/Cascade/Core/Bluetooth/OfficialHeadphoneAssetResolver.swift" \
+    "$project_directory/Cascade/Views/Bluetooth/OfficialHeadphoneArtwork.swift" \
+    "$project_directory/Cascade/Views/Bluetooth/AirPodsModelView.swift" \
+    "$project_directory/Cascade/Views/Bluetooth/AirPodsTurntableSurface.swift" \
+    "$project_directory/Cascade/Components/Bluetooth/BluetoothBatteryRing.swift" \
+    "$project_directory/Cascade/Core/Bluetooth/BluetoothConnectionActivity.swift" \
     "$script_directory/verify-bluetooth-presentation.swift" \
     $package_objects \
     -o "$output_directory/verify"

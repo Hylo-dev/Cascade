@@ -21,8 +21,14 @@ SWIFT_MODULE_CACHE_PATH="$module_cache" \
     -warnings-as-errors \
     -parse-as-library \
     -D POWER_MONITOR_TESTS \
-    "$project_directory"/Cascade/Integrations/Power/*.swift \
-    "$project_directory/Cascade/Integrations/Power/Tests/PowerBehaviorChecks.swift" \
+    "$project_directory/Cascade/Core/Power/IOKitPowerMonitor.swift" \
+    "$project_directory/Cascade/Models/Power/MacPowerSnapshot.swift" \
+    "$project_directory/Cascade/Models/Power/Enums/PowerConnectionUpdate.swift" \
+    "$project_directory/Cascade/Core/Power/PowerConnectionReducer.swift" \
+    "$project_directory/Cascade/Core/Protocols/PowerMonitoring.swift" \
+    "$project_directory/Cascade/Core/Protocols/MacPowerReading.swift" \
+    "$project_directory/Cascade/Core/Power/SystemMacPowerReader.swift" \
+    "$project_directory/Cascade/Checks/Power/PowerBehaviorChecks.swift" \
     -framework AppKit \
     -framework IOKit \
     -o "$test_binary"

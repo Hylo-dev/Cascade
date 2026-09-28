@@ -13,8 +13,10 @@ export CLANG_MODULE_CACHE_PATH=/private/tmp/cascade-artwork-module-cache
     -warnings-as-errors \
     -parse-as-library \
     -D MUSIC_ARTWORK_TESTS \
-    "$project_directory/Cascade/Features/MusicArtworkDecoder.swift" \
-    "$project_directory/Cascade/Features/Tests/MusicArtworkChecks.swift" \
+    "$project_directory/Cascade/Models/Media/MusicArtworkColor.swift" \
+    "$project_directory/Cascade/Models/Media/DecodedMusicArtwork.swift" \
+    "$project_directory/Cascade/Core/Media/MusicArtworkDecoder.swift" \
+    "$project_directory/Cascade/Checks/Music/MusicArtworkChecks.swift" \
     -o /private/tmp/cascade-artwork-checks
 
 /private/tmp/cascade-artwork-checks

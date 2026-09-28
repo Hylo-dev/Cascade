@@ -10,8 +10,9 @@ export CLANG_MODULE_CACHE_PATH=/private/tmp/cascade-spacebar-module-cache
 /usr/bin/xcrun swiftc -swift-version 6 -target arm64-apple-macosx14.0 \
     -default-isolation MainActor \
     -warnings-as-errors -parse-as-library -D MUSIC_SPACEBAR_TESTS \
-    "$project_directory/Cascade/Features/MusicSpacebarTap.swift" \
-    "$project_directory/Cascade/Integrations/Input/EventTapThread.swift" \
-    "$project_directory/Cascade/Features/Tests/MusicSpacebarChecks.swift" \
+    "$project_directory/Cascade/Core/Input/MusicSpacebarTap.swift" \
+    "$project_directory/Cascade/Core/Input/MusicSpacebarRelay.swift" \
+    "$project_directory/Cascade/Core/Input/EventTapThread.swift" \
+    "$project_directory/Cascade/Checks/Music/MusicSpacebarChecks.swift" \
     -o /private/tmp/cascade-music-spacebar-checks
 /private/tmp/cascade-music-spacebar-checks

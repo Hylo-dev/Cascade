@@ -16,9 +16,27 @@ fi
 mkdir -p "$module_cache"
 
 source_files=(
-    "$project_directory"/Cascade/Integrations/Volume/*.swift
-    "$project_directory/Cascade/Integrations/Volume/Tests/VolumeBehaviorChecks.swift"
-    "$project_directory/Cascade/Integrations/Volume/Tests/VolumeReadOnlyProbe.swift"
+    "$project_directory/Cascade/Core/Volume/CoreAudioSystemVolume.swift"
+    "$project_directory/Cascade/Core/Volume/VolumeMonitorWorker.swift"
+    "$project_directory/Cascade/Core/Volume/CoreAudioVolumeMonitor.swift"
+    "$project_directory/Cascade/Core/Volume/VolumeAccessibilityObserver.swift"
+    "$project_directory/Cascade/Models/Volume/SystemVolumeSnapshot.swift"
+    "$project_directory/Cascade/Models/Volume/VolumeChangeEvent.swift"
+    "$project_directory/Cascade/Core/Volume/VolumeChangeReducer.swift"
+    "$project_directory/Cascade/Models/Volume/Enums/VolumeKeyCommand.swift"
+    "$project_directory/Cascade/Models/Volume/VolumeMediaKey.swift"
+    "$project_directory/Cascade/Core/Volume/VolumeKeyRouter.swift"
+    "$project_directory/Cascade/Core/Volume/VolumeMediaKeyTap.swift"
+    "$project_directory/Cascade/Models/Volume/Enums/VolumeMonitoringStatus.swift"
+    "$project_directory/Cascade/Models/Volume/Enums/VolumeMonitorUpdate.swift"
+    "$project_directory/Cascade/Core/Protocols/VolumeMonitoring.swift"
+    "$project_directory/Cascade/Core/Protocols/SystemVolumeControlling.swift"
+    "$project_directory/Cascade/Core/Volume/VolumeTapRecovery.swift"
+    "$project_directory/Cascade/Checks/Volume/VolumeCheckFailure.swift"
+    "$project_directory/Cascade/Checks/Volume/VolumeBehaviorChecks.swift"
+    "$project_directory/Cascade/Checks/Volume/PermissionRefreshCounter.swift"
+    "$project_directory/Cascade/Checks/Volume/FakeVolumeController.swift"
+    "$project_directory/Cascade/Checks/Volume/VolumeReadOnlyProbe.swift"
 )
 
 DEVELOPER_DIR="$developer_directory" \

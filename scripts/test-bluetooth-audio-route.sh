@@ -7,16 +7,27 @@ module_cache=/private/tmp/cascade-bluetooth-audio-route-module-cache
 test_binary=/private/tmp/cascade-bluetooth-audio-route-tests
 mkdir -p "$module_cache"
 source_files=(
-    "$project_directory/Cascade/Integrations/Bluetooth/BluetoothBatterySnapshot.swift"
-    "$project_directory/Cascade/Integrations/Bluetooth/BluetoothDeviceModel.swift"
-    "$project_directory/Cascade/Integrations/Bluetooth/BluetoothDeviceMetadata.swift"
-    "$project_directory/Cascade/Integrations/Bluetooth/BluetoothConnectionEvent.swift"
-    "$project_directory/Cascade/Integrations/Bluetooth/BluetoothConnectionReducer.swift"
-    "$project_directory/Cascade/Integrations/Bluetooth/BluetoothAudioRouteReducer.swift"
-    "$project_directory/Cascade/Integrations/Bluetooth/Tests/BluetoothAudioRouteChecks.swift"
+    "$project_directory/Cascade/Models/Bluetooth/BluetoothBatterySnapshot.swift"
+    "$project_directory/Cascade/Models/Bluetooth/Enums/BluetoothDeviceModel.swift"
+    "$project_directory/Cascade/Models/Bluetooth/BluetoothDeviceMetadata.swift"
+    "$project_directory/Cascade/Core/Protocols/BluetoothDeviceMetadataReading.swift"
+    "$project_directory/Cascade/Models/Bluetooth/BluetoothConnectionEvent.swift"
+    "$project_directory/Cascade/Models/Bluetooth/BluetoothConnectedDevice.swift"
+    "$project_directory/Cascade/Models/Bluetooth/BluetoothConnectionCallbackIdentity.swift"
+    "$project_directory/Cascade/Core/Bluetooth/BluetoothConnectionCallbackGate.swift"
+    "$project_directory/Cascade/Core/Bluetooth/BluetoothConnectionReducer.swift"
+    "$project_directory/Cascade/Models/Bluetooth/BluetoothAudioRouteSnapshot.swift"
+    "$project_directory/Cascade/Core/Bluetooth/BluetoothAudioRouteReducer.swift"
+    "$project_directory/Cascade/Checks/Bluetooth/BluetoothAudioRouteChecks.swift"
 )
-if [[ -f "$project_directory/Cascade/Integrations/Bluetooth/BluetoothAudioRouteMonitor.swift" ]]; then
-    source_files+=("$project_directory/Cascade/Integrations/Bluetooth/BluetoothAudioRouteMonitor.swift")
+if [[ -f "$project_directory/Cascade/Core/Bluetooth/BluetoothAudioRouteMonitor.swift" ]]; then
+    source_files+=(
+        "$project_directory/Cascade/Models/Bluetooth/Enums/BluetoothAudioRouteReadResult.swift"
+        "$project_directory/Cascade/Core/Protocols/BluetoothAudioRouteSource.swift"
+        "$project_directory/Cascade/Core/Bluetooth/CoreAudioBluetoothRouteSource.swift"
+        "$project_directory/Cascade/Core/Bluetooth/BluetoothAudioRouteWorker.swift"
+        "$project_directory/Cascade/Core/Bluetooth/BluetoothAudioRouteMonitor.swift"
+    )
 fi
 DEVELOPER_DIR="$developer_directory" \
 CLANG_MODULE_CACHE_PATH="$module_cache" \
