@@ -238,10 +238,14 @@ private struct MusicArtwork: View {
     var isStale = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
-        Group {
+        ZStack {
             // A paused cover keeps its colors; only its size and light respond.
+            // Each cover is its own identity, so a new one blurs in over the
+            // outgoing one instead of replacing it in a single frame.
             if let artwork = visual.artwork {
                 Image(nsImage: artwork).resizable().scaledToFill()
+                    .id(ObjectIdentifier(artwork))
+                    .transition(MusicTrackTransition.cover(reduceMotion: reduceMotion))
             } else {
                 RoundedRectangle(cornerRadius: size * 0.2).fill(.white.opacity(0.10))
                     .overlay {
@@ -249,8 +253,10 @@ private struct MusicArtwork: View {
                             .font(.system(size: size * 0.45, weight: .regular))
                             .foregroundStyle(.white.opacity(0.65))
                     }
+                    .transition(MusicTrackTransition.cover(reduceMotion: reduceMotion))
             }
         }
+        .animation(MusicTrackTransition.animation(reduceMotion: reduceMotion), value: visual.artwork.map(ObjectIdentifier.init))
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: size * 0.2, style: .continuous))
         .background {
@@ -535,16 +541,29 @@ private struct MusicActivityContent: View {
 
     private var isSending: Bool { pendingCapability != nil }
 
+    /// The track the text belongs to; a new one animates the title and artist.
+    private var trackIdentity: String {
+        [snapshot.sourceBundleIdentifier, snapshot.trackIdentifier ?? snapshot.title, snapshot.artist]
+            .joined(separator: "\u{1f}")
+    }
+
     var body: some View {
         VStack(spacing: 12) {
             HStack(spacing: 16) {
                 MusicArtwork(visual: visual, size: artworkSize, isPlaying: snapshot.isPlaying, isStale: isStale)
                     .frame(height: 66, alignment: .bottom)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(snapshot.title).font(.system(size: 15, weight: .medium)).foregroundStyle(.white)
-                    Text(snapshot.artist).font(.system(size: 13, weight: .regular)).foregroundStyle(.white.opacity(0.55))
+                // The outgoing title and artist rise and blur away as the new
+                // pair rises into place; both overlap for the transition.
+                ZStack(alignment: .leading) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(snapshot.title).font(.system(size: 15, weight: .medium)).foregroundStyle(.white)
+                        Text(snapshot.artist).font(.system(size: 13, weight: .regular)).foregroundStyle(.white.opacity(0.55))
+                    }
+                    .id(trackIdentity)
+                    .transition(MusicTrackTransition.text(reduceMotion: reduceMotion))
                 }
                 .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                .animation(MusicTrackTransition.animation(reduceMotion: reduceMotion), value: trackIdentity)
                 MusicSpectrumBars(visual: visual, width: 29, height: 27)
             }
             if let duration = snapshot.duration {
@@ -651,6 +670,27 @@ private struct MusicActivityContent: View {
     private func timestamp(_ seconds: TimeInterval) -> String {
         let value = Int(min(86_400, max(0, seconds)))
         return String(format: "%d:%02d", value / 60, value % 60)
+    }
+}
+
+/// MusicTrackTransition is the one motion of a track change: the cover blurs
+/// from one to the next, the text rises through a blur. It runs once per
+/// change, never while a track plays. Reduce Motion keeps a plain crossfade.
+private enum MusicTrackTransition {
+    static func animation(reduceMotion: Bool) -> Animation {
+        reduceMotion ? .easeInOut(duration: 0.2) : .smooth(duration: 0.45)
+    }
+
+    static func cover(reduceMotion: Bool) -> AnyTransition {
+        reduceMotion ? .opacity : AnyTransition(.blurReplace)
+    }
+
+    static func text(reduceMotion: Bool) -> AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        return .asymmetric(
+            insertion: AnyTransition(.blurReplace).combined(with: .offset(y: 7)),
+            removal  : AnyTransition(.blurReplace).combined(with: .offset(y: -7))
+        )
     }
 }
 
