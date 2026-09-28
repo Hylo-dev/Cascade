@@ -176,7 +176,7 @@ struct FileWorkspacePresentationTests {
         #expect(consumed == [7])
     }
 
-    @Test
+    @Test(.timeLimit(.minutes(1)))
     @MainActor
     func animatedAdmissionCompletesOnceBeforeTheViewIsRemoved() async throws {
         let presentation = try workspace(totalCount: 4, mode: .deck)
@@ -197,7 +197,14 @@ struct FileWorkspacePresentationTests {
         window.contentView = hostingView
         window.orderFront(nil)
         defer { window.orderOut(nil) }
-        try await Task.sleep(for: .milliseconds(600))
+        // Wait for the event, not a wall-clock deadline. The arrival suspends
+        // three times on the main actor; during the full parallel run hundreds
+        // of main-actor tests queue ahead of each resumption, and the 320 ms
+        // animation was measured completing after 4–6 s. The time limit still
+        // fails a real hang.
+        while consumed.isEmpty {
+            try await Task.sleep(for: .milliseconds(10))
+        }
         #expect(consumed == [9])
         hostingView.rootView = AnyView(EmptyView())
         try await Task.sleep(for: .milliseconds(50))

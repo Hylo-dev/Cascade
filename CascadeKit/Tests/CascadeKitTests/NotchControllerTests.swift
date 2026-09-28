@@ -1686,7 +1686,7 @@ struct NotchControllerTests {
         fixture.controller.stop()
     }
 
-    @Test
+    @Test(.timeLimit(.minutes(1)))
     func controlDragKeepsExpandedContentAliveUntilMouseUp() async {
         let fixture = ControllerFixture(reducesMotion: true)
         fixture.controller.start()
@@ -1699,8 +1699,10 @@ struct NotchControllerTests {
         #expect(fixture.panel.ignoresMouseEvents == false)
 
         fixture.monitor.sendButton(isPressed: false)
-        let deadline = ContinuousClock.now.advanced(by: .seconds(1))
-        while fixture.controller.state != .closed, ContinuousClock.now < deadline {
+        // Wait for the event, not a wall-clock deadline: the close is a real
+        // 280 ms debounce whose resumption queues behind every other main-actor
+        // test during the full parallel run. The time limit still fails a hang.
+        while fixture.controller.state != .closed {
             try? await Task.sleep(for: .milliseconds(1))
         }
 

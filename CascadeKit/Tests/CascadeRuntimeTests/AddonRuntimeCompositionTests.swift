@@ -4066,8 +4066,8 @@ final class RecordingRuntimeAdapter: AddonRuntimeStorageAdapter, AddonRuntimeAss
     }
 
     var lastAction: ActionDispatcher.Delivery? {
-        dataSlots.values.compactMap {
-            guard case .action(let delivery) = $0 else { return nil }
+        dataSlots.values.compactMap { slot -> ActionDispatcher.Delivery? in
+            guard case .action(let delivery) = slot else { return nil }
             return delivery
         }.first
     }

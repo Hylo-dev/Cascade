@@ -639,7 +639,7 @@ nonisolated private final class FocusedWindowAXCallbackContext: @unchecked Senda
     }
 
     func signal() {
-        let handler = lock.withLock { handler }
+        let handler = lock.withLock { self.handler }
         handler?()
     }
 

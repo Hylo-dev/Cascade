@@ -517,7 +517,7 @@ struct StorageRequestLifecycleTests {
         )
         #expect(old.close() == nil)
         #expect(old.close() == nil)
-        expectFailure(.sessionRevoked) { _ = try old.begin(request()) }
+        expectFailure(.sessionRevoked) { _ = try old.begin(self.request()) }
         let oldOpen = try Lifecycle(
             generation: generation,
             profile   : .v1_1

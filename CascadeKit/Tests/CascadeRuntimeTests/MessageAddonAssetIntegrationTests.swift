@@ -2008,9 +2008,11 @@ struct MessageAddonAssetIntegrationTests {
         #expect(borrowed?.width == 32)
         #expect(await fixture.governor.usage(.assetBytes) == chargedBytes)
         borrowed = nil
-        for _ in 0..<1_000 {
-            if await fixture.governor.usage(.assetBytes) == 0 { break }
-            await Task.yield()
+        // A time deadline, not a yield count: under the full parallel run a
+        // thousand yields can elapse before the release reaches the governor.
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        while await fixture.governor.usage(.assetBytes) != 0, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(1))
         }
         #expect(await fixture.governor.usage(.assetBytes) == 0)
         await fixture.tearDown()
