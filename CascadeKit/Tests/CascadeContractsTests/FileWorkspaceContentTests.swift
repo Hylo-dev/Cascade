@@ -10,10 +10,11 @@ import Testing
 
 @Suite
 struct FileWorkspaceContentTests {
+
     @Test
     func schemaThreeIsRequiredAndPreservesWorkspaceAssetsAndActions() throws {
         let fixture = try WorkspaceContractFixture()
-        let node = try ContentNode.fileWorkspace(fixture.presentation)
+        let node    = try ContentNode.fileWorkspace(fixture.presentation)
 
         for schema in [1, 2] {
             #expect(throws: (any Error).self) {
@@ -68,9 +69,10 @@ struct FileWorkspaceContentTests {
     @Test
     func hostileFieldsTargetsAndBindingBudgetsAreRejected() throws {
         let fixture = try WorkspaceContractFixture()
-        let data = try JSONEncoder().encode(fixture.presentation)
-        var object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let data    = try JSONEncoder().encode(fixture.presentation)
+        var object  = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
         object["filesystemPath"] = "/private/file"
+
         #expect(throws: (any Error).self) {
             try JSONDecoder().decode(
                 FileWorkspacePresentation.self,
@@ -113,6 +115,7 @@ struct FileWorkspaceContentTests {
     @Test
     func targetsMustResolveInsideThePresentedBoundedValues() throws {
         let fixture = try WorkspaceContractFixture()
+
         #expect(throws: (any Error).self) {
             try FileWorkspacePresentation(
                 snapshot        : fixture.snapshot,
@@ -154,8 +157,8 @@ struct FileWorkspaceContentTests {
     @Test
     func contextRequiresExplicitlyNegotiatedSchemaThreeForFutureTimelineContent() throws {
         let fixture = try WorkspaceContractFixture()
-        let owner = try #require(AddonID(rawValue: "com.example.files"))
-        let id = PublicationID(
+        let owner   = try #require(AddonID(rawValue: "com.example.files"))
+        let id      = PublicationID(
             addonID   : owner,
             instanceID: UUID(),
             sessionID : UUID()

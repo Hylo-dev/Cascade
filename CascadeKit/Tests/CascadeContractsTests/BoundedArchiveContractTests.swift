@@ -8,8 +8,11 @@ import Testing
 
 @testable import CascadeContracts
 
-@Suite struct BoundedArchiveContractTests {
-    @Test func rejectsOversizedChildrenBeforeDecodingTheirFields() throws {
+@Suite
+struct BoundedArchiveContractTests {
+
+    @Test
+    func rejectsOversizedChildrenBeforeDecodingTheirFields() throws {
         let object: [String: Any] = [
             "kind": "row",
             "children": Array(
@@ -17,28 +20,33 @@ import Testing
                 count    : 128
             ),
         ]
+
         try expectBudgetFailure(
             object,
             as: ContentNode.self
         )
     }
 
-    @Test func rejectsNinthLevelBeforeDecodingItsFields() throws {
+    @Test
+    func rejectsNinthLevelBeforeDecodingItsFields() throws {
         var object: [String: Any] = [:]
         for _ in 0..<8 { object = ["kind": "row", "children": [object]] }
+
         try expectBudgetFailure(
             object,
             as: ContentNode.self
         )
     }
 
-    @Test func rejectsOversizedTimelineBeforeDecodingEntries() throws {
+    @Test
+    func rejectsOversizedTimelineBeforeDecodingEntries() throws {
         var object = publicationObject()
         object.removeValue(forKey: "content")
         object["timeline"] = Array(
             repeating: [:],
             count    : 33
         )
+
         try expectBudgetFailure(
             object,
             as: Publication.self
@@ -49,21 +57,24 @@ import Testing
     func rejectsOversizedDocumentCollectionsBeforeElements(_ field: String) throws {
         var object = documentObject()
         object["schemaVersion"] = 2
-        object[field] = Array(
+        object[field]           = Array(
             repeating: NSNull(),
             count    : field == "assets" ? 65 : 9
         )
+
         try expectBudgetFailure(
             object,
             as: ContentDocument.self
         )
     }
 
-    @Test func rejectsTwoGraphBranchesBeforeDecodingEither() throws {
+    @Test
+    func rejectsTwoGraphBranchesBeforeDecodingEither() throws {
         var object = publicationObject()
-        object["content"] = ["unknownRepresentation": true]
+        object["content"]  = ["unknownRepresentation": true]
         object["timeline"] = []
         let data = try JSONSerialization.data(withJSONObject: object)
+
         do {
             _ = try JSONDecoder().decode(
                 Publication.self,
@@ -75,7 +86,8 @@ import Testing
         }
     }
 
-    @Test func sharesRemainingNodesAcrossSiblingSubtrees() throws {
+    @Test
+    func sharesRemainingNodesAcrossSiblingSubtrees() throws {
         let leaf  : [String: Any] = ["kind": "text", "text": "Leaf"]
         let object: [String: Any] = [
             "kind": "row",
@@ -96,13 +108,15 @@ import Testing
                 ],
             ],
         ]
+
         try expectBudgetFailure(
             object,
             as: ContentNode.self
         )
     }
 
-    @Test func acceptsExistingTreeAssetsAndLightBoundaries() throws {
+    @Test
+    func acceptsExistingTreeAssetsAndLightBoundaries() throws {
         let leaf: [String: Any] = ["kind": "text", "text": "Leaf"]
         let root: [String: Any] = [
             "kind": "row",
@@ -112,19 +126,21 @@ import Testing
             ),
         ]
         var document = documentObject()
-        document["root"] = root
+        document["root"]          = root
         document["schemaVersion"] = 2
-        document["assets"] = (0..<64).map { "asset-\($0)" }
-        document["glassLights"] = Array(
+        document["assets"]        = (0..<64).map { "asset-\($0)" }
+        document["glassLights"]   = Array(
             repeating: [
                 "x": 0.5, "y": 0.5, "radius": 0.5, "red": 1.0, "green": 0.0, "blue": 0.0, "intensity": 0.5,
             ],
-            count: 8
+            count    : 8
         )
+
         let decoded = try ContentDocument.decode(JSONSerialization.data(withJSONObject: document))
         #expect(decoded.root.children?.count == 127)
         #expect(decoded.assets.count == 64)
         #expect(decoded.glassLights?.count == 8)
+
         var deepest = leaf
         for _ in 0..<7 { deepest = ["kind": "row", "children": [deepest]] }
         _ = try JSONDecoder().decode(
@@ -133,7 +149,8 @@ import Testing
         )
     }
 
-    @Test func acceptsExplicitNullAlternativeAndPreservesUnknownFieldRejection() throws {
+    @Test
+    func acceptsExplicitNullAlternativeAndPreservesUnknownFieldRejection() throws {
         var object = publicationObject()
         object["timeline"] = NSNull()
         let valid = try JSONDecoder().decode(
@@ -141,6 +158,7 @@ import Testing
             from: JSONSerialization.data(withJSONObject: object)
         )
         #expect(valid.content != nil && valid.timeline == nil)
+
         object["future"] = true
         #expect(throws: AddonFailure.self) {
             try JSONDecoder().decode(
@@ -150,7 +168,8 @@ import Testing
         }
     }
 
-    @Test func supportsUnknownUnkeyedCountWithoutLosingBounds() throws {
+    @Test
+    func supportsUnknownUnkeyedCountWithoutLosingBounds() throws {
         let small = try JSONDecoder().decode(
             CountlessProbe.self,
             from: Data("[1,2,3]".utf8)
@@ -169,6 +188,7 @@ import Testing
         as type : Value.Type
     ) throws {
         let data = try JSONSerialization.data(withJSONObject: object)
+
         do {
             _ = try JSONDecoder().decode(
                 type,

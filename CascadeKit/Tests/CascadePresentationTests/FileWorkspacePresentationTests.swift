@@ -13,36 +13,72 @@ import UniformTypeIdentifiers
 
 @Suite
 struct FileWorkspacePresentationTests {
+
     @Test
     @MainActor
     func rendererRefreshesRenameAndPaginationAtTheSameRevision() async throws {
-        var seen: [String] = []
+        var seen   : [String] = []
         let firstID = UUID()
-        func view(id: UUID, name: String) throws -> AnyView {
-            let entry = try FileWorkspaceEntry(id: id, name: name, typeIdentifier: "public.text",
-                availability: .available, ownership: .externalReference, thumbnailAssetID: nil)
-            let snapshot = try FileWorkspaceSnapshot(revision: 1, entries: [entry], totalCount: 2, nextCursor: nil, jobs: [])
-            let presentation = try FileWorkspacePresentation(snapshot: snapshot, mode: .list,
-                selectedEntryIDs: [], formats: [], selectedFormatID: nil, actions: [])
-            let content = try CascadeFileWorkspace(presentation, assets: PreviewAssets(), dispatch: { _ in },
-                reduceMotion: true, thumbnail: { entry in
+
+        func view(
+            id  : UUID,
+            name: String
+        ) throws -> AnyView {
+            let entry = try FileWorkspaceEntry(
+                id              : id,
+                name            : name,
+                typeIdentifier  : "public.text",
+                availability    : .available,
+                ownership       : .externalReference,
+                thumbnailAssetID: nil
+            )
+            let snapshot = try FileWorkspaceSnapshot(
+                revision  : 1,
+                entries   : [entry],
+                totalCount: 2,
+                nextCursor: nil,
+                jobs      : []
+            )
+            let presentation = try FileWorkspacePresentation(
+                snapshot        : snapshot,
+                mode            : .list,
+                selectedEntryIDs: [],
+                formats         : [],
+                selectedFormatID: nil,
+                actions         : []
+            )
+            let content = try CascadeFileWorkspace(
+                presentation,
+                assets      : PreviewAssets(),
+                dispatch    : { _ in },
+                reduceMotion: true,
+                thumbnail   : { entry in
                     seen.append(entry.name)
                     return Image(systemName: "doc")
-                })
+                }
+            )
+
             return AnyView(content.frame(width: 400, height: 124))
         }
+
         let hosting = NSHostingView(rootView: try view(id: firstID, name: "original.txt"))
-        let window = NSWindow(contentRect: CGRect(x: -10000, y: -10000, width: 400, height: 124),
-                              styleMask: [.borderless], backing: .buffered, defer: false)
+        let window  = NSWindow(
+            contentRect: CGRect(x: -10000, y: -10000, width: 400, height: 124),
+            styleMask  : [.borderless],
+            backing    : .buffered,
+            defer      : false
+        )
         window.contentView = hosting
         window.orderFront(nil)
         defer { window.orderOut(nil) }
         try await Task.sleep(for: .milliseconds(100))
-        seen = []
+
+        seen             = []
         hosting.rootView = try view(id: firstID, name: "renamed.txt")
         try await Task.sleep(for: .milliseconds(100))
         #expect(seen.contains("renamed.txt"))
-        seen = []
+
+        seen             = []
         hosting.rootView = try view(id: UUID(), name: "next-page.txt")
         try await Task.sleep(for: .milliseconds(100))
         #expect(seen.contains("next-page.txt"))
@@ -54,6 +90,7 @@ struct FileWorkspacePresentationTests {
             count       : 40,
             reduceMotion: false
         )
+
         #expect(transforms.count == 4)
         #expect(transforms.map(\.index) == [0, 1, 2, 3])
         #expect(transforms[0].rotationDegrees == 1.75)
@@ -73,6 +110,7 @@ struct FileWorkspacePresentationTests {
             count       : 4,
             reduceMotion: true
         )
+
         #expect(animated.map(\.index) == reduced.map(\.index))
         #expect(reduced.allSatisfy { $0.rotationDegrees == 0 && $0.yOffset == 0 })
         #expect(Set(reduced.map(\.xOffset)).count == 4)
@@ -80,8 +118,8 @@ struct FileWorkspacePresentationTests {
 
     @Test(arguments: [CGSize(width: 420, height: 180), CGSize(width: 680, height: 260)])
     func conversionArrowStaysCenteredBetweenNonoverlappingGroups(_ size: CGSize) {
-        let bounds = CGRect(origin: .zero, size: size)
-        let frames = FileWorkspaceLayout.conversionFrames(in: bounds)
+        let bounds  = CGRect(origin: .zero, size: size)
+        let frames  = FileWorkspaceLayout.conversionFrames(in: bounds)
         let gapMidX = (frames.inputs.maxX + frames.results.minX) / 2
 
         #expect(abs(frames.arrow.midX - gapMidX) < 0.001)
@@ -94,7 +132,7 @@ struct FileWorkspacePresentationTests {
 
     @Test
     func routingReturnsThePublishedDescriptorUnchanged() throws {
-        let entryID = UUID()
+        let entryID    = UUID()
         let descriptor = try ActionDescriptor(
             id     : "select-entry",
             label  : "Select file",
@@ -102,14 +140,14 @@ struct FileWorkspacePresentationTests {
         )
         let presentation = try workspace(
             totalCount: 1,
-            actions: [
+            actions   : [
                 FileWorkspaceActionBinding(
                     role      : .select,
                     entryID   : entryID,
                     descriptor: descriptor
                 ),
             ],
-            entryID: entryID
+            entryID   : entryID
         )
 
         #expect(presentation.action(for: .select, entryID: entryID) == descriptor)
@@ -120,27 +158,27 @@ struct FileWorkspacePresentationTests {
     @MainActor
     func optionalHostHooksDecorateEntriesWithoutChangingDefaultCallers() throws {
         let presentation = try workspace(totalCount: 4, mode: .deck)
-        var thumbnails: Set<UUID> = []
-        var wrapped: Set<UUID> = []
-        var clearCount = 0
-        var renameCount = 0
-        let view = try CascadeFileWorkspace(
+        var thumbnails  : Set<UUID> = []
+        var wrapped     : Set<UUID> = []
+        var clearCount   = 0
+        var renameCount  = 0
+        let view         = try CascadeFileWorkspace(
             presentation,
-            assets  : PreviewAssets(),
-            dispatch: { _ in },
-            thumbnail: { entry in
+            assets                          : PreviewAssets(),
+            dispatch                        : { _ in },
+            thumbnail                       : { entry in
                 thumbnails.insert(entry.id)
                 return Image(systemName: "doc.text.fill")
             },
-            wrapEntry: { entry, _, content in
+            wrapEntry                       : { entry, _, content in
                 wrapped.insert(entry.id)
                 return content
             },
             conversionUnavailableExplanation: "Conversion not available yet",
-            clearAll: { clearCount += 1 },
-            focusedEntryID: presentation.snapshot.entries.first?.id,
-            rename: { renameCount += 1 },
-            renameDisabled: false
+            clearAll                        : { clearCount += 1 },
+            focusedEntryID                  : presentation.snapshot.entries.first?.id,
+            rename                          : { renameCount += 1 },
+            renameDisabled                  : false
         )
 
         _ = try render(
@@ -158,21 +196,22 @@ struct FileWorkspacePresentationTests {
     @MainActor
     func reducedMotionConsumesAdmissionTokenOnce() throws {
         let presentation = try workspace(totalCount: 4, mode: .deck)
-        var consumed: [UInt64] = []
-        let view = try CascadeFileWorkspace(
+        var consumed    : [UInt64] = []
+        let view         = try CascadeFileWorkspace(
             presentation,
-            assets  : PreviewAssets(),
-            dispatch: { _ in },
-            reduceMotion: true,
-            admissionSequence: 7,
+            assets                      : PreviewAssets(),
+            dispatch                    : { _ in },
+            reduceMotion                : true,
+            admissionSequence           : 7,
             onAdmissionAnimationConsumed: { consumed.append($0) },
-            centerObstructionFrame: CGRect(x: 108, y: 0, width: 184, height: 28)
+            centerObstructionFrame      : CGRect(x: 108, y: 0, width: 184, height: 28)
         )
 
         _ = try render(
             view.frame(width: 400, height: 124),
             size: CGSize(width: 400, height: 124)
         )
+
         #expect(consumed == [7])
     }
 
@@ -180,23 +219,26 @@ struct FileWorkspacePresentationTests {
     @MainActor
     func animatedAdmissionCompletesOnceBeforeTheViewIsRemoved() async throws {
         let presentation = try workspace(totalCount: 4, mode: .deck)
-        var consumed: [UInt64] = []
-        let content = try CascadeFileWorkspace(
+        var consumed    : [UInt64] = []
+        let content      = try CascadeFileWorkspace(
             presentation,
-            assets: PreviewAssets(),
-            dispatch: { _ in },
-            reduceMotion: false,
-            admissionSequence: 9,
+            assets                      : PreviewAssets(),
+            dispatch                    : { _ in },
+            reduceMotion                : false,
+            admissionSequence           : 9,
             onAdmissionAnimationConsumed: { consumed.append($0) }
         )
         let hostingView = NSHostingView(rootView: AnyView(content.frame(width: 400, height: 124)))
-        let window = NSWindow(
+        let window      = NSWindow(
             contentRect: CGRect(x: -10_000, y: -10_000, width: 400, height: 124),
-            styleMask: [.borderless], backing: .buffered, defer: false
+            styleMask  : [.borderless],
+            backing    : .buffered,
+            defer      : false
         )
         window.contentView = hostingView
         window.orderFront(nil)
         defer { window.orderOut(nil) }
+
         // Wait for the event, not a wall-clock deadline. The arrival suspends
         // three times on the main actor; during the full parallel run hundreds
         // of main-actor tests queue ahead of each resumption, and the 320 ms
@@ -206,6 +248,7 @@ struct FileWorkspacePresentationTests {
             try await Task.sleep(for: .milliseconds(10))
         }
         #expect(consumed == [9])
+
         hostingView.rootView = AnyView(EmptyView())
         try await Task.sleep(for: .milliseconds(50))
         #expect(consumed == [9])
@@ -224,6 +267,7 @@ struct FileWorkspacePresentationTests {
             ("conversion-long-labels", .conversion, 4, CGSize(width: 680, height: 260), true, false),
             ("deck-reduced-motion", .deck, 4, CGSize(width: 400, height: 124), false, false),
         ]
+
         for fixture in fixtures {
             let presentation = try workspace(
                 totalCount      : fixture.2,
@@ -233,19 +277,21 @@ struct FileWorkspacePresentationTests {
             )
             let view = try CascadeFileWorkspace(
                 presentation,
-                assets  : PreviewAssets(),
-                dispatch: { _ in Issue.record("Preview must not dispatch") },
-                reduceMotion: fixture.0 == "deck-reduced-motion",
-                thumbnail: { entry in
+                assets                          : PreviewAssets(),
+                dispatch                        : { _ in Issue.record("Preview must not dispatch") },
+                reduceMotion                    : fixture.0 == "deck-reduced-motion",
+                thumbnail                       : { entry in
                     Image(nsImage: NSWorkspace.shared.icon(
                         for: UTType(entry.typeIdentifier) ?? .data
                     ))
                 },
                 conversionUnavailableExplanation: "Conversion will be available soon",
-                clearAll: {},
-                focusedEntryID: presentation.mode == .list ? presentation.snapshot.entries.first?.id : nil,
-                rename: {},
-                centerObstructionFrame: fixture.3 == CGSize(width: 400, height: 124)
+                clearAll                        : {},
+                focusedEntryID                  : presentation.mode == .list
+                    ? presentation.snapshot.entries.first?.id
+                    : nil,
+                rename                          : {},
+                centerObstructionFrame          : fixture.3 == CGSize(width: 400, height: 124)
                     ? CGRect(x: 108, y: 0, width: 184, height: 28)
                     : nil
             )
@@ -258,10 +304,11 @@ struct FileWorkspacePresentationTests {
                 size: fixture.3
             )
             #expect(image.size.width > 0 && image.size.height > 0)
+
             if let directory = ProcessInfo.processInfo.environment["CASCADE_FILE_WORKSPACE_PREVIEW_DIR"],
-               let tiff = image.tiffRepresentation,
+               let tiff   = image.tiffRepresentation,
                let bitmap = NSBitmapImageRep(data: tiff),
-               let data = bitmap.representation(using: .png, properties: [:]) {
+               let data   = bitmap.representation(using: .png, properties: [:]) {
                 let destination = URL(fileURLWithPath: directory)
                     .appendingPathComponent(fixture.0)
                     .appendingPathExtension("png")
@@ -272,41 +319,43 @@ struct FileWorkspacePresentationTests {
 
     @MainActor
     private func render<Content: View>(
-        _ content: Content,
-        size     : CGSize,
+        _ content   : Content,
+        size        : CGSize,
         waitDuration: TimeInterval = 0.25
     ) throws -> NSImage {
         let hostingView = NSHostingView(rootView: content)
         hostingView.frame = CGRect(origin: .zero, size: size)
         let window = NSWindow(
             contentRect: hostingView.frame,
-            styleMask : [.borderless],
-            backing   : .buffered,
-            defer     : false
+            styleMask  : [.borderless],
+            backing    : .buffered,
+            defer      : false
         )
         window.contentView = hostingView
         window.setFrameOrigin(NSPoint(x: -10_000, y: -10_000))
         window.orderFront(nil)
         RunLoop.current.run(until: Date().addingTimeInterval(waitDuration))
         hostingView.layoutSubtreeIfNeeded()
+
         let bitmap = try #require(hostingView.bitmapImageRepForCachingDisplay(in: hostingView.bounds))
         hostingView.cacheDisplay(in: hostingView.bounds, to: bitmap)
         let image = NSImage(size: size)
         image.addRepresentation(bitmap)
         window.orderOut(nil)
+
         return image
     }
 
     private func workspace(
-        totalCount: Int,
-        actions   : [FileWorkspaceActionBinding] = [],
-        entryID   : UUID = UUID(),
-        mode      : FileWorkspaceMode? = nil,
+        totalCount      : Int,
+        actions         : [FileWorkspaceActionBinding] = [],
+        entryID         : UUID = UUID(),
+        mode            : FileWorkspaceMode? = nil,
         completedResults: Bool = false,
-        runningJob: Bool = false
+        runningJob      : Bool = false
     ) throws -> FileWorkspacePresentation {
         let visibleCount = min(totalCount, 32)
-        let entries = try (0..<visibleCount).map { index in
+        let entries      = try (0..<visibleCount).map { index in
             try FileWorkspaceEntry(
                 id              : index == 0 ? entryID : UUID(),
                 name            : index == 0
@@ -323,8 +372,9 @@ struct FileWorkspacePresentationTests {
             label               : "Portable Network Graphics",
             outputTypeIdentifier: "public.png"
         )
+
         let resolvedMode = mode ?? (totalCount == 40 ? .list : (totalCount == 4 ? .conversion : .deck))
-        let jobs: [FileConversionJobSnapshot]
+        let jobs        : [FileConversionJobSnapshot]
         if runningJob {
             jobs = [try FileConversionJobSnapshot(
                 id       : UUID(),
@@ -342,6 +392,7 @@ struct FileWorkspacePresentationTests {
         } else {
             jobs = []
         }
+
         let representativeActions: [FileWorkspaceActionBinding]
         if actions.isEmpty {
             var built: [FileWorkspaceActionBinding] = []
@@ -392,8 +443,9 @@ struct FileWorkspacePresentationTests {
         } else {
             representativeActions = actions
         }
+
         return try FileWorkspacePresentation(
-            snapshot: FileWorkspaceSnapshot(
+            snapshot        : FileWorkspaceSnapshot(
                 revision  : 1,
                 entries   : entries,
                 totalCount: totalCount,
@@ -410,6 +462,7 @@ struct FileWorkspacePresentationTests {
 
     @MainActor
     private struct PreviewAssets: ContentAssetResolving {
+
         func image(for assetID: String) -> Image? { Image(systemName: "doc.fill") }
     }
 }

@@ -9,6 +9,7 @@ import Testing
 @testable import CascadeContracts
 
 struct WorkspaceContractFixture {
+
     let entry       : FileWorkspaceEntry
     let snapshot    : FileWorkspaceSnapshot
     let openList    : FileWorkspaceActionBinding

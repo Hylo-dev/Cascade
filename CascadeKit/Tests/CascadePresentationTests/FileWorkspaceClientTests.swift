@@ -8,9 +8,12 @@ import Foundation
 import Testing
 @testable import CascadeAddonSDK
 
-@Suite struct FileWorkspaceClientTests {
-    @Test func sendsBoundedCommandWithExplicitWorkspaceGrant() async throws {
-        let instant = Date(timeIntervalSince1970: 1_000)
+@Suite
+struct FileWorkspaceClientTests {
+
+    @Test
+    func sendsBoundedCommandWithExplicitWorkspaceGrant() async throws {
+        let instant  = Date(timeIntervalSince1970: 1_000)
         let snapshot = try FileWorkspaceSnapshot(
             revision  : 7,
             entries   : [],
@@ -26,7 +29,7 @@ import Testing
                 payload      : snapshot.encode()
             )
         )
-        let grant = try workspaceGrant()
+        let grant  = try workspaceGrant()
         let client = try FileWorkspaceClient(
             services: services,
             grant   : grant,
@@ -34,13 +37,15 @@ import Testing
         )
 
         #expect(try await client.send(.list(cursor: "next")) == snapshot)
+
         let request = try #require(await services.lastRequest)
         #expect(request.grant == grant)
         #expect(request.invocation.contractID == "files.workspace")
         #expect(request.invocation.operation == "command")
         #expect(request.invocation.deadline == instant.addingTimeInterval(30))
-        #expect(try JSONDecoder().decode(FileWorkspaceCommand.self, from: request.invocation.payload)
-            == .list(cursor: "next"))
+        #expect(
+            try JSONDecoder().decode(FileWorkspaceCommand.self, from: request.invocation.payload) == .list(cursor: "next")
+        )
     }
 
     @Test(arguments: ["other.service", "otherOperation"])
@@ -69,7 +74,8 @@ import Testing
         }
     }
 
-    @Test func rejectsMalformedSnapshotResponse() async throws {
+    @Test
+    func rejectsMalformedSnapshotResponse() async throws {
         let response = try ServiceResponse(
             schemaVersion: 1,
             contractID   : "files.workspace",
@@ -87,7 +93,8 @@ import Testing
         }
     }
 
-    @Test func rejectsWrongGrantBeforeInvokingTransport() async throws {
+    @Test
+    func rejectsWrongGrantBeforeInvokingTransport() async throws {
         let services = try RecordingWorkspaceServiceClient(
             response: ServiceResponse(
                 schemaVersion: 1,
@@ -103,7 +110,7 @@ import Testing
             )
         )
         let wrongGrant = try workspaceGrant(featureID: "other")
-        let client = try FileWorkspaceClient(
+        let client     = try FileWorkspaceClient(
             services: services,
             grant   : wrongGrant,
             now     : { Date(timeIntervalSince1970: 1_000) }

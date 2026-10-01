@@ -11,21 +11,27 @@ import Testing
 
 @Suite
 struct ContentArchiveTests {
+
     @Test
     func keepsCountdownWithoutProviderObjects() throws {
         let document = try ContentDocument(
-            root: .countdown(until: Date(timeIntervalSince1970: 2_000_000_000)),
-            privacy: .publicContent,
+            root              : .countdown(until: Date(timeIntervalSince1970: 2_000_000_000)),
+            privacy           : .publicContent,
             accessibilityLabel: "Time remaining"
         )
+
         #expect(try ContentDocument.decode(document.encode()) == document)
     }
 
     @Test
     func archivesAllComponentsAndBuilderBranches() throws {
-        let action = try ActionDescriptor(id: "open", label: "Open details", payload: Data([1, 2, 3]))
+        let action = try ActionDescriptor(
+            id     : "open",
+            label  : "Open details",
+            payload: Data([1, 2, 3])
+        )
         let showImage = true
-        let column = try CascadeColumn {
+        let column    = try CascadeColumn {
             try CascadeRow {
                 try CascadeText("Focus")
                 try CascadeSymbol("moon.fill")
@@ -41,11 +47,12 @@ struct ContentArchiveTests {
             try CascadeButton(action)
         }
         let document = try ContentDocument(
-            root: column.contentNode,
-            privacy: .sensitive,
+            root              : column.contentNode,
+            privacy           : .sensitive,
             accessibilityLabel: "Focus status",
-            assetIDs: ["cover"]
+            assetIDs          : ["cover"]
         )
+
         #expect(try ContentDocument.decode(document.encode()) == document)
         #expect(column.contentNode.children?.last?.actionPayload == action.payload)
     }
@@ -53,6 +60,7 @@ struct ContentArchiveTests {
     @Test
     func archivesVersionedProviderEvents() throws {
         let event = AddonEvent.scheduled(eventID: "refresh")
+
         #expect(try AddonEvent.decode(JSONEncoder().encode(event)) == event)
         #expect(throws: (any Error).self) { try JSONEncoder().encode(AddonEvent.scheduled(eventID: "")) }
         #expect(throws: (any Error).self) {

@@ -10,7 +10,9 @@ import Testing
 
 /// CountlessProbe forwards actual Foundation values while exercising the generic unknown-count path.
 struct CountlessProbe: Decodable {
+
     let values: [Int]
+
     init(from decoder: any Decoder) throws {
         values = try BoundedContractArray.decode(
             Int.self,
