@@ -14,7 +14,7 @@ import Testing
 struct PluginSystemTests {
 
     @MainActor
-    final class Grid: PluginWidgetHosting {
+    final class Grid: PluginSurfaceHosting {
 
         var widgets: [WidgetIdentifier: NotchWidget] = [:]
 
@@ -25,12 +25,16 @@ struct PluginSystemTests {
         func unregisterWidget(id: WidgetIdentifier) {
             widgets[id] = nil
         }
+
+        func showNotice(_ notice: any NotchTransientNotice) {}
+
+        func dismissActivity(id: String) {}
     }
 
     @Test
     func theBundledClockReachesTheNotchThroughPluginHost() async throws {
         let grid    = Grid()
-        let plugins = PluginSystem(widgets: grid)
+        let plugins = PluginSystem(host: grid)
         plugins.start()
 
         let deadline = ContinuousClock.now.advanced(by: .seconds(30))

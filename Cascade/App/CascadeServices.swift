@@ -221,7 +221,7 @@ final class CascadeServices {
             displayPreferences: displayPreferencesStore.preferences
         )
         self.notch                   = notch
-        plugins                      = PluginSystem(widgets: notch)
+        plugins                      = PluginSystem(host: notch)
         self.displayPreferencesStore = displayPreferencesStore
 
         let fileShelfGovernor = ResourceGovernor()

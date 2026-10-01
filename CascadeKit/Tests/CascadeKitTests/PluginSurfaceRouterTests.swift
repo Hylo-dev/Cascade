@@ -30,7 +30,7 @@ struct PluginSurfaceRouterTests {
     @MainActor
     final class Rig {
 
-        let host      = RecordingWidgetHost()
+        let host      = RecordingSurfaceHost()
         var submitted : [PluginActionRequest] = []
         var visibility: [(Bool, PluginPublicationKey)] = []
         var surfaces  : PluginSurfaceRouter!
@@ -53,7 +53,7 @@ struct PluginSurfaceRouterTests {
             resources      : PluginResources(profile: .eventDriven)
         )
         rig.surfaces = PluginSurfaceRouter(
-            widgets   : rig.host,
+            host      : rig.host,
             manifests : [manifest],
             submit    : { [unowned rig] in rig.submitted.append($0) },
             visibility: { [unowned rig] isVisible, key in rig.visibility.append((isVisible, key)) }
@@ -154,10 +154,10 @@ struct PluginSurfaceRouterTests {
     }
 
     @Test
-    func activitiesAndNoticesWaitForTheirPlans() throws {
+    func activitiesWaitForTheirPlan() throws {
         let rig       = try rig()
         var publisher = PluginPublicationStore()
-        let key       = PluginPublicationKey(plugin: clock, feature: "time", surface: .notice)
+        let key       = PluginPublicationKey(plugin: clock, feature: "time", surface: .activity)
         let applied   = publisher.apply(try PluginDocument(root: PluginNode(.clock)), staleAfter: nil, for: key, at: Date())
         let change    = try #require(applied)
 

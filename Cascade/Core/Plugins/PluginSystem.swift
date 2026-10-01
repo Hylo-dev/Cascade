@@ -17,13 +17,13 @@ import Foundation
 /// external plugin.
 final class PluginSystem {
 
-    private let widgets   : any PluginWidgetHosting
+    private let host      : any PluginSurfaceHosting
     private var engine    : PluginEngine?
     private var surfaces  : PluginSurfaceRouter?
     private var isStarting = false
 
-    init(widgets: any PluginWidgetHosting) {
-        self.widgets = widgets
+    init(host: any PluginSurfaceHosting) {
+        self.host = host
     }
 
     /// start reads the bundled manifests and the app's signing team off the main thread, since
@@ -53,7 +53,7 @@ final class PluginSystem {
         requirement: String?
     ) {
         let surfaces = PluginSurfaceRouter(
-            widgets   : widgets,
+            host      : host,
             manifests : manifests,
             submit    : { [weak self] request in self?.engine?.submit(request) },
             visibility: { [weak self] isVisible, key in self?.engine?.setVisible(isVisible, for: key) }
