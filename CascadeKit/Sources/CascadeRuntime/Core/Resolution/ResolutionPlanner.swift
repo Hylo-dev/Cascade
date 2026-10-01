@@ -511,8 +511,8 @@ extension ResolutionPlanner {
         }
 
         func topologicalOrder(_ accepted: [AddonID]) -> [AddonID] {
-            var result   : [AddonID] = [],
-                remaining = Set(accepted)
+            var result   : [AddonID] = []
+            var remaining = Set(accepted)
             while !remaining.isEmpty {
                 let ready = remaining.filter { id in
                     !edges.contains { $0.consumer == id && remaining.contains($0.provider) }

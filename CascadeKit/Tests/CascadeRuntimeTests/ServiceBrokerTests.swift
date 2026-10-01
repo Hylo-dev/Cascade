@@ -142,7 +142,8 @@ struct ServiceBrokerTests {
 
     @Test
     func canonicalGrantRejectsTheftAndWrongOperation() async throws {
-        let fixture = BrokerFixture(), broker = ServiceBroker()
+        let fixture = BrokerFixture()
+        let broker  = ServiceBroker()
         _ = try await broker.authorize(fixture.permission())
 
         let session  = try await broker.registerSession(identity: fixture.owner)
@@ -182,8 +183,9 @@ struct ServiceBrokerTests {
 
     @Test
     func compatibleConsumersShareOneSourceAndOnlyLastReleaseStopsIt() async throws {
-        let fixture = BrokerFixture(), governor = ResourceGovernor()
-        let broker  = ServiceBroker(governor: governor)
+        let fixture  = BrokerFixture()
+        let governor = ResourceGovernor()
+        let broker   = ServiceBroker(governor: governor)
         _ = try await broker.authorize(fixture.permission())
         _ = try await broker.authorize(fixture.permission(fixture.other))
 
@@ -218,7 +220,8 @@ struct ServiceBrokerTests {
 
     @Test
     func partitionsAndFeatureVersionsNeverShareSources() async throws {
-        let fixture = BrokerFixture(), broker = ServiceBroker()
+        let fixture = BrokerFixture()
+        let broker  = ServiceBroker()
         _ = try await broker.authorize(fixture.permission())
         _ = try await broker.authorize(fixture.permission(feature: "second", version: SemanticVersion(2, 0, 0)))
         _ = try await broker.authorize(fixture.permission(fixture.other, partition: "account-b"))
@@ -251,7 +254,8 @@ struct ServiceBrokerTests {
 
     @Test
     func disconnectedInterestCoalescesWakeAndReconnectGetsNewGrant() async throws {
-        let fixture = BrokerFixture(), broker = ServiceBroker()
+        let fixture = BrokerFixture()
+        let broker  = ServiceBroker()
         _ = try await broker.authorize(fixture.permission())
 
         let firstSession = try await broker.registerSession(identity: fixture.owner)
@@ -291,7 +295,8 @@ struct ServiceBrokerTests {
 
     @Test
     func wholePathAdmissionRejectsBeforeWorkAndReleasesOnlyItsOwnReservations() async throws {
-        let fixture   = BrokerFixture(), governor = ResourceGovernor()
+        let fixture   = BrokerFixture()
+        let governor  = ResourceGovernor()
         let broker    = ServiceBroker(governor: governor)
         let unrelated = try await governor.admit(.job, owner: fixture.owner.addonID)
         let providers = (1...4).map {
@@ -314,7 +319,8 @@ struct ServiceBrokerTests {
 
     @Test
     func queuedDecisionsMustBeConsumedCanonicallyAndCannotExecuteAfterRevocation() async throws {
-        let fixture    = BrokerFixture(), broker = ServiceBroker()
+        let fixture    = BrokerFixture()
+        let broker     = ServiceBroker()
         let permission = try await broker.authorize(fixture.permission(version: SemanticVersion(2, 0, 0)))
         let session    = try await broker.registerSession(identity: fixture.owner)
         let value      = try await broker.acquire(
@@ -357,7 +363,8 @@ struct ServiceBrokerTests {
 
     @Test
     func sourceStartQueuedUntilAfterExpiryCannotBeConsumed() async throws {
-        let fixture = BrokerFixture(), broker = ServiceBroker()
+        let fixture = BrokerFixture()
+        let broker  = ServiceBroker()
         _ = try await broker.authorize(fixture.permission())
 
         let session = try await broker.registerSession(identity: fixture.owner)
@@ -374,8 +381,9 @@ struct ServiceBrokerTests {
 
     @Test
     func concurrentConsumersNeverEmitDuplicateSourceStarts() async throws {
-        let fixture = BrokerFixture(), governor = ResourceGovernor()
-        let broker  = ServiceBroker(governor: governor)
+        let fixture  = BrokerFixture()
+        let governor = ResourceGovernor()
+        let broker   = ServiceBroker(governor: governor)
         _ = try await broker.authorize(fixture.permission())
         _ = try await broker.authorize(fixture.permission(fixture.other))
 
@@ -412,8 +420,9 @@ struct ServiceBrokerTests {
 
     @Test
     func defaultOwnerGrantLimitRejectsTheSixtyFifthWithoutAdditionalCharge() async throws {
-        let fixture = BrokerFixture(), governor = ResourceGovernor()
-        let broker  = ServiceBroker(governor: governor)
+        let fixture  = BrokerFixture()
+        let governor = ResourceGovernor()
+        let broker   = ServiceBroker(governor: governor)
         _ = try await broker.authorize(fixture.permission())
 
         let session = try await broker.registerSession(identity: fixture.owner)
@@ -446,8 +455,9 @@ struct ServiceBrokerTests {
 
     @Test
     func shutdownReturnsStopDecisionsAndKeepsProcessAdmissionUntilObservedExit() async throws {
-        let fixture = BrokerFixture(), governor = ResourceGovernor()
-        let broker  = ServiceBroker(governor: governor)
+        let fixture  = BrokerFixture()
+        let governor = ResourceGovernor()
+        let broker   = ServiceBroker(governor: governor)
         _ = try await broker.authorize(fixture.permission())
 
         let session = try await broker.registerSession(identity: fixture.owner)
@@ -468,7 +478,8 @@ struct ServiceBrokerTests {
 
     @Test
     func identicalAndChangedLogicalRequestsCannotEmitSecondWork() async throws {
-        let fixture = BrokerFixture(), broker = ServiceBroker()
+        let fixture = BrokerFixture()
+        let broker  = ServiceBroker()
         let (session, grant) = try await fixture.connect(broker)
         let request = try fixture.invocation()
         let work    = try await broker.beginInvocation(
@@ -521,7 +532,8 @@ struct ServiceBrokerTests {
 
     @Test
     func completedLogicalRequestSurvivesReconnectAndRequiresCurrentAuthorityToRecover() async throws {
-        let fixture = BrokerFixture(), broker = ServiceBroker()
+        let fixture = BrokerFixture()
+        let broker  = ServiceBroker()
         let (session, grant) = try await fixture.connect(broker)
         let request = try fixture.invocation()
         let work    = try await broker.beginInvocation(
@@ -600,10 +612,12 @@ struct ServiceBrokerTests {
 
     @Test
     func disconnectKeepsUnknownAndUnsentRequestsDistinctAndNeverRetriesThem() async throws {
-        let fixture = BrokerFixture(), broker = ServiceBroker()
+        let fixture = BrokerFixture()
+        let broker  = ServiceBroker()
         let (session, grant) = try await fixture.connect(broker)
-        let sent = try fixture.invocation(), unsent = try fixture.invocation()
-        let work = try await broker.beginInvocation(
+        let sent   = try fixture.invocation()
+        let unsent = try fixture.invocation()
+        let work   = try await broker.beginInvocation(
             session   : session,
             grantID   : grant.grant.id,
             invocation: sent,
@@ -665,8 +679,9 @@ struct ServiceBrokerTests {
 
     @Test
     func requestHistoryFailsClosedAtCapacityAndExpiresWithoutReservationLeaks() async throws {
-        let fixture = BrokerFixture(), governor = ResourceGovernor()
-        let broker  = ServiceBroker(governor: governor, limits: ServiceBrokerLimits(requestsPerOwner: 1))
+        let fixture  = BrokerFixture()
+        let governor = ResourceGovernor()
+        let broker   = ServiceBroker(governor: governor, limits: ServiceBrokerLimits(requestsPerOwner: 1))
         let (session, grant) = try await fixture.connect(broker)
         let baseline = await governor.usage(.retainedStateBytes)
         let request  = try fixture.invocation()
@@ -727,7 +742,8 @@ struct ServiceBrokerTests {
 
     @Test
     func commandWindowIsThirtySecondsAndFreshRequestsWorkAfterClockRollback() async throws {
-        let fixture = BrokerFixture(), broker = ServiceBroker()
+        let fixture = BrokerFixture()
+        let broker  = ServiceBroker()
         let (session, grant) = try await fixture.connect(broker)
         let request = try fixture.invocation()
         let tooLong = try ServiceInvocation(
@@ -785,7 +801,8 @@ struct ServiceBrokerTests {
 
     @Test
     func requestHistoryBindsRecoveryAndAdmissionToCanonicalFeatureAndProvider() async throws {
-        let fixture = BrokerFixture(), broker = ServiceBroker()
+        let fixture = BrokerFixture()
+        let broker  = ServiceBroker()
         let (session, grant) = try await fixture.connect(broker)
         let request = try fixture.invocation()
         let work    = try await broker.beginInvocation(
@@ -1001,7 +1018,8 @@ struct ServiceBrokerTests {
             )
             let path      = try await broker.admitPath([fixture.provider])
             let unrelated = try await governor.admit(.job, owner: fixture.other.addonID)
-            let sent      = try fixture.invocation(), unsent = try fixture.invocation()
+            let sent      = try fixture.invocation()
+            let unsent    = try fixture.invocation()
             let work      = try await broker.beginInvocation(
                 session   : session,
                 grantID   : grant.grant.id,

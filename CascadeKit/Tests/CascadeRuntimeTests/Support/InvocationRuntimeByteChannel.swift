@@ -90,8 +90,11 @@ final class InvocationRuntimeByteChannel: AddonServiceInvocationMessageChannel, 
     func close() async {
         let task = lock.withLock {
             if let drainTask { return drainTask }
-            let runtime = runtime, connection = connection, finished = active, started = closeStarted
-            let task = Task {
+            let runtime    = runtime
+            let connection = connection
+            let finished   = active
+            let started    = closeStarted
+            let task       = Task {
                 await runtime.closeConnection(connection)
                 started.signal()
                 if let finished { await finished.wait() }

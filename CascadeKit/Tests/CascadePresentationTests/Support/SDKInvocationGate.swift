@@ -12,7 +12,8 @@ import Testing
 /// abandoned task.
 actor SDKInvocationGate {
 
-    private var arrived       = false, released = false
+    private var arrived       = false
+    private var released      = false
     private var arrival      : CheckedContinuation<Void, Never>?
     private var releaseWaiter: CheckedContinuation<Void, Never>?
 

@@ -4872,7 +4872,8 @@ actor AddonRuntime {
         operation: AdmissionOperation
     ) async throws {
         var route      = try controlTransport(id, operation: operation)
-        let connection = route.connection, owner = connection.identity.addonID
+        let connection = route.connection
+        let owner      = connection.identity.addonID
 
         switch route.request.action {
             case .acquire(.requestService(let requirementID, let scope)):

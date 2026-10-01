@@ -13,7 +13,8 @@ struct PermissionRevocationTests {
 
     @Test
     func expiryUsesMonotonicTimeAcrossWallClockChanges() async throws {
-        let fixture = BrokerFixture(), broker = ServiceBroker()
+        let fixture = BrokerFixture()
+        let broker  = ServiceBroker()
         _ = try await broker.authorize(fixture.permission())
 
         let session = try await broker.registerSession(identity: fixture.owner)
@@ -60,7 +61,8 @@ struct PermissionRevocationTests {
 
     @Test
     func revocationInvalidatesOutstandingResultsAndStopsTheSource() async throws {
-        let fixture    = BrokerFixture(), governor = ResourceGovernor()
+        let fixture    = BrokerFixture()
+        let governor   = ResourceGovernor()
         let broker     = ServiceBroker(governor: governor)
         let permission = try await broker.authorize(fixture.permission())
         let session    = try await broker.registerSession(identity: fixture.owner)
@@ -101,7 +103,8 @@ struct PermissionRevocationTests {
 
     @Test
     func disablingOneFeaturePreservesIndependentFeatureAndNeverRebinds() async throws {
-        let fixture = BrokerFixture(), broker = ServiceBroker()
+        let fixture = BrokerFixture()
+        let broker  = ServiceBroker()
         _ = try await broker.authorize(fixture.permission())
         _ = try await broker.authorize(fixture.permission(feature: "other", version: SemanticVersion(2, 0, 0)))
 
@@ -144,8 +147,9 @@ struct PermissionRevocationTests {
 
     @Test
     func deniedAdmissionAndGrantBoundsDoNotLeakReservations() async throws {
-        let fixture = BrokerFixture(), governor = ResourceGovernor()
-        let broker  = ServiceBroker(governor: governor, limits: ServiceBrokerLimits(grantsPerOwner: 1))
+        let fixture  = BrokerFixture()
+        let governor = ResourceGovernor()
+        let broker   = ServiceBroker(governor: governor, limits: ServiceBrokerLimits(grantsPerOwner: 1))
         _ = try await broker.authorize(fixture.permission())
 
         let session = try await broker.registerSession(identity: fixture.owner)
@@ -192,7 +196,8 @@ struct PermissionRevocationTests {
 
     @Test
     func authorityRejectsMissingConsentOversizeAndNoncanonicalVersion() async throws {
-        let fixture = BrokerFixture(), broker = ServiceBroker()
+        let fixture = BrokerFixture()
+        let broker  = ServiceBroker()
 
         for permission in [
             fixture.permission(consent: false),
@@ -220,8 +225,9 @@ struct PermissionRevocationTests {
 
     @Test
     func commonExpiryDrainReleasesExpiredInterestsSourcesAndWork() async throws {
-        let fixture = BrokerFixture(), governor = ResourceGovernor()
-        let broker  = ServiceBroker(governor: governor)
+        let fixture  = BrokerFixture()
+        let governor = ResourceGovernor()
+        let broker   = ServiceBroker(governor: governor)
         _ = try await broker.authorize(fixture.permission())
 
         let session  = try await broker.registerSession(identity: fixture.owner)
@@ -270,7 +276,8 @@ struct PermissionRevocationTests {
 
     @Test
     func providerLossReturnsOnlyAffectedFeaturesAndRevokesTheirOutstandingWork() async throws {
-        let fixture = BrokerFixture(), broker = ServiceBroker()
+        let fixture = BrokerFixture()
+        let broker  = ServiceBroker()
         _ = try await broker.authorize(fixture.permission())
 
         let otherProvider = VerifiedAddonIdentity(
@@ -352,7 +359,8 @@ struct PermissionRevocationTests {
 
     @Test
     func disablingAddonAlsoDisconnectsSessionAndReleasesItsProviderDependencies() async throws {
-        let fixture = BrokerFixture(), broker = ServiceBroker()
+        let fixture = BrokerFixture()
+        let broker  = ServiceBroker()
         _ = try await broker.authorize(fixture.permission())
 
         let session = try await broker.registerSession(identity: fixture.owner)

@@ -72,7 +72,8 @@ enum ScaffoldWriter {
                 throw ScaffoldError("Invalid scaffold output path.")
             }
 
-            var relative = "", directory = staging
+            var relative  = ""
+            var directory = staging
             for component in components.dropLast() {
                 relative = relative.isEmpty ? component : relative + "/" + component
                 if let existing = directories[relative] {

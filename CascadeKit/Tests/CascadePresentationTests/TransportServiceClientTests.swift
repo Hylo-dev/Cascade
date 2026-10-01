@@ -32,7 +32,8 @@ struct TransportServiceClientTests {
         }
         #expect(channel.sequences == Array(1...64).map(UInt64.init))
 
-        let extraGrant = try channel.grant(), extraAlias = UUID()
+        let extraGrant = try channel.grant()
+        let extraAlias = UUID()
         channel.result = .subscribed(extraAlias)
         await subscriptionExpect(.resourceDenied) {
             _ = try await client.subscribe(requirementID: "extra", grant: extraGrant)
@@ -86,7 +87,8 @@ struct TransportServiceClientTests {
     @Test(arguments: [false, true])
     func repeatedSubscribePreservesOnlyLatestForConfirmedFullGrant(changedGrant: Bool) async throws {
         let channel      = SubscriptionSDKChannel()
-        let firstHandler = SubscriptionSDKGate(), exchangeGate = SubscriptionSDKGate()
+        let firstHandler = SubscriptionSDKGate()
+        let exchangeGate = SubscriptionSDKGate()
         let delivered    = AsyncStream<Data>.makeStream(bufferingPolicy: .bufferingNewest(1))
         let client       = try TransportServiceClient(
             channel    : channel,
@@ -154,7 +156,9 @@ struct TransportServiceClientTests {
     @Test(arguments: [false, true])
     func noEffectUnsubscribePreservesLatestAlreadyReceiptedEvent(notSent: Bool) async throws {
         let channel      = SubscriptionSDKChannel()
-        let firstHandler = SubscriptionSDKGate(), delivered = SubscriptionSDKGate(), exchangeGate = SubscriptionSDKGate()
+        let firstHandler = SubscriptionSDKGate()
+        let delivered    = SubscriptionSDKGate()
+        let exchangeGate = SubscriptionSDKGate()
         let observed     = SubscriptionSDKObservation()
         let client       = try TransportServiceClient(
             channel    : channel,

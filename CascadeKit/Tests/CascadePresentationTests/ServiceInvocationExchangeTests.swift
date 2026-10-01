@@ -181,7 +181,8 @@ struct ServiceInvocationExchangeTests {
     @Test
     func closeAfterConsumeSuppressesFinalDeliveryAndSharesDrain() async throws {
         try await withSDKExchange { channel, executor in
-            let gate = SDKInvocationGate(), drainGate = SDKInvocationGate()
+            let gate      = SDKInvocationGate()
+            let drainGate = SDKInvocationGate()
             channel.closeGate = drainGate
 
             let work = Task {

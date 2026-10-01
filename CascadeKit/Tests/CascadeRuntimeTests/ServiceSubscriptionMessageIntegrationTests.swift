@@ -1113,7 +1113,8 @@ extension ServiceSubscriptionMessageIntegrationTests {
     // build metadata compares equal semantically but must remain a different source.
     @Test(arguments: ["build", "digest"])
     func canonicalBindingRetainsExactSelectedVersionAndDigest(difference: String) async throws {
-        let fixture       = BrokerFixture(), governor = ResourceGovernor()
+        let fixture       = BrokerFixture()
+        let governor      = ResourceGovernor()
         let broker        = ServiceBroker(governor: governor)
         let firstVersion  = try #require(SemanticVersion("1.0.0+one"))
         let secondVersion = try #require(SemanticVersion(difference == "build" ? "1.0.0+two" : "1.0.0+one"))

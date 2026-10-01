@@ -13,7 +13,8 @@ import Testing
 /// the paid workspace.
 actor InvocationRouteGate {
 
-    private var arrived = false, released = false
+    private var arrived  = false
+    private var released = false
 
     var hasArrived: Bool { arrived }
 

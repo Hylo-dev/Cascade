@@ -19,7 +19,8 @@ enum ScaffoldCommand {
 
         var values: [String: String] = [:]
         for offset in stride(from: 0, to: arguments.count, by: 2) {
-            let flag = arguments[offset], value = arguments[offset + 1]
+            let flag  = arguments[offset]
+            let value = arguments[offset + 1]
             guard flags.contains(flag),
                   values[flag] == nil,
                   !value.isEmpty,

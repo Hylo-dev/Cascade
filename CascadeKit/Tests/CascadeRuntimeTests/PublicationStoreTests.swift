@@ -83,9 +83,10 @@ struct PublicationStoreTests {
 
     @Test
     func timelineUsesLastDueEntryAndDisableRemovesFutureEntries() async throws {
-        let store = PublicationStore(now: { Date(timeIntervalSince1970: 2_000_000_000) })
-        let first = try content("First"), second = try content("Second")
-        let plan  = try publication(
+        let store  = PublicationStore(now: { Date(timeIntervalSince1970: 2_000_000_000) })
+        let first  = try content("First")
+        let second = try content("Second")
+        let plan   = try publication(
             timeline: [
                 ScheduledEntry(date: now.addingTimeInterval(1), content: first),
                 ScheduledEntry(date: now.addingTimeInterval(10), content: second)

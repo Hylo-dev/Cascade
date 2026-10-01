@@ -41,9 +41,9 @@ struct PublicationBatchTests {
 
     @Test
     func invalidLaterRevisionDoesNotCommitEarlierUpdate() async throws {
-        let store = PublicationStore(now: { Date(timeIntervalSince1970: 2_000_000_000) })
-        let first  = try publication(),
-            second = try publication()
+        let store  = PublicationStore(now: { Date(timeIntervalSince1970: 2_000_000_000) })
+        let first  = try publication()
+        let second = try publication()
 
         try await store.accept(first, owner: owner)
         try await store.accept(second, owner: owner)
@@ -97,9 +97,9 @@ struct PublicationBatchTests {
 
     @Test
     func validBatchCommitsEveryPublicationAndEmptyBatchIsInert() async throws {
-        let store = PublicationStore(now: { Date(timeIntervalSince1970: 2_000_000_000) })
-        let first  = try publication(),
-            second = try publication()
+        let store  = PublicationStore(now: { Date(timeIntervalSince1970: 2_000_000_000) })
+        let first  = try publication()
+        let second = try publication()
 
         try await store.accept([first, second], owner: owner)
 

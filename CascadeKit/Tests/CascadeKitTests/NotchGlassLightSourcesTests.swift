@@ -37,11 +37,13 @@ struct NotchGlassLightSourcesTests {
 
     @Test
     func removingOneWidgetKeepsTheOtherWidgetLight() throws {
-        let first       = NSObject(), second = NSObject()
+        let first       = NSObject()
+        let second      = NSObject()
         var sources     = NotchGlassLightSources()
         let firstToken  = sources.replace(source: ObjectIdentifier(first))
         let secondToken = sources.replace(source: ObjectIdentifier(second))
-        let red         = try makeLight(red: 1), dim = try makeLight(red: 0.2)
+        let red         = try makeLight(red: 1)
+        let dim         = try makeLight(red: 0.2)
 
         _ = sources.update([red], for: firstToken)
         _ = sources.update([dim], for: secondToken)
@@ -53,11 +55,13 @@ struct NotchGlassLightSourcesTests {
 
     @Test
     func combinedSourcesHaveAFixedRenderingBudget() throws {
-        let first       = NSObject(), second = NSObject()
+        let first       = NSObject()
+        let second      = NSObject()
         var sources     = NotchGlassLightSources()
         let firstToken  = sources.replace(source: ObjectIdentifier(first))
         let secondToken = sources.replace(source: ObjectIdentifier(second))
-        let red         = try makeLight(red: 1), dim = try makeLight(red: 0.2)
+        let red         = try makeLight(red: 1)
+        let dim         = try makeLight(red: 0.2)
 
         _ = sources.update(Array(repeating: red, count: 6), for: firstToken)
         _ = sources.update(Array(repeating: dim, count: 6), for: secondToken)

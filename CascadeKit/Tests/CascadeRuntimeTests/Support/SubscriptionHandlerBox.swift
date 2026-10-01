@@ -44,9 +44,9 @@ actor SubscriptionHandlerBox {
         }
 
         do {
-            let context = try #require(context),
-                invocation = try #require(invocation),
-                alias      = try #require(alias)
+            let context    = try #require(context)
+            let invocation = try #require(invocation)
+            let alias      = try #require(alias)
             _ = try await context.services.invoke(invocation, grant: event.token)
             try await context.services.unsubscribe(subscriptionID: alias)
             // Closing from the active handler must not join its own dispatch pump.

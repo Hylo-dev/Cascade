@@ -51,8 +51,8 @@ public struct SemanticVersion: Hashable, Codable, Sendable, Comparable, CustomSt
               let patch = Int(core[2])
         else { return nil }
 
-        let prerelease = release.count == 2 ? String(release[1]) : nil,
-            build      = parts.count == 2 ? String(parts[1]) : nil
+        let prerelease = release.count == 2 ? String(release[1]) : nil
+        let build      = parts.count == 2 ? String(parts[1]) : nil
 
         func valid(
             _ value    : String,
@@ -90,8 +90,8 @@ public struct SemanticVersion: Hashable, Codable, Sendable, Comparable, CustomSt
         lhs: Self,
         rhs: Self
     ) -> Bool {
-        let lhsCore = (lhs.major, lhs.minor, lhs.patch),
-            rhsCore = (rhs.major, rhs.minor, rhs.patch)
+        let lhsCore = (lhs.major, lhs.minor, lhs.patch)
+        let rhsCore = (rhs.major, rhs.minor, rhs.patch)
         if lhsCore != rhsCore { return lhsCore < rhsCore }
 
         switch (lhs.prerelease, rhs.prerelease) {
@@ -100,11 +100,11 @@ public struct SemanticVersion: Hashable, Codable, Sendable, Comparable, CustomSt
             case (_, nil): return true
 
             case let (lhsPrerelease?, rhsPrerelease?):
-                let lhsParts = lhsPrerelease.split(separator: "."),
-                    rhsParts = rhsPrerelease.split(separator: ".")
+                let lhsParts = lhsPrerelease.split(separator: ".")
+                let rhsParts = rhsPrerelease.split(separator: ".")
                 for index in 0..<min(lhsParts.count, rhsParts.count) where lhsParts[index] != rhsParts[index] {
-                    let lhsNumeric = lhsParts[index].allSatisfy(\.isNumber),
-                        rhsNumeric = rhsParts[index].allSatisfy(\.isNumber)
+                    let lhsNumeric = lhsParts[index].allSatisfy(\.isNumber)
+                    let rhsNumeric = rhsParts[index].allSatisfy(\.isNumber)
                     if lhsNumeric && rhsNumeric {
                         return lhsParts[index].count == rhsParts[index].count
                             ? lhsParts[index] < rhsParts[index]

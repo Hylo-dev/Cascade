@@ -427,8 +427,10 @@ struct InvocationMessageHost: Sendable {
         _ body       : () async throws -> Void
     ) async throws {
         await resources.armResize()
-        let runtime = runtime, resources = resources, leaf = leaf
-        let held    = Task {
+        let runtime   = runtime
+        let resources = resources
+        let leaf      = leaf
+        let held      = Task {
             do {
                 return try await runtime.assignPublication(
                     owner     : leaf,

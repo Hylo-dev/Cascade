@@ -24,8 +24,10 @@ final class SDKInvocationChannel: AddonServiceInvocationMessageChannel, @uncheck
     // These configurations are changed only while no operation accesses them, or at a gate.
     var result         : ServiceInvocationResult = .completed(try! sdkResponse())
     var damage         : SDKReplyDamage?
-    var transportThrows = false, rejectRequest = false
-    var exchangeGate   : SDKInvocationGate?, closeGate: SDKInvocationGate?
+    var transportThrows = false
+    var rejectRequest   = false
+    var exchangeGate   : SDKInvocationGate?
+    var closeGate      : SDKInvocationGate?
 
     func replaceGeneration() { lock.withLock { g = ConnectionGeneration() } }
 
