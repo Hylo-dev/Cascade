@@ -75,4 +75,15 @@ struct PluginNoticeTests {
             try PluginNoticeAttributes(duration: duration, border: nil, compactWidth: width, accessibilityLabel: label)
         }
     }
+
+    @Test
+    func aNoticeShowsUnlessItAsksOnlyToUpdate() throws {
+        let shown   = try PluginNoticeAttributes(duration: 4, accessibilityLabel: "Notice")
+        let updated = try PluginNoticeAttributes(duration: 4, accessibilityLabel: "Notice", delivery: .update)
+        let legacy  = try JSONDecoder().decode(PluginNoticeAttributes.self, from: Data(#"{"duration":4,"accessibilityLabel":"Notice"}"#.utf8))
+
+        #expect(shown.delivery == .show)
+        #expect(legacy.delivery == .show)
+        #expect(try JSONDecoder().decode(PluginNoticeAttributes.self, from: JSONEncoder().encode(updated)) == updated)
+    }
 }

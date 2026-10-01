@@ -7,7 +7,8 @@ import Foundation
 
 /// PluginNoticeAttributes is what a notice says about itself beside its regions: how long it
 /// shows, at most ten seconds; the rim's tint while it does; the width it would like for each
-/// compact side; and the sentence VoiceOver reads for it.
+/// compact side; the sentence VoiceOver reads for it; and whether it is a new event or only
+/// updates the notice on screen.
 public struct PluginNoticeAttributes: Codable, Hashable, Sendable {
 
     public static let durations     = 1.0...10.0
@@ -17,17 +18,20 @@ public struct PluginNoticeAttributes: Codable, Hashable, Sendable {
     public let border            : PluginBorderTint?
     public let compactWidth      : Double?
     public let accessibilityLabel: String
+    public let delivery          : PluginNoticeDelivery
 
     public init(
         duration          : Double,
         border            : PluginBorderTint? = nil,
         compactWidth      : Double? = nil,
-        accessibilityLabel: String
+        accessibilityLabel: String,
+        delivery          : PluginNoticeDelivery = .show
     ) throws {
         self.duration           = duration
         self.border             = border
         self.compactWidth       = compactWidth
         self.accessibilityLabel = accessibilityLabel
+        self.delivery           = delivery
 
         try validate()
     }
@@ -40,6 +44,7 @@ public struct PluginNoticeAttributes: Codable, Hashable, Sendable {
         border             = try container.decodeIfPresent(PluginBorderTint.self, forKey: .border)
         compactWidth       = try container.decodeIfPresent(Double.self, forKey: .compactWidth)
         accessibilityLabel = try container.decode(String.self, forKey: .accessibilityLabel)
+        delivery           = try container.decodeIfPresent(PluginNoticeDelivery.self, forKey: .delivery) ?? .show
 
         try validate()
     }
@@ -62,5 +67,6 @@ public struct PluginNoticeAttributes: Codable, Hashable, Sendable {
         case border
         case compactWidth
         case accessibilityLabel
+        case delivery
     }
 }
