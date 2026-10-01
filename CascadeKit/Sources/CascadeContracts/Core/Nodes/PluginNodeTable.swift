@@ -13,10 +13,10 @@ import Foundation
 ///
 /// The hashes come from Swift's `Hasher`, seeded per process. They are compared only inside the
 /// kernel that computed them and never cross the wire, which carries full snapshots.
-public struct PluginNodeTable: Sendable {
+public struct PluginNodeTable: Equatable, Sendable {
 
     /// Entry is one node of the table.
-    public struct Entry: Sendable {
+    public struct Entry: Equatable, Sendable {
 
         public let id          : PluginNodeID
         public let kind        : PluginNodeKind
