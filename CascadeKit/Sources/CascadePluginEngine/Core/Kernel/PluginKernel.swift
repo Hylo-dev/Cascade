@@ -31,6 +31,7 @@ struct PluginKernel: Sendable {
     private var store       = PluginPublicationStore()
     private var visible     : Set<PluginPublicationKey> = []
     private var lastToken   : UInt64 = 0
+    private var isHostReady = true
 
     init(
         capabilities: PluginHostCapabilities,
@@ -148,10 +149,15 @@ struct PluginKernel: Sendable {
         var effects: [PluginEngineEffect] = []
         record.status = .idle
 
-        if let output = result.output {
-            accept(output, from: plugin, &record, at: now, &effects)
-        } else {
-            react(to: .threw, plugin, &record, at: now, &effects)
+        switch result.outcome {
+            case .output(let output):
+                accept(output, from: plugin, &record, at: now, &effects)
+
+            case .failed:
+                react(to: .threw, plugin, &record, at: now, &effects)
+
+            case .lost:
+                prime(&record)
         }
 
         let rest = record.cpu.charge(result.cpuTime, at: now.monotonic)
@@ -264,6 +270,30 @@ struct PluginKernel: Sendable {
         return effects
     }
 
+    /// hostAvailable resumes dispatching once the executor's host has completed a handshake. A
+    /// host that restarted lost every plugin's state, so every runnable plugin is primed again;
+    /// after the first handshake that only repeats the refresh registration already queued.
+    mutating func hostAvailable(at now: PluginInstant) -> [PluginEngineEffect] {
+        isHostReady = true
+
+        for plugin in records.keys {
+            guard var record = records[plugin], record.isRunnable else { continue }
+
+            prime(&record)
+            records[plugin] = record
+        }
+
+        var effects: [PluginEngineEffect] = []
+        schedule(at: now, into: &effects)
+        return effects
+    }
+
+    /// hostUnavailable holds every dispatch while the host is gone. Events keep coalescing in the
+    /// mailboxes and nothing comes due until the host is back, so a dead host costs nothing.
+    mutating func hostUnavailable() {
+        isHostReady = false
+    }
+
     /// nextDelay is how long the engine's one timer may sleep: until the earliest watchdog,
     /// retry, held event or wake, and at most a day. Nil means nothing is due.
     func nextDelay(at now: PluginInstant) -> Duration? {
@@ -286,10 +316,10 @@ struct PluginKernel: Sendable {
         records.values
             .compactMap { record -> Duration? in
                 switch record.status {
-                    case .handling(_, let deadline)         : deadline
-                    case .retrying(let until)               : until
-                    case .idle where !record.mailbox.isEmpty: record.throttledUntil
-                    default                                 : nil
+                    case .handling(_, let deadline)                        : deadline
+                    case .retrying(let until)                              : until
+                    case .idle where isHostReady && !record.mailbox.isEmpty: record.throttledUntil
+                    default                                                : nil
                 }
             }
             .min()
@@ -301,6 +331,8 @@ struct PluginKernel: Sendable {
         at now      : PluginInstant,
         into effects: inout [PluginEngineEffect]
     ) {
+        guard isHostReady else { return }
+
         for plugin in records.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
             guard var record = records[plugin],
                   record.status == .idle,

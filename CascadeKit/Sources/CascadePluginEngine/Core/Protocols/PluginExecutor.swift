@@ -11,6 +11,10 @@ import CascadeContracts
 /// return at once, because the engine calls them from its own queue.
 public protocol PluginExecutor: Sendable {
 
+    /// observe registers the engine's handler for the host's availability. The executor reports
+    /// its current availability at once, then every change, from any thread.
+    func observe(_ handler: @escaping @Sendable (PluginExecutorEvent) -> Void)
+
     /// start loads the plugin behind `entryPoint`.
     func start(
         _ plugin  : PluginID,

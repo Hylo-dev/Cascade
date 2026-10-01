@@ -45,6 +45,19 @@ public final class PluginEngine: Sendable {
             self?.execute { kernel, now in kernel.tick(at: now) }
         }
         timer.activate()
+
+        executor.observe { [weak self] event in
+            self?.run { kernel, now in
+                switch event {
+                    case .available:
+                        return kernel.hostAvailable(at: now)
+
+                    case .unavailable:
+                        kernel.hostUnavailable()
+                        return []
+                }
+            }
+        }
     }
 
     deinit {

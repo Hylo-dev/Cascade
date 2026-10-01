@@ -417,4 +417,37 @@ struct PluginKernelTests {
         #expect(kernel.nextDelay(at: later) == .milliseconds(250))
         #expect(kernel.wakeDelay(at: later) == .seconds(3))
     }
+
+    @Test
+    func nothingIsDispatchedOrDueWhileTheHostIsUnavailable() throws {
+        var kernel = Fixtures.kernel()
+        kernel.hostUnavailable()
+
+        let effects = kernel.register(try Fixtures.music(), grants: ["automation.music"], at: start)
+
+        #expect(effects == [.start(music, entryPoint: "MusicPlugin"), .startSource("media.nowPlaying")])
+        #expect(kernel.nextDelay(at: start) == nil)
+    }
+
+    @Test
+    func aHostThatComesBackPrimesEveryPlugin() throws {
+        let song   = try Fixtures.nowPlaying("Song")
+        var kernel = Fixtures.kernel()
+        try playing(Fixtures.text("Song"), in: &kernel)
+        _ = kernel.receive(song, at: start)
+        _ = kernel.complete(music, token: 2, result: Fixtures.result(try PluginOutput()), at: start)
+        kernel.hostUnavailable()
+
+        #expect(kernel.hostAvailable(at: start) == [.dispatch(music, .source(song), token: 3)])
+        #expect(kernel.complete(music, token: 3, result: Fixtures.result(try PluginOutput()), at: start) == [.dispatch(music, .refresh, token: 4)])
+    }
+
+    @Test
+    func aLostDispatchPrimesThePluginWithoutBlame() throws {
+        var kernel = Fixtures.kernel(policy: FixedHealthPolicy(answer: .quarantine))
+        _ = kernel.register(try Fixtures.clock(), grants: [], at: start)
+
+        #expect(kernel.complete(clock, token: 1, result: .lost, at: start) == [.dispatch(clock, .refresh, token: 2)])
+        #expect(kernel.state(of: clock) == .active)
+    }
 }

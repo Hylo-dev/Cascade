@@ -30,6 +30,11 @@ public final class InProcessExecutor: PluginExecutor {
         self.providers = providers
     }
 
+    /// observe reports the double as always available: its host is Cascade itself.
+    public func observe(_ handler: @escaping @Sendable (PluginExecutorEvent) -> Void) {
+        handler(.available)
+    }
+
     public func start(
         _ plugin  : PluginID,
         entryPoint: String
