@@ -89,7 +89,7 @@ final class CascadeServices {
     var volumeEnabled: Bool {
         didSet {
             preferences.set(volumeEnabled, forKey: "volumeEnabled")
-            if isRunning { updateVolumeMonitoring() }
+            plugins.setEnabled(volumeEnabled, for: VolumePlugin.id)
         }
     }
 
@@ -160,7 +160,7 @@ final class CascadeServices {
     @ObservationIgnored
     private let suppressor    = AccessibilityBluetoothNoticeSuppressor()
     @ObservationIgnored
-    private let volume       : any VolumeMonitoring = CoreAudioVolumeMonitor()
+    private let volumeSource = VolumePluginSource(monitor: CoreAudioVolumeMonitor())
     @ObservationIgnored
     private let network      : any NetworkMonitoring = NetworkConnectionMonitor()
     @ObservationIgnored
@@ -184,15 +184,9 @@ final class CascadeServices {
     @ObservationIgnored
     private var mediaTask              : Task<Void, Never>?
     @ObservationIgnored
-    private var volumeTask             : Task<Void, Never>?
-    @ObservationIgnored
     private var networkTask            : Task<Void, Never>?
     @ObservationIgnored
     private var networkBorderResetTask : Task<Void, Never>?
-    @ObservationIgnored
-    private var volumeNotice           : VolumeChangeNotice?
-    @ObservationIgnored
-    private var volumePreviewRevision  : UInt64 = 0
     @ObservationIgnored
     private var mediaActivity          : MediaLiveActivity?
     @ObservationIgnored
@@ -217,7 +211,7 @@ final class CascadeServices {
             displayPreferences: displayPreferencesStore.preferences
         )
         self.notch                   = notch
-        plugins                      = PluginSystem(host: notch)
+        plugins                      = PluginSystem(host: notch, sources: [PluginVolumeState.source: volumeSource])
         self.displayPreferencesStore = displayPreferencesStore
 
         let fileShelfGovernor = ResourceGovernor()
@@ -280,6 +274,10 @@ final class CascadeServices {
                 if !isPresented { self?.settingsAnchorDisplayID = nil }
             }
         )
+
+        volumeSource.statusHandler = { [weak self] status in
+            self?.volumeStatus = status
+        }
 
         notch.onSettingsRequested = { [weak self] in
             self?.showSettings(reanchorToCurrentOwner: false)
@@ -365,6 +363,7 @@ final class CascadeServices {
 
         isRunning = true
         plugins.setEnabled(chargingEnabled, for: ChargingPlugin.id)
+        plugins.setEnabled(volumeEnabled, for: VolumePlugin.id)
         plugins.start()
         notch.setHapticsEnabled(hapticsEnabled)
         notch.setSensitiveContentVisible(sensitiveContentVisible)
@@ -376,7 +375,6 @@ final class CascadeServices {
         updateSpotlight()
         startNetworkMonitoring()
         updateBluetoothMonitoring()
-        updateVolumeMonitoring()
         updateMusicMonitoring()
         requestStartupPermissions()
 
@@ -418,7 +416,7 @@ final class CascadeServices {
 
             // Volume and native Bluetooth replacement use the same AX grant.
             if self.volumeEnabled {
-                self.volume.requestAccess()
+                self.volumeSource.monitor.requestAccess()
             } else if self.bluetoothEnabled && self.nativeReplacementEnabled {
                 self.suppressor.requestAccess()
             }
@@ -456,12 +454,6 @@ final class CascadeServices {
         bluetoothEventIDs.removeAll()
         bluetooth.stop()
         suppressor.stop()
-
-        volumeTask?.cancel()
-        volumeTask = nil
-        volume.stop()
-        volumeNotice = nil
-        volumeStatus = .stopped
 
         mediaTask?.cancel()
         mediaTask = nil
@@ -583,23 +575,17 @@ final class CascadeServices {
     func refreshVolumePermissions() {
         guard isRunning, volumeEnabled else { return }
 
-        volume.refreshPermissions()
+        volumeSource.monitor.refreshPermissions()
     }
 
     func requestVolumeAccessibility() {
-        volume.requestAccess()
+        volumeSource.monitor.requestAccess()
     }
 
-    /// previewVolume never adjusts hardware or installs an input tap.
+    /// previewVolume never adjusts hardware or installs an input tap. The volume plugin draws the
+    /// preview through its own preview action.
     func previewVolume() {
-        volumePreviewRevision &+= 1
-
-        let event = VolumeChangeEvent(
-            percentage: 65,
-            isMuted   : false,
-            revision  : volumePreviewRevision
-        )
-        notch.showNotice(VolumeChangeNotice(event: event))
+        plugins.invoke(VolumePlugin.preview, feature: VolumePlugin.feature, of: VolumePlugin.id)
     }
 
     /// previewBluetooth is explicitly synthetic and never arms the native
@@ -759,38 +745,5 @@ final class CascadeServices {
     private static func isRunning(_ bundleIdentifier: String) -> Bool {
         NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier)
             .contains { !$0.isTerminated }
-    }
-
-    private func updateVolumeMonitoring() {
-        volumeTask?.cancel()
-        volumeTask = nil
-        volume.stop()
-        volumeNotice = nil
-        volumeStatus = .stopped
-        notch.dismissActivities(from: "cascade.volume")
-        guard volumeEnabled else { return }
-
-        volumeStatus = .starting
-        let stream = volume.start()
-        volumeTask = Task { [weak self] in
-            for await update in stream {
-                guard !Task.isCancelled, let self, self.isRunning else { return }
-
-                switch update {
-                    case .status(let status):
-                        self.volumeStatus = status
-
-                    case .changed(let event):
-                        if let notice = self.volumeNotice {
-                            notice.update(event)
-                            self.notch.showNotice(notice)
-                        } else {
-                            let notice = VolumeChangeNotice(event: event)
-                            self.volumeNotice = notice
-                            self.notch.showNotice(notice)
-                        }
-                }
-            }
-        }
     }
 }

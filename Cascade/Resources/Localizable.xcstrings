@@ -478,17 +478,6 @@
         }
       }
     },
-    "Audio muted": {
-      "comment": "Accessibility label of the volume notice when the output is muted.",
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Audio disattivato"
-          }
-        }
-      }
-    },
     "Audio visualizer": {
       "comment": "Settings row title",
       "localizations": {
@@ -1143,17 +1132,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Anteprima musicale · Cascade"
-          }
-        }
-      }
-    },
-    "Muted": {
-      "comment": "Volume notice title when the output is muted.",
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Silenzioso"
           }
         }
       }
@@ -2263,17 +2241,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tasti volume reindirizzati al notch"
-          }
-        }
-      }
-    },
-    "Volume, %lld percent": {
-      "comment": "Accessibility label of the volume notice. %lld is the volume level from 0 to 100.",
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Volume, %lld percento"
           }
         }
       }

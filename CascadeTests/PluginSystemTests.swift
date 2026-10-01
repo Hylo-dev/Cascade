@@ -10,83 +10,106 @@ import Foundation
 import Testing
 @testable import Cascade
 
-/// PluginSystemTests run Cascade's plugin composition against the PluginHost bundled in the
-/// test host, with a recording grid in place of the notch.
-@MainActor
-struct PluginSystemTests {
+extension PluginHostTests {
 
+    /// PluginSystemTests run Cascade's plugin composition against the PluginHost bundled in the
+    /// test host, with a recording grid in place of the notch.
     @MainActor
-    final class Grid: PluginSurfaceHosting {
+    struct PluginSystemTests {
 
-        var widgets: [WidgetIdentifier: NotchWidget] = [:]
-        var notices: [any NotchTransientNotice] = []
+        @MainActor
+        final class Grid: PluginSurfaceHosting {
 
-        func register(_ widget: NotchWidget) {
-            widgets[widget.id] = widget
+            var widgets: [WidgetIdentifier: NotchWidget] = [:]
+            var notices: [any NotchTransientNotice] = []
+
+            func register(_ widget: NotchWidget) {
+                widgets[widget.id] = widget
+            }
+
+            func unregisterWidget(id: WidgetIdentifier) {
+                widgets[id] = nil
+            }
+
+            func showNotice(_ notice: any NotchTransientNotice) {
+                notices.append(notice)
+            }
+
+            func updateNotice(_ notice: any NotchTransientNotice) {}
+
+            func dismissActivity(id: String) {}
         }
 
-        func unregisterWidget(id: WidgetIdentifier) {
-            widgets[id] = nil
+        @Test
+        func theBundledClockReachesTheNotchThroughPluginHost() async throws {
+            let grid    = Grid()
+            let plugins = PluginSystem(host: grid)
+            plugins.start()
+
+            let deadline = ContinuousClock.now.advanced(by: .seconds(30))
+            while grid.widgets.isEmpty, ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+
+            let widget = try #require(grid.widgets[WidgetIdentifier("plugin:com.cascade.clock/time")])
+            #expect(widget.size == GridSpan(columns: 4, rows: 2))
         }
 
-        func showNotice(_ notice: any NotchTransientNotice) {
-            notices.append(notice)
+        @Test
+        func aChargingPreviewReachesTheNoticeHostThroughPluginHost() async throws {
+            let grid    = Grid()
+            let plugins = PluginSystem(host: grid)
+            plugins.start()
+            let deadline = ContinuousClock.now.advanced(by: .seconds(30))
+            while grid.widgets.isEmpty, ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+
+            plugins.invoke(ChargingPlugin.preview, value: .bool(true), feature: ChargingPlugin.feature, of: ChargingPlugin.id)
+            while grid.notices.isEmpty, ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+
+            let notice = try #require(grid.notices.first)
+            #expect(notice.borderAppearance == .chargingLowPower)
+            #expect(notice.compactPreferredSideWidth == 116)
         }
 
-        func updateNotice(_ notice: any NotchTransientNotice) {}
+        @Test
+        func aSwitchedOffPluginIsNotInvoked() async throws {
+            let grid    = Grid()
+            let plugins = PluginSystem(host: grid)
+            plugins.setEnabled(false, for: ChargingPlugin.id)
+            plugins.start()
+            let deadline = ContinuousClock.now.advanced(by: .seconds(30))
+            while grid.widgets.isEmpty, ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(20))
+            }
 
-        func dismissActivity(id: String) {}
-    }
+            plugins.invoke(ChargingPlugin.preview, value: .bool(false), feature: ChargingPlugin.feature, of: ChargingPlugin.id)
+            try await Task.sleep(for: .seconds(1))
 
-    @Test
-    func theBundledClockReachesTheNotchThroughPluginHost() async throws {
-        let grid    = Grid()
-        let plugins = PluginSystem(host: grid)
-        plugins.start()
-
-        let deadline = ContinuousClock.now.advanced(by: .seconds(30))
-        while grid.widgets.isEmpty, ContinuousClock.now < deadline {
-            try await Task.sleep(for: .milliseconds(20))
+            #expect(grid.notices.isEmpty)
         }
 
-        let widget = try #require(grid.widgets[WidgetIdentifier("plugin:com.cascade.clock/time")])
-        #expect(widget.size == GridSpan(columns: 4, rows: 2))
-    }
+        @Test
+        func aVolumePreviewReachesTheNoticeHostThroughPluginHost() async throws {
+            let grid    = Grid()
+            let plugins = PluginSystem(host: grid, sources: [PluginVolumeState.source: VolumePluginSource(monitor: FakeVolumeMonitor())])
+            plugins.start()
+            let deadline = ContinuousClock.now.advanced(by: .seconds(30))
+            while grid.widgets.isEmpty, ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(20))
+            }
 
-    @Test
-    func aChargingPreviewReachesTheNoticeHostThroughPluginHost() async throws {
-        let grid    = Grid()
-        let plugins = PluginSystem(host: grid)
-        plugins.start()
-        let deadline = ContinuousClock.now.advanced(by: .seconds(30))
-        while grid.widgets.isEmpty, ContinuousClock.now < deadline {
-            try await Task.sleep(for: .milliseconds(20))
+            plugins.invoke(VolumePlugin.preview, feature: VolumePlugin.feature, of: VolumePlugin.id)
+            while grid.notices.isEmpty, ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+
+            let notice = try #require(grid.notices.first)
+            #expect(notice.displayDuration == 1.8)
+            #expect(notice.borderAppearance == nil)
         }
-
-        plugins.invoke(ChargingPlugin.preview, value: .bool(true), feature: ChargingPlugin.feature, of: ChargingPlugin.id)
-        while grid.notices.isEmpty, ContinuousClock.now < deadline {
-            try await Task.sleep(for: .milliseconds(20))
-        }
-
-        let notice = try #require(grid.notices.first)
-        #expect(notice.borderAppearance == .chargingLowPower)
-        #expect(notice.compactPreferredSideWidth == 116)
-    }
-
-    @Test
-    func aSwitchedOffPluginIsNotInvoked() async throws {
-        let grid    = Grid()
-        let plugins = PluginSystem(host: grid)
-        plugins.setEnabled(false, for: ChargingPlugin.id)
-        plugins.start()
-        let deadline = ContinuousClock.now.advanced(by: .seconds(30))
-        while grid.widgets.isEmpty, ContinuousClock.now < deadline {
-            try await Task.sleep(for: .milliseconds(20))
-        }
-
-        plugins.invoke(ChargingPlugin.preview, value: .bool(false), feature: ChargingPlugin.feature, of: ChargingPlugin.id)
-        try await Task.sleep(for: .seconds(1))
-
-        #expect(grid.notices.isEmpty)
     }
 }

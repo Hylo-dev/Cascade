@@ -15,17 +15,23 @@ import Foundation
 /// notch through the surfaces' single hop to main. Bundled plugins signed by us get every
 /// permission their manifests declare; the approver is the only thing that will differ for an
 /// external plugin. Cascade's own settings reach plugins through it: a switch per plugin and the
-/// actions the menu invokes, such as previews.
+/// actions the menu invokes, such as previews. Cascade's own sources, such as volume beside its
+/// key tap, are offered next to PluginHost's.
 final class PluginSystem {
 
-    private let host      : any PluginSurfaceHosting
-    private var engine    : PluginEngine?
-    private var surfaces  : PluginSurfaceRouter?
-    private var isStarting = false
-    private var disabled   = Set<PluginID>()
+    private let host         : any PluginSurfaceHosting
+    private let kernelSources: [String: any PluginEventSource]
+    private var engine       : PluginEngine?
+    private var surfaces     : PluginSurfaceRouter?
+    private var isStarting   = false
+    private var disabled     = Set<PluginID>()
 
-    init(host: any PluginSurfaceHosting) {
-        self.host = host
+    init(
+        host   : any PluginSurfaceHosting,
+        sources: [String: any PluginEventSource] = [:]
+    ) {
+        self.host          = host
+        self.kernelSources = sources
     }
 
     /// start reads the bundled manifests and the app's signing team off the main thread, since
@@ -86,11 +92,12 @@ final class PluginSystem {
             visibility: { [weak self] isVisible, key in self?.engine?.setVisible(isVisible, for: key) }
         )
         let executor = SharedHostExecutor(transport: XPCPluginTransport(serviceName: serviceName, requirement: requirement))
-        let sources  = Dictionary(
+        let hosted   = Dictionary(
             uniqueKeysWithValues: PluginHostCatalog.names.map { name in
                 (name, HostedPluginSource(name: name, host: executor) as any PluginEventSource)
             }
         )
+        let sources  = kernelSources.merging(hosted) { kernel, _ in kernel }
         let engine = PluginEngine(
             executor  : executor,
             sources   : sources,
