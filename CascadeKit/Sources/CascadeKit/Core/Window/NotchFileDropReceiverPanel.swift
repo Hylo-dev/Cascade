@@ -46,6 +46,7 @@ final class NotchFileDropReceiverPanel: NSPanel, NSDraggingDestination {
         isOpaque                    = false
         backgroundColor             = .clear
         hasShadow                   = false
+        animationBehavior           = .none
         level                       = .statusBar
         ignoresMouseEvents          = true
         hidesOnDeactivate           = false

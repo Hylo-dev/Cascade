@@ -12,6 +12,8 @@ import AppKit
 /// makes it persist across every Space and survive full-screen transitions, and
 /// its window level sits above the menu bar so the chrome can sit flush in the
 /// notch region. Only an explicitly focused keyboard target can make it key.
+/// It orders in and out at once: the notch morphs itself, so AppKit's window
+/// transform animation would only cost a dispatch thread per order.
 ///
 /// The controller toggles `ignoresMouseEvents` from the exact animated path
 /// under the cursor. This matters because the panel's frame spans the whole menu
@@ -53,6 +55,7 @@ final class NotchPanel: NSPanel {
         isOpaque                    = false
         backgroundColor             = .clear
         hasShadow                   = false
+        animationBehavior           = .none
         level                       = .statusBar
         ignoresMouseEvents          = true
         hidesOnDeactivate           = false
