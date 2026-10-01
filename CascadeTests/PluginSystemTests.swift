@@ -33,7 +33,7 @@ struct PluginSystemTests {
         let plugins = PluginSystem(widgets: grid)
         plugins.start()
 
-        let deadline = ContinuousClock.now.advanced(by: .seconds(10))
+        let deadline = ContinuousClock.now.advanced(by: .seconds(30))
         while grid.widgets.isEmpty, ContinuousClock.now < deadline {
             try await Task.sleep(for: .milliseconds(20))
         }

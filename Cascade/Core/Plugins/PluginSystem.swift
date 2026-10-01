@@ -17,32 +17,49 @@ import Foundation
 /// external plugin.
 final class PluginSystem {
 
-    private let widgets : any PluginWidgetHosting
-    private var engine  : PluginEngine?
-    private var surfaces: PluginSurfaceRouter?
+    private let widgets   : any PluginWidgetHosting
+    private var engine    : PluginEngine?
+    private var surfaces  : PluginSurfaceRouter?
+    private var isStarting = false
 
     init(widgets: any PluginWidgetHosting) {
         self.widgets = widgets
     }
 
+    /// start reads the bundled manifests and the app's signing team off the main thread, since
+    /// both touch the disk, and composes the engine back on it. A second call while starting or
+    /// started does nothing.
     func start() {
-        guard engine == nil else { return }
+        guard engine == nil, !isStarting else { return }
 
-        let manifests   = FirstPartyPlugins.manifests()
+        isStarting = true
+
         let serviceName = (Bundle.main.bundleIdentifier ?? "hylo.Cascade") + ".PluginHost"
-        let surfaces    = PluginSurfaceRouter(
+        Task.detached(priority: .utility) { [weak self] in
+            let manifests   = FirstPartyPlugins.manifests()
+            let requirement = PluginHostSigning.requirement(identifier: serviceName, team: PluginHostSigning.currentTeam)
+
+            await self?.compose(
+                manifests  : manifests,
+                serviceName: serviceName,
+                requirement: requirement
+            )
+        }
+    }
+
+    private func compose(
+        manifests  : [PluginManifest],
+        serviceName: String,
+        requirement: String?
+    ) {
+        let surfaces = PluginSurfaceRouter(
             widgets   : widgets,
             manifests : manifests,
             submit    : { [weak self] request in self?.engine?.submit(request) },
             visibility: { [weak self] isVisible, key in self?.engine?.setVisible(isVisible, for: key) }
         )
         let engine = PluginEngine(
-            executor: SharedHostExecutor(
-                transport: XPCPluginTransport(
-                    serviceName: serviceName,
-                    requirement: PluginHostSigning.requirement(identifier: serviceName, team: PluginHostSigning.currentTeam)
-                )
-            ),
+            executor: SharedHostExecutor(transport: XPCPluginTransport(serviceName: serviceName, requirement: requirement)),
             sources : [:],
             sink    : surfaces.makeSink()
         )

@@ -16,7 +16,7 @@ import Testing
 /// an anonymous listener. The handshake then names this process, which the incarnation refuses
 /// to signal, so a slow dispatch that trips the watchdog cannot kill the test runner; killing a
 /// real PluginHost belongs to the integration check of the next plan.
-@Suite
+@Suite(.timeLimit(.minutes(1)))
 struct XPCPluginTransportTests {
 
     /// Host is an anonymous listener serving the given plugins, kept alive by the test.
