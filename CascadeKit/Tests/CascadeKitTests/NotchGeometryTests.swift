@@ -17,6 +17,7 @@ struct NotchGeometryTests {
     @Test
     func cornersRoundAheadOfExpansionAndStaySoftDuringClosure() {
         var previousRadius = configuration.restingBottomCornerRadius
+
         for progress in [CGFloat(0.1), 0.25, 0.5, 0.75, 0.9] {
             let geometry = NotchGeometry.resolve(
                 configuration   : configuration,
@@ -27,9 +28,11 @@ struct NotchGeometryTests {
             )
             let linearRadius = configuration.restingBottomCornerRadius
                 + (configuration.expandedBottomCornerRadius - configuration.restingBottomCornerRadius) * progress
+
             #expect(geometry.bottomCornerRadius > linearRadius)
             #expect(geometry.bottomCornerRadius > previousRadius)
             #expect(geometry.bottomCornerRadius <= configuration.expandedBottomCornerRadius)
+
             previousRadius = geometry.bottomCornerRadius
         }
     }
@@ -45,6 +48,7 @@ struct NotchGeometryTests {
             leadingProgress         : 0,
             trailingProgress        : 0
         )
+
         #expect(geometry.leftExtent == 160)
         #expect(geometry.rightExtent == 140)
         #expect(geometry.height == 30)
@@ -52,7 +56,6 @@ struct NotchGeometryTests {
 
     @Test
     func restingProgressMatchesTheRestingNotch() {
-
         let geometry = NotchGeometry.resolve(
             configuration   : configuration,
             restingHalfWidth: 100,
@@ -68,7 +71,6 @@ struct NotchGeometryTests {
 
     @Test
     func fullProgressReachesTheConfiguredExpansion() {
-
         let geometry = NotchGeometry.resolve(
             configuration   : configuration,
             restingHalfWidth: 100,
@@ -84,7 +86,6 @@ struct NotchGeometryTests {
 
     @Test
     func oneSideCanExpandWhileTheOtherRests() {
-
         let geometry = NotchGeometry.resolve(
             configuration   : configuration,
             restingHalfWidth: 100,

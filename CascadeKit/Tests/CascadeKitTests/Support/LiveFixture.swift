@@ -10,9 +10,15 @@ import Testing
 
 @MainActor
 final class LiveFixture: ContentFixture, NotchLiveActivity {
-    var lifetime = NotchActivityLifetime()
+
+    var lifetime       = NotchActivityLifetime()
     let relevanceScore: Double
-    init(_ id: String, sourceID: String = "media", relevance: Double = 0.5) {
+
+    init(
+        _ id     : String,
+        sourceID : String = "media",
+        relevance: Double = 0.5
+    ) {
         relevanceScore = relevance
         super.init(id, sourceID: sourceID)
     }

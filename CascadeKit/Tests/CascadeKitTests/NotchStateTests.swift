@@ -26,7 +26,6 @@ struct NotchStateTests {
 
     @Test
     func sidesMoveIndependently() {
-
         var state: NotchState = .leading
         #expect(state.contains(.leading))
         #expect(!state.contains(.trailing))

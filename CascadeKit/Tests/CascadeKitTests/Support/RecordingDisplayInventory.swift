@@ -10,9 +10,11 @@ import Testing
 
 @MainActor
 final class RecordingDisplayInventory: DisplayInventoryProviding {
+
     var displays: [DisplayInventoryEntry] { entries }
     var onChange: (() -> Void)?
     var entries : [DisplayInventoryEntry]
+
     private(set) var startCount = 0
     private(set) var stopCount  = 0
 
@@ -21,6 +23,8 @@ final class RecordingDisplayInventory: DisplayInventoryProviding {
     }
 
     func start() { startCount += 1 }
+
     func stop() { stopCount += 1 }
+
     func sendChange() { onChange?() }
 }

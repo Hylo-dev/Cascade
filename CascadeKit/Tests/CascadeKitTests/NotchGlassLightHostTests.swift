@@ -12,17 +12,23 @@ import Testing
 
 @MainActor
 struct NotchGlassLightHostTests {
+
     @Test
     func privacyPlaceholderClearsPreviousLightBeforePreferenceDelivery() async throws {
         let renderer = RecordingGlassRenderer()
-        let frame = CGRect(x: 0, y: 0, width: 320, height: 160)
-        let host = NotchHostView(frame: frame, glassRenderer: renderer)
-        let light = try makeLight()
+        let frame    = CGRect(x: 0, y: 0, width: 320, height: 160)
+        let host     = NotchHostView(frame: frame, glassRenderer: renderer)
+        let light    = try makeLight()
+
         host.setExpandedActivityContent(
             AnyView(Text("Private album").notchGlassLights([light])),
             frame: frame
         )
-        try await expectLights([light], from: host, renderer: renderer)
+        try await expectLights(
+            [light],
+            from    : host,
+            renderer: renderer
+        )
 
         host.setExpandedActivityContent(
             AnyView(Text("Hidden content").privacySensitive()),
@@ -32,40 +38,72 @@ struct NotchGlassLightHostTests {
         // Do not yield or lay out the replacement first: no private color may
         // survive while the no-light placeholder's preference is still queued.
         #expect(renderer.lights.isEmpty)
-        try await expectLights([], from: host, renderer: renderer)
+
+        try await expectLights(
+            [],
+            from    : host,
+            renderer: renderer
+        )
     }
 
     @Test
     func identicalReplacementReacquiresLightsWithItsNewGeneration() async throws {
         let renderer = RecordingGlassRenderer()
-        let frame = CGRect(x: 0, y: 0, width: 320, height: 160)
-        let host = NotchHostView(frame: frame, glassRenderer: renderer)
-        let light = try makeLight()
-        let content = AnyView(Text("Album").notchGlassLights([light]))
+        let frame    = CGRect(x: 0, y: 0, width: 320, height: 160)
+        let host     = NotchHostView(frame: frame, glassRenderer: renderer)
+        let light    = try makeLight()
+        let content  = AnyView(Text("Album").notchGlassLights([light]))
+
         host.setExpandedActivityContent(content, frame: frame)
-        try await expectLights([light], from: host, renderer: renderer)
+        try await expectLights(
+            [light],
+            from    : host,
+            renderer: renderer
+        )
 
         host.setExpandedActivityContent(content, frame: frame)
 
         #expect(renderer.lights.isEmpty)
-        try await expectLights([light], from: host, renderer: renderer)
+
+        try await expectLights(
+            [light],
+            from    : host,
+            renderer: renderer
+        )
     }
 
     @Test
     func anAppKitEmitterReachesTheGlassDirectlyAndWithdrawsWithAnEmptyArray() throws {
         let renderer = RecordingGlassRenderer()
-        let host = NotchHostView(frame: CGRect(x: 0, y: 0, width: 600, height: 260), glassRenderer: renderer)
-        let geometry = NotchGeometry(leftExtent: 200, rightExtent: 200, height: 150, bottomCornerRadius: 40, topCornerRadius: 16)
-        host.apply(geometry: geometry, centerX: 300, topY: 260, isChromeVisible: true)
+        let host     = NotchHostView(
+            frame        : CGRect(x: 0, y: 0, width: 600, height: 260),
+            glassRenderer: renderer
+        )
+        let geometry = NotchGeometry(
+            leftExtent        : 200,
+            rightExtent       : 200,
+            height            : 150,
+            bottomCornerRadius: 40,
+            topCornerRadius   : 16
+        )
+        host.apply(
+            geometry       : geometry,
+            centerX        : 300,
+            topY           : 260,
+            isChromeVisible: true
+        )
+
         let receiver: any NotchGlassLightReceiving = host
-        let light = try makeLight()
-        let emitter = NSView()
+        let light    = try makeLight()
+        let emitter  = NSView()
         host.addSubview(emitter)
 
         receiver.setGlassLights([light], from: emitter)
         #expect(renderer.lights == [light])
         // Normalized to the same outline the renderer lays lights out in.
-        #expect(receiver.glassLightBounds == CGPath.notch(geometry: geometry, centerX: 300, topY: 260).boundingBoxOfPath)
+        #expect(
+            receiver.glassLightBounds == CGPath.notch(geometry: geometry, centerX: 300, topY: 260).boundingBoxOfPath
+        )
 
         receiver.setGlassLights([], from: emitter)
         #expect(renderer.lights.isEmpty)
@@ -78,9 +116,10 @@ struct NotchGlassLightHostTests {
     @Test
     func replacingTheContentWithdrawsItsEmitterAtOnce() throws {
         let renderer = RecordingGlassRenderer()
-        let frame = CGRect(x: 0, y: 0, width: 320, height: 160)
-        let host = NotchHostView(frame: frame, glassRenderer: renderer)
+        let frame    = CGRect(x: 0, y: 0, width: 320, height: 160)
+        let host     = NotchHostView(frame: frame, glassRenderer: renderer)
         host.setExpandedActivityContent(AnyView(Text("Album")), frame: frame)
+
         func descendants(_ view: NSView) -> [NSView] { view.subviews + view.subviews.flatMap(descendants) }
         let hosting = try #require(descendants(host).first { $0 is NSHostingView<AnyView> && !$0.isHidden })
         let emitter = NSView()
@@ -94,9 +133,9 @@ struct NotchGlassLightHostTests {
     }
 
     private func expectLights(
-        _ lights: [GlassLight],
+        _ lights : [GlassLight],
         from host: NotchHostView,
-        renderer: RecordingGlassRenderer
+        renderer : RecordingGlassRenderer
     ) async throws {
         for _ in 0..<50 {
             host.layoutSubtreeIfNeeded()
@@ -108,23 +147,27 @@ struct NotchGlassLightHostTests {
 
     private func makeLight() throws -> GlassLight {
         try GlassLight(
-            x: 0.25,
-            y: 0.6,
-            radius: 0.4,
-            red: 1,
-            green: 0.2,
-            blue: 0.1,
+            x        : 0.25,
+            y        : 0.6,
+            radius   : 0.4,
+            red      : 1,
+            green    : 0.2,
+            blue     : 0.1,
             intensity: 0.7
         )
     }
 
     private final class RecordingGlassRenderer: NotchGlassRendering {
-        let view = NSView(frame: .zero)
+
+        let view        = NSView(frame: .zero)
         let isSupported = true
+
         private(set) var lights: [GlassLight] = []
 
         func setColor(_ color: Color) {}
+
         func setLights(_ lights: [GlassLight]) { self.lights = lights }
+
         func apply(
             path        : CGPath,
             body        : NotchGlassBody,

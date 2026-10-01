@@ -10,7 +10,8 @@ import Testing
 
 @MainActor
 final class FakeFocusedApplicationMonitor: FocusedApplicationMonitoring {
-    var onChange: (() -> Void)?
+
+    var onChange   : (() -> Void)?
     var application: FocusedApplication?
 
     init(application: FocusedApplication?) {
@@ -22,5 +23,6 @@ final class FakeFocusedApplicationMonitor: FocusedApplicationMonitoring {
     }
 
     func start() {}
+
     func stop() {}
 }

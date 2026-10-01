@@ -11,12 +11,13 @@ import Testing
 /// system query, to prove session identity protects against late completions.
 @MainActor
 final class AuxiliaryContentGate {
+
     private var continuation: CheckedContinuation<NSViewController?, Never>?
-    private var didReturn = false
+    private var didReturn    = false
 
     func wait() async -> NSViewController? {
         let content = await withCheckedContinuation { continuation = $0 }
-        didReturn = true
+        didReturn   = true
         return content
     }
 

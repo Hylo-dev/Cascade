@@ -8,6 +8,8 @@ import Testing
 
 @MainActor
 final class HapticFixture: HapticFeedbackPerforming {
+
     var impulses = 0
+
     func performHoverFeedback() { impulses += 1 }
 }

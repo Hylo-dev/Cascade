@@ -10,14 +10,18 @@ import Testing
 
 @MainActor
 final class DisplayCoordinatorFixture {
+
     let inventory   : RecordingDisplayInventory
-    let focus       = RecordingFocusedWindowMonitor()
-    let monitor     = RecordingCoordinatorEventMonitor()
+    let focus        = RecordingFocusedWindowMonitor()
+    let monitor      = RecordingCoordinatorEventMonitor()
     let activityHost: LiveActivityHost
     let widgetHost   = WidgetHost()
-    private(set) var surfaces: [CGDirectDisplayID: RecordingDisplaySurface] = [:]
+
+    private(set) var surfaces            : [CGDirectDisplayID: RecordingDisplaySurface] = [:]
     private(set) var surfaceCreationCount = 0
+
     let missingIdentity: CGDirectDisplayID?
+
     lazy var coordinator = NotchDisplayCoordinator(
         inventory   : inventory,
         focusMonitor: focus,
@@ -29,9 +33,11 @@ final class DisplayCoordinatorFixture {
         pointer     : { CGPoint(x: 50, y: 50) },
         makeSurface : { [unowned self] display in
             self.surfaceCreationCount += 1
-            let surface = RecordingDisplaySurface(display: display)
+
+            let surface                = RecordingDisplaySurface(display: display)
             surface.acceptsCalibration = display.hasHardwareNotch
             self.surfaces[display.displayID] = surface
+
             return surface
         }
     )
@@ -41,15 +47,18 @@ final class DisplayCoordinatorFixture {
         missingIdentity: CGDirectDisplayID? = nil,
         now            : @escaping () -> Date = Date.init
     ) {
-        self.activityHost = LiveActivityHost(now: now)
+        self.activityHost    = LiveActivityHost(now: now)
         self.missingIdentity = missingIdentity
-        self.inventory = RecordingDisplayInventory(entries: displayIDs.map { displayID in
+        self.inventory       = RecordingDisplayInventory(entries: displayIDs.map { displayID in
             DisplayInventoryEntry(
                 snapshot: ActiveDisplay(
                     displayID   : displayID,
                     frame       : CGRect(x: CGFloat(displayID - 10) * 100, y: 0, width: 100, height: 100),
                     backingScale: 2,
-                    notch       : HardwareNotch(isPresent: displayID == 10, size: CGSize(width: 40, height: 12))
+                    notch       : HardwareNotch(
+                        isPresent: displayID == 10,
+                        size     : CGSize(width: 40, height: 12)
+                    )
                 ),
                 identity: displayID == missingIdentity ? nil : DisplayIdentity(rawValue: "display-\(displayID)"),
                 name    : "Display \(displayID)"
@@ -63,7 +72,10 @@ final class DisplayCoordinatorFixture {
                 displayID   : displayID,
                 frame       : CGRect(x: CGFloat(displayID - 10) * 100, y: 0, width: 100, height: 100),
                 backingScale: 2,
-                notch       : HardwareNotch(isPresent: displayID == 10, size: CGSize(width: 40, height: 12))
+                notch       : HardwareNotch(
+                    isPresent: displayID == 10,
+                    size     : CGSize(width: 40, height: 12)
+                )
             ),
             identity: displayID == missingIdentity ? nil : DisplayIdentity(rawValue: "display-\(displayID)"),
             name    : "Display \(displayID)"

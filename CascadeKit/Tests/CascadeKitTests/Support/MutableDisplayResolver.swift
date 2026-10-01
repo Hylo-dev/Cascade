@@ -11,6 +11,7 @@ import Testing
 
 @MainActor
 final class MutableDisplayResolver: ActiveDisplayResolving {
+
     var display: ActiveDisplay
 
     init(display: ActiveDisplay) {

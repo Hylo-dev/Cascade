@@ -15,12 +15,12 @@ struct SoftwareNotchGeometryTests {
     @Test
     func activityContextKeepsOptionalHardwareWidthSourceCompatibility() {
         let implicit = NotchActivityViewContext(
-            presentation: .expanded,
+            presentation : .expanded,
             availableSize: CGSize(width: 100, height: 40)
         )
         let explicit = NotchActivityViewContext(
-            presentation: .expanded,
-            availableSize: CGSize(width: 100, height: 40),
+            presentation      : .expanded,
+            availableSize     : CGSize(width: 100, height: 40),
             hardwareNotchWidth: nil
         )
 
@@ -76,10 +76,8 @@ struct SoftwareNotchGeometryTests {
     }
 
     @Test(arguments: [ExternalNotchStyle.notch, .dynamicIsland])
-    func bothSoftwareStylesRestInsideTheExactNinetySixByEightBounds(
-        style: ExternalNotchStyle
-    ) {
-        let resting = softwareRestingGeometry
+    func bothSoftwareStylesRestInsideTheExactNinetySixByEightBounds(style: ExternalNotchStyle) {
+        let resting  = softwareRestingGeometry
         let ordinary = CGPath.notch(
             geometry: resting,
             centerX : 100,
@@ -133,9 +131,11 @@ struct SoftwareNotchGeometryTests {
         #expect(bounds.maxY.isFinite)
         #expect(CGRect(x: 0, y: 0, width: 600, height: 240).contains(bounds))
         #expect(path.contains(CGPoint(x: 300, y: 239)))
+
         if progress == 1 {
             #expect(path.contains(CGPoint(x: 300, y: 228)))
         }
+
         let expectedHeight = progress == 0
             ? metrics.restingSize.height
             : height + (metrics.restingSize.height + metrics.bodyOffset) * progress
@@ -169,7 +169,7 @@ struct SoftwareNotchGeometryTests {
     @Test
     @MainActor
     func productionHostSharesTheDropletPathWithMaskAndHitTesting() throws {
-        let host = NotchHostView(frame: CGRect(x: 0, y: 0, width: 600, height: 180))
+        let host     = NotchHostView(frame: CGRect(x: 0, y: 0, width: 600, height: 180))
         let geometry = NotchGeometry(
             leftExtent        : 180,
             rightExtent       : 180,
@@ -178,21 +178,22 @@ struct SoftwareNotchGeometryTests {
             topCornerRadius   : 16
         )
         host.apply(
-            geometry        : geometry,
-            centerX         : 300,
-            topY            : 180,
-            isChromeVisible : true,
-            softwareDroplet : true,
-            dropletProgress : 1,
-            softwareMetrics : metrics
+            geometry       : geometry,
+            centerX        : 300,
+            topY           : 180,
+            isChromeVisible: true,
+            softwareDroplet: true,
+            dropletProgress: 1,
+            softwareMetrics: metrics
         )
         let shape = try #require(host.layer?.sublayers?.first as? CAShapeLayer)
-        let path = try #require(shape.path)
-        let mask = try #require(host.subviews.compactMap {
+        let path  = try #require(shape.path)
+        let mask  = try #require(host.subviews.compactMap {
             $0.layer?.mask as? CAShapeLayer
         }.first?.path)
 
         #expect(mask.boundingBoxOfPath == path.boundingBoxOfPath)
+
         for point in [
             CGPoint(x: 300, y: 179),
             CGPoint(x: 300, y: 165),
@@ -211,7 +212,7 @@ struct SoftwareNotchGeometryTests {
         }
 
         let cellSize = CGSize(width: 480, height: 220)
-        let rows: [(String, ExternalNotchStyle, Bool)] = [
+        let rows    : [(String, ExternalNotchStyle, Bool)] = [
             ("Notch · no live", .notch, false),
             ("Notch · live", .notch, true),
             ("Dynamic Island · no live", .dynamicIsland, false),
@@ -240,10 +241,10 @@ struct SoftwareNotchGeometryTests {
                     CGRect(origin: origin, size: cellSize).insetBy(dx: 6, dy: 6).fill()
 
                     let path = productionPath(
-                        style  : row.1,
-                        hasLive: row.2,
+                        style   : row.1,
+                        hasLive : row.2,
                         progress: column.1,
-                        canvas : cellSize
+                        canvas  : cellSize
                     )
                     var translation = CGAffineTransform(
                         translationX: origin.x,
@@ -256,7 +257,7 @@ struct SoftwareNotchGeometryTests {
 
                     let label = "\(row.0) · \(column.0)" as NSString
                     label.draw(
-                        at: CGPoint(x: origin.x + 14, y: origin.y + 12),
+                        at            : CGPoint(x: origin.x + 14, y: origin.y + 12),
                         withAttributes: [
                             .font           : NSFont.systemFont(ofSize: 13, weight: .medium),
                             .foregroundColor: NSColor(calibratedWhite: 0.28, alpha: 1)
@@ -266,8 +267,9 @@ struct SoftwareNotchGeometryTests {
             }
             return true
         }
+
         let representation = try #require(image.tiffRepresentation.flatMap(NSBitmapImageRep.init))
-        let png = try #require(representation.representation(using: .png, properties: [:]))
+        let png            = try #require(representation.representation(using: .png, properties: [:]))
         try png.write(to: URL(fileURLWithPath: "/private/tmp/cascade-software-notch-comparison.png"))
     }
 
@@ -295,8 +297,8 @@ struct SoftwareNotchGeometryTests {
         canvas  : CGSize
     ) -> CGPath {
         let compactProgress = hasLive ? 1 - progress : 0
-        let initialHeight = hasLive ? metrics.compactHeight : metrics.restingSize.height
-        let height = initialHeight
+        let initialHeight   = hasLive ? metrics.compactHeight : metrics.restingSize.height
+        let height          = initialHeight
             + (configuration.expandedHeight - initialHeight) * progress
         let geometry = NotchGeometry.resolve(
             configuration           : configuration,
@@ -312,15 +314,16 @@ struct SoftwareNotchGeometryTests {
             leadingProgress         : progress,
             trailingProgress        : progress
         )
+
         let host = NotchHostView(frame: CGRect(origin: .zero, size: canvas))
         host.apply(
-            geometry        : geometry,
-            centerX         : canvas.width / 2,
-            topY            : canvas.height - 4,
-            isChromeVisible : true,
-            softwareDroplet : style == .dynamicIsland && !hasLive,
-            dropletProgress : progress,
-            softwareMetrics : metrics
+            geometry       : geometry,
+            centerX        : canvas.width / 2,
+            topY           : canvas.height - 4,
+            isChromeVisible: true,
+            softwareDroplet: style == .dynamicIsland && !hasLive,
+            dropletProgress: progress,
+            softwareMetrics: metrics
         )
         return (host.layer?.sublayers?.first as? CAShapeLayer)?.path ?? CGMutablePath()
     }

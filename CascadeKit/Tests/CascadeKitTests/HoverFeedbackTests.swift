@@ -8,14 +8,18 @@ import Testing
 
 @MainActor
 struct HoverFeedbackTests {
+
     @Test
     func performsImmediatelyOncePerHoverEntry() {
         let performer = HapticFixture()
-        let feedback = HoverFeedback(performer: performer)
+        let feedback  = HoverFeedback(performer: performer)
+
         feedback.update(isHovering: true)
         #expect(performer.impulses == 1)
+
         feedback.update(isHovering: true)
         #expect(performer.impulses == 1)
+
         feedback.update(isHovering: false)
         feedback.update(isHovering: true)
         #expect(performer.impulses == 2)
@@ -24,7 +28,8 @@ struct HoverFeedbackTests {
     @Test
     func enablingDuringAnExistingHoverDoesNotEmitDelayedFeedback() {
         let performer = HapticFixture()
-        let feedback = HoverFeedback(performer: performer)
+        let feedback  = HoverFeedback(performer: performer)
+
         feedback.isEnabled = false
         feedback.update(isHovering: true)
         feedback.isEnabled = true

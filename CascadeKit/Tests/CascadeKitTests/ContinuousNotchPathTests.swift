@@ -43,7 +43,7 @@ struct ContinuousNotchPathTests {
             group.first?.start.x == 0 && group.last?.end.y == 0
         })
         let nativeSpan = try #require(nativeCorner.first?.start.y)
-        let path = makePath()
+        let path       = makePath()
 
         // Compare filled regions against the complete native shape, including
         // the complemented region that becomes each concave bezel attachment.
@@ -231,6 +231,7 @@ struct ContinuousNotchPathTests {
                 }
             }
         }
+
         if !currentGroup.isEmpty {
             groups.append(currentGroup)
         }
@@ -249,6 +250,7 @@ struct ContinuousNotchPathTests {
     }
 
     private struct CubicCurve {
+
         let start   : CGPoint
         let control1: CGPoint
         let control2: CGPoint

@@ -14,59 +14,67 @@ import Testing
 /// sites readable without restoring global service ownership to the controller.
 @MainActor
 final class ControllerTestDriver {
+
     let surface     : NotchController
     let activityHost: LiveActivityHost
     let widgetHost  : WidgetHost
     let resolver    : MutableDisplayResolver
     let monitor     : RecordingEventMonitor
-    private var isExpanded = false
-    private var expansionActivityID: String?
-    private var isVisible  = true
-    private var closeGeneration: UInt64 = 0
-    private var isReconciling = false
-    private var needsReconciliation = false
-    private var widgetContentRevision: UInt64 = 0
-    private let autoGrantExpansions: Bool
-    private var style: ExternalNotchStyle
-    private(set) var expansionRequests: [DisplayExpansionRequest] = []
-    private(set) var cancelledExpansionGenerations: [UInt64] = []
-    private(set) var collapseRequestCount = 0
 
-    var state: NotchState { surface.state }
+    private var isExpanded            = false
+    private var expansionActivityID  : String?
+    private var isVisible             = true
+    private var closeGeneration      : UInt64 = 0
+    private var isReconciling         = false
+    private var needsReconciliation   = false
+    private var widgetContentRevision: UInt64 = 0
+
+    private let autoGrantExpansions: Bool
+    private var style              : ExternalNotchStyle
+
+    private(set) var expansionRequests            : [DisplayExpansionRequest] = []
+    private(set) var cancelledExpansionGenerations: [UInt64] = []
+    private(set) var collapseRequestCount          = 0
+
+    var state        : NotchState { surface.state }
     var activeDisplay: ActiveDisplay? { surface.activeDisplay }
     var expandedFrame: CGRect? { surface.expandedFrame }
-    var restingFrame: CGRect? { surface.restingFrame }
+    var restingFrame : CGRect? { surface.restingFrame }
+
     var onExpandedFrameChanged: ((CGRect?) -> Void)? {
         get { surface.onExpandedFrameChanged }
         set { surface.onExpandedFrameChanged = newValue }
     }
 
     init(
-        surface     : NotchController,
-        activityHost: LiveActivityHost,
-        widgetHost  : WidgetHost,
-        resolver    : MutableDisplayResolver,
-        monitor     : RecordingEventMonitor,
-        style       : ExternalNotchStyle,
+        surface            : NotchController,
+        activityHost       : LiveActivityHost,
+        widgetHost         : WidgetHost,
+        resolver           : MutableDisplayResolver,
+        monitor            : RecordingEventMonitor,
+        style              : ExternalNotchStyle,
         autoGrantExpansions: Bool
     ) {
-        self.surface      = surface
-        self.activityHost = activityHost
-        self.widgetHost   = widgetHost
-        self.resolver     = resolver
-        self.monitor      = monitor
-        self.style        = style
+        self.surface             = surface
+        self.activityHost        = activityHost
+        self.widgetHost          = widgetHost
+        self.resolver            = resolver
+        self.monitor             = monitor
+        self.style               = style
         self.autoGrantExpansions = autoGrantExpansions
 
-        activityHost.onChange = { [weak self] in self?.reconcile() }
+        activityHost.onChange         = { [weak self] in self?.reconcile() }
         activityHost.onValidityChange = { [weak self] in self?.reconcile() }
-        widgetHost.onContentChanged = { [weak self] in
+        widgetHost.onContentChanged   = { [weak self] in
             guard let self else { return }
+
             self.widgetContentRevision &+= 1
             self.reconcile()
         }
+
         surface.onExpansionRequested = { [weak self] request in
             guard let self else { return }
+
             self.expansionRequests.append(request)
             if self.autoGrantExpansions {
                 self.expand(activityID: request.activityID)
@@ -80,22 +88,24 @@ final class ControllerTestDriver {
             self?.collapse()
         }
         surface.onCollapseFinished = { [weak self] _ in
-            self?.isExpanded = false
+            self?.isExpanded          = false
             self?.expansionActivityID = nil
             self?.activityHost.setExpansion(.none)
             self?.reconcile()
         }
         surface.onRetainedActivityRootsChanged = { [weak self] in self?.reconcile() }
-        monitor.onPointerMoved = { [weak surface] in surface?.handlePointer(at: $0) }
+
+        monitor.onPointerMoved         = { [weak surface] in surface?.handlePointer(at: $0) }
         monitor.onPointerButtonChanged = { [weak surface] in
             surface?.handlePointerButton(isPressed: $0)
         }
         monitor.onActiveDisplayMayHaveChanged = { [weak self] in
             guard let self else { return }
+
             self.surface.updateDisplay(self.resolver.display)
         }
-        monitor.onSpaceChanged = { [weak surface] in surface?.handleSpaceChange() }
-        monitor.onScreenLocked = { [weak self] in self?.setVisible(false) }
+        monitor.onSpaceChanged   = { [weak surface] in surface?.handleSpaceChange() }
+        monitor.onScreenLocked   = { [weak self] in self?.setVisible(false) }
         monitor.onScreenUnlocked = { [weak self] in self?.setVisible(true) }
     }
 
@@ -115,50 +125,68 @@ final class ControllerTestDriver {
     }
 
     func present(_ activity: any NotchLiveActivity) { activityHost.present(activity) }
+
     func showNotice(_ notice: any NotchTransientNotice) {
         guard isVisible else { return }
+
         activityHost.showNotice(notice)
     }
+
     func updateNotice(_ notice: any NotchTransientNotice) { activityHost.updateNotice(notice) }
+
     func setExpandedFallback(_ activity: (any NotchLiveActivity)?) {
         activityHost.setExpandedFallback(activity)
     }
+
     func endActivity(id: String) { activityHost.end(id: id) }
+
     func dismissActivity(id: String) { activityHost.dismiss(id: id) }
+
     func dismissActivities(from sourceID: String) { activityHost.dismissActivities(from: sourceID) }
+
     func register(_ widget: NotchWidget) {
         widgetHost.register(widget)
         widgetContentRevision &+= 1
         reconcile()
     }
-    func unregisterWidget(id: WidgetIdentifier) { widgetHost.unregister(id: id); reconcile() }
+
+    func unregisterWidget(id: WidgetIdentifier) {
+        widgetHost.unregister(id: id)
+        reconcile()
+    }
+
     func beginSizeCalibration() { _ = surface.beginSizeCalibration() }
+
     func setSettingsFocused(_ isFocused: Bool) { surface.setSettingsFocused(isFocused) }
+
     func setExternalSurfacePresented(_ isPresented: Bool) {
         surface.setExternalSurfacePresented(isPresented)
     }
+
     func setHapticsEnabled(_ isEnabled: Bool) { surface.setHapticsEnabled(isEnabled) }
+
     func setBorderAppearance(_ appearance: NotchBorderAppearance) {
         surface.setBorderAppearance(appearance)
     }
+
     func setStyle(_ style: ExternalNotchStyle) {
         self.style = style
         reconcile()
     }
-    func simulateCompactRoutingMovedAwayWhileRetainingExpanded(
-        _ activity: any NotchLiveActivity
-    ) {
+
+    func simulateCompactRoutingMovedAwayWhileRetainingExpanded(_ activity: any NotchLiveActivity) {
         surface.applyPresentation(DisplayPresentation(
-            primary: nil,
-            secondary: nil,
-            notice: nil,
-            expanded: activity,
+            primary               : nil,
+            secondary             : nil,
+            notice                : nil,
+            expanded              : activity,
             expandedIsLiveActivity: true,
-            showsWidgets: false,
-            widgetContentRevision: widgetContentRevision,
-            style: style
+            showsWidgets          : false,
+            widgetContentRevision : widgetContentRevision,
+            style                 : style
         ))
     }
+
     func setSensitiveContentVisible(_ isVisible: Bool) {
         surface.setSensitiveContentVisible(isVisible)
     }
@@ -169,9 +197,10 @@ final class ControllerTestDriver {
     }
 
     private func expand(activityID: String?) {
-        isExpanded = true
+        isExpanded          = true
         expansionActivityID = activityID
         surface.cancelClose()
+
         if let activityID {
             activityHost.setExpansion(.activity(activityID))
         } else if let primary = activityHost.selection.primary {
@@ -184,6 +213,7 @@ final class ControllerTestDriver {
 
     private func collapse() {
         guard isExpanded else { return }
+
         closeGeneration &+= 1
         surface.close(animated: true, generation: closeGeneration)
     }
@@ -191,10 +221,11 @@ final class ControllerTestDriver {
     private func setVisible(_ visible: Bool) {
         isVisible = visible
         if !visible {
-            isExpanded = false
+            isExpanded          = false
             expansionActivityID = nil
             surface.setVisible(false)
         }
+
         activityHost.setVisible(visible)
         if visible {
             surface.setVisible(true)
@@ -207,6 +238,7 @@ final class ControllerTestDriver {
             needsReconciliation = true
             return
         }
+
         isReconciling = true
         repeat {
             needsReconciliation = false
@@ -220,26 +252,29 @@ final class ControllerTestDriver {
                     continue
                 }
             }
-            let selection = activityHost.selection
+
+            let selection    = activityHost.selection
             let presentation = DisplayPresentation(
-                primary     : selection.primary,
-                secondary   : selection.secondary,
-                notice      : selection.notice,
-                expanded    : isExpanded ? selection.expanded : nil,
+                primary               : selection.primary,
+                secondary             : selection.secondary,
+                notice                : selection.notice,
+                expanded              : isExpanded ? selection.expanded : nil,
                 expandedIsLiveActivity: isExpanded && {
                     if case .activity = activityHost.expansionSelection { return true }
                     return false
                 }(),
-                showsWidgets: isExpanded && selection.expanded == nil,
-                widgetContentRevision: widgetContentRevision,
-                style       : style
+                showsWidgets          : isExpanded && selection.expanded == nil,
+                widgetContentRevision : widgetContentRevision,
+                style                 : style
             )
-            let roots = presentation.visibleActivityRoots + surface.retainedActivityRoots
+
+            let roots     = presentation.visibleActivityRoots + surface.retainedActivityRoots
             let projected = activityHost.setVisibleActivities(roots)
-            let accepted = Set(projected.accepted.map(ObjectIdentifier.init))
+            let accepted  = Set(projected.accepted.map(ObjectIdentifier.init))
             if presentation.showsWidgets && isVisible {
                 widgetHost.update(state: .open)
             }
+
             surface.applyPresentation(presentation.removingInvalidRoots(
                 accepted: accepted,
                 host    : activityHost

@@ -9,12 +9,13 @@ import Testing
 
 @Suite
 struct FileDragTopEdgeGuardTests {
+
     @Test
     func clampsOnlyTheTargetScreensTopEdgeInsideTheShelfBand() throws {
-        let primary = CGRect(x: 100, y: 200, width: 1_000, height: 800)
+        let primary  = CGRect(x: 100, y: 200, width: 1_000, height: 800)
         let geometry = try #require(FileDragTopEdgeGeometry(
-            region: CGRect(x: 450, y: 940, width: 200, height: 60),
-            screen: primary,
+            region       : CGRect(x: 450, y: 940, width: 200, height: 60),
+            screen       : primary,
             primaryScreen: primary
         ))
 
@@ -27,16 +28,17 @@ struct FileDragTopEdgeGuardTests {
     @Test
     func convertsScreensAboveAndBelowThePrincipalScreen() throws {
         let primary = CGRect(x: 100, y: 200, width: 1_000, height: 800)
-        let above = CGRect(x: -500, y: 1_000, width: 800, height: 600)
-        let below = CGRect(x: 300, y: -500, width: 900, height: 700)
+        let above   = CGRect(x: -500, y: 1_000, width: 800, height: 600)
+        let below   = CGRect(x: 300, y: -500, width: 900, height: 700)
+
         let aboveGeometry = try #require(FileDragTopEdgeGeometry(
-            region: CGRect(x: -250, y: 1_540, width: 300, height: 60),
-            screen: above,
+            region       : CGRect(x: -250, y: 1_540, width: 300, height: 60),
+            screen       : above,
             primaryScreen: primary
         ))
         let belowGeometry = try #require(FileDragTopEdgeGeometry(
-            region: CGRect(x: 550, y: 140, width: 300, height: 60),
-            screen: below,
+            region       : CGRect(x: 550, y: 140, width: 300, height: 60),
+            screen       : below,
             primaryScreen: primary
         ))
 
@@ -50,18 +52,18 @@ struct FileDragTopEdgeGuardTests {
         let primary = CGRect(x: 0, y: 0, width: 1_000, height: 800)
 
         #expect(FileDragTopEdgeGeometry(
-            region: CGRect(x: 400, y: 600, width: 200, height: 100),
-            screen: primary,
+            region       : CGRect(x: 400, y: 600, width: 200, height: 100),
+            screen       : primary,
             primaryScreen: primary
         ) == nil)
     }
 
     @Test
     func mouseUpDisarmsBeforeAnyLaterDragEvent() throws {
-        let screen = CGRect(x: 0, y: 0, width: 1_000, height: 800)
+        let screen   = CGRect(x: 0, y: 0, width: 1_000, height: 800)
         let geometry = try #require(FileDragTopEdgeGeometry(
-            region: CGRect(x: 400, y: 740, width: 200, height: 60),
-            screen: screen,
+            region       : CGRect(x: 400, y: 740, width: 200, height: 60),
+            screen       : screen,
             primaryScreen: screen
         ))
         var filter = FileDragTopEdgeFilter(geometry: geometry)

@@ -11,6 +11,7 @@ import Testing
 
 @MainActor
 final class ControllerActivityFixture: NotchLiveActivity {
+
     let id                   : String
     let sourceID             : String
     let contentRevision      : UInt64
@@ -19,16 +20,15 @@ final class ControllerActivityFixture: NotchLiveActivity {
     let relevanceScore       : Double
     let expandedContentHeight: CGFloat
 
-    private(set) var activations = 0
-
-    private(set) var suspensions = 0
+    private(set) var activations                = 0
+    private(set) var suspensions                = 0
     private(set) var factoryRanBeforeActivation = false
-    private(set) var accessibilityLabelReads = 0
-    private(set) var contentURLReads          = 0
-    private(set) var compactLeadingContexts : [NotchActivityViewContext] = []
-    private(set) var compactTrailingContexts: [NotchActivityViewContext] = []
-    private(set) var minimalContexts        : [NotchActivityViewContext] = []
-    private(set) var expandedContexts       : [NotchActivityViewContext] = []
+    private(set) var accessibilityLabelReads    = 0
+    private(set) var contentURLReads            = 0
+    private(set) var compactLeadingContexts    : [NotchActivityViewContext] = []
+    private(set) var compactTrailingContexts   : [NotchActivityViewContext] = []
+    private(set) var minimalContexts           : [NotchActivityViewContext] = []
+    private(set) var expandedContexts          : [NotchActivityViewContext] = []
 
     var contentFactoryCount: Int {
         compactLeadingContexts.count
@@ -90,6 +90,7 @@ final class ControllerActivityFixture: NotchLiveActivity {
     }
 
     func activate(in context: LiveActivityContext) { activations += 1 }
+
     func suspend() { suspensions += 1 }
 
     private func recordFactoryActivationOrder() {

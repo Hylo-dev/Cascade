@@ -10,9 +10,10 @@ import Testing
 
 @MainActor
 final class ReentrantLiveFixture: ContentFixture, NotchLiveActivity {
-    var lifetime = NotchActivityLifetime()
+
+    var lifetime       = NotchActivityLifetime()
     let relevanceScore: Double = 0.5
-    var onActivate: (() -> Void)?
+    var onActivate    : (() -> Void)?
 
     override func activate(in context: LiveActivityContext) {
         super.activate(in: context)

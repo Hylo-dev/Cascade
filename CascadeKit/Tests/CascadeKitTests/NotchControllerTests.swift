@@ -14,8 +14,8 @@ struct NotchControllerTests {
 
     @Test
     func softwareRestAndCompactActivityUseIndependentBoundsAndCenterGap() throws {
-        let fixture = ControllerFixture(reducesMotion: true)
-        let display = fixture.resolver.display
+        let fixture              = ControllerFixture(reducesMotion: true)
+        let display              = fixture.resolver.display
         fixture.resolver.display = ActiveDisplay(
             displayID   : display.displayID,
             frame       : display.frame,
@@ -24,6 +24,7 @@ struct NotchControllerTests {
         )
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         let shape = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
 
         #expect(shape.path?.boundingBoxOfPath.size == CGSize(width: 96, height: 8))
@@ -47,8 +48,8 @@ struct NotchControllerTests {
     func softwareExpandedActivityHasNoHardwareReservationAndMatchesBothStyles() throws {
         var bounds = [CGRect]()
         for style in [ExternalNotchStyle.notch, .dynamicIsland] {
-            let fixture = ControllerFixture(reducesMotion: true, style: style)
-            let display = fixture.resolver.display
+            let fixture              = ControllerFixture(reducesMotion: true, style: style)
+            let display              = fixture.resolver.display
             fixture.resolver.display = ActiveDisplay(
                 displayID   : display.displayID,
                 frame       : display.frame,
@@ -66,6 +67,7 @@ struct NotchControllerTests {
             bounds.append(try #require(shape.path?.boundingBoxOfPath))
             #expect(activity.expandedContexts.last?.hardwareNotchWidth == 0)
             #expect(activity.expandedContexts.last?.availableSize.height == 40)
+
             fixture.controller.stop()
         }
 
@@ -74,8 +76,8 @@ struct NotchControllerTests {
 
     @Test(arguments: [ExternalNotchStyle.notch, .dynamicIsland])
     func noLiveExpansionUsesTheSelectedSoftwareShape(style: ExternalNotchStyle) throws {
-        let fixture = ControllerFixture(reducesMotion: true, style: style)
-        let display = fixture.resolver.display
+        let fixture              = ControllerFixture(reducesMotion: true, style: style)
+        let display              = fixture.resolver.display
         fixture.resolver.display = ActiveDisplay(
             displayID   : display.displayID,
             frame       : display.frame,
@@ -85,9 +87,10 @@ struct NotchControllerTests {
         fixture.controller.register(ControllerWidgetFixture())
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 799))
         let shape = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
-        let path = try #require(shape.path)
+        let path  = try #require(shape.path)
 
         #expect(path.boundingBoxOfPath.height == (style == .dynamicIsland ? 160 : 144))
         #expect(path.contains(fixture.point(x: 500, belowTop: 1)))
@@ -95,8 +98,8 @@ struct NotchControllerTests {
 
     @Test
     func expandedFallbackUsesDropletWithoutPretendingItIsALiveSession() throws {
-        let fixture = ControllerFixture(reducesMotion: true, style: .dynamicIsland)
-        let display = fixture.resolver.display
+        let fixture              = ControllerFixture(reducesMotion: true, style: .dynamicIsland)
+        let display              = fixture.resolver.display
         fixture.resolver.display = ActiveDisplay(
             displayID   : display.displayID,
             frame       : display.frame,
@@ -107,6 +110,7 @@ struct NotchControllerTests {
         fixture.controller.setExpandedFallback(fallback)
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 799))
         let shape = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
 
@@ -116,11 +120,9 @@ struct NotchControllerTests {
     }
 
     @Test(arguments: [CGFloat(1), CGFloat(2)])
-    func narrowSoftwareDisplayKeepsEveryAnimatedDropletFrameInsideTheCanvas(
-        scale: CGFloat
-    ) throws {
-        let morph = RecordingMorphEngine()
-        let fixture = ControllerFixture(morphEngine: morph, style: .dynamicIsland)
+    func narrowSoftwareDisplayKeepsEveryAnimatedDropletFrameInsideTheCanvas(scale: CGFloat) throws {
+        let morph                = RecordingMorphEngine()
+        let fixture              = ControllerFixture(morphEngine: morph, style: .dynamicIsland)
         fixture.resolver.display = ActiveDisplay(
             displayID   : 42,
             frame       : CGRect(x: -180, y: 100, width: 180, height: 500),
@@ -130,6 +132,7 @@ struct NotchControllerTests {
         fixture.controller.register(ControllerWidgetFixture())
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         fixture.monitor.sendPointer(CGPoint(x: -90, y: 599))
         while morph.isRunning {
             morph.tick()
@@ -139,7 +142,7 @@ struct NotchControllerTests {
 
     @Test
     func interruptedSoftwareOpeningAndClosingKeepOnePathForChromeMaskAndHitTesting() throws {
-        let morph = RecordingMorphEngine()
+        let morph   = RecordingMorphEngine()
         let fixture = softwareFixture(morph: morph, style: .dynamicIsland)
         fixture.controller.register(ControllerWidgetFixture())
         fixture.controller.start()
@@ -166,11 +169,12 @@ struct NotchControllerTests {
 
     @Test
     func styleEditClosesWithTheOldShapeBeforeApplyingTheLatestStyle() throws {
-        let morph = RecordingMorphEngine()
+        let morph   = RecordingMorphEngine()
         let fixture = softwareFixture(morph: morph, style: .notch)
         fixture.controller.register(ControllerWidgetFixture())
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 799))
         morph.settle()
         #expect(try softwareShape(in: fixture).boundingBoxOfPath.height == 144)
@@ -178,6 +182,7 @@ struct NotchControllerTests {
         fixture.controller.setStyle(.dynamicIsland)
         #expect(fixture.controller.state == .closed)
         #expect(try softwareShape(in: fixture).boundingBoxOfPath.height == 144)
+
         morph.tick()
         try assertSoftwarePathConsumersMatch(fixture)
 
@@ -193,16 +198,18 @@ struct NotchControllerTests {
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 799))
         morph.settle()
         #expect(try softwareShape(in: fixture).boundingBoxOfPath.height == 160)
+
         try assertSoftwarePathConsumersMatch(fixture)
     }
 
     @Test
     func liveArrivalAndEndInvalidateSettledDropletWithoutDivergingContentAndMask() throws {
-        let morph = RecordingMorphEngine()
+        let morph   = RecordingMorphEngine()
         let fixture = softwareFixture(morph: morph, style: .dynamicIsland)
         fixture.controller.register(ControllerWidgetFixture())
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 799))
         morph.settle()
         #expect(try softwareShape(in: fixture).boundingBoxOfPath.height == 160)
@@ -210,21 +217,25 @@ struct NotchControllerTests {
         let activity = ControllerActivityFixture(id: "arrival", expandedContentHeight: 94)
         fixture.controller.present(activity)
         #expect(try softwareShape(in: fixture).boundingBoxOfPath.height == 144)
+
         let expandedHost = try #require(fixture.hostView.subviews.flatMap(\.subviews)
             .compactMap { $0 as? NSHostingView<AnyView> }
             .first { !$0.isHidden && $0.frame.height == 114 })
         #expect(expandedHost.frame.maxY == fixture.hostView.bounds.maxY)
+
         try assertSoftwarePathConsumersMatch(fixture)
 
         fixture.controller.endActivity(id: activity.id)
         let endingHeight = try softwareShape(in: fixture).boundingBoxOfPath.height
         #expect(endingHeight == 144)
+
         while morph.isRunning {
             morph.tick()
             try assertSoftwarePathConsumersMatch(fixture)
         }
         #expect(try softwareShape(in: fixture).boundingBoxOfPath.height == 160)
         #expect(fixture.controller.state == .open)
+
         let settingsButton = try #require(fixture.hostView.subviews.flatMap(\.subviews)
             .compactMap { $0 as? NSButton }
             .first)
@@ -233,22 +244,25 @@ struct NotchControllerTests {
 
     @Test
     func retainedLiveOwnerClosesWithActivityGeometryAfterCompactRoutingMovesAway() throws {
-        let morph = RecordingMorphEngine()
-        let fixture = softwareFixture(morph: morph, style: .dynamicIsland)
+        let morph    = RecordingMorphEngine()
+        let fixture  = softwareFixture(morph: morph, style: .dynamicIsland)
         let activity = ControllerActivityFixture(id: "retained-owner", expandedContentHeight: 94)
         fixture.controller.present(activity)
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 799))
         morph.settle()
 
         fixture.controller.simulateCompactRoutingMovedAwayWhileRetainingExpanded(activity)
         fixture.monitor.sendPointer(CGPoint(x: 50, y: 400))
         #expect(fixture.controller.state == .closed)
+
         while morph.isRunning {
             morph.tick()
             let path = try softwareShape(in: fixture)
             #expect(path.boundingBoxOfPath.height <= 144)
+
             try assertSoftwarePathConsumersMatch(fixture)
         }
     }
@@ -257,8 +271,8 @@ struct NotchControllerTests {
         morph: RecordingMorphEngine,
         style: ExternalNotchStyle
     ) -> ControllerFixture {
-        let fixture = ControllerFixture(morphEngine: morph, style: style)
-        let display = fixture.resolver.display
+        let fixture              = ControllerFixture(morphEngine: morph, style: style)
+        let display              = fixture.resolver.display
         fixture.resolver.display = ActiveDisplay(
             displayID   : display.displayID,
             frame       : display.frame,
@@ -279,11 +293,13 @@ struct NotchControllerTests {
             $0.layer?.mask as? CAShapeLayer
         }.first?.path)
         #expect(mask == path)
+
         let bounds = path.boundingBoxOfPath
         #expect(bounds.minX >= fixture.hostView.bounds.minX)
         #expect(bounds.maxX <= fixture.hostView.bounds.maxX)
         #expect(bounds.minY >= fixture.hostView.bounds.minY)
         #expect(bounds.maxY <= fixture.hostView.bounds.maxY)
+
         let sample = CGPoint(x: bounds.midX, y: bounds.midY)
         #expect(fixture.hostView.containsInteractivePoint(sample) == path.contains(sample))
     }
@@ -301,6 +317,7 @@ struct NotchControllerTests {
                 .compactMap { $0 as? NSHostingView<AnyView> }
                 .filter { !$0.isHidden }
             #expect(!hosts.isEmpty)
+
             for host in hosts {
                 // Render the actual root supplied by the controller, including
                 // its shared wrapper or privacy placeholder. Sample an inset
@@ -309,7 +326,7 @@ struct NotchControllerTests {
                     width: host.bounds.width, height: host.bounds.height
                 ))
                 let bitmap = NSBitmapImageRep(cgImage: try #require(renderer.cgImage))
-                let alpha = try #require(bitmap.colorAt(x: 1, y: 1)).alphaComponent
+                let alpha  = try #require(bitmap.colorAt(x: 1, y: 1)).alphaComponent
                 #expect(alpha == (isExpanded ? 0 : 1))
             }
         }
@@ -318,7 +335,9 @@ struct NotchControllerTests {
     @Test(arguments: [0, 1, 2])
     func glassIsReservedForExpansion(activityCount: Int) throws {
         guard #available(macOS 26, *),
-              !NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency else { return }
+              !NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+        else { return }
+
         let fixture = ControllerFixture(reducesMotion: true)
         for index in 0..<activityCount {
             fixture.controller.present(ControllerActivityFixture(
@@ -328,6 +347,7 @@ struct NotchControllerTests {
         }
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         let backing = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
 
         #expect(fixture.controller.state == .closed)
@@ -344,27 +364,29 @@ struct NotchControllerTests {
 
     @Test(arguments: [false, true])
     func closureReboundsOutwardAfterTouchingHardware(hasActivity: Bool) throws {
-        let morph = RecordingMorphEngine()
+        let morph   = RecordingMorphEngine()
         let fixture = ControllerFixture(morphEngine: morph)
         if hasActivity {
             fixture.controller.present(ControllerActivityFixture(id: "music"))
         }
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         morph.settle()
         fixture.controller.setSettingsFocused(true)
         morph.settle()
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 400))
         fixture.controller.setSettingsFocused(false)
 
-        let shape = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
+        let shape           = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
         var touchedHardware = false
-        var reboundHeight: CGFloat = 0
+        var reboundHeight  : CGFloat = 0
         for _ in 0..<240 where morph.isRunning {
             morph.tick()
             let bounds = try #require(shape.path?.boundingBoxOfPath)
             #expect(bounds.height >= 30)
             #expect(bounds.width >= 200)
+
             if bounds.height == 30 { touchedHardware = true }
             if touchedHardware { reboundHeight = max(reboundHeight, bounds.height - 30) }
         }
@@ -378,23 +400,27 @@ struct NotchControllerTests {
 
     @Test
     func settingsGearWorksAboveExpandedActivitiesAndHidesWhenClosed() throws {
-        let fixture = ControllerFixture(reducesMotion: true)
-        var requests = 0
+        let fixture                          = ControllerFixture(reducesMotion: true)
+        var requests                         = 0
         fixture.hostView.onSettingsRequested = { requests += 1 }
         fixture.controller.present(ControllerActivityFixture(id: "music"))
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         let button = try #require(fixture.hostView.subviews.flatMap(\.subviews).compactMap { $0 as? NSButton }.first)
         #expect(button.isHidden)
+
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 790))
         #expect(!button.isHidden)
         #expect(button.frame.minX >= 600)
         #expect(button.frame.maxY <= fixture.hostView.bounds.maxY)
+
         let buttonCenter = CGPoint(x: button.bounds.midX, y: button.bounds.midY)
-        let hitPoint = button.convert(buttonCenter, to: fixture.hostView.superview)
+        let hitPoint     = button.convert(buttonCenter, to: fixture.hostView.superview)
         #expect(fixture.hostView.hitTest(hitPoint) === button)
         #expect(button.sendAction(button.action, to: button.target))
         #expect(requests == 1)
+
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 400))
         #expect(button.isHidden)
     }
@@ -404,9 +430,11 @@ struct NotchControllerTests {
         let fixture = ControllerFixture(reducesMotion: true)
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         fixture.controller.setSettingsFocused(true)
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 400))
         #expect(fixture.controller.state == .open)
+
         fixture.controller.setSettingsFocused(false)
         #expect(fixture.controller.state == .closed)
     }
@@ -416,9 +444,11 @@ struct NotchControllerTests {
         let fixture = ControllerFixture(reducesMotion: true)
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         fixture.controller.setSettingsFocused(true)
         fixture.controller.setExternalSurfacePresented(true)
         #expect(fixture.controller.state == .closed)
+
         fixture.controller.setExternalSurfacePresented(false)
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 400))
         #expect(fixture.controller.state == .open)
@@ -426,11 +456,12 @@ struct NotchControllerTests {
 
     @Test
     func settingsFocusDoesNotCollapseChromeWhenTheActivityChanges() {
-        let morph = RecordingMorphEngine()
+        let morph   = RecordingMorphEngine()
         let fixture = ControllerFixture(morphEngine: morph)
         fixture.controller.present(ControllerActivityFixture(id: "old"))
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         morph.settle()
         fixture.controller.setSettingsFocused(true)
         morph.settle()
@@ -447,9 +478,11 @@ struct NotchControllerTests {
         let fixture = ControllerFixture(reducesMotion: true)
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         fixture.controller.setSettingsFocused(true)
         fixture.monitor.sendLock()
         #expect(fixture.controller.state == .closed)
+
         fixture.monitor.sendUnlock()
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 400))
         #expect(fixture.controller.state == .closed)
@@ -467,13 +500,20 @@ struct NotchControllerTests {
         )
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         fixture.controller.setSettingsFocused(true)
         let initial = try #require(fixture.controller.expandedFrame)
         #expect(initial.midX == -500)
         #expect(initial.minY == 856)
-        fixture.controller.present(ControllerActivityFixture(id: "tall", contentRevision: 1, expandedContentHeight: 190))
+
+        fixture.controller.present(ControllerActivityFixture(
+            id                   : "tall",
+            contentRevision      : 1,
+            expandedContentHeight: 190
+        ))
         let expanded = try #require(fixture.controller.expandedFrame)
         #expect(expanded.minY == 760)
+
         fixture.monitor.sendLock()
         #expect(fixture.controller.expandedFrame == nil)
     }
@@ -499,17 +539,20 @@ struct NotchControllerTests {
 
     @Test
     func externalSearchKeepsHoverClosedUntilTheNativeSurfaceDismisses() {
-        let morph = RecordingMorphEngine()
+        let morph   = RecordingMorphEngine()
         let fixture = ControllerFixture(morphEngine: morph)
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 790))
         morph.settle()
         #expect(fixture.controller.state == .open)
+
         fixture.controller.setExternalSurfacePresented(true)
         morph.settle()
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 790))
         #expect(fixture.controller.state == .closed)
+
         fixture.controller.setExternalSurfacePresented(false)
         fixture.monitor.sendPointer(CGPoint(x: 300, y: 500))
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 790))
@@ -521,6 +564,7 @@ struct NotchControllerTests {
         let fixture = ControllerFixture(reducesMotion: true)
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         fixture.controller.setExternalSurfacePresented(true)
 
         fixture.monitor.sendLock()
@@ -532,11 +576,12 @@ struct NotchControllerTests {
 
     @Test
     func hoverDuringReplacementSelectsTheNewestActivityAtReveal() {
-        let morph = RecordingMorphEngine()
+        let morph   = RecordingMorphEngine()
         let fixture = ControllerFixture(morphEngine: morph)
         fixture.controller.present(ControllerActivityFixture(id: "old"))
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         morph.settle()
         let intermediate = ControllerActivityFixture(id: "intermediate")
         fixture.controller.present(intermediate)
@@ -551,11 +596,12 @@ struct NotchControllerTests {
 
     @Test
     func anEndedExpandedActivityCanRevealANewArrivalAfterClosure() {
-        let morph = RecordingMorphEngine()
+        let morph   = RecordingMorphEngine()
         let fixture = ControllerFixture(morphEngine: morph)
         fixture.controller.present(ControllerActivityFixture(id: "old"))
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         morph.settle()
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 790))
         morph.settle()
@@ -563,6 +609,7 @@ struct NotchControllerTests {
         let latest = ControllerActivityFixture(id: "latest")
         fixture.controller.present(latest)
         #expect(latest.expandedContexts.isEmpty)
+
         morph.settle()
         #expect(latest.expandedContexts.count == 1)
         #expect(!morph.isRunning)
@@ -570,13 +617,23 @@ struct NotchControllerTests {
 
     @Test
     func redactingDuringAttachmentReleasesThePreviousSatelliteContent() {
-        let morph = RecordingMorphEngine()
+        let morph   = RecordingMorphEngine()
         let fixture = ControllerFixture(morphEngine: morph)
         fixture.controller.setSensitiveContentVisible(true)
-        fixture.controller.present(ControllerActivityFixture(id: "primary", sourceID: "music", relevanceScore: 1))
-        fixture.controller.present(ControllerActivityFixture(id: "secondary", sourceID: "timer", privacy: .sensitive, relevanceScore: 0))
+        fixture.controller.present(ControllerActivityFixture(
+            id            : "primary",
+            sourceID      : "music",
+            relevanceScore: 1
+        ))
+        fixture.controller.present(ControllerActivityFixture(
+            id            : "secondary",
+            sourceID      : "timer",
+            privacy       : .sensitive,
+            relevanceScore: 0
+        ))
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         morph.settle()
         fixture.monitor.sendPointer(CGPoint(x: 625, y: 785))
         fixture.monitor.sendButton(isPressed: true)
@@ -590,13 +647,22 @@ struct NotchControllerTests {
 
     @Test
     func enablingReducedMotionDuringAttachmentReleasesTheSatelliteHost() {
-        let morph = RecordingMorphEngine()
+        let morph        = RecordingMorphEngine()
         var reduceMotion = false
-        let fixture = ControllerFixture(morphEngine: morph, motionPreference: { reduceMotion })
-        fixture.controller.present(ControllerActivityFixture(id: "primary", sourceID: "music", relevanceScore: 1))
-        fixture.controller.present(ControllerActivityFixture(id: "secondary", sourceID: "timer", relevanceScore: 0))
+        let fixture      = ControllerFixture(morphEngine: morph, motionPreference: { reduceMotion })
+        fixture.controller.present(ControllerActivityFixture(
+            id            : "primary",
+            sourceID      : "music",
+            relevanceScore: 1
+        ))
+        fixture.controller.present(ControllerActivityFixture(
+            id            : "secondary",
+            sourceID      : "timer",
+            relevanceScore: 0
+        ))
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         morph.settle()
         fixture.monitor.sendPointer(CGPoint(x: 625, y: 785))
         fixture.monitor.sendButton(isPressed: true)
@@ -613,16 +679,18 @@ struct NotchControllerTests {
 
     @Test
     func hoverDuringReplacementWaitsForTheBareNotch() throws {
-        let morph = RecordingMorphEngine()
+        let morph   = RecordingMorphEngine()
         let fixture = ControllerFixture(morphEngine: morph)
         fixture.controller.present(ControllerActivityFixture(id: "old"))
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         morph.settle()
         let replacement = ControllerActivityFixture(id: "new")
         fixture.controller.present(replacement)
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 790))
         #expect(replacement.expandedContexts.isEmpty)
+
         var reachedBase = false
         for _ in 0..<600 where morph.isRunning {
             morph.tick()
@@ -637,12 +705,13 @@ struct NotchControllerTests {
 
     @Test
     func mountedSameIDReplacementRetainsTheOldInstanceUntilItsRootLeaves() {
-        let morph = RecordingMorphEngine()
+        let morph   = RecordingMorphEngine()
         let fixture = ControllerFixture(morphEngine: morph)
-        let old = ControllerActivityFixture(id: "music")
+        let old     = ControllerActivityFixture(id: "music")
         fixture.controller.present(old)
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         morph.settle()
 
         #expect(fixture.controller.surface.retainedActivityRoots.first === old)
@@ -665,7 +734,7 @@ struct NotchControllerTests {
     @Test
     func reducedMotionReplacementReleasesTheOldInstanceAfterApplyingTheNewRoot() {
         let fixture = ControllerFixture(reducesMotion: true)
-        let old = ControllerActivityFixture(id: "music")
+        let old     = ControllerActivityFixture(id: "music")
         fixture.controller.present(old)
         fixture.controller.start()
         defer { fixture.controller.stop() }
@@ -681,16 +750,30 @@ struct NotchControllerTests {
 
     @Test
     func replacingTheSecondaryWaitsForClosureBeforeBuildingItsIcon() {
-        let morph = RecordingMorphEngine()
+        let morph   = RecordingMorphEngine()
         let fixture = ControllerFixture(morphEngine: morph)
-        fixture.controller.present(ControllerActivityFixture(id: "primary", sourceID: "music", relevanceScore: 1))
-        fixture.controller.present(ControllerActivityFixture(id: "old", sourceID: "timer", relevanceScore: 0))
+        fixture.controller.present(ControllerActivityFixture(
+            id            : "primary",
+            sourceID      : "music",
+            relevanceScore: 1
+        ))
+        fixture.controller.present(ControllerActivityFixture(
+            id            : "old",
+            sourceID      : "timer",
+            relevanceScore: 0
+        ))
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         morph.settle()
-        let replacement = ControllerActivityFixture(id: "new", sourceID: "timer", relevanceScore: 0)
+        let replacement = ControllerActivityFixture(
+            id            : "new",
+            sourceID      : "timer",
+            relevanceScore: 0
+        )
         fixture.controller.present(replacement)
         #expect(replacement.compactLeadingContexts.isEmpty)
+
         morph.settle()
         #expect(replacement.compactLeadingContexts.count == 1)
         #expect(!morph.isRunning)
@@ -698,17 +781,19 @@ struct NotchControllerTests {
 
     @Test
     func anArrivalDuringDismissalCannotReverseTheClosingPhase() {
-        let morph = RecordingMorphEngine()
+        let morph   = RecordingMorphEngine()
         let fixture = ControllerFixture(morphEngine: morph)
         fixture.controller.present(ControllerActivityFixture(id: "old"))
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         morph.settle()
         fixture.controller.endActivity(id: "old")
         morph.tick()
         let replacement = ControllerNoticeFixture(id: "new")
         fixture.controller.showNotice(replacement)
         #expect(replacement.compactLeadingContexts.isEmpty)
+
         morph.settle()
         #expect(replacement.compactLeadingContexts.count == 1)
         #expect(!morph.isRunning)
@@ -716,18 +801,21 @@ struct NotchControllerTests {
 
     @Test
     func replacingANoticeClosesFullyBeforeBuildingTheLatestContent() throws {
-        let morph = RecordingMorphEngine()
+        let morph   = RecordingMorphEngine()
         let fixture = ControllerFixture(morphEngine: morph)
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         fixture.controller.showNotice(ControllerNoticeFixture(id: "first"))
         morph.settle()
         let second = ControllerNoticeFixture(id: "second")
         fixture.controller.showNotice(second)
         #expect(second.compactLeadingContexts.isEmpty)
+
         let latest = ControllerNoticeFixture(id: "latest")
         fixture.controller.showNotice(latest)
         #expect(latest.compactLeadingContexts.isEmpty)
+
         var sawBareNotch = false
         for _ in 0..<600 where morph.isRunning {
             morph.tick()
@@ -744,19 +832,20 @@ struct NotchControllerTests {
 
     @Test
     func tallestActivityCanOvershootWithoutClippingTheCanvas() throws {
-        let morph = RecordingMorphEngine()
+        let morph   = RecordingMorphEngine()
         let fixture = ControllerFixture(morphEngine: morph)
         fixture.controller.present(ControllerActivityFixture(id: "tall", expandedContentHeight: 400))
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         morph.settle()
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 790))
         var peak: CGFloat = 0
         for _ in 0..<240 {
             morph.tick()
-            let shape = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
+            let shape  = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
             let bounds = try #require(shape.path?.boundingBoxOfPath)
-            peak = max(peak, bounds.height)
+            peak       = max(peak, bounds.height)
             #expect(bounds.minY >= 0)
         }
         #expect(peak > NotchConfiguration.default.maximumActivityExpandedHeight + 5)
@@ -769,6 +858,7 @@ struct NotchControllerTests {
         fixture.controller.present(ControllerGlowFixture())
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 790))
         let hosting = try #require(fixture.hostView.subviews
             .flatMap(\.subviews)
@@ -779,12 +869,17 @@ struct NotchControllerTests {
         hosting.cacheDisplay(in: hosting.bounds, to: bitmap)
         let scaleX = CGFloat(bitmap.pixelsWide) / hosting.bounds.width
         let scaleY = CGFloat(bitmap.pixelsHigh) / hosting.bounds.height
-        func color(_ x: CGFloat, _ y: CGFloat) throws -> NSColor {
-            try #require(bitmap.colorAt(x: Int(x * scaleX), y: Int(y * scaleY))?.usingColorSpace(.deviceRGB))
+        func color(
+            _ pointX: CGFloat,
+            _ pointY: CGFloat
+        ) throws -> NSColor {
+            try #require(bitmap.colorAt(x: Int(pointX * scaleX), y: Int(pointY * scaleY))?.usingColorSpace(.deviceRGB))
         }
+
         // The probe extends 8 pt into the 20 pt side / 4 pt top / 16 pt
         // bottom insets. Native chrome, rather than content bounds, clips it.
         #expect(try color(hosting.bounds.midX, hosting.bounds.midY).redComponent > 0.8)
+
         for point in [
             CGPoint(x: 16, y: hosting.bounds.midY),
             CGPoint(x: hosting.bounds.width - 16, y: hosting.bounds.midY),
@@ -802,8 +897,8 @@ struct NotchControllerTests {
         native.layoutSubtreeIfNeeded()
         let surface = try #require(native.bitmapImageRepForCachingDisplay(in: native.bounds))
         native.cacheDisplay(in: native.bounds, to: surface)
-        let pixelX = Int(350 * CGFloat(surface.pixelsWide) / native.bounds.width)
-        let pixelY = Int(28 * CGFloat(surface.pixelsHigh) / native.bounds.height)
+        let pixelX     = Int(350 * CGFloat(surface.pixelsWide) / native.bounds.width)
+        let pixelY     = Int(28 * CGFloat(surface.pixelsHigh) / native.bounds.height)
         let upperLight = try #require(surface.colorAt(x: pixelX, y: pixelY)?.usingColorSpace(.deviceRGB))
         #expect(upperLight.redComponent > 0.8)
     }
@@ -814,13 +909,14 @@ struct NotchControllerTests {
         fixture.sizeStore.sizes[42] = CGSize(width: 187, height: 33)
         fixture.controller.start()
         fixture.controller.beginSizeCalibration()
-        let shape = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
-        let path = try #require(shape.path)
+        let shape    = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
+        let path     = try #require(shape.path)
         let geometry = try #require(fixture.calibrationPresenter.geometry)
-        let center = fixture.hostView.bounds.midX
-        let middle = fixture.hostView.bounds.maxY - geometry.height / 2
-        let left = center - geometry.leftExtent
-        let right = center + geometry.rightExtent
+        let center   = fixture.hostView.bounds.midX
+        let middle   = fixture.hostView.bounds.maxY - geometry.height / 2
+        let left     = center - geometry.leftExtent
+        let right    = center + geometry.rightExtent
+
         #expect(path.boundingBoxOfPath.size == CGSize(width: 187, height: 33))
         #expect(fixture.calibrationPresenter.size == CGSize(width: 187, height: 33))
         #expect(path.contains(CGPoint(x: left + 0.01, y: middle)))
@@ -828,38 +924,42 @@ struct NotchControllerTests {
         #expect(path.contains(CGPoint(x: right - 0.01, y: middle)))
         #expect(!path.contains(CGPoint(x: right + 0.01, y: middle)))
         #expect(path.boundingBoxOfPath.minY == fixture.hostView.bounds.maxY - geometry.height)
+
         fixture.controller.stop()
     }
 
     @Test
     func softwareDisplaysRejectHardwareCalibrationAndKeepTheFixedBump() throws {
-        let fixture = ControllerFixture(reducesMotion: true)
-        let display = fixture.resolver.display
+        let fixture              = ControllerFixture(reducesMotion: true)
+        let display              = fixture.resolver.display
         fixture.resolver.display = ActiveDisplay(
-            displayID: display.displayID,
-            frame: display.frame,
+            displayID   : display.displayID,
+            frame       : display.frame,
             backingScale: display.backingScale,
-            notch: .absent
+            notch       : .absent
         )
         fixture.controller.start()
-        let shape = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
+        let shape       = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
         let initialSize = try #require(shape.path?.boundingBoxOfPath.size)
         fixture.controller.beginSizeCalibration()
         #expect(fixture.calibrationPresenter.size == nil)
         #expect(shape.path?.boundingBoxOfPath.size == initialSize)
+
         fixture.calibrationPresenter.onStep?(2, 1)
         #expect(shape.path?.boundingBoxOfPath.size == initialSize)
         #expect(fixture.calibrationPresenter.size == nil)
+
         fixture.calibrationPresenter.onFinish?(true)
         fixture.controller.stop()
         fixture.controller.start()
         #expect(shape.path?.boundingBoxOfPath.size == initialSize)
+
         fixture.controller.stop()
     }
 
     @Test
     func calibrationChangesTheRealContourAndBlocksHoverUntilFinished() throws {
-        let morph = RecordingMorphEngine()
+        let morph   = RecordingMorphEngine()
         let fixture = ControllerFixture(morphEngine: morph)
         fixture.controller.start()
         fixture.controller.beginSizeCalibration()
@@ -868,6 +968,7 @@ struct NotchControllerTests {
         #expect(fixture.controller.state == .closed)
         #expect(!morph.isRunning)
         #expect(fixture.panel.ignoresMouseEvents)
+
         let shape = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
         #expect(shape.path?.boundingBoxOfPath.size == CGSize(width: 198, height: 31))
         #expect(fixture.calibrationPresenter.size == shape.path?.boundingBoxOfPath.size)
@@ -876,8 +977,10 @@ struct NotchControllerTests {
         fixture.controller.stop()
         fixture.controller.start()
         #expect(shape.path?.boundingBoxOfPath.size == CGSize(width: 198, height: 31))
+
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 790))
         #expect(fixture.controller.state == .open)
+
         fixture.controller.stop()
     }
 
@@ -890,9 +993,11 @@ struct NotchControllerTests {
         fixture.monitor.sendLock()
         #expect(fixture.calibrationPresenter.hideCount == 1)
         #expect(fixture.sizeStore.sizes.isEmpty)
+
         fixture.monitor.sendUnlock()
         let shape = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
         #expect(shape.path?.boundingBoxOfPath.size == CGSize(width: 200, height: 30))
+
         fixture.controller.stop()
     }
 
@@ -902,7 +1007,7 @@ struct NotchControllerTests {
         fixture.controller.start()
         fixture.controller.beginSizeCalibration()
         fixture.calibrationPresenter.onStep?(20, 10)
-        let previous = fixture.resolver.display
+        let previous             = fixture.resolver.display
         fixture.resolver.display = ActiveDisplay(
             displayID   : 77,
             frame       : previous.frame.offsetBy(dx: 1_000, dy: 0),
@@ -913,6 +1018,7 @@ struct NotchControllerTests {
         #expect(fixture.calibrationPresenter.hideCount == 1)
         #expect(fixture.sizeStore.sizes.isEmpty)
         #expect(fixture.controller.activeDisplay?.displayID == 77)
+
         fixture.controller.stop()
     }
 
@@ -922,6 +1028,7 @@ struct NotchControllerTests {
         fixture.controller.start()
         let border = try #require(fixture.hostView.subviews.first { $0 is NSVisualEffectView } as? NSVisualEffectView)
         #expect(border.isHidden)
+
         fixture.controller.setBorderAppearance(.connected)
         fixture.controller.showNotice(ControllerNoticeFixture(id: "headphones"))
         #expect(!border.isHidden)
@@ -936,12 +1043,13 @@ struct NotchControllerTests {
 
         fixture.monitor.sendPointer(CGPoint(x: 50, y: 500))
         #expect(border.isHidden)
+
         fixture.controller.stop()
     }
 
     @Test
     func noticeBorderOverridesTheNetworkUntilDismissal() {
-        let morph = RecordingMorphEngine()
+        let morph   = RecordingMorphEngine()
         let fixture = ControllerFixture(morphEngine: morph, reducesMotion: true)
         fixture.controller.start()
         fixture.controller.setBorderAppearance(.connected)
@@ -954,6 +1062,7 @@ struct NotchControllerTests {
         fixture.controller.dismissActivities(from: notice.sourceID)
         #expect(fixture.hostView.borderAppearance == .connected)
         #expect(morph.startCount == 0)
+
         fixture.controller.stop()
     }
 
@@ -971,15 +1080,17 @@ struct NotchControllerTests {
         fixture.controller.showNotice(notice)
         fixture.controller.setBorderAppearance(.connected)
         #expect(fixture.hostView.borderAppearance == .neutral)
+
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 790))
         #expect(fixture.hostView.borderAppearance == .connected)
+
         fixture.controller.stop()
     }
 
     @Test
     func borderChangesDoNotRebuildContentOrStartTheMorph() {
-        let morph = RecordingMorphEngine()
-        let fixture = ControllerFixture(morphEngine: morph)
+        let morph    = RecordingMorphEngine()
+        let fixture  = ControllerFixture(morphEngine: morph)
         let activity = ControllerActivityFixture(id: "music")
         fixture.controller.start()
         fixture.controller.present(activity)
@@ -992,6 +1103,7 @@ struct NotchControllerTests {
         #expect(activity.contentFactoryCount == builds)
         #expect(morph.startCount == starts)
         #expect(!morph.isRunning)
+
         fixture.controller.stop()
     }
 
@@ -1000,20 +1112,21 @@ struct NotchControllerTests {
         let fixture = ControllerFixture(reducesMotion: true)
         fixture.controller.start()
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 790))
-        let shape = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
-        let path = try #require(shape.path)
+        let shape   = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
+        let path    = try #require(shape.path)
         let outline = fixture.hostView.convert(path.boundingBoxOfPath, to: nil)
         #expect(outline.minY >= 8)
         #expect(outline.maxY == fixture.panel.frame.height)
         #expect(!fixture.hostView.containsInteractivePoint(CGPoint(x: 500, y: -2)))
+
         fixture.controller.stop()
     }
 
     @Test
     func compactAndClosedChromeStayAnchoredToHardwareWithAHaloGutter() throws {
-        let fixture = ControllerFixture(reducesMotion: true)
-        let screen = CGRect(x: 1_470, y: -200, width: 1_470, height: 956)
-        let hardware = CGSize(width: 179, height: 32)
+        let fixture              = ControllerFixture(reducesMotion: true)
+        let screen               = CGRect(x: 1_470, y: -200, width: 1_470, height: 956)
+        let hardware             = CGSize(width: 179, height: 32)
         fixture.resolver.display = ActiveDisplay(
             displayID   : 42,
             frame       : screen,
@@ -1025,7 +1138,7 @@ struct NotchControllerTests {
 
         for compact in [false, true] {
             if compact { fixture.controller.showNotice(ControllerNoticeFixture(id: "alignment")) }
-            let path = try #require(shape.path)
+            let path     = try #require(shape.path)
             let inWindow = fixture.hostView.convert(path.boundingBoxOfPath, to: nil)
             let onScreen = fixture.panel.convertToScreen(inWindow)
             #expect(onScreen.midX == screen.midX)
@@ -1039,8 +1152,8 @@ struct NotchControllerTests {
     @Test
     func noticesNeverBuildAnExpandedViewAndAreDiscardedDuringHover() {
         let fixture = ControllerFixture(reducesMotion: true)
-        let notice = ControllerNoticeFixture(id: "device")
-        let widget = ControllerWidgetFixture()
+        let notice  = ControllerNoticeFixture(id: "device")
+        let widget  = ControllerWidgetFixture()
         fixture.controller.register(widget)
         fixture.controller.start()
         fixture.controller.showNotice(notice)
@@ -1048,20 +1161,23 @@ struct NotchControllerTests {
         #expect(notice.expandedFactoryCount == 0)
         #expect(widget.activations == 1)
         #expect(!widget.factoryRanBeforeActivation)
+
         let incoming = ControllerNoticeFixture(id: "volume")
         fixture.controller.showNotice(incoming)
         fixture.monitor.sendPointer(CGPoint(x: 50, y: 500))
         #expect(incoming.activations == 0)
+
         fixture.controller.stop()
     }
 
     @Test
     func activeWidgetRefreshRebuildsTheGrantedOwnersContent() throws {
         let fixture = ControllerFixture(reducesMotion: true)
-        let widget = ControllerWidgetFixture()
+        let widget  = ControllerWidgetFixture()
         fixture.controller.register(widget)
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 790))
         let initialFactories = widget.factoryCount
         #expect(initialFactories == 1)
@@ -1074,8 +1190,8 @@ struct NotchControllerTests {
 
     @Test
     func liveActivityCollapseReachesBareNotchBeforeRevealingCompactContent() {
-        let morph = RecordingMorphEngine()
-        let fixture = ControllerFixture(morphEngine: morph)
+        let morph    = RecordingMorphEngine()
+        let fixture  = ControllerFixture(morphEngine: morph)
         let activity = ControllerActivityFixture(id: "music")
         fixture.controller.present(activity)
         fixture.controller.start()
@@ -1086,6 +1202,7 @@ struct NotchControllerTests {
         fixture.monitor.sendPointer(CGPoint(x: 50, y: 500))
         #expect(activity.compactLeadingContexts.count == compactBuilds)
         #expect(activity.suspensions == 0)
+
         var sawBase = false
         for _ in 0..<360 {
             morph.tick()
@@ -1097,39 +1214,45 @@ struct NotchControllerTests {
         }
         #expect(sawBase)
         #expect(!fixture.hostView.containsInteractivePoint(fixture.point(x: 350, belowTop: 15)))
+
         morph.settle()
         #expect(fixture.hostView.containsInteractivePoint(fixture.point(x: 350, belowTop: 15)))
         #expect(activity.compactLeadingContexts.count > compactBuilds)
         #expect(activity.activations == 1)
         #expect(!morph.isRunning)
+
         fixture.controller.stop()
     }
 
     @Test
     func noticeWidthIsBoundedAndDoesNotJumpBeforeTheMorphAdvances() {
-        let morph = RecordingMorphEngine()
+        let morph   = RecordingMorphEngine()
         let fixture = ControllerFixture(morphEngine: morph)
         fixture.controller.start()
         let notice = ControllerNoticeFixture(id: "volume", compactPreferredSideWidth: 116)
         fixture.controller.showNotice(notice)
         #expect(notice.compactLeadingContexts.last?.availableSize.width == 102)
         #expect(!fixture.hostView.containsInteractivePoint(fixture.point(x: 700, belowTop: 15)))
+
         morph.settle()
         #expect(fixture.hostView.containsInteractivePoint(fixture.point(x: 700, belowTop: 15)))
+
         let invalid = ControllerNoticeFixture(id: "invalid", compactPreferredSideWidth: .infinity)
         fixture.controller.showNotice(invalid)
         #expect(invalid.compactLeadingContexts.isEmpty)
         #expect(fixture.hostView.containsInteractivePoint(fixture.point(x: 700, belowTop: 15)))
+
         morph.settle()
         #expect(invalid.compactLeadingContexts.last?.availableSize.width == 50)
         #expect(!fixture.hostView.containsInteractivePoint(fixture.point(x: 700, belowTop: 15)))
+
         fixture.controller.stop()
     }
 
     @Test
     func rehoverCancelsTheReturnToBaseWithoutADeferredCompactReveal() {
-        let morph = RecordingMorphEngine()
-        let fixture = ControllerFixture(morphEngine: morph)
+        let morph    = RecordingMorphEngine()
+        let fixture  = ControllerFixture(morphEngine: morph)
         let activity = ControllerActivityFixture(id: "music")
         fixture.controller.present(activity)
         fixture.controller.start()
@@ -1143,13 +1266,14 @@ struct NotchControllerTests {
         #expect(fixture.hostView.containsInteractivePoint(fixture.point(x: 500, belowTop: 100)))
         #expect(activity.expandedContexts.count >= 2)
         #expect(!morph.isRunning)
+
         fixture.controller.stop()
     }
 
     @Test
     func immediateCloseAndLockDuringCollapseCannotLeaveAHiddenSessionStuck() {
-        let morph = RecordingMorphEngine()
-        let fixture = ControllerFixture(morphEngine: morph)
+        let morph    = RecordingMorphEngine()
+        let fixture  = ControllerFixture(morphEngine: morph)
         let activity = ControllerActivityFixture(id: "music")
         fixture.controller.start()
         fixture.controller.present(activity)
@@ -1157,65 +1281,82 @@ struct NotchControllerTests {
         fixture.monitor.sendPointer(CGPoint(x: 50, y: 500))
         morph.settle()
         #expect(fixture.hostView.containsInteractivePoint(fixture.point(x: 350, belowTop: 15)))
+
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 790))
         morph.settle()
         fixture.monitor.sendPointer(CGPoint(x: 50, y: 500))
         fixture.monitor.sendLock()
         #expect(!morph.isRunning)
+
         fixture.monitor.sendUnlock()
         morph.settle()
         #expect(fixture.hostView.containsInteractivePoint(fixture.point(x: 350, belowTop: 15)))
         #expect(!morph.isRunning)
+
         fixture.controller.stop()
     }
 
     @Test
     func lockDoesNotBrieflyActivateTheHiddenSecondaryProvider() {
         let fixture = ControllerFixture(reducesMotion: true)
-        let primary = ControllerActivityFixture(id: "primary", sourceID: "music", relevanceScore: 1)
-        let secondary = ControllerActivityFixture(id: "secondary", sourceID: "timer", relevanceScore: 0)
+        let primary = ControllerActivityFixture(
+            id            : "primary",
+            sourceID      : "music",
+            relevanceScore: 1
+        )
+        let secondary = ControllerActivityFixture(
+            id            : "secondary",
+            sourceID      : "timer",
+            relevanceScore: 0
+        )
         fixture.controller.present(primary)
         fixture.controller.present(secondary)
         fixture.controller.start()
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 790))
         let activationsBeforeLock = secondary.activations
         #expect(activationsBeforeLock >= 1)
+
         fixture.monitor.sendLock()
         #expect(secondary.activations == activationsBeforeLock)
+
         fixture.monitor.sendUnlock()
         #expect(secondary.activations == activationsBeforeLock + 1)
+
         fixture.controller.stop()
     }
 
     @Test(arguments: [false, true])
     func displayChangeReconcilesCompactWidth(reduceMotion: Bool) {
-        let morph = RecordingMorphEngine()
+        let morph   = RecordingMorphEngine()
         let fixture = ControllerFixture(morphEngine: morph, reducesMotion: reduceMotion)
         fixture.controller.present(ControllerActivityFixture(id: "music"))
         fixture.controller.start()
         morph.settle()
-        let original = fixture.resolver.display
+        let original             = fixture.resolver.display
         fixture.resolver.display = ActiveDisplay(
-            displayID: 42,
-            frame: CGRect(x: 0, y: 0, width: 280, height: 800),
+            displayID   : 42,
+            frame       : CGRect(x: 0, y: 0, width: 280, height: 800),
             backingScale: 2,
-            notch: original.notch
+            notch       : original.notch
         )
         fixture.monitor.sendDisplayChange()
         let shape = fixture.hostView.layer?.sublayers?.first as? CAShapeLayer
         #expect((shape?.path?.boundingBoxOfPath.width ?? .infinity) <= 280)
+
         morph.settle()
         #expect(shape?.path?.boundingBoxOfPath.width == 280)
+
         fixture.resolver.display = original
         fixture.monitor.sendDisplayChange()
         morph.settle()
         #expect(shape?.path?.boundingBoxOfPath.width == 328)
+
         fixture.controller.stop()
     }
 
     @Test
     func acceptedHoverPerformsFeedbackBeforeStartingTheMorph() {
-        var events: [String] = []
+        var events : [String] = []
         let fixture = ControllerFixture(
             morphEngine: RecordingMorphEngine { events.append("morph") },
             performer  : RecordingHapticPerformer { events.append("haptic") }
@@ -1226,20 +1367,22 @@ struct NotchControllerTests {
         fixture.monitor.sendPointer(CGPoint(x: 501, y: 790))
 
         #expect(events == ["haptic", "morph"])
+
         fixture.controller.stop()
     }
 
     @Test
     func automaticActivityPresentationDoesNotPerformHoverFeedback() {
         let performer = CountingHapticPerformer()
-        let fixture = ControllerFixture(performer: performer)
-        let activity = ControllerActivityFixture(id: "music")
+        let fixture   = ControllerFixture(performer: performer)
+        let activity  = ControllerActivityFixture(id: "music")
 
         fixture.controller.start()
         fixture.controller.present(activity)
 
         #expect(performer.count == 0)
         #expect(activity.activations == 1)
+
         fixture.controller.stop()
         #expect(activity.suspensions == 1)
     }
@@ -1247,8 +1390,8 @@ struct NotchControllerTests {
     @Test
     func lockSuspendsActivityAndInhibitsPointerEventsUntilUnlock() {
         let performer = CountingHapticPerformer()
-        let fixture = ControllerFixture(performer: performer)
-        let activity = ControllerActivityFixture(id: "music")
+        let fixture   = ControllerFixture(performer: performer)
+        let activity  = ControllerActivityFixture(id: "music")
 
         fixture.controller.start()
         fixture.controller.present(activity)
@@ -1260,6 +1403,7 @@ struct NotchControllerTests {
 
         fixture.monitor.sendUnlock()
         #expect(activity.activations == 2)
+
         fixture.controller.stop()
     }
 
@@ -1279,14 +1423,15 @@ struct NotchControllerTests {
 
         #expect(fixture.panel.frame.width == 1_440)
         #expect(fixture.hostView.frame.width == 1_440)
+
         fixture.controller.stop()
     }
 
     @Test
     func reduceMotionSnapsWithoutStartingDisplayLink() {
         let morphEngine = RecordingMorphEngine()
-        let fixture = ControllerFixture(
-            morphEngine : morphEngine,
+        let fixture     = ControllerFixture(
+            morphEngine  : morphEngine,
             reducesMotion: true
         )
 
@@ -1295,30 +1440,31 @@ struct NotchControllerTests {
 
         #expect(fixture.controller.state == .open)
         #expect(morphEngine.startCount == 0)
+
         fixture.controller.stop()
     }
 
     @Test
     func contextualPageNeverExceedsTheStandardExpandedHeight() throws {
         let fixture = ControllerFixture(reducesMotion: true)
-        let page = ControllerContextualPage(contentHeight: 400)
+        let page    = ControllerContextualPage(contentHeight: 400)
         fixture.controller.start()
         defer { fixture.controller.stop() }
 
         fixture.controller.surface.applyPresentation(DisplayPresentation(
-            primary: nil,
-            secondary: nil,
-            notice: nil,
-            expanded: nil,
-            expandedIsLiveActivity: false,
-            showsWidgets: false,
-            contextualPage: page,
+            primary                 : nil,
+            secondary               : nil,
+            notice                  : nil,
+            expanded                : nil,
+            expandedIsLiveActivity  : false,
+            showsWidgets            : false,
+            contextualPage          : page,
             contextualPageIsSelected: true,
-            widgetContentRevision: 0,
-            style: .notch
+            widgetContentRevision   : 0,
+            style                   : .notch
         ))
 
-        let shape = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
+        let shape  = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
         let bounds = try #require(shape.path?.boundingBoxOfPath)
         #expect(bounds.height == NotchConfiguration.default.expandedHeight)
         #expect(page.contexts.count == 1)
@@ -1328,21 +1474,21 @@ struct NotchControllerTests {
     @Test
     func contextualPageReceivesTheHardwareNotchAsALocalCenterObstruction() throws {
         let fixture = ControllerFixture(reducesMotion: true)
-        let page = ControllerContextualPage(contentHeight: 400)
+        let page    = ControllerContextualPage(contentHeight: 400)
         fixture.controller.start()
         defer { fixture.controller.stop() }
 
         fixture.controller.surface.applyPresentation(DisplayPresentation(
-            primary: nil,
-            secondary: nil,
-            notice: nil,
-            expanded: nil,
-            expandedIsLiveActivity: false,
-            showsWidgets: false,
-            contextualPage: page,
+            primary                 : nil,
+            secondary               : nil,
+            notice                  : nil,
+            expanded                : nil,
+            expandedIsLiveActivity  : false,
+            showsWidgets            : false,
+            contextualPage          : page,
             contextualPageIsSelected: true,
-            widgetContentRevision: 0,
-            style: .notch
+            widgetContentRevision   : 0,
+            style                   : .notch
         ))
 
         let context = try #require(page.contexts.last)
@@ -1354,24 +1500,24 @@ struct NotchControllerTests {
 
     @Test
     func replacingAContextualPageInstanceWithTheSameIDAndRevisionRendersTheReplacement() {
-        let fixture = ControllerFixture(reducesMotion: true)
-        let first = ControllerContextualPage(contentHeight: 120)
+        let fixture     = ControllerFixture(reducesMotion: true)
+        let first       = ControllerContextualPage(contentHeight: 120)
         let replacement = ControllerContextualPage(contentHeight: 120)
         fixture.controller.start()
         defer { fixture.controller.stop() }
 
         func presentation(_ page: ControllerContextualPage) -> DisplayPresentation {
             DisplayPresentation(
-                primary: nil,
-                secondary: nil,
-                notice: nil,
-                expanded: nil,
-                expandedIsLiveActivity: false,
-                showsWidgets: false,
-                contextualPage: page,
+                primary                 : nil,
+                secondary               : nil,
+                notice                  : nil,
+                expanded                : nil,
+                expandedIsLiveActivity  : false,
+                showsWidgets            : false,
+                contextualPage          : page,
                 contextualPageIsSelected: true,
-                widgetContentRevision: 0,
-                style: .notch
+                widgetContentRevision   : 0,
+                style                   : .notch
             )
         }
 
@@ -1390,16 +1536,16 @@ struct NotchControllerTests {
 
         func presentation(_ page: ControllerContextualPage) -> DisplayPresentation {
             DisplayPresentation(
-                primary: nil,
-                secondary: nil,
-                notice: nil,
-                expanded: nil,
-                expandedIsLiveActivity: false,
-                showsWidgets: false,
-                contextualPage: page,
+                primary                 : nil,
+                secondary               : nil,
+                notice                  : nil,
+                expanded                : nil,
+                expandedIsLiveActivity  : false,
+                showsWidgets            : false,
+                contextualPage          : page,
                 contextualPageIsSelected: true,
-                widgetContentRevision: 0,
-                style: .notch
+                widgetContentRevision   : 0,
+                style                   : .notch
             )
         }
 
@@ -1421,10 +1567,11 @@ struct NotchControllerTests {
 
     @Test
     func recognizedFileDragRunsOneFiniteHeartbeatAndNearHoverRequestsDragExpansion() {
-        let morph = RecordingMorphEngine()
+        let morph   = RecordingMorphEngine()
         let fixture = ControllerFixture(morphEngine: morph)
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         morph.settle()
 
         fixture.controller.surface.setRecognizedFileDragActive(
@@ -1437,6 +1584,7 @@ struct NotchControllerTests {
             at: CGPoint(x: 100, y: 100)
         )
         #expect(morph.startCount == starts)
+
         morph.settle()
         #expect(!morph.isRunning)
 
@@ -1449,11 +1597,12 @@ struct NotchControllerTests {
     func recognizedFileDragUsesAWideIntakeWithoutChangingOrdinaryHitTesting() {
         let fixture = ControllerFixture(reducesMotion: true)
         fixture.controller.present(ControllerActivityFixture(
-            id: "tall",
+            id                   : "tall",
             expandedContentHeight: 200
         ))
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         let intakePoint = CGPoint(x: 250, y: 650)
 
         fixture.controller.surface.handlePointer(at: intakePoint)
@@ -1484,6 +1633,7 @@ struct NotchControllerTests {
         let fixture = ControllerFixture(reducesMotion: true)
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         let approachPoint = CGPoint(
             x: fixture.panel.frame.midX,
             y: fixture.panel.frame.minY - 20
@@ -1506,17 +1656,18 @@ struct NotchControllerTests {
     @Test
     func validatedOfferHintArmsBeforeNativeHoverAndMouseUpBlocksLateRearm() {
         let edgeGuard = RecordingFileDragTopEdgeGuard()
-        let fixture = ControllerFixture(
-            reducesMotion: true,
+        let fixture   = ControllerFixture(
+            reducesMotion       : true,
             fileDragTopEdgeGuard: edgeGuard
         )
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         let intakePoint = CGPoint(x: 500, y: 790)
 
         fixture.controller.surface.setRecognizedFileDragActive(
             true,
-            at: intakePoint,
+            at                   : intakePoint,
             hasValidatedOfferHint: true
         )
         #expect(fixture.controller.state == .open)
@@ -1534,16 +1685,17 @@ struct NotchControllerTests {
     @Test
     func nativeExitCanRearmTheGuardDuringTheSamePhysicalGesture() {
         let edgeGuard = RecordingFileDragTopEdgeGuard()
-        let fixture = ControllerFixture(
-            reducesMotion: true,
+        let fixture   = ControllerFixture(
+            reducesMotion       : true,
             fileDragTopEdgeGuard: edgeGuard
         )
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         let intakePoint = CGPoint(x: 500, y: 790)
         fixture.controller.surface.setRecognizedFileDragActive(
             true,
-            at: intakePoint,
+            at                   : intakePoint,
             hasValidatedOfferHint: true
         )
         #expect(edgeGuard.startCount == 1)
@@ -1559,18 +1711,19 @@ struct NotchControllerTests {
     @Test
     func nativeHoverWithoutGlobalHintArmsWhenItsPendingOpeningIsGranted() throws {
         let edgeGuard = RecordingFileDragTopEdgeGuard()
-        let fixture = ControllerFixture(
-            reducesMotion: true,
-            autoGrantExpansions: false,
+        let fixture   = ControllerFixture(
+            reducesMotion       : true,
+            autoGrantExpansions : false,
             fileDragTopEdgeGuard: edgeGuard
         )
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         let intakePoint = CGPoint(x: 500, y: 790)
 
         fixture.controller.surface.setRecognizedFileDragActive(
             true,
-            at: intakePoint,
+            at                   : intakePoint,
             hasValidatedOfferHint: false
         )
         #expect(fixture.controller.state == .closed)
@@ -1592,6 +1745,7 @@ struct NotchControllerTests {
         let fixture = ControllerFixture(reducesMotion: true)
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         fixture.controller.surface.setRecognizedFileDragActive(
             true,
             at: CGPoint(x: 250, y: 650)
@@ -1599,16 +1753,16 @@ struct NotchControllerTests {
         let page = ControllerContextualPage(contentHeight: 400)
 
         fixture.controller.surface.applyPresentation(DisplayPresentation(
-            primary: nil,
-            secondary: nil,
-            notice: nil,
-            expanded: nil,
-            expandedIsLiveActivity: false,
-            showsWidgets: false,
-            contextualPage: page,
+            primary                 : nil,
+            secondary               : nil,
+            notice                  : nil,
+            expanded                : nil,
+            expandedIsLiveActivity  : false,
+            showsWidgets            : false,
+            contextualPage          : page,
             contextualPageIsSelected: true,
-            widgetContentRevision: 0,
-            style: .notch
+            widgetContentRevision   : 0,
+            style                   : .notch
         ))
 
         let windowPoint = fixture.panel.convertPoint(
@@ -1623,7 +1777,7 @@ struct NotchControllerTests {
     @Test
     func expandedActivityKeepsTheCoveredWidgetSurfaceSuspended() {
         let fixture = ControllerFixture(reducesMotion: true)
-        let widget = ControllerWidgetFixture()
+        let widget  = ControllerWidgetFixture()
         fixture.controller.register(widget)
         fixture.controller.present(ControllerActivityFixture(id: "music"))
 
@@ -1632,8 +1786,10 @@ struct NotchControllerTests {
 
         #expect(fixture.controller.state == .open)
         #expect(widget.activations == 0)
+
         fixture.controller.endActivity(id: "music")
         #expect(widget.activations == 1)
+
         fixture.controller.stop()
         #expect(widget.suspensions == 1)
     }
@@ -1641,11 +1797,12 @@ struct NotchControllerTests {
     @Test
     func activityChangesWhileLockedDoNotRestartTheDisplayLink() {
         let morphEngine = RecordingMorphEngine()
-        let fixture = ControllerFixture(morphEngine: morphEngine)
+        let fixture     = ControllerFixture(morphEngine: morphEngine)
 
         fixture.controller.start()
         fixture.controller.present(ControllerActivityFixture(id: "first"))
         #expect(morphEngine.startCount == 1)
+
         fixture.monitor.sendLock()
         #expect(morphEngine.isRunning == false)
 
@@ -1655,13 +1812,14 @@ struct NotchControllerTests {
         #expect(morphEngine.startCount == 1)
         #expect(morphEngine.isRunning == false)
         #expect(second.contentFactoryCount == 0)
+
         fixture.controller.stop()
     }
 
     @Test
     func transientPresentedWhileLockedIsNotReplayedAfterUnlock() {
         let fixture = ControllerFixture(reducesMotion: true)
-        let notice = ControllerNoticeFixture(id: "locked-notice")
+        let notice  = ControllerNoticeFixture(id: "locked-notice")
 
         fixture.controller.start()
         fixture.monitor.sendLock()
@@ -1669,13 +1827,14 @@ struct NotchControllerTests {
         fixture.monitor.sendUnlock()
 
         #expect(notice.activations == 0)
+
         fixture.controller.stop()
     }
 
     @Test
     func compactActivityWingAcceptsHoverEntry() {
         let performer = CountingHapticPerformer()
-        let fixture = ControllerFixture(
+        let fixture   = ControllerFixture(
             performer    : performer,
             reducesMotion: true
         )
@@ -1686,6 +1845,7 @@ struct NotchControllerTests {
 
         #expect(fixture.controller.state == .open)
         #expect(performer.count == 1)
+
         fixture.controller.stop()
     }
 
@@ -1710,13 +1870,14 @@ struct NotchControllerTests {
         }
 
         #expect(fixture.controller.state == .closed)
+
         fixture.controller.stop()
     }
 
     @Test
     func restartDoesNotUseAPointerSegmentFromBeforeStop() {
         let performer = CountingHapticPerformer()
-        let fixture = ControllerFixture(
+        let fixture   = ControllerFixture(
             performer    : performer,
             reducesMotion: true
         )
@@ -1729,12 +1890,13 @@ struct NotchControllerTests {
 
         #expect(fixture.controller.state == .closed)
         #expect(performer.count == 0)
+
         fixture.controller.stop()
     }
 
     @Test
     func compactProviderCanKeepItsOuterMarginsWithoutAnOversizedWing() {
-        let fixture = ControllerFixture(reducesMotion: true)
+        let fixture  = ControllerFixture(reducesMotion: true)
         let activity = ControllerNoticeFixture(
             id                       : "narrow-compact",
             compactPreferredSideWidth: 40
@@ -1744,6 +1906,7 @@ struct NotchControllerTests {
         defer { fixture.controller.stop() }
 
         #expect(activity.compactLeadingContexts.last?.availableSize.width == 26)
+
         let shape = fixture.hostView.layer?.sublayers?.first as? CAShapeLayer
         #expect(shape?.path?.boundingBoxOfPath.width == 280)
     }
@@ -1751,17 +1914,20 @@ struct NotchControllerTests {
     @Test
     func expandedFallbackLeavesTheHardwareNotchBareUntilOpened() {
         let fixture = ControllerFixture(reducesMotion: true)
-        let music = ControllerActivityFixture(id: "paused-music")
+        let music   = ControllerActivityFixture(id: "paused-music")
         fixture.controller.setExpandedFallback(music)
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         #expect(music.activations == 0)
         #expect(music.compactLeadingContexts.isEmpty)
         #expect(!fixture.hostView.containsInteractivePoint(fixture.point(x: 350, belowTop: 15)))
+
         fixture.monitor.sendPointer(CGPoint(x: 500, y: 790))
         #expect(fixture.controller.state == .open)
         #expect(music.expandedContexts.count == 1)
         #expect(music.activations == 1)
+
         fixture.monitor.sendPointer(CGPoint(x: 50, y: 500))
         #expect(fixture.controller.state == .closed)
         #expect(music.compactLeadingContexts.isEmpty)
@@ -1770,7 +1936,7 @@ struct NotchControllerTests {
 
     @Test
     func oneActivityUsesCompactFamiliesWithSafeAvailableBounds() {
-        let fixture = ControllerFixture(reducesMotion: true)
+        let fixture  = ControllerFixture(reducesMotion: true)
         let activity = ControllerActivityFixture(id: "music")
         fixture.controller.present(activity)
 
@@ -1786,26 +1952,38 @@ struct NotchControllerTests {
         ))
         #expect(activity.minimalContexts.isEmpty)
         #expect(!activity.factoryRanBeforeActivation)
+
         fixture.controller.stop()
     }
 
     @Test
     func twoActivitiesUseADetachedCircleThatExpandsOnlyOnClick() throws {
         let fixture = ControllerFixture(reducesMotion: true)
-        let primary = ControllerActivityFixture(id: "primary", sourceID: "music", relevanceScore: 0.9)
-        let secondary = ControllerActivityFixture(id: "secondary", sourceID: "bluetooth", relevanceScore: 0.8)
+        let primary = ControllerActivityFixture(
+            id            : "primary",
+            sourceID      : "music",
+            relevanceScore: 0.9
+        )
+        let secondary = ControllerActivityFixture(
+            id            : "secondary",
+            sourceID      : "bluetooth",
+            relevanceScore: 0.8
+        )
         fixture.controller.present(primary)
         fixture.controller.present(secondary)
         fixture.controller.start()
         defer { fixture.controller.stop() }
+
         #expect(primary.compactLeadingContexts.last?.availableSize == CGSize(width: 50, height: 18))
         #expect(primary.compactTrailingContexts.isEmpty)
         #expect(secondary.compactLeadingContexts.last?.availableSize == CGSize(width: 18, height: 18))
         #expect(!fixture.hostView.containsInteractivePoint(fixture.point(x: 605, belowTop: 15)))
         #expect(fixture.hostView.containsInteractivePoint(fixture.point(x: 625, belowTop: 15)))
         #expect(!fixture.hostView.containsInteractivePoint(fixture.point(x: 611, belowTop: 1)))
+
         fixture.monitor.sendPointer(CGPoint(x: 625, y: 785))
         #expect(fixture.controller.state == .closed)
+
         fixture.monitor.sendButton(isPressed: true)
         #expect(fixture.controller.state == .open)
         #expect(secondary.expandedContexts.last?.presentation == .expanded)
@@ -1814,7 +1992,7 @@ struct NotchControllerTests {
 
     @Test
     func hiddenSensitiveActivityBypassesProviderContentAndMetadata() {
-        let fixture = ControllerFixture(reducesMotion: true)
+        let fixture  = ControllerFixture(reducesMotion: true)
         let activity = ControllerActivityFixture(
             id     : "private",
             privacy: .sensitive
@@ -1839,12 +2017,13 @@ struct NotchControllerTests {
         #expect(activity.contentFactoryCount == 1)
         #expect(activity.accessibilityLabelReads == 1)
         #expect(activity.contentURLReads == 1)
+
         fixture.controller.stop()
     }
 
     @Test
     func expandedHeightAdaptsToDeclaredContentAndClampsAtTheConfiguredMaximum() {
-        let fixture = ControllerFixture(reducesMotion: true)
+        let fixture         = ControllerFixture(reducesMotion: true)
         let compactActivity = ControllerActivityFixture(
             id                   : "compact-expanded",
             expandedContentHeight: 40
@@ -1867,13 +2046,17 @@ struct NotchControllerTests {
         fixture.controller.present(tallActivity)
 
         #expect(fixture.hostView.containsInteractivePoint(fixture.point(x: 500, belowTop: 219)))
-        #expect(tallActivity.expandedContexts.last?.availableSize.height == NotchConfiguration.default.maximumActivityExpandedHeight - 50)
+        #expect(
+            tallActivity.expandedContexts.last?.availableSize.height
+                == NotchConfiguration.default.maximumActivityExpandedHeight - 50
+        )
+
         fixture.controller.stop()
     }
 
     @Test
     func invalidProviderHeightCannotPoisonTheInteractiveGeometry() {
-        let fixture = ControllerFixture(reducesMotion: true)
+        let fixture  = ControllerFixture(reducesMotion: true)
         let activity = ControllerActivityFixture(
             id                   : "invalid-height",
             expandedContentHeight: .nan
@@ -1885,6 +2068,7 @@ struct NotchControllerTests {
         #expect(activity.expandedContexts.last?.availableSize.height == 0)
         #expect(fixture.hostView.containsInteractivePoint(fixture.point(x: 500, belowTop: 49)))
         #expect(!fixture.hostView.containsInteractivePoint(fixture.point(x: 500, belowTop: 51)))
+
         fixture.controller.stop()
     }
 }

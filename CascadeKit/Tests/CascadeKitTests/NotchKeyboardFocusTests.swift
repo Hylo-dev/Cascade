@@ -9,11 +9,13 @@ import Testing
 
 @MainActor
 struct NotchKeyboardFocusTests {
+
     @Test
     func overlayAcceptsKeysOnlyAfterAnExplicitKeyboardTargetBecomesResponder() {
         let content = NSView(frame: CGRect(x: 0, y: 0, width: 440, height: 144))
-        let target = KeyboardTarget(frame: content.bounds)
+        let target  = KeyboardTarget(frame: content.bounds)
         content.addSubview(target)
+
         let panel = NotchPanel(contentView: content)
         #expect(!panel.canBecomeKey)
         #expect(!panel.canBecomeMain)

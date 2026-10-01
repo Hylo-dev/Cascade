@@ -64,6 +64,7 @@ struct ActivityDisplayRoutingTests {
         )
         let encoded = try JSONEncoder().encode(preferences)
         let decoded = try JSONDecoder().decode(DisplayPresentationPreferences.self, from: encoded)
+
         #expect(decoded == preferences)
         #expect(decoded.style(for: displayA) == .dynamicIsland)
         #expect(decoded.style(for: displayB) == .notch)
@@ -71,7 +72,7 @@ struct ActivityDisplayRoutingTests {
 
     @Test
     func preferenceStoreUsesOnePayloadAndFallsBackFromCorruptData() throws {
-        let suite = "Cascade.ActivityDisplayRoutingTests.\(UUID().uuidString)"
+        let suite    = "Cascade.ActivityDisplayRoutingTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
 
@@ -102,11 +103,11 @@ struct ActivityDisplayRoutingTests {
 
     @Test
     func inventoryKeepsStableIdentityWhenTheRuntimeIDChanges() {
-        var runtimeID: CGDirectDisplayID = 7
-        let identity = DisplayIdentity(rawValue: "stable-uuid")
+        var runtimeID  : CGDirectDisplayID = 7
+        let identity    = DisplayIdentity(rawValue: "stable-uuid")
         var resolvedIDs: [CGDirectDisplayID] = []
-        let inventory = DisplayInventory(
-            screens: {
+        let inventory   = DisplayInventory(
+            screens         : {
                 [Self.screen(
                     displayID: runtimeID,
                     name     : "Studio Display"
@@ -116,7 +117,7 @@ struct ActivityDisplayRoutingTests {
                 resolvedIDs.append(displayID)
                 return displayID == 7 || displayID == 42 ? identity : nil
             },
-            mirrorResolver: { _ in kCGNullDirectDisplay }
+            mirrorResolver  : { _ in kCGNullDirectDisplay }
         )
 
         inventory.start()
@@ -128,15 +129,16 @@ struct ActivityDisplayRoutingTests {
         #expect(inventory.displays.map(\.identity) == [identity])
         #expect(inventory.displays.map(\.snapshot.displayID) == [42])
         #expect(resolvedIDs == [7, 42])
+
         inventory.stop()
     }
 
     @Test
     func inventoryCoalescesMirrorsUsingTheFirstAppKitRepresentative() {
         let mirroredIdentity = DisplayIdentity(rawValue: "mirrored-uuid")
-        let primaryIdentity = DisplayIdentity(rawValue: "primary-uuid")
-        let inventory = DisplayInventory(
-            screens: {
+        let primaryIdentity  = DisplayIdentity(rawValue: "primary-uuid")
+        let inventory        = DisplayInventory(
+            screens         : {
                 [
                     Self.screen(
                         displayID: 11,
@@ -153,7 +155,7 @@ struct ActivityDisplayRoutingTests {
             identityResolver: { displayID in
                 displayID == 11 ? mirroredIdentity : primaryIdentity
             },
-            mirrorResolver: { displayID in
+            mirrorResolver  : { displayID in
                 displayID == 11 ? 10 : kCGNullDirectDisplay
             }
         )
@@ -163,25 +165,27 @@ struct ActivityDisplayRoutingTests {
         #expect(inventory.displays[0].snapshot.displayID == 11)
         #expect(inventory.displays[0].identity == mirroredIdentity)
         #expect(inventory.displays[0].name == "AppKit representative")
+
         inventory.stop()
     }
 
     @Test
     func inventoryLeavesFailedIdentityLookupsUnresolved() {
         let inventory = DisplayInventory(
-            screens: {
+            screens         : {
                 [Self.screen(
                     displayID: 8,
                     name     : "Session only"
                 )]
             },
             identityResolver: { _ in nil },
-            mirrorResolver: { _ in kCGNullDirectDisplay }
+            mirrorResolver  : { _ in kCGNullDirectDisplay }
         )
 
         inventory.start()
         #expect(inventory.displays.count == 1)
         #expect(inventory.displays[0].identity == nil)
+
         inventory.stop()
     }
 
@@ -198,13 +202,13 @@ struct ActivityDisplayRoutingTests {
             ),
         ]
         let inventory = DisplayInventory(
-            screens: { screens },
+            screens         : { screens },
             identityResolver: { displayID in
                 displayID == 7 ? displayA : nil
             },
-            mirrorResolver: { _ in kCGNullDirectDisplay }
+            mirrorResolver  : { _ in kCGNullDirectDisplay }
         )
-        var changes = 0
+        var changes        = 0
         inventory.onChange = { changes += 1 }
 
         inventory.start()
@@ -227,6 +231,7 @@ struct ActivityDisplayRoutingTests {
         )
         inventory.refresh()
         #expect(changes == 2)
+
         inventory.stop()
     }
 

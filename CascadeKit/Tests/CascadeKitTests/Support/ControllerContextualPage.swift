@@ -11,15 +11,20 @@ import Testing
 
 @MainActor
 final class ControllerContextualPage: NotchContextualPage {
-    let id = "shelf"
-    let contentRevision: UInt64 = 1
-    let contentHeight: CGFloat
+
+    let id                        = "shelf"
+    let contentRevision          : UInt64 = 1
+    let contentHeight            : CGFloat
     let keepsExpandedPresentation: Bool
-    let accessibilityLabel = "Shelf"
+    let accessibilityLabel        = "Shelf"
+
     private(set) var contexts: [NotchContextualPageContext] = []
 
-    init(contentHeight: CGFloat, keepsExpanded: Bool = false) {
-        self.contentHeight = contentHeight
+    init(
+        contentHeight: CGFloat,
+        keepsExpanded: Bool = false
+    ) {
+        self.contentHeight             = contentHeight
         self.keepsExpandedPresentation = keepsExpanded
     }
 

@@ -11,5 +11,6 @@ import Testing
 
 @MainActor
 struct NoOpWindowPinner: WindowPinning {
+
     func pin(_ window: NSWindow) {}
 }

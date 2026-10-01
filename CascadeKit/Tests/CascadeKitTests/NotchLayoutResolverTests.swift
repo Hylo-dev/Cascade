@@ -13,8 +13,8 @@ import CoreGraphics
 /// and a narrow notch degrades the trailing-cell count (the "does it fit" answer).
 struct NotchLayoutResolverTests {
 
-    private let resolver = NotchLayoutResolver() // .default metrics: 14 cols, gutter 6, ≤4 trailing
-    private let interior = CGRect(x: 0, y: 0, width: 640, height: 180)
+    private let resolver      = NotchLayoutResolver() // .default metrics: 14 cols, gutter 6, ≤4 trailing
+    private let interior      = CGRect(x: 0, y: 0, width: 640, height: 180)
     private let notchWidth   : CGFloat = 200
     private let topBandHeight: CGFloat = 36
 
@@ -36,7 +36,6 @@ struct NotchLayoutResolverTests {
 
     @Test
     func smallWidgetMapsToOneMainCell() throws {
-
         let id     = WidgetIdentifier("small")
         let layout = resolve([
             id: WidgetPlacement(position: GridPosition(column: 0, row: 1), span: .small)
@@ -51,10 +50,12 @@ struct NotchLayoutResolverTests {
 
     @Test
     func largeWidgetSpansBothMainRows() throws {
-
         let id     = WidgetIdentifier("large")
         let layout = resolve([
-            id: WidgetPlacement(position: GridPosition(column: 2, row: 1), span: GridSpan(columns: 3, rows: 2))
+            id: WidgetPlacement(
+                position: GridPosition(column: 2, row: 1),
+                span    : GridSpan(columns: 3, rows: 2)
+            )
         ])
 
         let frame = try #require(layout.frames[id])
@@ -64,7 +65,6 @@ struct NotchLayoutResolverTests {
 
     @Test
     func row0OffersOnlyTheTrailingSide() {
-
         let trailing = WidgetIdentifier("trailing")
         let slider   = WidgetIdentifier("slider")
 
@@ -79,10 +79,12 @@ struct NotchLayoutResolverTests {
 
     @Test
     func overflowingPlacementIsDropped() {
-
         let id     = WidgetIdentifier("overflow")
         let layout = resolve([
-            id: WidgetPlacement(position: GridPosition(column: 13, row: 1), span: GridSpan(columns: 2, rows: 1))
+            id: WidgetPlacement(
+                position: GridPosition(column: 13, row: 1),
+                span    : GridSpan(columns: 2, rows: 1)
+            )
         ])
 
         #expect(layout.frames[id] == nil) // columns 13,14 — column 14 is out of bounds
@@ -90,7 +92,6 @@ struct NotchLayoutResolverTests {
 
     @Test
     func narrowNotchDegradesTrailingCells() {
-
         let layout = NotchLayoutResolver().resolve(
             interior     : CGRect(x: 0, y: 0, width: 300, height: 160),
             notchWidth   : 250,

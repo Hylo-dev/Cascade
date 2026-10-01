@@ -9,5 +9,6 @@ import Testing
 
 @MainActor
 final class KeyboardTarget: NSView, NotchKeyboardFocusTarget {
+
     override var acceptsFirstResponder: Bool { true }
 }

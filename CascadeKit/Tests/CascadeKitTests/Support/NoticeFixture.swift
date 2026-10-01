@@ -10,6 +10,13 @@ import Testing
 
 @MainActor
 final class NoticeFixture: ContentFixture, NotchTransientNotice {
+
     var displayDuration: TimeInterval = 4
-    override init(_ id: String, sourceID: String = "bluetooth") { super.init(id, sourceID: sourceID) }
+
+    override init(
+        _ id    : String,
+        sourceID: String = "bluetooth"
+    ) {
+        super.init(id, sourceID: sourceID)
+    }
 }

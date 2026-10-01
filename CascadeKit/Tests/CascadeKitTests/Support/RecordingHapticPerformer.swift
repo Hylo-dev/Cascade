@@ -11,6 +11,8 @@ import Testing
 
 @MainActor
 struct RecordingHapticPerformer: HapticFeedbackPerforming {
+
     let onPerform: () -> Void
+
     func performHoverFeedback() { onPerform() }
 }

@@ -9,12 +9,14 @@ import Testing
 @testable import CascadeKit
 
 nonisolated final class RecordingFocusedWindowTransport: FocusedWindowTransport, @unchecked Sendable {
+
     private typealias Completion = @Sendable (FocusedWindowTransportResult) -> Void
 
     private let lock = NSLock()
+
     private var changeHandler: (@Sendable () -> Void)?
-    private var completions: [Completion?] = []
-    private var processIDs: [pid_t?] = []
+    private var completions  : [Completion?] = []
+    private var processIDs   : [pid_t?] = []
 
     var requestCount: Int {
         lock.withLock { completions.count }
@@ -29,7 +31,7 @@ nonisolated final class RecordingFocusedWindowTransport: FocusedWindowTransport,
     }
 
     func requestSnapshot(
-        processID: pid_t?,
+        processID : pid_t?,
         completion: @escaping @Sendable (FocusedWindowTransportResult) -> Void
     ) {
         lock.withLock {
@@ -49,12 +51,13 @@ nonisolated final class RecordingFocusedWindowTransport: FocusedWindowTransport,
 
     func completeRequest(
         at index: Int,
-        result: FocusedWindowTransportResult
+        result  : FocusedWindowTransportResult
     ) {
         let completion = lock.withLock { () -> Completion? in
             guard completions.indices.contains(index) else {
                 return nil
             }
+
             let completion = completions[index]
             completions[index] = nil
             return completion

@@ -13,16 +13,17 @@ struct FocusedWindowMonitorTests {
 
     @Test
     func focusedWindowChangeWithinTheSameApplicationPublishesTheNewFrame() async {
-        let application = FocusedApplication(processID: 400, bundleIdentifier: "example.editor")
+        let application  = FocusedApplication(processID: 400, bundleIdentifier: "example.editor")
         let applications = FakeFocusedApplicationMonitor(application: application)
-        let transport = RecordingFocusedWindowTransport()
-        let monitor = FocusedWindowMonitor(
+        let transport    = RecordingFocusedWindowTransport()
+        let monitor      = FocusedWindowMonitor(
             applicationMonitor: applications,
             transport         : transport,
             desktopTop        : { 900 },
-            coalescingDelay    : 0
+            coalescingDelay   : 0
         )
         var frames: [CGRect?] = []
+
         monitor.onChange = { frames.append($0) }
 
         monitor.start()
@@ -46,6 +47,7 @@ struct FocusedWindowMonitorTests {
             CGRect(x: -900, y: 200, width: 600, height: 500),
         ])
         #expect(transport.requestedProcessIDs == [400, 400])
+
         monitor.stop()
     }
 
@@ -55,13 +57,14 @@ struct FocusedWindowMonitorTests {
             application: FocusedApplication(processID: 450, bundleIdentifier: "example.editor")
         )
         let transport = RecordingFocusedWindowTransport()
-        let monitor = FocusedWindowMonitor(
+        let monitor   = FocusedWindowMonitor(
             applicationMonitor: applications,
             transport         : transport,
             desktopTop        : { 900 },
-            coalescingDelay    : 0
+            coalescingDelay   : 0
         )
         var frames: [CGRect?] = []
+
         monitor.onChange = { frames.append($0) }
 
         monitor.start()
@@ -84,6 +87,7 @@ struct FocusedWindowMonitorTests {
             CGRect(x: 100, y: 500, width: 500, height: 300),
             CGRect(x: -700, y: 1_000, width: 500, height: 300),
         ])
+
         monitor.stop()
     }
 
@@ -93,13 +97,14 @@ struct FocusedWindowMonitorTests {
             application: FocusedApplication(processID: 475, bundleIdentifier: "example.editor")
         )
         let transport = RecordingFocusedWindowTransport()
-        let monitor = FocusedWindowMonitor(
+        let monitor   = FocusedWindowMonitor(
             applicationMonitor: applications,
             transport         : transport,
             desktopTop        : { 900 },
-            coalescingDelay    : 0
+            coalescingDelay   : 0
         )
         var frames: [CGRect?] = []
+
         monitor.onChange = { frames.append($0) }
 
         monitor.start()
@@ -116,6 +121,7 @@ struct FocusedWindowMonitorTests {
         await waitUntil { frames.count == 2 }
 
         #expect(frames[1] == nil)
+
         monitor.stop()
     }
 
@@ -125,13 +131,14 @@ struct FocusedWindowMonitorTests {
             application: FocusedApplication(processID: 500, bundleIdentifier: "example.editor")
         )
         let transport = RecordingFocusedWindowTransport()
-        let monitor = FocusedWindowMonitor(
+        let monitor   = FocusedWindowMonitor(
             applicationMonitor: applications,
             transport         : transport,
             desktopTop        : { 900 },
-            coalescingDelay    : 0
+            coalescingDelay   : 0
         )
         var frames: [CGRect?] = []
+
         monitor.onChange = { frames.append($0) }
 
         monitor.start()
@@ -150,6 +157,7 @@ struct FocusedWindowMonitorTests {
         await waitUntil { frames.count == 1 }
 
         #expect(frames == [CGRect(x: 600, y: 600, width: 200, height: 200)])
+
         monitor.stop()
     }
 
@@ -159,13 +167,14 @@ struct FocusedWindowMonitorTests {
             application: FocusedApplication(processID: 600, bundleIdentifier: "example.editor")
         )
         let transport = RecordingFocusedWindowTransport()
-        let monitor = FocusedWindowMonitor(
+        let monitor   = FocusedWindowMonitor(
             applicationMonitor: applications,
             transport         : transport,
             desktopTop        : { 900 },
-            coalescingDelay    : 0
+            coalescingDelay   : 0
         )
         var frames: [CGRect?] = []
+
         monitor.onChange = { frames.append($0) }
 
         monitor.start()
@@ -183,6 +192,7 @@ struct FocusedWindowMonitorTests {
 
         #expect(frames[0] == CGRect(x: 100, y: 600, width: 300, height: 200))
         #expect(frames[1] == nil)
+
         monitor.stop()
     }
 
@@ -190,26 +200,29 @@ struct FocusedWindowMonitorTests {
     func ownApplicationNeverBecomesTheFocusedWindowSource() async {
         let applications = FakeFocusedApplicationMonitor(
             application: FocusedApplication(
-                processID      : ProcessInfo.processInfo.processIdentifier,
+                processID       : ProcessInfo.processInfo.processIdentifier,
                 bundleIdentifier: Bundle.main.bundleIdentifier
             )
         )
         let transport = RecordingFocusedWindowTransport()
-        let monitor = FocusedWindowMonitor(
+        let monitor   = FocusedWindowMonitor(
             applicationMonitor: applications,
             transport         : transport,
             desktopTop        : { 900 },
-            coalescingDelay    : 0
+            coalescingDelay   : 0
         )
         var frames: [CGRect?] = []
+
         monitor.onChange = { frames.append($0) }
 
         monitor.start()
         await waitUntil { transport.requestCount == 1 }
         #expect(transport.requestedProcessIDs == [nil])
+
         transport.completeRequest(at: 0, result: .unavailable)
         await waitUntil { frames.count == 1 }
         #expect(frames[0] == nil)
+
         monitor.stop()
     }
 
@@ -219,14 +232,15 @@ struct FocusedWindowMonitorTests {
             application: FocusedApplication(processID: 700, bundleIdentifier: "example.editor")
         )
         let transport = RecordingFocusedWindowTransport()
-        let monitor = FocusedWindowMonitor(
+        let monitor   = FocusedWindowMonitor(
             applicationMonitor: applications,
             transport         : transport,
             desktopTop        : { 900 },
-            coalescingDelay    : 0
+            coalescingDelay   : 0
         )
         let rawFrame = CGRect(x: 100, y: 100, width: 300, height: 200)
-        var frames: [CGRect?] = []
+        var frames  : [CGRect?] = []
+
         monitor.onChange = { frames.append($0) }
 
         monitor.start()
@@ -250,12 +264,11 @@ struct FocusedWindowMonitorTests {
             CGRect(x: 100, y: 600, width: 300, height: 200),
             CGRect(x: 100, y: 600, width: 300, height: 200),
         ])
+
         monitor.stop()
     }
 
-    private func waitUntil(
-        _ condition: @escaping @MainActor () -> Bool
-    ) async {
+    private func waitUntil(_ condition: @escaping @MainActor () -> Bool) async {
         for _ in 0..<200 {
             if condition() {
                 return

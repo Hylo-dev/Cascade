@@ -11,6 +11,7 @@ import Testing
 
 @MainActor
 final class RecordingEventMonitor: EventMonitoring {
+
     var onPointerMoved               : ((CGPoint) -> Void)?
     var onPointerButtonChanged       : ((Bool) -> Void)?
     var onActiveDisplayMayHaveChanged: (() -> Void)?
@@ -20,10 +21,16 @@ final class RecordingEventMonitor: EventMonitoring {
     var onScreensAsleepChanged       : ((Bool) -> Void)?
 
     func start() {}
+
     func stop() {}
+
     func sendPointer(_ point: CGPoint) { onPointerMoved?(point) }
+
     func sendButton(isPressed: Bool) { onPointerButtonChanged?(isPressed) }
+
     func sendDisplayChange() { onActiveDisplayMayHaveChanged?() }
+
     func sendLock() { onScreenLocked?() }
+
     func sendUnlock() { onScreenUnlocked?() }
 }

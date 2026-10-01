@@ -14,9 +14,9 @@ struct NotchDisplayCoordinatorTests {
     @Test
     func preferredPersistentContextualPageOpensAndStaysSelected() {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10])
-        let shelf = CoordinatorContextualPage(
-            id: "shelf",
-            contentRevision: 1,
+        let shelf   = CoordinatorContextualPage(
+            id                       : "shelf",
+            contentRevision          : 1,
             keepsExpandedPresentation: true
         )
         fixture.coordinator.setContextualPage(shelf, prefersDefault: true)
@@ -34,13 +34,13 @@ struct NotchDisplayCoordinatorTests {
     @Test
     func persistentContextualPageOpensWhenItBecomesOccupied() {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10])
-        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        let shelf   = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
         fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
         fixture.coordinator.start()
         #expect(fixture.coordinator.expandedDisplayID == nil)
 
         shelf.keepsExpandedPresentation = true
-        shelf.contentRevision = 2
+        shelf.contentRevision           = 2
         fixture.coordinator.setContextualPage(shelf, prefersDefault: true)
 
         #expect(fixture.coordinator.expandedDisplayID == 10)
@@ -50,25 +50,26 @@ struct NotchDisplayCoordinatorTests {
     @Test
     func persistentTransitionOwnsAnAlreadyExpandedSurfaceUntilEmpty() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10])
-        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        let shelf   = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
         fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
         fixture.coordinator.start()
         fixture.surfaces[10]?.requestExpansion(
             activityID: nil,
-            trigger: .drag,
+            trigger   : .drag,
             generation: 1
         )
 
         shelf.keepsExpandedPresentation = true
-        shelf.contentRevision = 2
+        shelf.contentRevision           = 2
         fixture.coordinator.setContextualPage(shelf, prefersDefault: true)
         #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == true)
 
         shelf.keepsExpandedPresentation = false
-        shelf.contentRevision = 3
+        shelf.contentRevision           = 3
         fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
 
         #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == false)
+
         let generation = try #require(fixture.surfaces[10]?.closeRequests.last)
         fixture.surfaces[10]?.finishCollapse(generation: generation)
         #expect(fixture.coordinator.expandedDisplayID == nil)
@@ -91,19 +92,20 @@ struct NotchDisplayCoordinatorTests {
     @Test
     func emptyingPersistentContextualPageReturnsToClosedOrdinaryState() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10])
-        let shelf = CoordinatorContextualPage(
-            id: "shelf",
-            contentRevision: 1,
+        let shelf   = CoordinatorContextualPage(
+            id                       : "shelf",
+            contentRevision          : 1,
             keepsExpandedPresentation: true
         )
         fixture.coordinator.setContextualPage(shelf, prefersDefault: true)
         fixture.coordinator.start()
 
         shelf.keepsExpandedPresentation = false
-        shelf.contentRevision = 2
+        shelf.contentRevision           = 2
         fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
 
         #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == false)
+
         let generation = try #require(fixture.surfaces[10]?.closeRequests.last)
         fixture.surfaces[10]?.finishCollapse(generation: generation)
         #expect(fixture.coordinator.expandedDisplayID == nil)
@@ -115,8 +117,8 @@ struct NotchDisplayCoordinatorTests {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10])
         fixture.coordinator.setContextualPage(
             CoordinatorContextualPage(
-                id: "shelf",
-                contentRevision: 1,
+                id                       : "shelf",
+                contentRevision          : 1,
                 keepsExpandedPresentation: true
             ),
             prefersDefault: true
@@ -134,13 +136,17 @@ struct NotchDisplayCoordinatorTests {
     @Test
     func occupiedContextualPageIsDefaultOnlyForANewOpening() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10])
-        let music = CoordinatorActivityFixture(id: "music")
-        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        let music   = CoordinatorActivityFixture(id: "music")
+        let shelf   = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
         fixture.activityHost.present(music)
         fixture.coordinator.setContextualPage(shelf, prefersDefault: true)
         fixture.coordinator.start()
 
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         #expect(fixture.surfaces[10]?.presentations.last?.contextualPage === shelf)
         #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == true)
 
@@ -156,7 +162,11 @@ struct NotchDisplayCoordinatorTests {
         fixture.surfaces[10]?.requestCollapse()
         let generation = try #require(fixture.surfaces[10]?.closeRequests.last)
         fixture.surfaces[10]?.finishCollapse(generation: generation)
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 2)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 2
+        )
         #expect(fixture.surfaces[10]?.presentations.last?.contextualPage === shelf)
         #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == true)
     }
@@ -164,10 +174,14 @@ struct NotchDisplayCoordinatorTests {
     @Test
     func emptyContextualPageRequiresExplicitSelectionAndReturnsToOrdinaryWhenEmptied() {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10])
-        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        let shelf   = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
         fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
         fixture.coordinator.start()
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
 
         #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == false)
         #expect(fixture.surfaces[10]?.presentations.last?.showsWidgets == true)
@@ -185,12 +199,12 @@ struct NotchDisplayCoordinatorTests {
     @Test
     func explicitContextualSelectionSurvivesAnOwnershipHandoff() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
-        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        let shelf   = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
         fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
         fixture.coordinator.start()
         fixture.surfaces[10]?.requestExpansion(
             activityID: nil,
-            trigger: .click,
+            trigger   : .click,
             generation: 1
         )
 
@@ -205,23 +219,28 @@ struct NotchDisplayCoordinatorTests {
 
     @Test
     func dragHoverPreviewRestoresThePreviouslySelectedPageUnlessDropSucceeds() {
-        let fixture = DisplayCoordinatorFixture(displayIDs: [10])
-        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
-        let url = URL(fileURLWithPath: "/tmp/report.txt")
-        var hovered: [[URL]?] = []
+        let fixture     = DisplayCoordinatorFixture(displayIDs: [10])
+        let shelf       = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        let url         = URL(fileURLWithPath: "/tmp/report.txt")
+        var hovered    : [[URL]?] = []
         var acceptsDrop = false
         fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
         fixture.coordinator.configureFileDrop(
-            onHover: { hovered.append($0) },
-            onDrop: { _ in acceptsDrop },
+            onHover      : { hovered.append($0) },
+            onDrop       : { _ in acceptsDrop },
             onUnsupported: {}
         )
         fixture.coordinator.start()
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
 
         fixture.surfaces[10]?.sendFileDragHover([url])
         #expect(fixture.surfaces[10]?.presentations.last?.contextualPage === shelf)
         #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == true)
+
         fixture.surfaces[10]?.sendFileDragHover(nil)
         #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == false)
 
@@ -240,13 +259,16 @@ struct NotchDisplayCoordinatorTests {
     @Test
     func validatedDropBeforePreviewExpansionStillReachesTheShelf() {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10])
-        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
-        let url = URL(fileURLWithPath: "/tmp/report.txt")
+        let shelf   = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        let url     = URL(fileURLWithPath: "/tmp/report.txt")
         var dropped: [[URL]] = []
         fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
         fixture.coordinator.configureFileDrop(
-            onHover: { _ in },
-            onDrop: { dropped.append($0); return true },
+            onHover      : { _ in },
+            onDrop       : {
+                dropped.append($0)
+                return true
+            },
             onUnsupported: {}
         )
         fixture.coordinator.start()
@@ -267,7 +289,9 @@ struct NotchDisplayCoordinatorTests {
             prefersDefault: false
         )
         fixture.coordinator.configureFileDrop(
-            onHover: { _ in }, onDrop: { _ in true }, onUnsupported: {}
+            onHover      : { _ in },
+            onDrop       : { _ in true },
+            onUnsupported: {}
         )
         fixture.coordinator.start()
         let point = CGPoint(x: 1_050, y: 50)
@@ -276,8 +300,8 @@ struct NotchDisplayCoordinatorTests {
         #expect(fixture.surfaces[20]?.fileDragRecognitionUpdates.isEmpty == true)
 
         fixture.monitor.sendRecognizedFileDrag(
-            active: true,
-            point: point,
+            active               : true,
+            point                : point,
             hasValidatedOfferHint: true
         )
         #expect(fixture.surfaces[10]?.fileDragRecognitionUpdates.isEmpty == true)
@@ -291,7 +315,7 @@ struct NotchDisplayCoordinatorTests {
     @Test
     func fileDropDestinationRequiresBothAContextualPageAndDropHandler() {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10])
-        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        let shelf   = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
         fixture.coordinator.start()
         #expect(fixture.surfaces[10]?.fileDropEnabledUpdates.last == false)
 
@@ -299,7 +323,9 @@ struct NotchDisplayCoordinatorTests {
         #expect(fixture.surfaces[10]?.fileDropEnabledUpdates.last == false)
 
         fixture.coordinator.configureFileDrop(
-            onHover: { _ in }, onDrop: { _ in true }, onUnsupported: {}
+            onHover      : { _ in },
+            onDrop       : { _ in true },
+            onUnsupported: {}
         )
         #expect(fixture.surfaces[10]?.fileDropEnabledUpdates.last == true)
 
@@ -310,21 +336,29 @@ struct NotchDisplayCoordinatorTests {
     @Test
     func mouseUpDoesNotRestorePreviewBeforeDestinationDropIsDelivered() async {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10])
-        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
-        let url = URL(fileURLWithPath: "/tmp/report.txt")
+        let shelf   = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        let url     = URL(fileURLWithPath: "/tmp/report.txt")
         fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
         fixture.coordinator.configureFileDrop(
-            onHover: { _ in }, onDrop: { _ in true }, onUnsupported: {}
+            onHover      : { _ in },
+            onDrop       : { _ in true },
+            onUnsupported: {}
         )
         fixture.coordinator.start()
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         fixture.monitor.sendRecognizedFileDrag(active: true, point: CGPoint(x: 50, y: 90))
         fixture.surfaces[10]?.sendFileDragHover([url])
 
         fixture.monitor.sendRecognizedFileDrag(active: false, point: CGPoint(x: 50, y: 90))
         #expect(fixture.surfaces[10]?.fileDragGestureEndCount == 1)
+
         for _ in 0..<4 { await Task.yield() }
         #expect(fixture.surfaces[10]?.sendFileDrop([url]) == true)
+
         await Task.yield()
 
         #expect(fixture.surfaces[10]?.presentations.last?.contextualPage === shelf)
@@ -335,14 +369,20 @@ struct NotchDisplayCoordinatorTests {
     @Test
     func nativeFileDragExitAfterMouseUpRestoresThePreviousPageAndIntake() async {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10])
-        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
-        let url = URL(fileURLWithPath: "/tmp/report.txt")
+        let shelf   = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        let url     = URL(fileURLWithPath: "/tmp/report.txt")
         fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
         fixture.coordinator.configureFileDrop(
-            onHover: { _ in }, onDrop: { _ in true }, onUnsupported: {}
+            onHover      : { _ in },
+            onDrop       : { _ in true },
+            onUnsupported: {}
         )
         fixture.coordinator.start()
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         fixture.monitor.sendRecognizedFileDrag(active: true, point: CGPoint(x: 50, y: 90))
         fixture.surfaces[10]?.sendFileDragHover([url])
         fixture.monitor.sendRecognizedFileDrag(active: false, point: CGPoint(x: 50, y: 90))
@@ -390,9 +430,21 @@ struct NotchDisplayCoordinatorTests {
     func rapidHandoffUsesTheNewestStillValidRequest() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20, 30])
         fixture.coordinator.start()
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
-        fixture.surfaces[20]?.requestExpansion(activityID: nil, trigger: .hover, generation: 8)
-        fixture.surfaces[30]?.requestExpansion(activityID: nil, trigger: .click, generation: 3)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
+        fixture.surfaces[20]?.requestExpansion(
+            activityID: nil,
+            trigger   : .hover,
+            generation: 8
+        )
+        fixture.surfaces[30]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 3
+        )
 
         let closeGeneration = try #require(fixture.surfaces[10]?.closeRequests.last)
         fixture.surfaces[10]?.finishCollapse(generation: closeGeneration)
@@ -406,8 +458,16 @@ struct NotchDisplayCoordinatorTests {
     func cancelledPendingHoverLeavesEverySurfaceCompact() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
         fixture.coordinator.start()
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
-        fixture.surfaces[20]?.requestExpansion(activityID: nil, trigger: .hover, generation: 9)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
+        fixture.surfaces[20]?.requestExpansion(
+            activityID: nil,
+            trigger   : .hover,
+            generation: 9
+        )
         fixture.surfaces[20]?.cancelExpansion(generation: 9)
 
         let closeGeneration = try #require(fixture.surfaces[10]?.closeRequests.last)
@@ -421,9 +481,21 @@ struct NotchDisplayCoordinatorTests {
     func cancelledNewestHoverRestoresTheOlderExplicitCandidate() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20, 30])
         fixture.coordinator.start()
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
-        fixture.surfaces[20]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
-        fixture.surfaces[30]?.requestExpansion(activityID: nil, trigger: .hover, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
+        fixture.surfaces[20]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
+        fixture.surfaces[30]?.requestExpansion(
+            activityID: nil,
+            trigger   : .hover,
+            generation: 1
+        )
 
         fixture.surfaces[30]?.cancelExpansion(generation: 1)
         let closeGeneration = try #require(fixture.surfaces[10]?.closeRequests.last)
@@ -438,8 +510,16 @@ struct NotchDisplayCoordinatorTests {
     func disconnectingTheOwnerDuringHandoffDoesNotOpenThePendingSurface() {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
         fixture.coordinator.start()
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
-        fixture.surfaces[20]?.requestExpansion(activityID: nil, trigger: .click, generation: 2)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
+        fixture.surfaces[20]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 2
+        )
 
         fixture.inventory.entries = [fixture.entry(displayID: 20)]
         fixture.inventory.sendChange()
@@ -452,16 +532,18 @@ struct NotchDisplayCoordinatorTests {
     @Test
     func disconnectingAContextualPreviewOwnerClearsItsSelection() {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
-        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
-        let url = URL(fileURLWithPath: "/tmp/report.txt")
+        let shelf   = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        let url     = URL(fileURLWithPath: "/tmp/report.txt")
         fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
         fixture.coordinator.configureFileDrop(
-            onHover: { _ in }, onDrop: { _ in true }, onUnsupported: {}
+            onHover      : { _ in },
+            onDrop       : { _ in true },
+            onUnsupported: {}
         )
         fixture.coordinator.start()
         fixture.surfaces[10]?.requestExpansion(
             activityID: nil,
-            trigger: .click,
+            trigger   : .click,
             generation: 1
         )
         fixture.surfaces[10]?.sendFileDragHover([url])
@@ -499,7 +581,7 @@ struct NotchDisplayCoordinatorTests {
 
     @Test
     func activationPrecedesEverySurfaceFactory() {
-        let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
+        let fixture  = DisplayCoordinatorFixture(displayIDs: [10, 20])
         let activity = CoordinatorActivityFixture(id: "music")
         fixture.activityHost.present(activity)
 
@@ -514,7 +596,7 @@ struct NotchDisplayCoordinatorTests {
     /// local fake roots; advancing the clock does not measure native timer activity.
     @Test
     func threeDisplayCopiesShareOneLifecycleAndExpiry() {
-        var now = Date()
+        var now     = Date()
         let fixture = DisplayCoordinatorFixture(
             displayIDs: [10, 20, 30],
             now       : { now }
@@ -527,6 +609,7 @@ struct NotchDisplayCoordinatorTests {
         #expect(activity.factoryCount == 3)
         #expect(activity.activations == 1)
         #expect(!activity.factoryRanBeforeActivation)
+
         for surface in fixture.surfaces.values {
             #expect(surface.presentations.last?.primary === activity)
         }
@@ -537,6 +620,7 @@ struct NotchDisplayCoordinatorTests {
         #expect(fixture.surfaces[30]?.presentations.last?.primary === activity)
         #expect(fixture.surfaces[10]?.presentations.last?.primary == nil)
         #expect(fixture.surfaces[20]?.presentations.last?.primary == nil)
+
         fixture.coordinator.updatePreferences(DisplayPresentationPreferences(activityMode: .allDisplays))
         for surface in fixture.surfaces.values {
             #expect(surface.presentations.last?.primary === activity)
@@ -554,12 +638,14 @@ struct NotchDisplayCoordinatorTests {
         }
         #expect(activity.suspensions == 1)
         #expect(activity.activeCount == 0)
+
         let presentationCounts = fixture.surfaces.mapValues { $0.presentations.count }
         fixture.activityHost.expireNotices()
         #expect(fixture.surfaces.mapValues { $0.presentations.count } == presentationCounts)
         #expect(activity.activations == 1)
         #expect(activity.suspensions == 1)
         #expect(fixture.surfaceCreationCount == 3)
+
         fixture.coordinator.stop()
     }
 
@@ -568,8 +654,16 @@ struct NotchDisplayCoordinatorTests {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
         fixture.activityHost.present(CoordinatorActivityFixture(id: "music"))
         fixture.coordinator.start()
-        fixture.surfaces[10]?.requestExpansion(activityID: "music", trigger: .click, generation: 1)
-        fixture.surfaces[20]?.requestExpansion(activityID: "music", trigger: .click, generation: 2)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: "music",
+            trigger   : .click,
+            generation: 1
+        )
+        fixture.surfaces[20]?.requestExpansion(
+            activityID: "music",
+            trigger   : .click,
+            generation: 2
+        )
 
         fixture.coordinator.updatePreferences(DisplayPresentationPreferences(
             activityMode: .fixedDisplay(DisplayIdentity(rawValue: "display-10"))
@@ -586,12 +680,28 @@ struct NotchDisplayCoordinatorTests {
     func ownerCollapseRequestDoesNotDiscardAnotherDisplaysPendingGrant() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
         fixture.coordinator.start()
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
-        fixture.coordinator.setInteractionHold(.popover, on: 10, active: true)
-        fixture.surfaces[20]?.requestExpansion(activityID: nil, trigger: .click, generation: 2)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
+        fixture.coordinator.setInteractionHold(
+            .popover,
+            on    : 10,
+            active: true
+        )
+        fixture.surfaces[20]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 2
+        )
         #expect(fixture.surfaces[10]?.closeRequests.isEmpty == true)
 
-        fixture.coordinator.setInteractionHold(.popover, on: 10, active: false)
+        fixture.coordinator.setInteractionHold(
+            .popover,
+            on    : 10,
+            active: false
+        )
         fixture.surfaces[10]?.requestCollapse()
         let closeGeneration = try #require(fixture.surfaces[10]?.closeRequests.last)
         fixture.surfaces[10]?.finishCollapse(generation: closeGeneration)
@@ -602,7 +712,7 @@ struct NotchDisplayCoordinatorTests {
 
     @Test
     func focusedCopyMovesWithoutSuspendingTheSharedActivity() {
-        let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
+        let fixture  = DisplayCoordinatorFixture(displayIDs: [10, 20])
         let activity = CoordinatorActivityFixture(id: "music")
         fixture.activityHost.present(activity)
         fixture.coordinator.start()
@@ -620,17 +730,18 @@ struct NotchDisplayCoordinatorTests {
 
     @Test
     func synchronousInvalidationDuringActivationBuildsNoSurfaceRoots() {
-        let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
-        let first = CoordinatorActivityFixture(id: "first", sourceID: "first-source")
-        let second = CoordinatorActivityFixture(id: "second", sourceID: "second-source")
-        var invalidated = false
+        let fixture       = DisplayCoordinatorFixture(displayIDs: [10, 20])
+        let first         = CoordinatorActivityFixture(id: "first", sourceID: "first-source")
+        let second        = CoordinatorActivityFixture(id: "second", sourceID: "second-source")
+        var invalidated   = false
         let invalidateAll = {
             guard !invalidated else { return }
+
             invalidated = true
             fixture.activityHost.dismissActivities(from: "first-source")
             fixture.activityHost.dismissActivities(from: "second-source")
         }
-        first.onActivate = invalidateAll
+        first.onActivate  = invalidateAll
         second.onActivate = invalidateAll
         fixture.activityHost.present(first)
         fixture.activityHost.present(second)
@@ -650,9 +761,14 @@ struct NotchDisplayCoordinatorTests {
         fixture.coordinator.setSettingsPresented(true)
         fixture.coordinator.setSettingsFocused(true)
         #expect(fixture.coordinator.expandedDisplayID == 10)
+
         fixture.coordinator.setSettingsFocused(false)
 
-        fixture.surfaces[20]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[20]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         let closeGeneration = try #require(fixture.surfaces[10]?.closeRequests.last)
         fixture.surfaces[10]?.finishCollapse(generation: closeGeneration)
 
@@ -669,7 +785,11 @@ struct NotchDisplayCoordinatorTests {
         fixture.coordinator.setSettingsPresented(true)
         fixture.coordinator.setSettingsFocused(true)
 
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         #expect(fixture.surfaces[20]?.closeRequests.isEmpty == true)
         #expect(fixture.coordinator.expandedDisplayID == 20)
 
@@ -688,7 +808,11 @@ struct NotchDisplayCoordinatorTests {
         fixture.coordinator.setSettingsFocused(true)
         fixture.coordinator.setSettingsFocused(false)
         fixture.focus.send(frame: fixture.entry(displayID: 20).snapshot.frame)
-        fixture.surfaces[20]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[20]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         let closeGeneration = try #require(fixture.surfaces[10]?.closeRequests.last)
         fixture.surfaces[10]?.finishCollapse(generation: closeGeneration)
 
@@ -704,7 +828,11 @@ struct NotchDisplayCoordinatorTests {
         fixture.focus.send(frame: fixture.entry(displayID: 20).snapshot.frame)
         fixture.coordinator.setSettingsPresented(true)
         fixture.coordinator.setSettingsFocused(false)
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         let closeGeneration = try #require(fixture.surfaces[20]?.closeRequests.last)
         fixture.surfaces[20]?.finishCollapse(generation: closeGeneration)
 
@@ -722,7 +850,11 @@ struct NotchDisplayCoordinatorTests {
         fixture.focus.send(frame: fixture.entry(displayID: 20).snapshot.frame)
         fixture.coordinator.setSettingsPresented(true)
         fixture.coordinator.setSettingsFocused(false)
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         let closeGeneration = try #require(fixture.surfaces[20]?.closeRequests.last)
         fixture.surfaces[20]?.finishCollapse(generation: closeGeneration)
 
@@ -737,13 +869,18 @@ struct NotchDisplayCoordinatorTests {
     func contextualExternalSurfaceWaitsForAnotherOwnersActualCollapse() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
         fixture.coordinator.start()
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         var readyCount = 0
 
         fixture.coordinator.reserveExternalSurface(on: 20) { readyCount += 1 }
 
         #expect(readyCount == 0)
         #expect(fixture.surfaces[20]?.externalSurfaceUpdates.isEmpty == true)
+
         let closeGeneration = try #require(fixture.surfaces[10]?.closeRequests.last)
         fixture.surfaces[10]?.finishCollapse(generation: closeGeneration)
         #expect(readyCount == 1)
@@ -755,15 +892,28 @@ struct NotchDisplayCoordinatorTests {
     func externalReservationWaitsForAnotherOwnersInteractionToEnd() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
         fixture.coordinator.start()
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
-        fixture.coordinator.setInteractionHold(.popover, on: 10, active: true)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
+        fixture.coordinator.setInteractionHold(
+            .popover,
+            on    : 10,
+            active: true
+        )
         var readyCount = 0
 
         fixture.coordinator.reserveExternalSurface(on: 20) { readyCount += 1 }
 
         #expect(fixture.surfaces[10]?.closeRequests.isEmpty == true)
         #expect(readyCount == 0)
-        fixture.coordinator.setInteractionHold(.popover, on: 10, active: false)
+
+        fixture.coordinator.setInteractionHold(
+            .popover,
+            on    : 10,
+            active: false
+        )
         let closeGeneration = try #require(fixture.surfaces[10]?.closeRequests.last)
         fixture.surfaces[10]?.finishCollapse(generation: closeGeneration)
         #expect(readyCount == 1)
@@ -777,7 +927,11 @@ struct NotchDisplayCoordinatorTests {
         fixture.focus.send(frame: fixture.entry(displayID: 20).snapshot.frame)
         fixture.coordinator.setSettingsPresented(true)
         fixture.coordinator.setSettingsFocused(false)
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         let closeGeneration = try #require(fixture.surfaces[20]?.closeRequests.last)
         fixture.surfaces[20]?.finishCollapse(generation: closeGeneration)
 
@@ -789,8 +943,8 @@ struct NotchDisplayCoordinatorTests {
 
     @Test
     func screenLockReleasesTheOriginalExternalSurfaceAndCannotReplayItAfterUnlock() {
-        let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
-        var screenLockCount = 0
+        let fixture                        = DisplayCoordinatorFixture(displayIDs: [10, 20])
+        var screenLockCount                = 0
         fixture.coordinator.onScreenLocked = { screenLockCount += 1 }
         fixture.coordinator.start()
         fixture.coordinator.reserveExternalSurface(on: 20) {}
@@ -801,7 +955,12 @@ struct NotchDisplayCoordinatorTests {
 
         #expect(screenLockCount == 1)
         #expect(fixture.surfaces[20]?.externalSurfaceUpdates == [true, false])
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         #expect(fixture.coordinator.expandedDisplayID == 10)
         #expect(fixture.surfaces[20]?.externalSurfaceUpdates == [true, false])
     }
@@ -810,7 +969,11 @@ struct NotchDisplayCoordinatorTests {
     func screenLockCancelsAPendingCrossDisplayExternalReservation() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
         fixture.coordinator.start()
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         var readyCount = 0
         fixture.coordinator.reserveExternalSurface(on: 20) { readyCount += 1 }
         let staleGeneration = try #require(fixture.surfaces[10]?.closeRequests.last)
@@ -821,7 +984,12 @@ struct NotchDisplayCoordinatorTests {
 
         #expect(readyCount == 0)
         #expect(fixture.surfaces[20]?.externalSurfaceUpdates.isEmpty == true)
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 2)
+
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 2
+        )
         #expect(fixture.coordinator.expandedDisplayID == 10)
     }
 
@@ -830,7 +998,11 @@ struct NotchDisplayCoordinatorTests {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
         fixture.coordinator.start()
         fixture.coordinator.reserveExternalSurface(on: 10) {}
-        fixture.surfaces[20]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[20]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         fixture.coordinator.onScreenLocked = {
             fixture.coordinator.releaseExternalSurface()
         }
@@ -865,7 +1037,11 @@ struct NotchDisplayCoordinatorTests {
     func styleChangeCollapsesOwnerBeforeApplyingNewGeometry() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [20])
         fixture.coordinator.start()
-        fixture.surfaces[20]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[20]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
 
         fixture.coordinator.updatePreferences(DisplayPresentationPreferences(
             activityMode: .allDisplays,
@@ -873,6 +1049,7 @@ struct NotchDisplayCoordinatorTests {
         ))
 
         #expect(fixture.surfaces[20]?.presentations.last?.style == .notch)
+
         let closeGeneration = try #require(fixture.surfaces[20]?.closeRequests.last)
         fixture.surfaces[20]?.finishCollapse(generation: closeGeneration)
         #expect(fixture.surfaces[20]?.presentations.last?.style == .dynamicIsland)
@@ -913,7 +1090,7 @@ struct NotchDisplayCoordinatorTests {
 
     @Test
     func displaySleepSuspendsActivitiesAndWakeNeverRevealsALockedScreen() {
-        let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
+        let fixture  = DisplayCoordinatorFixture(displayIDs: [10, 20])
         let activity = CoordinatorActivityFixture(id: "music")
         fixture.activityHost.present(activity)
         fixture.coordinator.start()
@@ -934,7 +1111,7 @@ struct NotchDisplayCoordinatorTests {
 
     @Test
     func lockUnlockAndStopUseOneSharedLifecycle() {
-        let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
+        let fixture  = DisplayCoordinatorFixture(displayIDs: [10, 20])
         let activity = CoordinatorActivityFixture(id: "music")
         fixture.activityHost.present(activity)
         fixture.coordinator.start()
@@ -960,15 +1137,15 @@ struct NotchDisplayCoordinatorTests {
     @Test
     func mountedReplacementStaysActiveUntilTheSurfaceReleasesItsOutgoingRoot() {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10])
-        let old = CoordinatorActivityFixture(id: "music")
+        let old     = CoordinatorActivityFixture(id: "music")
         fixture.activityHost.present(old)
         fixture.coordinator.start()
         fixture.surfaces[10]?.retainsOutgoingRootsOnReplacement = true
         #expect(fixture.surfaces[10]?.retainedActivityRoots.first === old)
 
-        let replacement = CoordinatorActivityFixture(id: "music")
+        let replacement                            = CoordinatorActivityFixture(id: "music")
         var bothWereActiveBeforeReplacementFactory = false
-        replacement.onCompactLeadingFactory = {
+        replacement.onCompactLeadingFactory        = {
             bothWereActiveBeforeReplacementFactory = old.activeCount == 1
                 && replacement.activeCount == 1
         }
@@ -978,6 +1155,7 @@ struct NotchDisplayCoordinatorTests {
         #expect(old.activeCount == 1)
         #expect(replacement.activeCount == 1)
         #expect(fixture.surfaces[10]?.retainedActivityRoots.contains { $0 === old } == true)
+
         fixture.surfaces[10]?.releaseOutgoingRoots()
         #expect(old.activeCount == 0)
         #expect(old.suspensions == 1)
@@ -986,8 +1164,8 @@ struct NotchDisplayCoordinatorTests {
 
     @Test
     func expandedOwnerDoesNotInventASecondaryRoot() {
-        let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
-        let primary = CoordinatorActivityFixture(id: "primary", sourceID: "music")
+        let fixture   = DisplayCoordinatorFixture(displayIDs: [10, 20])
+        let primary   = CoordinatorActivityFixture(id: "primary", sourceID: "music")
         let secondary = CoordinatorActivityFixture(id: "secondary", sourceID: "timer")
         fixture.activityHost.present(primary)
         fixture.activityHost.present(secondary)
@@ -999,10 +1177,11 @@ struct NotchDisplayCoordinatorTests {
             generation: 1
         )
 
-        let owner = fixture.surfaces[10]?.presentations.last
+        let owner       = fixture.surfaces[10]?.presentations.last
         let compactCopy = fixture.surfaces[20]?.presentations.last
         #expect(owner?.visibleActivityRoots.count == 1)
         #expect(owner?.expanded === primary)
+
         let compactIdentities = Set(compactCopy?.visibleActivityRoots.map(ObjectIdentifier.init) ?? [])
         #expect(compactIdentities == [ObjectIdentifier(primary), ObjectIdentifier(secondary)])
         #expect(secondary.activeCount == 1)
@@ -1011,15 +1190,24 @@ struct NotchDisplayCoordinatorTests {
     @Test
     func widgetHandoffRevokesOldOwnerBeforeOpeningTheNewOne() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
-        let widget = CoordinatorWidgetFixture()
+        let widget  = CoordinatorWidgetFixture()
         fixture.coordinator.register(widget)
         fixture.coordinator.start()
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         #expect(widget.activations == 1)
         #expect(widget.suspensions == 0)
 
-        fixture.surfaces[20]?.requestExpansion(activityID: nil, trigger: .click, generation: 2)
+        fixture.surfaces[20]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 2
+        )
         #expect(widget.activations == 1)
+
         let closeGeneration = try #require(fixture.surfaces[10]?.closeRequests.last)
         fixture.surfaces[10]?.finishCollapse(generation: closeGeneration)
 
@@ -1033,8 +1221,16 @@ struct NotchDisplayCoordinatorTests {
     func staleCloseCompletionCannotGrantThePendingDisplay() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
         fixture.coordinator.start()
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
-        fixture.surfaces[20]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
+        fixture.surfaces[20]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         let closeGeneration = try #require(fixture.surfaces[10]?.closeRequests.last)
 
         fixture.surfaces[10]?.finishCollapse(generation: closeGeneration &+ 1)
@@ -1049,8 +1245,16 @@ struct NotchDisplayCoordinatorTests {
     func disconnectingPendingDisplayLeavesTheOwnerToFinishCompact() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
         fixture.coordinator.start()
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
-        fixture.surfaces[20]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
+        fixture.surfaces[20]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         let closeGeneration = try #require(fixture.surfaces[10]?.closeRequests.last)
 
         fixture.inventory.entries = [fixture.entry(displayID: 10)]
@@ -1083,7 +1287,11 @@ struct NotchDisplayCoordinatorTests {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
         fixture.activityHost.present(CoordinatorActivityFixture(id: "music"))
         fixture.coordinator.start()
-        fixture.surfaces[10]?.requestExpansion(activityID: "music", trigger: .click, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: "music",
+            trigger   : .click,
+            generation: 1
+        )
 
         fixture.coordinator.updatePreferences(DisplayPresentationPreferences(
             activityMode: .fixedDisplay(DisplayIdentity(rawValue: "display-20"))
@@ -1091,6 +1299,7 @@ struct NotchDisplayCoordinatorTests {
 
         let closeGeneration = try #require(fixture.surfaces[10]?.closeRequests.last)
         #expect(fixture.coordinator.expandedDisplayID == 10)
+
         fixture.surfaces[10]?.finishCollapse(generation: closeGeneration)
         #expect(fixture.coordinator.expandedDisplayID == nil)
         #expect(fixture.surfaces.values.allSatisfy { $0.presentations.last?.isExpanded == false })
@@ -1098,14 +1307,18 @@ struct NotchDisplayCoordinatorTests {
 
     @Test
     func focusMovementKeepsManualOwnerWhileCompactCopyMoves() {
-        let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
+        let fixture  = DisplayCoordinatorFixture(displayIDs: [10, 20])
         let activity = CoordinatorActivityFixture(id: "music")
         fixture.activityHost.present(activity)
         fixture.coordinator.start()
         fixture.coordinator.updatePreferences(DisplayPresentationPreferences(
             activityMode: .focusedDisplay
         ))
-        fixture.surfaces[10]?.requestExpansion(activityID: "music", trigger: .click, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: "music",
+            trigger   : .click,
+            generation: 1
+        )
 
         fixture.focus.send(frame: fixture.entry(displayID: 20).snapshot.frame)
 
@@ -1119,7 +1332,7 @@ struct NotchDisplayCoordinatorTests {
 
     @Test
     func excludedDisplayOpensWidgetsInsteadOfGlobalFallbackContent() {
-        let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
+        let fixture  = DisplayCoordinatorFixture(displayIDs: [10, 20])
         let fallback = CoordinatorActivityFixture(id: "fallback")
         fixture.activityHost.setExpandedFallback(fallback)
         fixture.coordinator.start()
@@ -1183,7 +1396,11 @@ struct NotchDisplayCoordinatorTests {
     func spotlightDismissalReturnsToItsInvocationDisplayAfterFocusMoves() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
         fixture.coordinator.start()
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         fixture.coordinator.setExternalSurfacePresented(true)
         fixture.surfaces[10]?.requestCollapse()
         let closeGeneration = try #require(fixture.surfaces[10]?.closeRequests.last)
@@ -1200,9 +1417,17 @@ struct NotchDisplayCoordinatorTests {
     func spotlightReservationDefersPendingGrantUntilDismissal() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
         fixture.coordinator.start()
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         fixture.coordinator.setExternalSurfacePresented(true)
-        fixture.surfaces[20]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[20]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         fixture.surfaces[10]?.requestCollapse()
 
         let closeGeneration = try #require(fixture.surfaces[10]?.closeRequests.last)
@@ -1219,7 +1444,11 @@ struct NotchDisplayCoordinatorTests {
     func compactSpotlightReservationRejectsNoticesWithoutReplayingThem() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
         fixture.coordinator.start()
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         fixture.coordinator.setExternalSurfacePresented(true)
         fixture.surfaces[10]?.requestCollapse()
         let closeGeneration = try #require(fixture.surfaces[10]?.closeRequests.last)
@@ -1241,11 +1470,18 @@ struct NotchDisplayCoordinatorTests {
         fixture.coordinator.beginSizeCalibration()
         #expect(fixture.surfaces[10]?.calibrationStartCount == 1)
 
-        fixture.surfaces[20]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[20]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         #expect(fixture.coordinator.expandedDisplayID == nil)
         #expect(fixture.surfaces[20]?.presentations.last?.isExpanded == false)
 
-        fixture.surfaces[10]?.setInteractionHold(.calibration, active: false)
+        fixture.surfaces[10]?.setInteractionHold(
+            .calibration,
+            active: false
+        )
         #expect(fixture.coordinator.expandedDisplayID == 20)
         #expect(fixture.surfaces[20]?.presentations.last?.isExpanded == true)
     }
@@ -1259,13 +1495,17 @@ struct NotchDisplayCoordinatorTests {
         fixture.coordinator.beginSizeCalibration()
         #expect(fixture.surfaces[20]?.calibrationStartCount == 1)
 
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         #expect(fixture.coordinator.expandedDisplayID == 10)
     }
 
     @Test
     func expandedLiveOwnerKeepsLiveShapeMetadataAfterCompactRoutingMoves() {
-        let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
+        let fixture  = DisplayCoordinatorFixture(displayIDs: [10, 20])
         let activity = CoordinatorActivityFixture(id: "music")
         fixture.activityHost.present(activity)
         fixture.coordinator.start()
@@ -1290,12 +1530,26 @@ struct NotchDisplayCoordinatorTests {
     func releasingCompactHoldCollapsesTheCurrentOwnerForPendingHandoff() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20, 30])
         fixture.coordinator.start()
-        fixture.surfaces[10]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
-        fixture.surfaces[20]?.setInteractionHold(.drag, active: true)
-        fixture.surfaces[30]?.requestExpansion(activityID: nil, trigger: .click, generation: 1)
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
+        fixture.surfaces[20]?.setInteractionHold(
+            .drag,
+            active: true
+        )
+        fixture.surfaces[30]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
         #expect(fixture.surfaces[10]?.closeRequests.isEmpty == true)
 
-        fixture.surfaces[20]?.setInteractionHold(.drag, active: false)
+        fixture.surfaces[20]?.setInteractionHold(
+            .drag,
+            active: false
+        )
         let closeGeneration = try #require(fixture.surfaces[10]?.closeRequests.last)
         #expect(fixture.coordinator.expandedDisplayID == 10)
 

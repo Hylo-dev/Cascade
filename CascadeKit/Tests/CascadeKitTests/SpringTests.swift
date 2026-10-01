@@ -15,11 +15,13 @@ struct SpringTests {
     @Test(arguments: [30.0, 60.0, 120.0])
     func overshootsGentlyBeforeSettling(refreshRate: Double) {
         var spring = Spring(parameters: .snappy)
-        var peak = 0.0
+        var peak   = 0.0
+
         for _ in 0..<Int(refreshRate * 2) {
             spring.advance(toward: 1, dt: 1 / refreshRate)
             peak = max(peak, spring.value)
         }
+
         #expect(peak > 1.04)
         #expect(peak < 1.18)
         #expect(spring.isSettled(at: 1))
@@ -27,7 +29,6 @@ struct SpringTests {
 
     @Test
     func convergesTowardItsTarget() {
-
         var spring = Spring(parameters: .snappy)
 
         // Roughly two seconds at 120 Hz is plenty for a snappy spring to settle.
@@ -41,7 +42,6 @@ struct SpringTests {
 
     @Test
     func snapJumpsAndKillsVelocity() {
-
         var spring = Spring(parameters: .snappy)
         spring.advance(toward: 1.0, dt: 1.0 / 120.0)
         spring.snap(to: 0)
@@ -52,7 +52,6 @@ struct SpringTests {
 
     @Test
     func clampsAnEnormousDeltaInsteadOfExploding() {
-
         var spring = Spring(parameters: .snappy)
 
         // A five-second dt models the display link resuming after an idle notch.

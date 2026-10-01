@@ -10,6 +10,7 @@ import Testing
 
 @MainActor
 final class NativeFileDragHintFixture {
+
     let root: URL
 
     init() throws {
