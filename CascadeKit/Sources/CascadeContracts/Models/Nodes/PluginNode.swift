@@ -31,7 +31,17 @@ public struct PluginNode: Codable, Hashable, Sendable {
         self.layers    = layers
     }
 
+    /// init(from:) checks its own depth before it decodes any child, so a hostile document
+    /// that nests far past the limit is refused after a dozen levels instead of recursing until
+    /// the decoding thread's stack runs out.
     public init(from decoder: any Decoder) throws {
+        let depth = 1 + decoder.codingPath.count { key in
+            key.stringValue == CodingKeys.children.stringValue || key.stringValue == CodingKeys.layers.stringValue
+        }
+        try ContractValidation.require(
+            depth <= PluginDocument.maximumDepth,
+            "Document deeper than \(PluginDocument.maximumDepth)"
+        )
         try ContractValidation.knownFields(in: decoder, CodingKeys.self)
 
         let container = try decoder.container(keyedBy: CodingKeys.self)

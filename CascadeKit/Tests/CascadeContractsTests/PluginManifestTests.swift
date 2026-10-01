@@ -161,4 +161,24 @@ struct PluginManifestTests {
             )
         }
     }
+
+    @Test
+    func rejectsDeeplyNestedAlternativesWhileDecodingWithoutExhaustingTheStack() throws {
+        var requirement: [String: Any] = ["kind": "appRunning", "bundleID": "com.apple.Music"]
+        for _ in 0..<200 {
+            requirement = ["kind": "anyOf", "alternatives": [requirement, ["kind": "appRunning", "bundleID": "com.apple.TV"]]]
+        }
+
+        let data     = try pluginManifestData { $0["REQUIRES"] = [requirement] }
+        let rejected = onSmallStack {
+            do {
+                _ = try PluginManifest.decode(data)
+                return false
+            } catch {
+                return error is AddonFailure
+            }
+        }
+
+        #expect(rejected)
+    }
 }

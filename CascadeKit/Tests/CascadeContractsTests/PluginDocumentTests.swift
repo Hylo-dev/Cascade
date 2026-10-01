@@ -162,4 +162,24 @@ struct PluginDocumentTests {
 
         #expect(document.componentReferences == [spectrum])
     }
+
+    @Test
+    func rejectsADeepDocumentWhileDecodingWithoutExhaustingTheStack() {
+        let levels = 200
+        let node   = String(repeating: #"{"kind":{"vStack":{"alignment":"center"}},"children":["#, count: levels)
+            + #"{"kind":{"spacer":{}}}"#
+            + String(repeating: "]}", count: levels)
+        let data   = Data((#"{"schema":2,"root":"# + node + "}").utf8)
+
+        let rejected = onSmallStack {
+            do {
+                _ = try PluginDocument.decode(data)
+                return false
+            } catch {
+                return error is AddonFailure
+            }
+        }
+
+        #expect(rejected)
+    }
 }

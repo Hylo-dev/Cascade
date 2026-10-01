@@ -26,6 +26,12 @@ public indirect enum PluginRequirement: Codable, Equatable, Sendable {
                 self = .appRunning(bundleID: try container.decode(String.self, forKey: .bundleID))
 
             case "anyOf":
+                // Refused before the alternatives are decoded: nesting is invalid anyway, and
+                // decoding it first would let a hostile manifest recurse to any depth.
+                try ContractValidation.require(
+                    !decoder.codingPath.contains { $0.stringValue == CodingKeys.alternatives.stringValue },
+                    "anyOf alternatives cannot nest"
+                )
                 self = .anyOf(try container.decode([PluginRequirement].self, forKey: .alternatives))
 
             default:
