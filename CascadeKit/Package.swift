@@ -109,7 +109,7 @@ let package = Package(
         ),
         .target(
             name: "CascadeKit",
-            dependencies: ["CascadeContracts", "CascadePresentation"],
+            dependencies: ["CascadeContracts", "CascadePresentation", "CascadePluginEngine"],
             resources: [.process("Resources")],
             swiftSettings: [
                 .defaultIsolation(MainActor.self)
@@ -117,7 +117,7 @@ let package = Package(
         ),
         .testTarget(
             name: "CascadeKitTests",
-            dependencies: ["CascadeKit", "CascadeContracts", "CascadePresentation", "CascadeRuntime"]
+            dependencies: ["CascadeKit", "CascadeContracts", "CascadePresentation", "CascadeRuntime", "CascadePluginEngine"]
         ),
     ],
     swiftLanguageModes: [.v5]
