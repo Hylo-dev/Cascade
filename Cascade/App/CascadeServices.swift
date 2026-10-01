@@ -4,7 +4,9 @@
 //
 
 import AppKit
+import CascadeContracts
 import CascadeKit
+import CascadePlugins
 import CascadeRuntime
 import Observation
 
@@ -94,7 +96,7 @@ final class CascadeServices {
     var chargingEnabled: Bool {
         didSet {
             preferences.set(chargingEnabled, forKey: "chargingEnabled")
-            if isRunning { updatePowerMonitoring() }
+            plugins.setEnabled(chargingEnabled, for: ChargingPlugin.id)
         }
     }
 
@@ -162,8 +164,6 @@ final class CascadeServices {
     @ObservationIgnored
     private let network      : any NetworkMonitoring = NetworkConnectionMonitor()
     @ObservationIgnored
-    private let power        : any PowerMonitoring = IOKitPowerMonitor()
-    @ObservationIgnored
     private let mediaProvider = SystemNowPlayingProvider()
     @ObservationIgnored
     private let audioSpectrum = CoreAudioSpectrumMonitor()
@@ -187,10 +187,6 @@ final class CascadeServices {
     private var volumeTask             : Task<Void, Never>?
     @ObservationIgnored
     private var networkTask            : Task<Void, Never>?
-    @ObservationIgnored
-    private var powerTask              : Task<Void, Never>?
-    @ObservationIgnored
-    private var chargingPreviewRevision: UInt64 = 0
     @ObservationIgnored
     private var networkBorderResetTask : Task<Void, Never>?
     @ObservationIgnored
@@ -368,6 +364,7 @@ final class CascadeServices {
         guard !isRunning else { return }
 
         isRunning = true
+        plugins.setEnabled(chargingEnabled, for: ChargingPlugin.id)
         plugins.start()
         notch.setHapticsEnabled(hapticsEnabled)
         notch.setSensitiveContentVisible(sensitiveContentVisible)
@@ -380,7 +377,6 @@ final class CascadeServices {
         startNetworkMonitoring()
         updateBluetoothMonitoring()
         updateVolumeMonitoring()
-        updatePowerMonitoring()
         updateMusicMonitoring()
         requestStartupPermissions()
 
@@ -453,9 +449,6 @@ final class CascadeServices {
         networkBorderResetTask = nil
         network.stop()
 
-        powerTask?.cancel()
-        powerTask = nil
-        power.stop()
         notch.setBorderAppearance(.neutral)
 
         bluetoothTask?.cancel()
@@ -629,51 +622,10 @@ final class CascadeServices {
         notch.showNotice(activity)
     }
 
-    /// previewCharging changes presentation only; it never changes macOS energy settings.
+    /// previewCharging changes presentation only; it never changes macOS energy settings. The
+    /// charging plugin draws the preview through its own preview action.
     func previewCharging(lowPower: Bool) {
-        chargingPreviewRevision &+= 1
-
-        notch.showNotice(
-            ChargingNotice(
-                snapshot: MacPowerSnapshot(
-                    percentage     : 19,
-                    isExternalPower: true,
-                    isCharging     : true,
-                    isLowPowerMode : lowPower
-                ),
-                revision: chargingPreviewRevision
-            )
-        )
-    }
-
-    private func updatePowerMonitoring() {
-        powerTask?.cancel()
-        powerTask = nil
-        power.stop()
-        notch.dismissActivities(from: "cascade.power")
-        guard chargingEnabled else { return }
-
-        let stream = power.start()
-        powerTask = Task { [weak self] in
-            for await update in stream {
-                guard !Task.isCancelled, let self, self.isRunning else { return }
-
-                switch update {
-                    case .connected(let snapshot, let revision):
-                        self.notch.showNotice(
-                            ChargingNotice(snapshot: snapshot, revision: revision)
-                        )
-
-                    case .updated(let snapshot, let revision):
-                        self.notch.updateNotice(
-                            ChargingNotice(snapshot: snapshot, revision: revision)
-                        )
-
-                    case .disconnected:
-                        self.notch.dismissActivities(from: "cascade.power")
-                }
-            }
-        }
+        plugins.invoke(ChargingPlugin.preview, value: .bool(lowPower), feature: ChargingPlugin.feature, of: ChargingPlugin.id)
     }
 
     private func updateBluetoothMonitoring() {
