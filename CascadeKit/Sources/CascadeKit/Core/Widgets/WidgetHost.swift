@@ -163,40 +163,9 @@ final class WidgetHost {
     /// band) is reserved for explicit / drag-and-drop placement, since its
     /// availability depends on the live notch geometry.
     private func autoPlacement(for span: GridSpan) -> WidgetPlacement? {
-        let columns = resolver.metrics.columns
-
-        var occupied: Set<GridPosition> = []
-        for placement in currentScreen.arrangement.values {
-            for column in placement.position.column ..< placement.position.column + placement.span.columns {
-                for row in placement.position.row ..< placement.position.row + placement.span.rows {
-                    occupied.insert(GridPosition(column: column, row: row))
-                }
-            }
-        }
-
-        // A two-row widget can only originate at row 1 (covering rows 1–2); a
-        // one-row widget may sit in either main row.
-        let originRows = span.rows == 2 ? [1] : [1, 2]
-
-        for row in originRows {
-            for column in 0 ... max(0, columns - span.columns) {
-                var fits = true
-                for cellColumn in column ..< column + span.columns {
-                    for cellRow in row ..< row + span.rows
-                        where occupied.contains(GridPosition(column: cellColumn, row: cellRow)) {
-                        fits = false
-                    }
-                }
-
-                if fits {
-                    return WidgetPlacement(
-                        position: GridPosition(column: column, row: row),
-                        span    : span
-                    )
-                }
-            }
-        }
-
-        return nil
+        NotchGrid(columns: resolver.metrics.columns, bandColumns: 0 ..< 0).firstFit(
+            for  : span,
+            among: Array(currentScreen.arrangement.values)
+        )
     }
 }
