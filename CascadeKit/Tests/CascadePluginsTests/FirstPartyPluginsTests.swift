@@ -29,7 +29,7 @@ struct FirstPartyPluginsTests {
     func everyManifestHasAProvider() {
         let manifests = FirstPartyPlugins.manifests()
 
-        #expect(manifests.map(\.id.rawValue) == ["com.cascade.clock"])
+        #expect(manifests.map(\.id.rawValue) == ["com.cascade.clock", "com.cascade.power"])
         #expect(manifests.allSatisfy { FirstPartyPlugins.providers[$0.execution.entryPoint] != nil })
     }
 
