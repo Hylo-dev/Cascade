@@ -121,11 +121,14 @@ final class PluginNodeStore {
         }
     }
 
-    /// drag moves a slider's thumb while the user holds it, sending nothing until release.
+    /// drag moves a slider's thumb while the user holds it, sending nothing until release. A new
+    /// drag also outdates the revert an earlier release armed, so its timeout cannot pull the
+    /// thumb from under the user's hand.
     func drag(
         _ value : Double,
         on model: PluginNodeModel
     ) {
+        generations[model.id, default: 0] += 1
         model.isDragging = true
         model.optimistic = .number(value)
     }
@@ -139,9 +142,10 @@ final class PluginNodeStore {
         }
     }
 
-    /// reject reverts the control whose action the kernel refused.
+    /// reject reverts the control whose action the kernel refused, unless the user is dragging
+    /// it again: the refusal was for the value let go before, and the new one is still to come.
     func reject(_ request: PluginActionRequest) {
-        if let model = models[request.node] {
+        if let model = models[request.node], !model.isDragging {
             revert(model)
         }
     }

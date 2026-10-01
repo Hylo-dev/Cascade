@@ -196,6 +196,41 @@ struct PluginNodeStoreTests {
     }
 
     @Test
+    func anEarlierReleasesTimeoutDoesNotTouchANewDrag() throws {
+        var publisher = Fixtures.Publisher()
+        let sent      = SentRequests()
+        let scheduler = ManualScheduler()
+        let store     = store(sent: sent, scheduler: scheduler)
+        store.apply(publisher.publish(try Fixtures.face()))
+        let model = try #require(store.model(volume))
+        store.drag(0.3, on: model)
+        store.release(model)
+        store.drag(0.6, on: model)
+
+        scheduler.run(0)
+        #expect(model.optimistic == .number(0.6))
+
+        store.release(model)
+        #expect(sent.requests.map(\.value) == [.number(0.3), .number(0.6)])
+    }
+
+    @Test
+    func anEarlierRefusalDoesNotTouchANewDrag() throws {
+        var publisher = Fixtures.Publisher()
+        let sent      = SentRequests()
+        let store     = store(sent: sent)
+        store.apply(publisher.publish(try Fixtures.face()))
+        let model = try #require(store.model(volume))
+        store.drag(0.3, on: model)
+        store.release(model)
+        store.drag(0.6, on: model)
+
+        store.reject(try #require(sent.requests.first))
+
+        #expect(model.optimistic == .number(0.6))
+    }
+
+    @Test
     func aButtonSendsItsActionAndHoldsNoState() throws {
         var publisher = Fixtures.Publisher()
         let sent      = SentRequests()
