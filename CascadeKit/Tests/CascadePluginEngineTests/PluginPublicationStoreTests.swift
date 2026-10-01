@@ -96,4 +96,19 @@ struct PluginPublicationStoreTests {
 
         #expect(store.keys(of: PluginEngineFixtures.musicID) == [key, widget])
     }
+
+    @Test
+    func anEqualNoticeIsStoredAgainUnderANewRevision() throws {
+        let notice     = PluginPublicationKey(plugin: PluginEngineFixtures.musicID, feature: "now-playing", surface: .notice)
+        let document   = try PluginDocument(root: PluginNode(.regions, children: [PluginNode(.text("a")), PluginNode(.text("b")), PluginNode(.text("c"))]))
+        let attributes = try PluginNoticeAttributes(duration: 4, accessibilityLabel: "Notice")
+        var store      = PluginPublicationStore()
+        _ = store.apply(document, staleAfter: nil, for: notice, at: epoch, notice: attributes)
+
+        let again = store.apply(document, staleAfter: nil, for: notice, at: epoch, notice: attributes)
+
+        #expect(again?.revision == 2)
+        #expect(again?.content?.notice == attributes)
+        #expect(again?.content?.diff.isEmpty == true)
+    }
 }

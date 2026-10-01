@@ -10,6 +10,8 @@ import Foundation
 /// plugins: one that throws or restarts leaves its last valid content in place. Revisions come
 /// from one counter, so a revision names exactly one stored document. A document equal to the
 /// stored one changes nothing, not even the revision, because nothing a viewer sees changed.
+/// A notice is an event, not a state, so a notice is stored again under a new revision even when
+/// it equals the last one, and the notch shows it again.
 ///
 /// Content's age is measured on the wall clock, because content ages while the Mac sleeps and
 /// uptime does not; a clock change can make one refresh come early or late, and nothing worse.
@@ -23,6 +25,7 @@ struct PluginPublicationStore: Sendable {
         let table      : PluginNodeTable
         var publishedAt: Date
         let staleAfter : TimeInterval?
+        let notice     : PluginNoticeAttributes?
     }
 
     private var entries : [PluginPublicationKey: Entry] = [:]
@@ -38,10 +41,11 @@ struct PluginPublicationStore: Sendable {
         _ document: PluginDocument,
         staleAfter: TimeInterval?,
         for key   : PluginPublicationKey,
-        at instant: Date
+        at instant: Date,
+        notice    : PluginNoticeAttributes? = nil
     ) -> PluginPublicationChange? {
         let previous = entries[key]
-        if let previous, previous.document == document {
+        if let previous, previous.document == document, key.surface != .notice {
             renew(key, at: instant)
             return nil
         }
@@ -54,13 +58,14 @@ struct PluginPublicationStore: Sendable {
             document   : document,
             table      : table,
             publishedAt: instant,
-            staleAfter : staleAfter
+            staleAfter : staleAfter,
+            notice     : notice
         )
 
         return PluginPublicationChange(
             key     : key,
             revision: revision,
-            content : PluginPublicationChange.Content(document: document, table: table, diff: diff)
+            content : PluginPublicationChange.Content(document: document, table: table, diff: diff, notice: notice)
         )
     }
 

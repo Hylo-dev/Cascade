@@ -437,7 +437,8 @@ struct PluginKernel: Sendable {
             document,
             staleAfter: publication.staleAfter,
             for       : key,
-            at        : now.wall
+            at        : now.wall,
+            notice    : publication.notice
         )
     }
 
