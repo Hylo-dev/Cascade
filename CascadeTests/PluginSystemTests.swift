@@ -70,9 +70,12 @@ extension PluginHostTests {
                 try await Task.sleep(for: .milliseconds(20))
             }
 
-            let notice = try #require(grid.notices.first)
+            let notice   = try #require(grid.notices.first)
+            let strings  = try #require(Bundle.main.url(forResource: "CascadeKit_CascadePlugins", withExtension: "bundle").flatMap(Bundle.init(url:)))
+            let charging = strings.localizedString(forKey: "Charging", value: nil, table: "ChargingNotice")
             #expect(notice.borderAppearance == .chargingLowPower)
             #expect(notice.compactPreferredSideWidth == 116)
+            #expect(notice.accessibilityLabel.hasPrefix(charging), "PluginHost speaks the language Cascade speaks")
         }
 
         @Test

@@ -157,5 +157,14 @@ extension PluginHostTests {
 
             return SecStaticCodeCheckValidity(code, [], requirement) == errSecSuccess
         }
+
+        /// PluginHost has no localizations of its own, so without mixed localizations its plugins'
+        /// strings would fall back to English even for a user who reads Cascade in Italian.
+        @Test
+        func pluginHostSpeaksTheUsersLanguage() throws {
+            let host = try #require(Bundle(url: Bundle.main.bundleURL.appending(path: "Contents/XPCServices/PluginHost.xpc")))
+
+            #expect(host.object(forInfoDictionaryKey: "CFBundleAllowMixedLocalizations") as? Bool == true)
+        }
     }
 }
