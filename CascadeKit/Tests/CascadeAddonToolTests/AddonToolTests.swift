@@ -71,4 +71,39 @@ struct AddonToolTests {
         #expect(AddonToolCommand.run(arguments: ["--help"]).exitCode == 0)
         #expect(AddonToolCommand.run(arguments: ["validate", "/path-that-does-not-exist/Manifest.json"]).exitCode == 1)
     }
+
+    @Test
+    func validatesAVersionTwoManifestAsAPluginManifest() throws {
+        let url    = try #require(Bundle.module.url(forResource: "plugin-clock", withExtension: "json"))
+        let result = AddonToolCommand.run(arguments: ["validate", url.path])
+
+        #expect(result.exitCode == 0)
+        #expect(result.output.hasPrefix("Plugin manifest valid: com.cascade.clock 1.0.0"))
+        #expect(result.output.contains("signature"))
+    }
+
+    @Test
+    func rejectsAVersionTwoManifestWithAVersionOneField() throws {
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let source = try #require(Bundle.module.url(forResource: "plugin-clock", withExtension: "json"))
+        var object = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: source)) as? [String: Any])
+        object["PROVIDES"] = []
+
+        let file = directory.appendingPathComponent("Manifest.json")
+        try JSONSerialization.data(withJSONObject: object).write(to: file)
+
+        let result = AddonToolCommand.run(arguments: ["validate", file.path])
+
+        #expect(result.exitCode == 1)
+        #expect(result.output == "Invalid manifest: Unknown wire field")
+    }
+
+    @Test
+    func stillValidatesAVersionOneManifest() throws {
+        let url = try #require(Bundle.module.url(forResource: "focus", withExtension: "json"))
+
+        #expect(AddonToolCommand.run(arguments: ["validate", url.path]).output.hasPrefix("Manifest valid:"))
+    }
 }

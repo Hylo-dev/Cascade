@@ -9,7 +9,8 @@ import Foundation
 
 enum AddonToolCommand {
 
-    private static let usage = "Usage: cascade-addon validate <Manifest.json>\n" + ScaffoldCommand.usage
+    private static let usage = "Usage: cascade-addon validate <Manifest.json>\n" +
+        "Validates manifest v1 (addons) and v2 (plugins).\n" + ScaffoldCommand.usage
 
     static func run(arguments: [String]) -> AddonToolResult {
         if arguments.first == "init" {
@@ -23,11 +24,23 @@ enum AddonToolCommand {
         }
 
         do {
-            let manifest = try AddonManifest.decode(readManifest(at: arguments[1]))
+            let data       = try readManifest(at: arguments[1])
+            let disclaimer = "Only manifest syntax and contracts were checked; signature and runtime admission are not verified."
+
+            if (try? JSONDecoder().decode(ManifestVersion.self, from: data))?.manifestVersion == 2 {
+                let manifest = try PluginManifest.decode(data)
+
+                return AddonToolResult(
+                    exitCode: 0,
+                    output  : "Plugin manifest valid: \(manifest.id.rawValue) \(manifest.version)\n" + disclaimer
+                )
+            }
+
+            let manifest = try AddonManifest.decode(data)
+
             return AddonToolResult(
                 exitCode: 0,
-                output  : "Manifest valid: \(manifest.id.rawValue) \(manifest.version)\n" +
-                    "Only manifest syntax and contracts were checked; signature and runtime admission are not verified."
+                output  : "Manifest valid: \(manifest.id.rawValue) \(manifest.version)\n" + disclaimer
             )
         } catch let failure as AddonFailure {
             return AddonToolResult(exitCode: 1, output: "Invalid manifest: \(failure.reason)")
@@ -89,5 +102,11 @@ enum AddonToolCommand {
         }
 
         return data
+    }
+
+    /// ManifestVersion reads only the version, to pick the decoder; it validates nothing.
+    private struct ManifestVersion: Decodable {
+
+        let manifestVersion: Int
     }
 }
