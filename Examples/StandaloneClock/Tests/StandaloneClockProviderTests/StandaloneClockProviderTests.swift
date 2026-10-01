@@ -9,48 +9,84 @@ import Foundation
 import StandaloneClockProvider
 import Testing
 
-private enum UnexpectedCapability: Error { case call }
+private enum UnexpectedCapability: Error {
+
+    case call
+}
 
 private struct FailingServices: AddonServiceClient {
-    func invoke(_ invocation: ServiceInvocation, grant: Grant) async throws -> ServiceResponse {
+
+    func invoke(
+        _ invocation: ServiceInvocation,
+        grant       : Grant
+    ) async throws -> ServiceResponse {
         throw UnexpectedCapability.call
     }
-    func subscribe(requirementID: String, grant: Grant) async throws -> UUID { throw UnexpectedCapability.call }
+
+    func subscribe(
+        requirementID: String,
+        grant        : Grant
+    ) async throws -> UUID {
+        throw UnexpectedCapability.call
+    }
+
     func unsubscribe(subscriptionID: UUID) async throws { throw UnexpectedCapability.call }
 }
 
 private struct FailingStorage: AddonStorageClient {
+
     func read(key: String) async throws -> Data? { throw UnexpectedCapability.call }
-    func write(_ data: Data, key: String) async throws { throw UnexpectedCapability.call }
+
+    func write(
+        _ data: Data,
+        key   : String
+    ) async throws {
+        throw UnexpectedCapability.call
+    }
+
     func remove(key: String) async throws { throw UnexpectedCapability.call }
 }
 
 private struct FailingAssets: AddonAssetClient {
-    func importAsset(_ data: Data, publicationID: PublicationID) async throws -> AssetHandle {
+
+    func importAsset(
+        _ data       : Data,
+        publicationID: PublicationID
+    ) async throws -> AssetHandle {
         throw UnexpectedCapability.call
     }
-    func shareAsset(_ asset: AssetHandle, to publicationID: PublicationID) async throws -> AssetHandle {
+
+    func shareAsset(
+        _ asset         : AssetHandle,
+        to publicationID: PublicationID
+    ) async throws -> AssetHandle {
         throw UnexpectedCapability.call
     }
+
     func releaseAsset(_ asset: AssetHandle) async throws { throw UnexpectedCapability.call }
 }
 
 private struct Fixture {
-    let owner = AddonID(rawValue: "org.cascade.examples.clock")!
+
+    let owner      = AddonID(rawValue: "org.cascade.examples.clock")!
     let assignment: PublicationID
-    let now = Date(timeIntervalSince1970: 2_000_000_000)
+    let now        = Date(timeIntervalSince1970: 2_000_000_000)
 
     init() {
-        assignment = PublicationID(addonID: owner, instanceID: UUID(), sessionID: UUID())
+        assignment = PublicationID(
+            addonID   : owner,
+            instanceID: UUID(),
+            sessionID : UUID()
+        )
     }
 
     func context() throws -> AddonContext {
         try AddonContext(
-            services: FailingServices(),
-            storage: FailingStorage(),
-            assets: FailingAssets(),
+            services  : FailingServices(),
+            storage   : FailingStorage(),
+            assets    : FailingAssets(),
             generation: ConnectionGeneration(),
-            grants: []
+            grants    : []
         )
     }
 }
@@ -64,7 +100,8 @@ private func failureCode(_ operation: () async throws -> ProviderOutput) async -
     }
 }
 
-@Test func manifestAndRefreshUseOnlyHostAssignedDeclarativeClockState() async throws {
+@Test
+func manifestAndRefreshUseOnlyHostAssignedDeclarativeClockState() async throws {
     let manifestURL = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         .appendingPathComponent("Manifest.json")
@@ -77,13 +114,14 @@ private func failureCode(_ operation: () async throws -> ProviderOutput) async -
     #expect(manifest.features[0].id == "clock" && manifest.features[0].actions == [])
     #expect(manifest.resources.background == .none)
 
-    let fixture = Fixture()
+    let fixture  = Fixture()
     let provider = try StandaloneClockProvider(
         expectedOwner: fixture.owner,
         publicationID: fixture.assignment,
-        clock: { fixture.now }
+        clock        : { fixture.now }
     )
-    let first = try await provider.handle(.refresh(fixture.assignment), context: fixture.context())
+
+    let first       = try await provider.handle(.refresh(fixture.assignment), context: fixture.context())
     let publication = try #require(first.publications.first)
     #expect(first.publications.count == 1 && first.operations.isEmpty)
     #expect(first.completion == nil && first.checkpoint == nil)
@@ -95,35 +133,36 @@ private func failureCode(_ operation: () async throws -> ProviderOutput) async -
     #expect(publication.content?.widget?.assets.isEmpty == true)
     try first.validateContext(
         authenticatedAddonID: fixture.owner,
-        expectedCompletion: nil,
-        previousRevisions: [:]
+        expectedCompletion  : nil,
+        previousRevisions   : [:]
     )
 
     let second = try await provider.handle(.refresh(fixture.assignment), context: fixture.context())
     #expect(second.publications.first?.revision == 2)
     try second.validateContext(
         authenticatedAddonID: fixture.owner,
-        expectedCompletion: nil,
-        previousRevisions: [fixture.assignment: 1]
+        expectedCompletion  : nil,
+        previousRevisions   : [fixture.assignment: 1]
     )
 
     let recreated = try StandaloneClockProvider(
-        expectedOwner: fixture.owner,
-        publicationID: fixture.assignment,
+        expectedOwner   : fixture.owner,
+        publicationID   : fixture.assignment,
         previousRevision: 2,
-        clock: { fixture.now }
+        clock           : { fixture.now }
     )
     let resumed = try await recreated.handle(.refresh(fixture.assignment), context: fixture.context())
     #expect(resumed.publications.first?.revision == 3)
     try resumed.validateContext(
         authenticatedAddonID: fixture.owner,
-        expectedCompletion: nil,
-        previousRevisions: [fixture.assignment: 2]
+        expectedCompletion  : nil,
+        previousRevisions   : [fixture.assignment: 2]
     )
 }
 
-@Test func unsupportedAndInvalidEventsFailWithoutUsingCapabilities() async throws {
-    let fixture = Fixture()
+@Test
+func unsupportedAndInvalidEventsFailWithoutUsingCapabilities() async throws {
+    let fixture      = Fixture()
     let foreignOwner = AddonID(rawValue: "org.cascade.examples.other")!
     #expect(throws: (any Error).self) {
         _ = try StandaloneClockProvider(expectedOwner: foreignOwner, publicationID: fixture.assignment)
@@ -132,22 +171,24 @@ private func failureCode(_ operation: () async throws -> ProviderOutput) async -
     let provider = try StandaloneClockProvider(
         expectedOwner: fixture.owner,
         publicationID: fixture.assignment,
-        clock: { fixture.now }
+        clock        : { fixture.now }
     )
     let other = PublicationID(
-        addonID: fixture.owner,
+        addonID   : fixture.owner,
         instanceID: UUID(),
-        sessionID: fixture.assignment.sessionID
+        sessionID : fixture.assignment.sessionID
     )
-    #expect(await failureCode { try await provider.handle(.refresh(other), context: fixture.context()) } == .invalidPayload)
+    #expect(await failureCode {
+        try await provider.handle(.refresh(other), context: fixture.context())
+    } == .invalidPayload)
 
     let request = try ActionRequest(
-        schemaVersion: 1,
-        requestID: UUID(),
-        publicationID: fixture.assignment,
-        actionID: "unknown",
-        input: Data(),
-        deadline: fixture.now.addingTimeInterval(30),
+        schemaVersion   : 1,
+        requestID       : UUID(),
+        publicationID   : fixture.assignment,
+        actionID        : "unknown",
+        input           : Data(),
+        deadline        : fixture.now.addingTimeInterval(30),
         observedRevision: 0
     )
     let rejected = try await provider.handle(.action(request), context: fixture.context())
@@ -156,24 +197,29 @@ private func failureCode(_ operation: () async throws -> ProviderOutput) async -
         Issue.record("Unsupported action must return its correlated rejection")
         return
     }
+
     #expect(reason.code == .invalidPayload)
     try rejected.validateContext(
         authenticatedAddonID: fixture.owner,
-        expectedCompletion: .action(requestID: request.requestID),
-        previousRevisions: [:]
+        expectedCompletion  : .action(requestID: request.requestID),
+        previousRevisions   : [:]
     )
 
     let scheduled = try await provider.handle(.scheduled(eventID: "clock.refresh"), context: fixture.context())
     #expect(scheduled.publications.isEmpty && scheduled.operations.isEmpty && scheduled.completion == nil)
+
     let service = try ServiceInvocation(
         schemaVersion: 1,
-        requestID: UUID(),
-        contractID: "unsupported.service",
-        operation: "read",
-        payload: Data(),
-        deadline: fixture.now.addingTimeInterval(30)
+        requestID    : UUID(),
+        contractID   : "unsupported.service",
+        operation    : "read",
+        payload      : Data(),
+        deadline     : fixture.now.addingTimeInterval(30)
     )
-    #expect(await failureCode { try await provider.handle(.serviceRequest(service), context: fixture.context()) } == .missingRequirement)
+    #expect(await failureCode {
+        try await provider.handle(.serviceRequest(service), context: fixture.context())
+    } == .missingRequirement)
+
     let stopped = try await provider.handle(.stop(.idle), context: fixture.context())
     #expect(stopped.publications.isEmpty && stopped.operations.isEmpty)
     #expect(await failureCode {
@@ -181,22 +227,23 @@ private func failureCode(_ operation: () async throws -> ProviderOutput) async -
     } == .sessionRevoked)
 }
 
-@Test func invalidCivilTimeAndExhaustedRevisionFailClosed() async throws {
-    let fixture = Fixture()
+@Test
+func invalidCivilTimeAndExhaustedRevisionFailClosed() async throws {
+    let fixture   = Fixture()
     let nonfinite = try StandaloneClockProvider(
         expectedOwner: fixture.owner,
         publicationID: fixture.assignment,
-        clock: { Date(timeIntervalSince1970: .infinity) }
+        clock        : { Date(timeIntervalSince1970: .infinity) }
     )
     #expect(await failureCode {
         try await nonfinite.handle(.refresh(fixture.assignment), context: fixture.context())
     } == .invalidPayload)
 
     let exhausted = try StandaloneClockProvider(
-        expectedOwner: fixture.owner,
-        publicationID: fixture.assignment,
+        expectedOwner   : fixture.owner,
+        publicationID   : fixture.assignment,
         previousRevision: .max,
-        clock: { fixture.now }
+        clock           : { fixture.now }
     )
     #expect(await failureCode {
         try await exhausted.handle(.refresh(fixture.assignment), context: fixture.context())
