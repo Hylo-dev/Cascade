@@ -70,6 +70,10 @@ struct InProcessExecutorTests {
         executor.start(plugin, entryPoint: "ClockPlugin")
         let power = try PluginSourceEvent(source: "power")
         async let last = executor.dispatch(.source(power), to: plugin)
+        try await Task.sleep(for: .milliseconds(50))
+
+        #expect(log.events == [.refresh])
+
         gate.signal()
         _ = await last
 
