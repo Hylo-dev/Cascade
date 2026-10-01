@@ -10,21 +10,24 @@ import Testing
 @testable import CascadeRuntime
 
 final class ChainReadSource: @unchecked Sendable {
+
     private let lock = NSLock()
-    private var ticks: [UUID: [UInt64]]
-    private var counts: [UUID: UInt64] = [:]
+
+    private var ticks   : [UUID: [UInt64]]
+    private var counts  : [UUID: UInt64] = [:]
     private var captured: [ProcessMetricBinding] = []
+
     private let gatedToken: UUID?
-    private let gate: ChainReadGate?
+    private let gate      : ChainReadGate?
 
     init(
-        _ ticks    : [UUID: [UInt64]],
+        _ ticks   : [UUID: [UInt64]],
         gatedToken: UUID? = nil,
         gate      : ChainReadGate? = nil
     ) {
-        self.ticks = ticks
+        self.ticks      = ticks
         self.gatedToken = gatedToken
-        self.gate = gate
+        self.gate       = gate
     }
 
     var bindings: [ProcessMetricBinding] { lock.withLock { captured } }
@@ -32,14 +35,17 @@ final class ChainReadSource: @unchecked Sendable {
     func read(_ binding: ProcessMetricBinding) -> ProcessMetricReadResult {
         lock.withLock {
             captured.append(binding)
+
             guard var queued = ticks[binding.token], !queued.isEmpty else {
                 return .unavailable(.readFailed(5))
             }
-            let userTicks = queued.removeFirst()
-            ticks[binding.token] = queued
-            let count = (counts[binding.token] ?? 0) + 1
+
+            let userTicks         = queued.removeFirst()
+            ticks[binding.token]  = queued
+            let count             = (counts[binding.token] ?? 0) + 1
             counts[binding.token] = count
             if binding.token == gatedToken, count == 2 { gate?.pause() }
+
             return .sample(ProcessMetricObservation(
                 binding       : binding,
                 userTicks     : userTicks,

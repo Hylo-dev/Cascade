@@ -10,10 +10,11 @@ import Testing
 @testable import CascadeRuntime
 
 final class BrokerObservationGate: @unchecked Sendable {
-    private let observationStarted = DispatchSemaphore(value: 0)
-    private let observationRelease = DispatchSemaphore(value: 0)
+
+    private let observationStarted  = DispatchSemaphore(value: 0)
+    private let observationRelease  = DispatchSemaphore(value: 0)
     private let observationFinished = DispatchSemaphore(value: 0)
-    private let acquisitionStarted = DispatchSemaphore(value: 0)
+    private let acquisitionStarted  = DispatchSemaphore(value: 0)
     private let acquisitionFinished = DispatchSemaphore(value: 0)
 
     func enterObservation() {

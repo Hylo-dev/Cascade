@@ -9,33 +9,37 @@ import Foundation
 import Testing
 @testable import CascadeRuntime
 
-@Suite struct ServiceBrokerCPUAttributionTests {
-    @Test func newInterestPublishesOneLedgerEdgeAndReuseDoesNotDuplicateIt() async throws {
+@Suite
+struct ServiceBrokerCPUAttributionTests {
+
+    @Test
+    func newInterestPublishesOneLedgerEdgeAndReuseDoesNotDuplicateIt() async throws {
         let fixture = BrokerFixture()
-        let ledger = try ledger(for: fixture)
+        let ledger  = try ledger(for: fixture)
         let binding = metricBinding()
-        _ = try ledger.register(binding, physicalOwner: fixture.provider)
-        let broker = broker(fixture: fixture, ledger: ledger)
-        _ = try await broker.authorize(fixture.permission())
+        _           = try ledger.register(binding, physicalOwner: fixture.provider)
+        let broker  = broker(fixture: fixture, ledger: ledger)
+        _           = try await broker.authorize(fixture.permission())
         let session = try await broker.registerSession(identity: fixture.owner)
-        let scope = try ServiceScope(featureID: "main", operation: "read")
+        let scope   = try ServiceScope(featureID: "main", operation: "read")
 
         let first = try await broker.acquire(
-            session                : session,
-            requirementID          : "requirement",
-            scope                  : scope,
-            now                    : fixture.now,
-            lifetime               : .seconds(30),
-            allowNewSourceStart    : true,
+            session                 : session,
+            requirementID           : "requirement",
+            scope                   : scope,
+            now                     : fixture.now,
+            lifetime                : .seconds(30),
+            allowNewSourceStart     : true,
             allowNewConsumerInterest: true
         )
+
         let second = try await broker.acquire(
-            session                : session,
-            requirementID          : "requirement",
-            scope                  : scope,
-            now                    : fixture.now,
-            lifetime               : .seconds(30),
-            allowNewSourceStart    : true,
+            session                 : session,
+            requirementID           : "requirement",
+            scope                   : scope,
+            now                     : fixture.now,
+            lifetime                : .seconds(30),
+            allowNewSourceStart     : true,
             allowNewConsumerInterest: false
         )
 
@@ -44,241 +48,262 @@ import Testing
         #expect(first.interestID == second.interestID)
         #expect(try ledger.withObservation(for: binding) { $0 } == [fixture.owner])
         #expect(try ledger.withObservation(for: binding) { $0 } == [fixture.owner])
+
         await broker.rollbackAcquisition(second)
         #expect(try ledger.withObservation(for: binding) { $0 } == [fixture.owner])
         #expect(try ledger.withObservation(for: binding) { $0 } == [fixture.owner])
     }
 
-    @Test func rollbackAndTerminalRemovalPreserveOnlyTheOpenIntervalHistory() async throws {
+    @Test
+    func rollbackAndTerminalRemovalPreserveOnlyTheOpenIntervalHistory() async throws {
         let fixture = BrokerFixture()
-        let ledger = try ledger(for: fixture)
+        let ledger  = try ledger(for: fixture)
         let binding = metricBinding()
-        _ = try ledger.register(binding, physicalOwner: fixture.provider)
-        let broker = broker(fixture: fixture, ledger: ledger)
-        _ = try await broker.authorize(fixture.permission())
+        _           = try ledger.register(binding, physicalOwner: fixture.provider)
+        let broker  = broker(fixture: fixture, ledger: ledger)
+        _           = try await broker.authorize(fixture.permission())
         let session = try await broker.registerSession(identity: fixture.owner)
-        let scope = try ServiceScope(featureID: "main", operation: "read")
+        let scope   = try ServiceScope(featureID: "main", operation: "read")
 
         let rolledBack = try await broker.acquire(
-            session                : session,
-            requirementID          : "requirement",
-            scope                  : scope,
-            now                    : fixture.now,
-            lifetime               : .seconds(30),
-            allowNewSourceStart    : true,
+            session                 : session,
+            requirementID           : "requirement",
+            scope                   : scope,
+            now                     : fixture.now,
+            lifetime                : .seconds(30),
+            allowNewSourceStart     : true,
             allowNewConsumerInterest: true
         )
+
         await broker.rollbackAcquisition(rolledBack)
         #expect(try ledger.withObservation(for: binding) { $0 } == [fixture.owner])
         #expect(try ledger.withObservation(for: binding) { $0 }.isEmpty)
 
         let active = try await broker.acquire(
-            session                : session,
-            requirementID          : "requirement",
-            scope                  : scope,
-            now                    : fixture.now,
-            lifetime               : .seconds(30),
-            allowNewSourceStart    : true,
+            session                 : session,
+            requirementID           : "requirement",
+            scope                   : scope,
+            now                     : fixture.now,
+            lifetime                : .seconds(30),
+            allowNewSourceStart     : true,
             allowNewConsumerInterest: true
         )
+
         _ = try await broker.unsubscribe(session: session, interestID: active.interestID)
         #expect(try ledger.withObservation(for: binding) { $0 } == [fixture.owner])
         #expect(try ledger.withObservation(for: binding) { $0 }.isEmpty)
     }
 
-    @Test func pausedNewInterestFailsBeforeReservationsWhileReuseRemainsAvailable() async throws {
-        let fixture = BrokerFixture()
+    @Test
+    func pausedNewInterestFailsBeforeReservationsWhileReuseRemainsAvailable() async throws {
+        let fixture  = BrokerFixture()
         let governor = ResourceGovernor()
-        let broker = ServiceBroker(
-            governor       : governor,
-            resourceAccess : governor
-        )
-        _ = try await broker.authorize(fixture.permission())
-        let session = try await broker.registerSession(identity: fixture.owner)
-        let scope = try ServiceScope(featureID: "main", operation: "read")
+        let broker   = ServiceBroker(governor: governor, resourceAccess: governor)
+
+        _            = try await broker.authorize(fixture.permission())
+        let session  = try await broker.registerSession(identity: fixture.owner)
+        let scope    = try ServiceScope(featureID: "main", operation: "read")
         let baseline = await governor.usage(.retainedStateBytes)
 
         await #expect(throws: AddonFailure.self) {
             try await broker.acquire(
-                session                : session,
-                requirementID          : "requirement",
-                scope                  : scope,
-                now                    : fixture.now,
-                lifetime               : .seconds(30),
-                allowNewSourceStart    : true,
+                session                 : session,
+                requirementID           : "requirement",
+                scope                   : scope,
+                now                     : fixture.now,
+                lifetime                : .seconds(30),
+                allowNewSourceStart     : true,
                 allowNewConsumerInterest: false
             )
         }
+
         #expect(await governor.usage(.retainedStateBytes) == baseline)
 
         _ = try await broker.acquire(
-            session                : session,
-            requirementID          : "requirement",
-            scope                  : scope,
-            now                    : fixture.now,
-            lifetime               : .seconds(30),
-            allowNewSourceStart    : true,
+            session                 : session,
+            requirementID           : "requirement",
+            scope                   : scope,
+            now                     : fixture.now,
+            lifetime                : .seconds(30),
+            allowNewSourceStart     : true,
             allowNewConsumerInterest: true
         )
+
         _ = try await broker.acquire(
-            session                : session,
-            requirementID          : "requirement",
-            scope                  : scope,
-            now                    : fixture.now,
-            lifetime               : .seconds(30),
-            allowNewSourceStart    : true,
+            session                 : session,
+            requirementID           : "requirement",
+            scope                   : scope,
+            now                     : fixture.now,
+            lifetime                : .seconds(30),
+            allowNewSourceStart     : true,
             allowNewConsumerInterest: false
         )
     }
 
-    @Test func ledgerFailureDoesNotPublishCanonicalSourceOrRetainReservations() async throws {
-        let fixture = BrokerFixture()
-        let ledger = try ServiceCPUAttributionLedger(authorizedOwners: [fixture.provider])
+    @Test
+    func ledgerFailureDoesNotPublishCanonicalSourceOrRetainReservations() async throws {
+        let fixture  = BrokerFixture()
+        let ledger   = try ServiceCPUAttributionLedger(authorizedOwners: [fixture.provider])
         let governor = ResourceGovernor()
-        let broker = ServiceBroker(
-            governor             : governor,
-            resourceAccess       : governor,
-            cpuAttributionLedger : ledger
+        let broker   = ServiceBroker(
+            governor            : governor,
+            resourceAccess      : governor,
+            cpuAttributionLedger: ledger
         )
-        _ = try await broker.authorize(fixture.permission())
-        let session = try await broker.registerSession(identity: fixture.owner)
+
+        _            = try await broker.authorize(fixture.permission())
+        let session  = try await broker.registerSession(identity: fixture.owner)
         let baseline = await governor.usage(.retainedStateBytes)
 
         await #expect(throws: AddonFailure.self) {
             try await broker.acquire(
-                session                : session,
-                requirementID          : "requirement",
-                scope                  : try ServiceScope(featureID: "main", operation: "read"),
-                now                    : fixture.now,
-                lifetime               : .seconds(30),
-                allowNewSourceStart    : true,
+                session                 : session,
+                requirementID           : "requirement",
+                scope                   : try ServiceScope(featureID: "main", operation: "read"),
+                now                     : fixture.now,
+                lifetime                : .seconds(30),
+                allowNewSourceStart     : true,
                 allowNewConsumerInterest: true
             )
         }
+
         #expect(await broker.activeSourceIDs().isEmpty)
         #expect(await governor.usage(.retainedStateBytes) == baseline)
     }
 
-    @Test func disconnectAndProviderExitPreserveTheActiveLedgerRelationship() async throws {
-        let fixture = BrokerFixture()
-        let ledger = try ledger(for: fixture)
-        let binding = metricBinding()
-        _ = try ledger.register(binding, physicalOwner: fixture.provider)
-        let broker = broker(fixture: fixture, ledger: ledger)
-        _ = try await broker.authorize(fixture.permission())
-        let session = try await broker.registerSession(identity: fixture.owner)
+    @Test
+    func disconnectAndProviderExitPreserveTheActiveLedgerRelationship() async throws {
+        let fixture  = BrokerFixture()
+        let ledger   = try ledger(for: fixture)
+        let binding  = metricBinding()
+        _            = try ledger.register(binding, physicalOwner: fixture.provider)
+        let broker   = broker(fixture: fixture, ledger: ledger)
+        _            = try await broker.authorize(fixture.permission())
+        let session  = try await broker.registerSession(identity: fixture.owner)
         let acquired = try await broker.acquire(
-            session                : session,
-            requirementID          : "requirement",
-            scope                  : try ServiceScope(featureID: "main", operation: "read"),
-            now                    : fixture.now,
-            lifetime               : .seconds(30),
-            allowNewSourceStart    : true,
+            session                 : session,
+            requirementID           : "requirement",
+            scope                   : try ServiceScope(featureID: "main", operation: "read"),
+            now                     : fixture.now,
+            lifetime                : .seconds(30),
+            allowNewSourceStart     : true,
             allowNewConsumerInterest: true
         )
 
         #expect(try ledger.withObservation(for: binding) { $0 } == [fixture.owner])
+
         await broker.disconnect(session)
         #expect(try ledger.withObservation(for: binding) { $0 } == [fixture.owner])
         #expect(try ledger.withObservation(for: binding) { $0 } == [fixture.owner])
+
         await broker.providerExitedPreservingInterests(fixture.provider)
         #expect(await broker.activeSourceIDs() == Set([acquired.sourceID]))
         #expect(try ledger.withObservation(for: binding) { $0 } == [fixture.owner])
         #expect(try ledger.withObservation(for: binding) { $0 } == [fixture.owner])
     }
 
-    @Test func brokerChainConservativelyAttributesThePhysicalProviderToAncestors() async throws {
+    @Test
+    func brokerChainConservativelyAttributesThePhysicalProviderToAncestors() async throws {
         let fixture = BrokerFixture()
-        let middle = fixture.other
-        let ledger = try ServiceCPUAttributionLedger(
+        let middle  = fixture.other
+        let ledger  = try ServiceCPUAttributionLedger(
             authorizedOwners: [fixture.owner, middle, fixture.provider]
         )
+
         let binding = metricBinding()
-        _ = try ledger.register(binding, physicalOwner: fixture.provider)
-        let broker = broker(fixture: fixture, ledger: ledger)
-        _ = try await broker.authorize(permission(
+        _           = try ledger.register(binding, physicalOwner: fixture.provider)
+        let broker  = broker(fixture: fixture, ledger: ledger)
+        _           = try await broker.authorize(permission(
             consumer     : middle,
             provider     : fixture.provider,
             requirementID: "middle-to-provider"
         ))
+
         _ = try await broker.authorize(permission(
             consumer     : fixture.owner,
             provider     : middle,
             requirementID: "owner-to-middle"
         ))
+
         let middleSession = try await broker.registerSession(identity: middle)
-        let ownerSession = try await broker.registerSession(identity: fixture.owner)
-        _ = try await broker.acquire(
-            session                : middleSession,
-            requirementID          : "middle-to-provider",
-            scope                  : try ServiceScope(featureID: "main", operation: "read"),
-            now                    : fixture.now,
-            lifetime               : .seconds(30),
-            allowNewSourceStart    : true,
+        let ownerSession  = try await broker.registerSession(identity: fixture.owner)
+        _                 = try await broker.acquire(
+            session                 : middleSession,
+            requirementID           : "middle-to-provider",
+            scope                   : try ServiceScope(featureID: "main", operation: "read"),
+            now                     : fixture.now,
+            lifetime                : .seconds(30),
+            allowNewSourceStart     : true,
             allowNewConsumerInterest: true
         )
+
         _ = try await broker.acquire(
-            session                : ownerSession,
-            requirementID          : "owner-to-middle",
-            scope                  : try ServiceScope(featureID: "main", operation: "read"),
-            now                    : fixture.now,
-            lifetime               : .seconds(30),
-            allowNewSourceStart    : true,
+            session                 : ownerSession,
+            requirementID           : "owner-to-middle",
+            scope                   : try ServiceScope(featureID: "main", operation: "read"),
+            now                     : fixture.now,
+            lifetime                : .seconds(30),
+            allowNewSourceStart     : true,
             allowNewConsumerInterest: true
         )
 
         #expect(try ledger.withObservation(for: binding) { $0 } == [fixture.owner, middle])
     }
 
-    @Test func revocationAndShutdownRemoveLedgerMembershipThroughTheCentralPath() async throws {
-        let fixture = BrokerFixture()
-        let ledger = try ledger(for: fixture)
-        let binding = metricBinding()
-        _ = try ledger.register(binding, physicalOwner: fixture.provider)
-        let broker = broker(fixture: fixture, ledger: ledger)
+    @Test
+    func revocationAndShutdownRemoveLedgerMembershipThroughTheCentralPath() async throws {
+        let fixture      = BrokerFixture()
+        let ledger       = try ledger(for: fixture)
+        let binding      = metricBinding()
+        _                = try ledger.register(binding, physicalOwner: fixture.provider)
+        let broker       = broker(fixture: fixture, ledger: ledger)
         let permissionID = try await broker.authorize(fixture.permission())
-        let session = try await broker.registerSession(identity: fixture.owner)
-        _ = try await broker.acquire(
-            session                : session,
-            requirementID          : "requirement",
-            scope                  : try ServiceScope(featureID: "main", operation: "read"),
-            now                    : fixture.now,
-            lifetime               : .seconds(30),
-            allowNewSourceStart    : true,
+        let session      = try await broker.registerSession(identity: fixture.owner)
+        _                = try await broker.acquire(
+            session                 : session,
+            requirementID           : "requirement",
+            scope                   : try ServiceScope(featureID: "main", operation: "read"),
+            now                     : fixture.now,
+            lifetime                : .seconds(30),
+            allowNewSourceStart     : true,
             allowNewConsumerInterest: true
         )
+
         _ = await broker.revoke(permissionID: permissionID)
         #expect(try ledger.withObservation(for: binding) { $0 } == [fixture.owner])
         #expect(try ledger.withObservation(for: binding) { $0 }.isEmpty)
 
         _ = try await broker.authorize(fixture.permission())
         _ = try await broker.acquire(
-            session                : session,
-            requirementID          : "requirement",
-            scope                  : try ServiceScope(featureID: "main", operation: "read"),
-            now                    : fixture.now,
-            lifetime               : .seconds(30),
-            allowNewSourceStart    : true,
+            session                 : session,
+            requirementID           : "requirement",
+            scope                   : try ServiceScope(featureID: "main", operation: "read"),
+            now                     : fixture.now,
+            lifetime                : .seconds(30),
+            allowNewSourceStart     : true,
             allowNewConsumerInterest: true
         )
+
         _ = await broker.shutdown()
         #expect(try ledger.withObservation(for: binding) { $0 } == [fixture.owner])
         #expect(try ledger.withObservation(for: binding) { $0 }.isEmpty)
     }
 
-    @Test func brokerPublicationWaitsForTheBlockedPhysicalObservation() async throws {
-        let fixture = BrokerFixture()
-        let ledger = try ledger(for: fixture)
-        let binding = metricBinding()
-        _ = try ledger.register(binding, physicalOwner: fixture.provider)
-        let broker = broker(fixture: fixture, ledger: ledger)
-        _ = try await broker.authorize(fixture.permission())
-        let session = try await broker.registerSession(identity: fixture.owner)
-        let gate = BrokerObservationGate()
+    @Test
+    func brokerPublicationWaitsForTheBlockedPhysicalObservation() async throws {
+        let fixture    = BrokerFixture()
+        let ledger     = try ledger(for: fixture)
+        let binding    = metricBinding()
+        _              = try ledger.register(binding, physicalOwner: fixture.provider)
+        let broker     = broker(fixture: fixture, ledger: ledger)
+        _              = try await broker.authorize(fixture.permission())
+        let session    = try await broker.registerSession(identity: fixture.owner)
+        let gate       = BrokerObservationGate()
         let recipients = BrokerRecipientBox()
 
         DispatchQueue(label: "broker-ledger-observation").async {
             defer { gate.finishObservation() }
+
             do {
                 recipients.store(try ledger.withObservation(for: binding) { values in
                     gate.enterObservation()
@@ -286,40 +311,49 @@ import Testing
                         Issue.record("Observation release timed out.")
                         return values
                     }
+
                     return values
                 })
             } catch {
                 Issue.record("Blocked observation failed: \(error)")
             }
         }
+
         defer { gate.releaseObservation() }
+
         guard gate.waitForObservation() else {
             Issue.record("Observation did not enter its synchronous body.")
             return
         }
+
         let acquiring = Task {
             gate.startAcquisition()
             defer { gate.finishAcquisition() }
+
             return try await broker.acquire(
-                session                : session,
-                requirementID          : "requirement",
-                scope                  : try ServiceScope(featureID: "main", operation: "read"),
-                now                    : fixture.now,
-                lifetime               : .seconds(30),
-                allowNewSourceStart    : true,
+                session                 : session,
+                requirementID           : "requirement",
+                scope                   : try ServiceScope(featureID: "main", operation: "read"),
+                now                     : fixture.now,
+                lifetime                : .seconds(30),
+                allowNewSourceStart     : true,
                 allowNewConsumerInterest: true
             )
         }
+
         guard gate.waitForAcquisitionStart() else {
             Issue.record("Acquisition task did not start.")
             return
         }
+
         #expect(!gate.waitForAcquisitionFinish(within: .milliseconds(20)))
+
         gate.releaseObservation()
         guard gate.waitForObservationFinish() else {
             Issue.record("Observation did not finish after release.")
             return
         }
+
         #expect((try await acquiring.value).createdNewConsumerInterest)
         #expect(recipients.value.isEmpty)
         #expect(try ledger.withObservation(for: binding) { $0 } == [fixture.owner])
@@ -330,10 +364,11 @@ import Testing
         ledger : ServiceCPUAttributionLedger
     ) -> ServiceBroker {
         let governor = ResourceGovernor()
+
         return ServiceBroker(
-            governor             : governor,
-            resourceAccess       : governor,
-            cpuAttributionLedger : ledger
+            governor            : governor,
+            resourceAccess      : governor,
+            cpuAttributionLedger: ledger
         )
     }
 
@@ -357,20 +392,20 @@ import Testing
         requirementID: String
     ) throws -> HostServicePermission {
         HostServicePermission(
-            consumer: consumer,
-            binding : ServiceBinding(
-                requirementID    : requirementID,
-                consumer         : consumer.addonID,
-                provider         : provider.addonID,
-                providerIdentity : provider,
-                contractVersion  : SemanticVersion(1, 0, 0),
-                digest           : "sha256-verified",
-                featureID        : "main"
+            consumer             : consumer,
+            binding              : ServiceBinding(
+                requirementID   : requirementID,
+                consumer        : consumer.addonID,
+                provider        : provider.addonID,
+                providerIdentity: provider,
+                contractVersion : SemanticVersion(1, 0, 0),
+                digest          : "sha256-verified",
+                featureID       : "main"
             ),
-            serviceID             : "test.service",
-            partition             : "account-a",
-            operation             : "read",
-            crossPublisherConsent : true
+            serviceID            : "test.service",
+            partition            : "account-a",
+            operation            : "read",
+            crossPublisherConsent: true
         )
     }
 }

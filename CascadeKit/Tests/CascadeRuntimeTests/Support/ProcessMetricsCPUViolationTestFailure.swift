@@ -9,5 +9,6 @@ import Testing
 @testable import CascadeRuntime
 
 enum ProcessMetricsCPUViolationTestFailure: Error {
+
     case expectedCompleteAccounting
 }

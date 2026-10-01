@@ -8,8 +8,10 @@ import Foundation
 import Testing
 @testable import CascadeRuntime
 
-@Suite struct PublicationAssetReferencesTests {
-    private let now = Date(timeIntervalSince1970: 2_000_000_000)
+@Suite
+struct PublicationAssetReferencesTests {
+
+    private let now      = Date(timeIntervalSince1970: 2_000_000_000)
     private let identity: VerifiedAddonIdentity
 
     init() throws {
@@ -20,7 +22,8 @@ import Testing
     }
 
     private struct Reference: Equatable {
-        let id: String
+
+        let id     : String
         let privacy: ContentDocument.Privacy
     }
 
@@ -39,11 +42,11 @@ import Testing
 
     private func representations(_ prefix: String) throws -> PresentationSet {
         try PresentationSet(
-            widget: document(prefix + ".widget"),
-            compactLeading: document(prefix + ".leading", privacy: .sensitive),
+            widget         : document(prefix + ".widget"),
+            compactLeading : document(prefix + ".leading", privacy: .sensitive),
             compactTrailing: document(prefix + ".trailing"),
-            minimal: document(prefix + ".minimal", privacy: .sensitive),
-            expanded: document(prefix + ".expanded")
+            minimal        : document(prefix + ".minimal", privacy: .sensitive),
+            expanded       : document(prefix + ".expanded")
         )
     }
 
@@ -73,6 +76,7 @@ import Testing
     private func references(_ publication: Publication) -> [Reference] {
         var values: [Reference] = []
         publication.forEachAssetReference { values.append(Reference(id: $0, privacy: $1)) }
+
         return values
     }
 
@@ -83,11 +87,8 @@ import Testing
         try state.openConnection(
             identity        : identity,
             verifiedDigest  : "test-digest",
-            manifestProtocol: ProtocolVersion(
-                major       : 1,
-                minimumMinor: 0
-            ),
-            offer: ProtocolOffer(
+            manifestProtocol: ProtocolVersion(major: 1, minimumMinor: 0),
+            offer           : ProtocolOffer(
                 major         : 1,
                 minimumMinor  : 0,
                 maximumMinor  : 0,
@@ -113,16 +114,19 @@ import Testing
     private func changes(_ prepared: PublicationState.PreparedOutput) -> [Publication] {
         var values: [Publication] = []
         prepared.forEachChangedPublication { values.append($0) }
+
         return values
     }
 
     private func endedIDs(_ prepared: PublicationState.PreparedOutput) -> Set<PublicationID> {
         var ids: Set<PublicationID> = []
         prepared.forEachEndedPublicationID { ids.insert($0) }
+
         return ids
     }
 
-    @Test func visitsDeclaredAssetsInEveryRepresentationWithDocumentPrivacy() throws {
+    @Test
+    func visitsDeclaredAssetsInEveryRepresentationWithDocumentPrivacy() throws {
         let values = references(try publication())
         #expect(values == [
             Reference(id: "current.widget", privacy: .publicContent),
@@ -133,25 +137,35 @@ import Testing
         ])
     }
 
-    @Test func sameAssetIDKeepsEachDocumentPrivacy() throws {
-        let content = try PresentationSet(widget: document("shared"),
-            compactLeading: document("shared", privacy: .sensitive), compactTrailing: nil,
-            minimal: nil, expanded: nil)
+    @Test
+    func sameAssetIDKeepsEachDocumentPrivacy() throws {
+        let content = try PresentationSet(
+            widget         : document("shared"),
+            compactLeading : document("shared", privacy: .sensitive),
+            compactTrailing: nil,
+            minimal        : nil,
+            expanded       : nil
+        )
         #expect(references(try publication(content: content)) == [
             Reference(id: "shared", privacy: .publicContent),
             Reference(id: "shared", privacy: .sensitive),
         ])
     }
 
-    @Test func preparedProjectionPreservesFutureEntriesAndExcludesHostClippedEntries() throws {
+    @Test
+    func preparedProjectionPreservesFutureEntriesAndExcludesHostClippedEntries() throws {
         var state = PublicationState(now: { Date(timeIntervalSince1970: 2_000_000_000) })
-        let value = try publication(timeline: [
-            ScheduledEntry(date: now, content: representations("due")),
-            ScheduledEntry(date: now.addingTimeInterval(7 * 3_600), content: representations("future")),
-            ScheduledEntry(date: now.addingTimeInterval(8 * 3_600), content: representations("clipped")),
-        ], kind: .activity, duration: 9 * 3_600)
+        let value = try publication(
+            timeline: [
+                ScheduledEntry(date: now, content: representations("due")),
+                ScheduledEntry(date: now.addingTimeInterval(7 * 3_600), content: representations("future")),
+                ScheduledEntry(date: now.addingTimeInterval(8 * 3_600), content: representations("clipped")),
+            ],
+            kind    : .activity,
+            duration: 9 * 3_600
+        )
         let connection = try connect(&state, ids: [value.id])
-        let prepared = try state.prepareOutput(
+        let prepared   = try state.prepareOutput(
             output([value]),
             connection: connection,
             generation: connection.generation,
@@ -173,18 +187,25 @@ import Testing
         #expect(references(visible).count == 5)
     }
 
-    @Test func endedProjectionUsesCanonicalChangesInsteadOfRawOperations() throws {
-        var state = PublicationState(now: { Date(timeIntervalSince1970: 2_000_000_000) })
+    @Test
+    func endedProjectionUsesCanonicalChangesInsteadOfRawOperations() throws {
+        var state             = PublicationState(now: { Date(timeIntervalSince1970: 2_000_000_000) })
         let existing          = try publication()
         let insertedThenEnded = try publication()
         let missing           = try publication()
-        let surviving = try publication()
-        let untouched = try publication()
-        let connection = try connect(&state, ids: [existing.id, insertedThenEnded.id, missing.id, surviving.id, untouched.id])
+        let surviving         = try publication()
+        let untouched         = try publication()
+        let connection        = try connect(
+            &state,
+            ids: [existing.id, insertedThenEnded.id, missing.id, surviving.id, untouched.id]
+        )
         try state.accept([existing, untouched], owner: identity.addonID)
         let prepared = try state.prepareOutput(
             output([insertedThenEnded, surviving], ends: [existing.id, insertedThenEnded.id, missing.id]),
-            connection: connection, generation: connection.generation, sequence: 1)
+            connection: connection,
+            generation: connection.generation,
+            sequence  : 1
+        )
         #expect(changes(prepared) == [surviving])
         #expect(endedIDs(prepared) == [existing.id, insertedThenEnded.id])
         #expect(state.publication(id: existing.id, at: now) == existing)
@@ -195,13 +216,18 @@ import Testing
         #expect(state.publication(id: untouched.id, at: now) == untouched)
     }
 
-    @Test func failedAndStalePreparationsNeverChangeCanonicalReferences() throws {
-        var state = PublicationState(now: { Date(timeIntervalSince1970: 2_000_000_000) })
-        let original = try publication()
-        let other    = try publication()
+    @Test
+    func failedAndStalePreparationsNeverChangeCanonicalReferences() throws {
+        var state      = PublicationState(now: { Date(timeIntervalSince1970: 2_000_000_000) })
+        let original   = try publication()
+        let other      = try publication()
         let connection = try connect(&state, ids: [original.id, other.id])
         try state.accept([original, other], owner: identity.addonID)
-        let updated = try publication(id: original.id, revision: 2, content: representations("replacement"))
+        let updated = try publication(
+            id      : original.id,
+            revision: 2,
+            content : representations("replacement")
+        )
         #expect(throws: AddonFailure.self) {
             try state.prepareOutput(
                 output([updated, other]),
@@ -210,6 +236,7 @@ import Testing
                 sequence  : 1
             )
         }
+
         #expect(state.publication(id: original.id, at: now) == original)
         let prepared = try state.prepareOutput(
             output([updated]),

@@ -9,9 +9,10 @@ import Testing
 @testable import CascadeRuntime
 
 final class MetricsDeadlineReadSource: @unchecked Sendable {
-    private let lock = NSLock()
-    private var ticks: [UInt64]
-    private var count = 0
+
+    private let lock        = NSLock()
+    private var ticks      : [UInt64]
+    private var count       = 0
     private var windowIndex: UInt64 = 0
 
     var readCount: Int {
@@ -26,7 +27,9 @@ final class MetricsDeadlineReadSource: @unchecked Sendable {
         lock.withLock {
             count += 1
             windowIndex += 1
+
             let tick = ticks.isEmpty ? 0 : ticks.removeFirst()
+
             return .sample(ProcessMetricObservation(
                 binding       : binding,
                 userTicks     : tick,

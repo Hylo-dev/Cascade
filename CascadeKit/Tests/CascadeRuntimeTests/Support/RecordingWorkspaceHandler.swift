@@ -9,12 +9,15 @@ import Testing
 @testable import CascadeRuntime
 
 actor RecordingWorkspaceHandler: FileWorkspaceCommandHandling {
+
     enum Failure: Sendable {
+
         case workspace(FileWorkspaceError)
         case untrusted(AddonFailure)
     }
 
     struct Call: Sendable {
+
         let command: FileWorkspaceCommand
         let owner  : VerifiedAddonIdentity
         let source : ServiceSourceDescriptor
@@ -23,6 +26,7 @@ actor RecordingWorkspaceHandler: FileWorkspaceCommandHandling {
     let snapshot: FileWorkspaceSnapshot
     let gate    : WorkspaceHandlerGate?
     let failure : Failure?
+
     private(set) var calls: [Call] = []
 
     init(
@@ -31,8 +35,8 @@ actor RecordingWorkspaceHandler: FileWorkspaceCommandHandling {
         failure : Failure? = nil
     ) {
         self.snapshot = snapshot
-        self.gate = gate
-        self.failure = failure
+        self.gate     = gate
+        self.failure  = failure
     }
 
     func handle(
@@ -46,11 +50,13 @@ actor RecordingWorkspaceHandler: FileWorkspaceCommandHandling {
             source : source
         ))
         await gate?.pause()
+
         switch failure {
-        case .workspace(let error): throw error
-        case .untrusted(let error): throw error
-        case nil: break
+            case .workspace(let error): throw error
+            case .untrusted(let error): throw error
+            case nil: break
         }
+
         return snapshot
     }
 }

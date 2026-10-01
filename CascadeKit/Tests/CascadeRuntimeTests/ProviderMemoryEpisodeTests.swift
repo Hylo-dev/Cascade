@@ -6,10 +6,13 @@
 import Testing
 @testable import CascadeRuntime
 
-@Suite struct ProviderMemoryEpisodeTests {
+@Suite
+struct ProviderMemoryEpisodeTests {
+
     private let mebibyte: UInt64 = 1_024 * 1_024
 
-    @Test func boundariesClassifyOnePhysicalFootprint() {
+    @Test
+    func boundariesClassifyOnePhysicalFootprint() {
         let target = 64 * mebibyte
         let stop   = 96 * mebibyte
 
@@ -28,9 +31,10 @@ import Testing
         #expect(maximum.observe(footprintBytes: .max) == .severe)
     }
 
-    @Test func episodePersistsAcrossUnavailableSamplesAndClosesOnRecovery() {
-        let target = 64 * mebibyte
-        let stop   = 96 * mebibyte
+    @Test
+    func episodePersistsAcrossUnavailableSamplesAndClosesOnRecovery() {
+        let target  = 64 * mebibyte
+        let stop    = 96 * mebibyte
         var episode = ProviderMemoryEpisode()
 
         #expect(episode.observe(footprintBytes: target + 1) == .moderate(isNewEpisode: true))
@@ -44,10 +48,11 @@ import Testing
         #expect(episode.observe(footprintBytes: target + 1) == .moderate(isNewEpisode: true))
     }
 
-    @Test func eachPhysicalIncarnationStartsItsOwnEpisode() {
+    @Test
+    func eachPhysicalIncarnationStartsItsOwnEpisode() {
         let aboveTarget = 64 * mebibyte + 1
-        var first  = ProviderMemoryEpisode()
-        var second = ProviderMemoryEpisode()
+        var first       = ProviderMemoryEpisode()
+        var second      = ProviderMemoryEpisode()
 
         #expect(first.observe(footprintBytes: aboveTarget) == .moderate(isNewEpisode: true))
         #expect(first.observe(footprintBytes: aboveTarget) == .moderate(isNewEpisode: false))

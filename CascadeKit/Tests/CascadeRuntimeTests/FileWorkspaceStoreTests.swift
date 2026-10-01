@@ -11,6 +11,7 @@ import Testing
 
 @Suite
 struct FileWorkspaceStoreTests {
+
     private let owner: AddonID
 
     init() throws {
@@ -22,16 +23,23 @@ struct FileWorkspaceStoreTests {
         let fixture = try Fixture(owner: owner)
         let first   = try fixture.file(name: "same.txt", contents: "first")
         let folder  = try fixture.folder(name: "other")
-        let second  = try fixture.file(in: folder, name: "same.txt", contents: "second")
-        let initial = try await fixture.store()
+        let second  = try fixture.file(
+            in      : folder,
+            name    : "same.txt",
+            contents: "second"
+        )
 
-        let ids = try await initial.addOriginals([first, first, second])
+        let initial = try await fixture.store()
+        let ids     = try await initial.addOriginals([first, first, second])
+
         #expect(ids.count == 2)
+
         try await initial.close()
 
         let reopened = try await fixture.store(lifetime: initial.namespaceLifetime)
         try await reopened.restore()
         let snapshot = try await reopened.snapshot(cursor: nil)
+
         #expect(snapshot.entries.map(\.id) == ids)
         #expect(snapshot.entries.map(\.name) == ["same.txt", "same.txt"])
         #expect(snapshot.entries.allSatisfy { $0.ownership == .externalReference })
@@ -46,11 +54,12 @@ struct FileWorkspaceStoreTests {
 
         try FileManager.default.removeItem(at: source)
         try FileManager.default.createSymbolicLink(
-            at        : source,
+            at                : source,
             withDestinationURL: try fixture.file(name: "replacement.txt", contents: "two")
         )
 
         let snapshot = try await store.snapshot(cursor: nil)
+
         #expect(snapshot.entries.map(\.id) == [id])
         #expect(snapshot.entries.first?.availability == .unavailable)
     }
@@ -66,9 +75,11 @@ struct FileWorkspaceStoreTests {
             await #expect(throws: FileWorkspaceError.ioFailure) {
                 try await store.restore()
             }
+
             await #expect(throws: FileWorkspaceError.self) {
                 _ = try await store.addOriginals([try fixture.file(name: "new.txt", contents: "new")])
             }
+
             #expect(try Data(contentsOf: fixture.manifestURL) == original)
         }
     }
@@ -76,34 +87,42 @@ struct FileWorkspaceStoreTests {
     @Test
     func persistenceRejectsASymlinkNamespaceLeaf() async throws {
         let fixture = try Fixture(owner: owner)
-        let alias = fixture.root.deletingLastPathComponent().appendingPathComponent("workspace-link")
-        try FileManager.default.createSymbolicLink(
-            at        : alias,
-            withDestinationURL: fixture.root
-        )
+        let alias   = fixture.root.deletingLastPathComponent().appendingPathComponent("workspace-link")
+        try FileManager.default.createSymbolicLink(at: alias, withDestinationURL: fixture.root)
+
         let persistence = FoundationFileWorkspacePersistence(directory: alias)
 
         await #expect(throws: (any Error).self) {
             try await persistence.save(Data("owned".utf8))
         }
+
         #expect(!FileManager.default.fileExists(atPath: fixture.manifestURL.path))
     }
 
     @Test
     func failedRenameSaveRollsOriginalBackWithoutPublishingNewMetadata() async throws {
-        let fixture = try Fixture(owner: owner)
+        let fixture    = try Fixture(owner: owner)
         let persistent = FailingFileWorkspacePersistence(base: fixture.persistence)
-        let store = try await fixture.store(persistence: persistent)
-        let source = try fixture.file(name: "before.txt", contents: "preserved")
-        let id = try #require(try await store.addOriginals([source]).first)
-        let before = try await store.snapshot(cursor: nil)
+        let store      = try await fixture.store(persistence: persistent)
+        let source     = try fixture.file(name: "before.txt", contents: "preserved")
+        let id         = try #require(try await store.addOriginals([source]).first)
+        let before     = try await store.snapshot(cursor: nil)
         await persistent.failNextSave()
         await #expect(throws: FileWorkspaceError.ioFailure) {
-            try await store.renameExternalReference(id: id, newName: "after.txt", revision: before.revision)
+            try await store.renameExternalReference(
+                id      : id,
+                newName : "after.txt",
+                revision: before.revision
+            )
         }
+
         #expect(try String(contentsOf: source, encoding: .utf8) == "preserved")
-        #expect(!FileManager.default.fileExists(atPath: source.deletingLastPathComponent().appendingPathComponent("after.txt").path))
+        #expect(!FileManager.default.fileExists(
+            atPath: source.deletingLastPathComponent().appendingPathComponent("after.txt").path
+        ))
+
         let after = try await store.snapshot(cursor: nil)
+
         #expect(after.entries.first?.name == "before.txt")
         #expect(after.entries.first?.availability == .available)
         #expect(after.revision == before.revision)
@@ -120,7 +139,9 @@ struct FileWorkspaceStoreTests {
         await #expect(throws: FileWorkspaceError.ioFailure) {
             _ = try await store.addOriginals([try fixture.file(name: "nope.txt", contents: "nope")])
         }
+
         let after = try await store.snapshot(cursor: nil)
+
         #expect(after.entries.isEmpty)
         #expect(after.revision == before.revision)
     }
@@ -129,16 +150,19 @@ struct FileWorkspaceStoreTests {
     func paginationIsBoundedByCountAndBytesAndRejectsStaleCursor() async throws {
         let fixture = try Fixture(owner: owner)
         let store   = try await fixture.store()
-        let urls = try (0..<40).map { index in
+        let urls    = try (0..<40).map { index in
             try fixture.file(
                 name    : String(repeating: "n", count: 200) + "-\(index).txt",
                 contents: "\(index)"
             )
         }
-        _ = try await store.addOriginals(urls)
+
+        _         = try await store.addOriginals(urls)
         let first = try await store.snapshot(cursor: nil)
+
         #expect(first.entries.count <= 32)
         #expect(try first.encode().count <= 65_536)
+
         let cursor = try #require(first.nextCursor)
 
         _ = try await store.addOriginals([try fixture.file(name: "new.txt", contents: "new")])
@@ -149,61 +173,95 @@ struct FileWorkspaceStoreTests {
 
     @Test
     func deliveryRemovesOnlySucceededItemsAndLateReceiptsCannotRemoveReopenedEntries() async throws {
-        let fixture = try Fixture(owner: owner)
-        let first   = try fixture.file(name: "first.txt", contents: "first")
-        let second  = try fixture.file(name: "second.txt", contents: "second")
-        let store   = try await fixture.store()
-        let ids     = try await store.addOriginals([first, second])
+        let fixture  = try Fixture(owner: owner)
+        let first    = try fixture.file(name: "first.txt", contents: "first")
+        let second   = try fixture.file(name: "second.txt", contents: "second")
+        let store    = try await fixture.store()
+        let ids      = try await store.addOriginals([first, second])
         let delivery = try await store.beginDelivery(ids: ids)
 
-        try await store.finishDelivery(delivery, itemID: ids[0], result: .success(()))
-        try await store.finishDelivery(delivery, itemID: ids[1], result: .failure(.interrupted))
+        try await store.finishDelivery(
+            delivery,
+            itemID: ids[0],
+            result: .success(())
+        )
+
+        try await store.finishDelivery(
+            delivery,
+            itemID: ids[1],
+            result: .failure(.interrupted)
+        )
+
         #expect(try await store.snapshot(cursor: nil).entries.map(\.id) == [ids[1]])
+
         try await store.close()
 
         let reopened = try await fixture.store(lifetime: store.namespaceLifetime)
         try await reopened.restore()
-        try await reopened.finishDelivery(delivery, itemID: ids[1], result: .success(()))
+        try await reopened.finishDelivery(
+            delivery,
+            itemID: ids[1],
+            result: .success(())
+        )
+
         #expect(try await reopened.snapshot(cursor: nil).entries.map(\.id) == [ids[1]])
     }
 
     @Test
     func relinkingTheSameFileInvalidatesPreparedAndPendingLifetimes() async throws {
-        let fixture = try Fixture(owner: owner)
-        let source  = try fixture.file(name: "same.txt", contents: "same")
-        let store   = try await fixture.store()
-        let id      = try #require(try await store.addOriginals([source]).first)
+        let fixture  = try Fixture(owner: owner)
+        let source   = try fixture.file(name: "same.txt", contents: "same")
+        let store    = try await fixture.store()
+        let id       = try #require(try await store.addOriginals([source]).first)
         let prepared = try #require(try await store.prepareItems(ids: [id]).first)
         let delivery = try await store.beginDelivery(prepared)
         let revision = try await store.snapshot(cursor: nil).revision
 
-        try await store.relinkExternalReference(id: id, to: source, revision: revision)
+        try await store.relinkExternalReference(
+            id      : id,
+            to      : source,
+            revision: revision
+        )
 
         await #expect(throws: FileWorkspaceError.unavailable) {
             _ = try await store.beginDelivery(prepared)
         }
-        try await store.finishDelivery(delivery, itemID: id, result: .success(()))
+
+        try await store.finishDelivery(
+            delivery,
+            itemID: id,
+            result: .success(())
+        )
+
         #expect(try await store.snapshot(cursor: nil).entries.map(\.id) == [id])
     }
 
     @Test
     func managedCopyUsesRealQuotaAndStaysChargedWhenCleanupFails() async throws {
         let governor = ResourceGovernor()
-        _ = try await governor.admit(
-            .diskState(bytes: 9 * 1_024 * 1_024),
-            owner: owner
-        )
+        _            = try await governor.admit(.diskState(bytes: 9 * 1_024 * 1_024), owner: owner)
+
         let fixture  = try Fixture(owner: owner, governor: governor)
         let store    = try await fixture.store()
-        let accepted = try fixture.file(name: "accepted.bin", data: Data(repeating: 1, count: 65_536))
-        _ = try await store.importPromisedFile(accepted)
+        let accepted = try fixture.file(
+            name: "accepted.bin",
+            data: Data(repeating: 1, count: 65_536)
+        )
+
+        _           = try await store.importPromisedFile(accepted)
         let charged = await governor.usage(.diskStateBytes, owner: owner)
+
         #expect(charged >= 65_536)
 
-        let denied = try fixture.file(name: "denied.bin", data: Data(repeating: 2, count: 2 * 1_024 * 1_024))
+        let denied = try fixture.file(
+            name: "denied.bin",
+            data: Data(repeating: 2, count: 2 * 1_024 * 1_024)
+        )
+
         await #expect(throws: FileWorkspaceError.quotaExceeded) {
             _ = try await store.importPromisedFile(denied)
         }
+
         #expect(await governor.usage(.diskStateBytes, owner: owner) >= charged)
     }
 
@@ -211,14 +269,20 @@ struct FileWorkspaceStoreTests {
     func overlappingDeliveriesPinManagedBytesUntilEveryReceiptFinishes() async throws {
         let fixture = try Fixture(owner: owner)
         let store   = try await fixture.store()
-        let id = try await store.importPromisedFile(
+        let id      = try await store.importPromisedFile(
             try fixture.file(name: "managed.bin", data: Data(repeating: 7, count: 4_096))
         )
-        let path = fixture.root.appendingPathComponent("managed/\(id.uuidString)").path
+
+        let path   = fixture.root.appendingPathComponent("managed/\(id.uuidString)").path
         let first  = try await store.beginDelivery(ids: [id])
         let second = try await store.beginDelivery(ids: [id])
 
-        try await store.finishDelivery(first, itemID: id, result: .success(()))
+        try await store.finishDelivery(
+            first,
+            itemID: id,
+            result: .success(())
+        )
+
         #expect(FileManager.default.fileExists(atPath: path))
         #expect(try await store.snapshot(cursor: nil).entries.isEmpty)
 
@@ -226,21 +290,29 @@ struct FileWorkspaceStoreTests {
         await #expect(throws: FileWorkspaceError.interrupted) {
             try await reopened.restore()
         }
-        try await store.finishDelivery(second, itemID: id, result: .failure(.interrupted))
+
+        try await store.finishDelivery(
+            second,
+            itemID: id,
+            result: .failure(.interrupted)
+        )
+
         #expect(!FileManager.default.fileExists(atPath: path))
+
         try await store.close()
         try await reopened.restore()
     }
 
     @Test
     func blockedStoreCanSettleFailureReceiptAndReleaseEveryDeliveryPin() async throws {
-        let fixture  = try Fixture(owner: owner)
+        let fixture   = try Fixture(owner: owner)
         let resources = GatedRuntimeResourceAccess(target: fixture.governor)
-        let lifetime = FileWorkspaceNamespaceLifetime(
+        let lifetime  = FileWorkspaceNamespaceLifetime(
             directory: fixture.root,
             owner    : owner,
             resources: resources
         )
+
         let store = FileWorkspaceStore(
             directory  : fixture.root,
             owner      : owner,
@@ -249,17 +321,24 @@ struct FileWorkspaceStoreTests {
             references : FoundationFileReferenceResolver(),
             lifetime   : lifetime
         )
+
         try await store.restore()
         let id = try await store.importPromisedFile(
             try fixture.file(name: "settled.bin", data: Data(repeating: 5, count: 4_096))
         )
+
         let first  = try await store.beginDelivery(ids: [id])
         let second = try await store.beginDelivery(ids: [id])
 
         await resources.armWorkspaceReconcile()
         let finishing = Task {
-            try await store.finishDelivery(first, itemID: id, result: .success(()))
+            try await store.finishDelivery(
+                first,
+                itemID: id,
+                result: .success(())
+            )
         }
+
         await resources.waitForArrival()
         finishing.cancel()
         try await finishing.value
@@ -267,7 +346,13 @@ struct FileWorkspaceStoreTests {
         await #expect(throws: FileWorkspaceError.ioFailure) {
             _ = try await store.snapshot(cursor: nil)
         }
-        try await store.finishDelivery(second, itemID: id, result: .failure(.interrupted))
+
+        try await store.finishDelivery(
+            second,
+            itemID: id,
+            result: .failure(.interrupted)
+        )
+
         try await store.close()
 
         let reopened = FileWorkspaceStore(
@@ -278,6 +363,7 @@ struct FileWorkspaceStoreTests {
             references : FoundationFileReferenceResolver(),
             lifetime   : lifetime
         )
+
         try await reopened.restore()
         #expect(try await reopened.snapshot(cursor: nil).entries.isEmpty)
     }
@@ -286,18 +372,31 @@ struct FileWorkspaceStoreTests {
     func failedManagedCleanupKeepsBytesAndGovernorCharge() async throws {
         let fixture = try Fixture(owner: owner)
         let store   = try await fixture.store()
-        let id = try await store.importPromisedFile(
+        let id      = try await store.importPromisedFile(
             try fixture.file(name: "retained.bin", data: Data(repeating: 9, count: 4_096))
         )
-        let managed = fixture.root.appendingPathComponent("managed")
-        let path    = managed.appendingPathComponent(id.uuidString).path
+
+        let managed  = fixture.root.appendingPathComponent("managed")
+        let path     = managed.appendingPathComponent(id.uuidString).path
         let delivery = try await store.beginDelivery(ids: [id])
-        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: managed.path)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o500],
+            ofItemAtPath: managed.path
+        )
+
         defer {
-            try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: managed.path)
+            try? FileManager.default.setAttributes(
+                [.posixPermissions: 0o700],
+                ofItemAtPath: managed.path
+            )
         }
 
-        try await store.finishDelivery(delivery, itemID: id, result: .success(()))
+        try await store.finishDelivery(
+            delivery,
+            itemID: id,
+            result: .success(())
+        )
+
         #expect(FileManager.default.fileExists(atPath: path))
         #expect(await fixture.governor.usage(.diskStateBytes, owner: owner) >= 4_096)
     }
@@ -316,6 +415,7 @@ struct FileWorkspaceStoreTests {
         await #expect(throws: FileWorkspaceError.interrupted) {
             _ = try await second.addOriginals([source])
         }
+
         await gate.resumeSave()
         _ = try await task.value
 
@@ -323,6 +423,7 @@ struct FileWorkspaceStoreTests {
         try await first.close()
         try await second.restore()
         let after = await fixture.governor.usage(.diskStateBytes, owner: owner)
+
         #expect(after == before)
     }
 
@@ -330,14 +431,9 @@ struct FileWorkspaceStoreTests {
     func memoryReservationResizePreservesAuthorityKindAndAccounting() async throws {
         let governor = ResourceGovernor()
         let foreign  = try #require(AddonID(rawValue: "com.example.foreign"))
-        let memory = try await governor.admit(
-            .temporaryMemory(bytes: 100),
-            owner: owner
-        )
-        let state = try await governor.admit(
-            .state(bytes: 100),
-            owner: owner
-        )
+        let memory   = try await governor.admit(.temporaryMemory(bytes: 100), owner: owner)
+        let state    = try await governor.admit(.state(bytes: 100), owner: owner)
+
         await #expect(throws: AddonFailure.self) {
             try await governor.resizeMemoryReservation(
                 memory.id,
@@ -346,6 +442,7 @@ struct FileWorkspaceStoreTests {
                 toBytes  : 50
             )
         }
+
         #expect(try await !governor.resizeMemoryReservation(
             memory.id,
             owner    : owner,
@@ -366,7 +463,7 @@ struct FileWorkspaceStoreTests {
         ))
         #expect(await governor.usage(.admittedMemoryBytes, owner: owner) == 40)
 
-        _ = try await governor.admit(.provider, owner: owner)
+        _          = try await governor.admit(.provider, owner: owner)
         let before = await governor.usage(.admittedMemoryBytes, owner: owner)
         await #expect(throws: AddonFailure.self) {
             try await governor.resizeMemoryReservation(
@@ -376,18 +473,20 @@ struct FileWorkspaceStoreTests {
                 toBytes  : 65 * 1_024 * 1_024
             )
         }
+
         #expect(await governor.usage(.admittedMemoryBytes, owner: owner) == before)
     }
 
     @Test
     func cancellationAfterManifestCommitPreservesCommittedEntryForReopen() async throws {
-        let fixture  = try Fixture(owner: owner)
+        let fixture   = try Fixture(owner: owner)
         let resources = GatedRuntimeResourceAccess(target: fixture.governor)
-        let lifetime = FileWorkspaceNamespaceLifetime(
+        let lifetime  = FileWorkspaceNamespaceLifetime(
             directory: fixture.root,
             owner    : owner,
             resources: resources
         )
+
         let store = FileWorkspaceStore(
             directory  : fixture.root,
             owner      : owner,
@@ -396,6 +495,7 @@ struct FileWorkspaceStoreTests {
             references : FoundationFileReferenceResolver(),
             lifetime   : lifetime
         )
+
         try await store.restore()
         let source = try fixture.file(name: "committed.txt", contents: "committed")
         await resources.armWorkspaceReconcile()
@@ -406,6 +506,7 @@ struct FileWorkspaceStoreTests {
         await #expect(throws: FileWorkspaceError.ioFailure) {
             _ = try await store.snapshot(cursor: nil)
         }
+
         try await store.close()
 
         let reopened = FileWorkspaceStore(
@@ -416,52 +517,69 @@ struct FileWorkspaceStoreTests {
             references : FoundationFileReferenceResolver(),
             lifetime   : lifetime
         )
+
         try await reopened.restore()
         #expect(try await reopened.snapshot(cursor: nil).entries.map(\.id) == ids)
     }
 
     @Test
     func deliveryLeaseKeepsTheCheckedOriginalReadableAfterItsPathDisappears() async throws {
-        let fixture = try Fixture(owner: owner)
-        let source  = try fixture.file(name: "leased.txt", contents: "leased")
-        let store   = try await fixture.store()
-        let id      = try #require(try await store.addOriginals([source]).first)
+        let fixture  = try Fixture(owner: owner)
+        let source   = try fixture.file(name: "leased.txt", contents: "leased")
+        let store    = try await fixture.store()
+        let id       = try #require(try await store.addOriginals([source]).first)
         let delivery = try await store.beginDelivery(ids: [id])
         let lease    = try await store.leaseForDelivery(delivery, itemID: id)
         try FileManager.default.removeItem(at: source)
+
         var bytes = [UInt8](repeating: 0, count: 6)
         let count = bytes.withUnsafeMutableBytes {
-            Darwin.read(lease.descriptor, $0.baseAddress, $0.count)
+            Darwin.read(
+                lease.descriptor,
+                $0.baseAddress,
+                $0.count
+            )
         }
+
         lease.close()
 
         #expect(count == 6)
         #expect(String(decoding: bytes, as: UTF8.self) == "leased")
-        try await store.finishDelivery(delivery, itemID: id, result: .failure(.interrupted))
+
+        try await store.finishDelivery(
+            delivery,
+            itemID: id,
+            result: .failure(.interrupted)
+        )
     }
 
     @Test
     func uncertainManifestCommitPreservesManagedBytesAndBlocksUntilReopen() async throws {
-        let fixture = try Fixture(owner: owner)
+        let fixture     = try Fixture(owner: owner)
         let persistence = UncertainFileWorkspacePersistence(base: fixture.persistence)
-        let store = try await fixture.store(persistence: persistence)
+        let store       = try await fixture.store(persistence: persistence)
         await persistence.makeNextSaveUncertain()
         await #expect(throws: FileWorkspaceError.ioFailure) {
             _ = try await store.importPromisedFile(
                 try fixture.file(name: "uncertain.bin", data: Data(repeating: 4, count: 4_096))
             )
         }
+
         let managed = fixture.root.appendingPathComponent("managed")
-        let files = try FileManager.default.contentsOfDirectory(atPath: managed.path)
+        let files   = try FileManager.default.contentsOfDirectory(atPath: managed.path)
+
         #expect(files.count == 1)
+
         await #expect(throws: FileWorkspaceError.ioFailure) {
             _ = try await store.snapshot(cursor: nil)
         }
+
         try await store.close()
 
         let reopened = try await fixture.store(lifetime: store.namespaceLifetime)
         try await reopened.restore()
         let entry = try #require(try await reopened.snapshot(cursor: nil).entries.first)
+
         #expect(files == [entry.id.uuidString])
     }
 }

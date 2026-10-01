@@ -11,10 +11,11 @@ import Testing
 /// WakeReadSource pauses only its third real read, which would otherwise
 /// deliver a complete positive-credit interval across the host wake.
 final class WakeReadSource: @unchecked Sendable {
-    private let lock = NSLock()
-    private let binding: ProcessMetricBinding
-    private let gate = WakeResetGate()
-    private var count = 0
+
+    private let lock                 = NSLock()
+    private let binding             : ProcessMetricBinding
+    private let gate                 = WakeResetGate()
+    private var count                = 0
     private var shouldPauseThirdRead = false
 
     var readCount: Int { lock.withLock { count } }
@@ -28,6 +29,7 @@ final class WakeReadSource: @unchecked Sendable {
     }
 
     func waitForArrival() -> Bool { gate.waitForArrival() }
+
     func release() { gate.release() }
 
     func read(_ observed: ProcessMetricBinding) -> ProcessMetricReadResult {
@@ -35,10 +37,13 @@ final class WakeReadSource: @unchecked Sendable {
             count += 1
             return (count, count == 3 && shouldPauseThirdRead)
         }
+
         if pause { gate.pause() }
         guard observed == binding else { return .unavailable(.identityMismatch) }
+
         let ticks: UInt64 = ordinal == 1 ? 0 : 150_000_000
         let start = UInt64(ordinal) * 100
+
         return .sample(ProcessMetricObservation(
             binding       : observed,
             userTicks     : ticks,

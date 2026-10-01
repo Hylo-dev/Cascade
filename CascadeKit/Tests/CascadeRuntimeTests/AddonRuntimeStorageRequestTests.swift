@@ -11,8 +11,10 @@ import Testing
 
 @Suite
 struct AddonRuntimeStorageRequestTests {
+
     /// Fixture assembles secure native storage and the real governor behind a bounded recording transport.
     private final class Fixture: @unchecked Sendable {
+
         let root         : URL
         let keyedRoot    : URL
         let action       : ActionFixture
@@ -36,7 +38,7 @@ struct AddonRuntimeStorageRequestTests {
             registered          : Bool = true,
             peerMaximumMinor    : Int = 1
         ) async throws {
-            root = URL(fileURLWithPath: "/private/tmp/cascade-runtime-storage-\(UUID())")
+            root      = URL(fileURLWithPath: "/private/tmp/cascade-runtime-storage-\(UUID())")
             keyedRoot = root.appendingPathComponent("keyed")
             let checkpoint = root.appendingPathComponent("checkpoint")
             let archive    = root.appendingPathComponent("archive")
@@ -47,21 +49,19 @@ struct AddonRuntimeStorageRequestTests {
                     attributes                 : [.posixPermissions: 0o700]
                 )
             }
-            action = try ActionFixture()
+
+            action    = try ActionFixture()
             installed = try replacing(
                 action.context().installed,
                 permissions: declared
                     ? [
-                        AddonPermission(
-                            id   : .storageOwn,
-                            scope: .addon
-                        )
+                        AddonPermission(id: .storageOwn, scope: .addon)
                     ] : []
             )
             governor = ResourceGovernor()
-            gate = KeyedResourceGate(governor)
-            access = GatedRuntimeResourceAccess(target: governor)
-            adapter = RecordingRuntimeAdapter()
+            gate     = KeyedResourceGate(governor)
+            access   = GatedRuntimeResourceAccess(target: governor)
+            adapter  = RecordingRuntimeAdapter()
             let storage = try await AddonStorageCoordinator.make(
                 checkpointRoot: checkpoint,
                 keyedRoot     : keyedRoot,
@@ -85,11 +85,7 @@ struct AddonRuntimeStorageRequestTests {
             runtime = try await AddonRuntime.make(
                 catalog    : [installed],
                 environment: HostEnvironment(
-                    osVersion: SemanticVersion(
-                        14,
-                        0,
-                        0
-                    ),
+                    osVersion       : SemanticVersion(14, 0, 0),
                     hostCapabilities: [:],
                     applications    : [:],
                     grants          : [installed.manifest.id: granted ? ["storage.own"] : []],
@@ -101,10 +97,7 @@ struct AddonRuntimeStorageRequestTests {
                 serviceDecisionFactory: { $0 },
                 adapter               : adapter,
                 clock                 : FixedRuntimeClock(
-                    instant: RuntimeInstant(
-                        wall     : action.wall,
-                        monotonic: .zero
-                    )
+                    instant: RuntimeInstant(wall: action.wall, monotonic: .zero)
                 ),
                 maximumEnvelopeBytes: maximumEnvelopeBytes,
                 storageCoordinator  : storage
@@ -172,10 +165,7 @@ struct AddonRuntimeStorageRequestTests {
             _ request: StorageRequest,
             sequence : UInt64 = 1
         ) throws -> RuntimeStorageIngressHandle {
-            let bytes = try StorageFrameCodec.encode(
-                request,
-                profile: .v1_1
-            )
+            let bytes = try StorageFrameCodec.encode(request, profile: .v1_1)
             return try #require(
                 adapter.stageStorageIngress(
                     bytes,
@@ -192,6 +182,7 @@ struct AddonRuntimeStorageRequestTests {
                 key     : key
             )
             guard FileManager.default.fileExists(atPath: file.path) else { return nil }
+
             return try KeyedStorageRecord.decode(
                 Data(contentsOf: file),
                 key         : Data(key.utf8),
@@ -202,15 +193,11 @@ struct AddonRuntimeStorageRequestTests {
 
         func reply() throws -> RuntimeStorageResponseDelivery {
             guard
-                case .storageResponse(let response)? = adapter.currentDelivery(
-                    incarnation: connection.incarnation
-                )
+                case .storageResponse(let response)? = adapter.currentDelivery(incarnation: connection.incarnation)
             else {
-                throw AddonFailure(
-                    code  : .invalidPayload,
-                    reason: "Expected retained reply"
-                )
+                throw AddonFailure(code: .invalidPayload, reason: "Expected retained reply")
             }
+
             return response
         }
 
@@ -218,37 +205,17 @@ struct AddonRuntimeStorageRequestTests {
             _ request: StorageRequest,
             sequence : UInt64
         ) async throws -> StorageResponse {
-            let ingress = try stage(
-                request,
-                sequence: sequence
-            )
-            let result = await runtime.receiveStorageRequest(
-                ingress,
-                connection: connection
-            )
-            guard
-                case .completed(
-                    _,
-                    .handedOff
-                ) = result
-            else {
-                throw AddonFailure(
-                    code  : .invalidPayload,
-                    reason: "Expected handed-off request"
-                )
+            let ingress = try stage(request, sequence: sequence)
+            let result  = await runtime.receiveStorageRequest(ingress, connection: connection)
+            guard case .completed(_, .handedOff) = result else {
+                throw AddonFailure(code: .invalidPayload, reason: "Expected handed-off request")
             }
+
             let delivery = try reply()
-            let response = try StorageFrameCodec.decodeResponse(
-                delivery.payload,
-                profile: .v1_1
-            )
+            let response = try StorageFrameCodec.decodeResponse(delivery.payload, profile: .v1_1)
             try response.validate(matching: request)
-            #expect(
-                await runtime.receiveStorageReceipt(
-                    delivery.receipt,
-                    connection: connection
-                )
-            )
+            #expect(await runtime.receiveStorageReceipt(delivery.receipt, connection: connection))
+
             return response
         }
 
@@ -264,10 +231,7 @@ struct AddonRuntimeStorageRequestTests {
     func canonicalProfileCannotBeElevatedByCallerNestedSession() async throws {
         let old     = try await Fixture(peerMaximumMinor: 0)
         let current = try await Fixture()
-        let raw     = try StorageFrameCodec.encode(
-            old.request(),
-            profile: .v1_1
-        )
+        let raw     = try StorageFrameCodec.encode(old.request(), profile: .v1_1)
         #expect(old.connection.publicationConnection.negotiatedProtocol.storageFrameProfile == nil)
         #expect(current.connection.publicationConnection.negotiatedProtocol.storageFrameProfile == .v1_1)
         let ingress = try #require(
@@ -290,12 +254,7 @@ struct AddonRuntimeStorageRequestTests {
             serviceSession       : current.connection.serviceSession,
             authorityRevision    : old.connection.authorityRevision
         )
-        #expect(
-            await old.runtime.receiveStorageRequest(
-                ingress,
-                connection: copied
-            ) == .refused(.versionConflict)
-        )
+        #expect(await old.runtime.receiveStorageRequest(ingress, connection: copied) == .refused(.versionConflict))
         #expect(old.adapter.ingressTakeAttempts == takesBefore)
         #expect(try old.diskValue() == nil)
         #expect(old.adapter.currentDelivery(incarnation: old.connection.incarnation) == deliveryBefore)
@@ -351,28 +310,12 @@ struct AddonRuntimeStorageRequestTests {
         _ = try await fixture.runtime.submitAction(action)
         #expect(try await fixture.runtime.pumpReady())
         let delivery = try #require(fixture.adapter.lastAction)
-        #expect(
-            try await fixture.runtime.receiveAcknowledgment(
-                delivery,
-                connection: fixture.connection
-            )
-        )
-        let request = try fixture.request(
-            value: Data(
-                repeating: 255,
-                count    : 65_536
-            )
-        )
+        #expect(try await fixture.runtime.receiveAcknowledgment(delivery, connection: fixture.connection))
+        let request = try fixture.request(value: Data(repeating: 255, count: 65_536))
         let ingress = try fixture.stage(request)
         #expect(
-            await fixture.runtime.receiveStorageRequest(
-                ingress,
-                connection: fixture.connection
-            )
-                == .completed(
-                    .acknowledged,
-                    .handedOff
-                )
+            await fixture.runtime.receiveStorageRequest(ingress, connection: fixture.connection)
+                == .completed(.acknowledged, .handedOff)
         )
         #expect(try fixture.diskValue() == request.value)
         guard
@@ -384,10 +327,8 @@ struct AddonRuntimeStorageRequestTests {
             await fixture.close()
             return
         }
-        try StorageFrameCodec.decodeResponse(
-            response.payload,
-            profile: .v1_1
-        ).validate(matching: request)
+
+        try StorageFrameCodec.decodeResponse(response.payload, profile: .v1_1).validate(matching: request)
         #expect(
             try await fixture.runtime.receiveActionCompletion(
                 delivery,
@@ -399,108 +340,26 @@ struct AddonRuntimeStorageRequestTests {
             fixture.adapter.currentDelivery(incarnation: fixture.connection.incarnation)
                 == .storageResponse(response)
         )
-        #expect(
-            await fixture.runtime.receiveStorageReceipt(
-                response.receipt,
-                connection: fixture.connection
-            )
-        )
+        #expect(await fixture.runtime.receiveStorageReceipt(response.receipt, connection: fixture.connection))
         #expect(fixture.adapter.currentDelivery(incarnation: fixture.connection.incarnation) == nil)
         await fixture.close()
     }
+
     @Test
     func boundedRoundTripMissingEmptyAndIsolation() async throws {
         let first  = try await Fixture()
         let second = try await Fixture()
-        let key    = String(
-            repeating: "é",
-            count    : 128
-        )
-        let bytes = Data(
-            repeating: 255,
-            count    : 65_536
-        )
-        #expect(
-            try await first.consume(
-                first.request(
-                    .read,
-                    key: key
-                ),
-                sequence: 1
-            ).result == .missing
-        )
-        #expect(
-            try await first.consume(
-                first.request(
-                    key  : key,
-                    value: bytes
-                ),
-                sequence: 2
-            ).result == .acknowledged
-        )
-        #expect(
-            try await first.consume(
-                first.request(
-                    .read,
-                    key: key
-                ),
-                sequence: 3
-            ).value == bytes
-        )
-        #expect(
-            try await second.consume(
-                second.request(
-                    .read,
-                    key: key
-                ),
-                sequence: 1
-            ).result == .missing
-        )
-        #expect(
-            try await first.consume(
-                first.request(
-                    key  : key,
-                    value: Data()
-                ),
-                sequence: 4
-            ).result == .acknowledged
-        )
-        #expect(
-            try await first.consume(
-                first.request(
-                    .read,
-                    key: key
-                ),
-                sequence: 5
-            ).value == Data()
-        )
-        #expect(
-            try await first.consume(
-                first.request(
-                    .remove,
-                    key: key
-                ),
-                sequence: 6
-            ).result == .acknowledged
-        )
-        #expect(
-            try await first.consume(
-                first.request(
-                    .remove,
-                    key: key
-                ),
-                sequence: 7
-            ).result == .acknowledged
-        )
-        #expect(
-            try await first.consume(
-                first.request(
-                    .read,
-                    key: key
-                ),
-                sequence: 8
-            ).result == .missing
-        )
+        let key    = String(repeating: "é", count: 128)
+        let bytes  = Data(repeating: 255, count: 65_536)
+        #expect(try await first.consume(first.request(.read, key: key), sequence: 1).result == .missing)
+        #expect(try await first.consume(first.request(key: key, value: bytes), sequence: 2).result == .acknowledged)
+        #expect(try await first.consume(first.request(.read, key: key), sequence: 3).value == bytes)
+        #expect(try await second.consume(second.request(.read, key: key), sequence: 1).result == .missing)
+        #expect(try await first.consume(first.request(key: key, value: Data()), sequence: 4).result == .acknowledged)
+        #expect(try await first.consume(first.request(.read, key: key), sequence: 5).value == Data())
+        #expect(try await first.consume(first.request(.remove, key: key), sequence: 6).result == .acknowledged)
+        #expect(try await first.consume(first.request(.remove, key: key), sequence: 7).result == .acknowledged)
+        #expect(try await first.consume(first.request(.read, key: key), sequence: 8).result == .missing)
         await first.close()
         await second.close()
     }
@@ -543,11 +402,8 @@ struct AddonRuntimeStorageRequestTests {
                 connection: fixture.connection
             ) == .refused(.invalidPayload)
         )
-        let request = try fixture.request()
-        let raw     = try StorageFrameCodec.encode(
-            request,
-            profile: .v1_1
-        )
+        let request  = try fixture.request()
+        let raw      = try StorageFrameCodec.encode(request, profile: .v1_1)
         let mismatch = try #require(
             fixture.adapter.stageStorageIngress(
                 raw,
@@ -564,16 +420,8 @@ struct AddonRuntimeStorageRequestTests {
         )
         #expect(fixture.adapter.deliveryReceiptCount == receipts)
         #expect(try fixture.diskValue() == nil)
-        #expect(
-            try await fixture.consume(
-                request,
-                sequence: 1
-            ).result == .acknowledged
-        )
-        let stale = try fixture.stage(
-            request,
-            sequence: 1
-        )
+        #expect(try await fixture.consume(request, sequence: 1).result == .acknowledged)
+        let stale = try fixture.stage(request, sequence: 1)
         let takes = fixture.adapter.ingressTakeAttempts
         #expect(
             await fixture.runtime.receiveStorageRequest(
@@ -582,16 +430,8 @@ struct AddonRuntimeStorageRequestTests {
             ) == .refused(.invalidPayload)
         )
         #expect(fixture.adapter.ingressTakeAttempts == takes)
-        #expect(
-            try await fixture.consume(
-                request,
-                sequence: UInt64.max
-            ).result == .acknowledged
-        )
-        let exhausted = try fixture.stage(
-            request,
-            sequence: UInt64.max
-        )
+        #expect(try await fixture.consume(request, sequence: UInt64.max).result == .acknowledged)
+        let exhausted = try fixture.stage(request, sequence: UInt64.max)
         #expect(
             await fixture.runtime.receiveStorageRequest(
                 exhausted,
@@ -608,25 +448,14 @@ struct AddonRuntimeStorageRequestTests {
         let receipts = fixture.adapter.deliveryReceiptCount
         let ingress  = try fixture.stage(fixture.request())
         #expect(
-            await fixture.runtime.receiveStorageRequest(
-                ingress,
-                connection: fixture.connection
-            )
-                == .completed(
-                    .acknowledged,
-                    .rejectedBeforeHandoff
-                )
+            await fixture.runtime.receiveStorageRequest(ingress, connection: fixture.connection)
+                == .completed(.acknowledged, .rejectedBeforeHandoff)
         )
         #expect(try fixture.diskValue() == Data([7]))
         #expect(fixture.adapter.currentDelivery(incarnation: fixture.connection.incarnation) == nil)
         #expect(fixture.adapter.deliveryReceiptCount == receipts)
         fixture.adapter.rejectStorageReplies = false
-        #expect(
-            try await fixture.consume(
-                fixture.request(.read),
-                sequence: 2
-            ).value == Data([7])
-        )
+        #expect(try await fixture.consume(fixture.request(.read), sequence: 2).value == Data([7]))
         await fixture.close()
     }
 
@@ -635,14 +464,8 @@ struct AddonRuntimeStorageRequestTests {
         let fixture = try await Fixture()
         let ingress = try fixture.stage(fixture.request())
         #expect(
-            await fixture.runtime.receiveStorageRequest(
-                ingress,
-                connection: fixture.connection
-            )
-                == .completed(
-                    .acknowledged,
-                    .handedOff
-                )
+            await fixture.runtime.receiveStorageRequest(ingress, connection: fixture.connection)
+                == .completed(.acknowledged, .handedOff)
         )
         let first  = try fixture.reply()
         let before = try #require(await fixture.runtime.diagnostics(owner: fixture.action.owner))
@@ -655,51 +478,22 @@ struct AddonRuntimeStorageRequestTests {
             requestID      : first.receipt.requestID,
             operation      : first.receipt.operation
         )
-        #expect(
-            await fixture.runtime.receiveStorageReceipt(
-                wrong,
-                connection: fixture.connection
-            ) == false
-        )
+        #expect(await fixture.runtime.receiveStorageReceipt(wrong, connection: fixture.connection) == false)
         #expect(try fixture.reply() == first)
+        #expect(await fixture.runtime.receiveStorageReceipt(first.receipt, connection: fixture.connection))
+        let next = try fixture.stage(fixture.request(.read), sequence: 2)
         #expect(
-            await fixture.runtime.receiveStorageReceipt(
-                first.receipt,
-                connection: fixture.connection
-            )
-        )
-        let next = try fixture.stage(
-            fixture.request(.read),
-            sequence: 2
-        )
-        #expect(
-            await fixture.runtime.receiveStorageRequest(
-                next,
-                connection: fixture.connection
-            )
-                == .completed(
-                    .value,
-                    .handedOff
-                )
+            await fixture.runtime.receiveStorageRequest(next, connection: fixture.connection)
+                == .completed(.value, .handedOff)
         )
         let second = try fixture.reply()
-        #expect(
-            await fixture.runtime.receiveStorageReceipt(
-                first.receipt,
-                connection: fixture.connection
-            ) == false
-        )
+        #expect(await fixture.runtime.receiveStorageReceipt(first.receipt, connection: fixture.connection) == false)
         #expect(try fixture.reply() == second)
         #expect(
             try #require(await fixture.runtime.diagnostics(owner: fixture.action.owner)).reservedStateBytes
                 == before
         )
-        #expect(
-            await fixture.runtime.receiveStorageReceipt(
-                second.receipt,
-                connection: fixture.connection
-            )
-        )
+        #expect(await fixture.runtime.receiveStorageReceipt(second.receipt, connection: fixture.connection))
         await fixture.close()
     }
 
@@ -707,42 +501,31 @@ struct AddonRuntimeStorageRequestTests {
     func acceptedMutationGatePreservesOutcomeAcrossCancellation(_ committed: Bool) async throws {
         let fixture = try await Fixture()
         // Seed both existing disk-pool rows before measuring or arming post-mutation release.
-        _ = try await fixture.consume(
-            fixture.request(value: Data([1])),
-            sequence: 1
-        )
-        await fixture.gate.arm(
-            committed ? .release : .temporary,
-            skipping: committed ? 1 : 0
-        )
-        let ingress = try fixture.stage(
-            fixture.request(value: Data([9])),
-            sequence: 2
-        )
-        let task = Task {
-            await fixture.runtime.receiveStorageRequest(
-                ingress,
-                connection: fixture.connection
-            )
+        _ = try await fixture.consume(fixture.request(value: Data([1])), sequence: 1)
+        await fixture.gate.arm(committed ? .release : .temporary, skipping: committed ? 1 : 0)
+        let ingress = try fixture.stage(fixture.request(value: Data([9])), sequence: 2)
+        let task    = Task {
+            await fixture.runtime.receiveStorageRequest(ingress, connection: fixture.connection)
         }
+
         await fixture.gate.wait()
         let observed: Data?
-        do { observed = try fixture.diskValue() } catch {
+        do {
+            observed = try fixture.diskValue()
+        } catch {
             await fixture.gate.resume()
             _ = await task.value
             await fixture.close()
             throw error
         }
+
         #expect(observed == Data([committed ? 9 : 1]))
         #expect(fixture.adapter.storageIngressIsTransferred(ingress))
         task.cancel()
         await fixture.gate.resume()
         #expect(
             await task.value
-                == .completed(
-                    committed ? .acknowledged : .outcomeUnknown,
-                    .suppressed
-                )
+                == .completed(committed ? .acknowledged : .outcomeUnknown, .suppressed)
         )
         #expect(fixture.adapter.currentDelivery(incarnation: fixture.connection.incarnation) == nil)
         await fixture.close()
@@ -753,26 +536,16 @@ struct AddonRuntimeStorageRequestTests {
         _ releaseOrdinaryReservations: Bool
     ) async throws {
         let fixture = try await Fixture()
-        _ = try await fixture.consume(
-            fixture.request(value: Data([1])),
-            sequence: 1
-        )
+        _ = try await fixture.consume(fixture.request(value: Data([1])), sequence: 1)
         await fixture.gate.arm(.temporary)
         let ingress = try fixture.stage(
-            fixture.request(
-                value: Data(
-                    repeating: 5,
-                    count    : 65_536
-                )
-            ),
+            fixture.request(value: Data(repeating: 5, count: 65_536)),
             sequence: 2
         )
         let task = Task {
-            await fixture.runtime.receiveStorageRequest(
-                ingress,
-                connection: fixture.connection
-            )
+            await fixture.runtime.receiveStorageRequest(ingress, connection: fixture.connection)
         }
+
         await fixture.gate.wait()
         weak var weakCoordinator = fixture.coordinator
         fixture.coordinator = nil
@@ -784,10 +557,7 @@ struct AddonRuntimeStorageRequestTests {
         await fixture.gate.resume()
         #expect(
             await task.value
-                == .completed(
-                    releaseOrdinaryReservations ? .outcomeUnknown : .acknowledged,
-                    .suppressed
-                )
+                == .completed(releaseOrdinaryReservations ? .outcomeUnknown : .acknowledged, .suppressed)
         )
         #expect(weakCoordinator == nil)
         #expect(await fixture.governor.usage(.admittedMemoryBytes) < 8 * 1_024 * 1_024)
@@ -796,17 +566,11 @@ struct AddonRuntimeStorageRequestTests {
 
     @Test
     func configuredCapacityPreservesLegacyBuffersAndPrepaysEnabledDelivery() async throws {
-        let legacy = try await Fixture(
-            hostMinor           : 0,
-            maximumEnvelopeBytes: 8_192
-        )
+        let legacy  = try await Fixture(hostMinor: 0, maximumEnvelopeBytes: 8_192)
         let enabled = try await Fixture(maximumEnvelopeBytes: 8_192)
         #expect(enabled.processGrowth - legacy.processGrowth == (256 - 80) * 1_024)
         #expect(legacy.processGrowth >= 16 * 1_024 + 8_192 + 32 * 1_024 + 80 * 1_024 + 512)
-        let tooLarge = Data(
-            repeating: 0,
-            count    : 8_193
-        )
+        let tooLarge = Data(repeating: 0, count: 8_193)
         #expect(
             enabled.adapter.stageStorageIngress(
                 tooLarge,
@@ -824,32 +588,41 @@ struct AddonRuntimeStorageRequestTests {
         await legacy.close()
         await enabled.close()
     }
+
     private struct UnsupportedAdapter: AddonRuntimeAdapter {
+
         func takeIngress(
             _ handle   : RuntimeIngressHandle,
             incarnation: RuntimeIncarnation
         ) -> ProviderOutput? { nil }
+
         func rejectIngress(
             _ handle   : RuntimeIngressHandle,
             incarnation: RuntimeIncarnation
         ) {}
+
         func cancelIngress(
             _ handle   : RuntimeIngressHandle,
             incarnation: RuntimeIncarnation
         ) {}
+
         func finishIngress(
             _ handle   : RuntimeIngressHandle,
             incarnation: RuntimeIncarnation
         ) {}
+
         func tryHandoff(
             incarnation: RuntimeIncarnation,
             delivery   : RuntimeAdapterDelivery
         ) -> RuntimeHandoffResult { .rejectedBeforeHandoff }
+
         func requestStop(
             incarnation: RuntimeIncarnation,
             reason     : RuntimeStopReason
         ) {}
+
         func deliveryWasReceived(incarnation: RuntimeIncarnation) {}
+
         func processDidExit(incarnation: RuntimeIncarnation) {}
     }
 
@@ -867,6 +640,7 @@ struct AddonRuntimeStorageRequestTests {
                 storageCoordinator: fixture.coordinator
             )
         }
+
         await #expect(throws: AddonFailure.self) {
             try await AddonRuntime.make(
                 catalog           : [],
@@ -876,6 +650,7 @@ struct AddonRuntimeStorageRequestTests {
                 storageCoordinator: fixture.coordinator
             )
         }
+
         #expect(await foreign.usage(.retainedStateBytes) == 0)
         #expect(await fixture.governor.usage(.retainedStateBytes) == baseline)
         await fixture.close()
@@ -891,10 +666,7 @@ struct AddonRuntimeStorageRequestTests {
             version        : manifest.version,
             compatibility  : AddonCompatibility(
                 macOS          : manifest.compatibility.macOS,
-                cascadeProtocol: ProtocolVersion(
-                    major       : 1,
-                    minimumMinor: 1
-                )
+                cascadeProtocol: ProtocolVersion(major: 1, minimumMinor: 1)
             ),
             execution       : manifest.execution,
             sourceApp       : manifest.sourceApp,
@@ -916,11 +688,7 @@ struct AddonRuntimeStorageRequestTests {
             let runtime  = try await AddonRuntime.make(
                 catalog    : [addon],
                 environment: HostEnvironment(
-                    osVersion: SemanticVersion(
-                        14,
-                        0,
-                        0
-                    ),
+                    osVersion       : SemanticVersion(14, 0, 0),
                     hostCapabilities: [:],
                     applications    : [:],
                     grants          : [addon.manifest.id: grant ? ["storage.own"] : []],
@@ -937,16 +705,14 @@ struct AddonRuntimeStorageRequestTests {
                     instanceID: UUID()
                 )
             }
+
             await runtime.stop()
         }
+
         let ungranted = try await AddonRuntime.make(
             catalog    : [fixture.installed],
             environment: HostEnvironment(
-                osVersion: SemanticVersion(
-                    14,
-                    0,
-                    0
-                ),
+                osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
                 applications    : [:],
                 grants          : [:],
@@ -964,6 +730,7 @@ struct AddonRuntimeStorageRequestTests {
                 instanceID: UUID()
             )
         }
+
         await ungranted.stop()
         await fixture.close()
     }
@@ -972,11 +739,8 @@ struct AddonRuntimeStorageRequestTests {
     func quotaRefusalPreservesSequenceAndRejectsOnlyStagedIngress() async throws {
         let fixture = try await Fixture()
         let owner   = fixture.action.owner
-        let used    = await fixture.governor.usage(
-            .admittedMemoryBytes,
-            owner: owner
-        )
-        let filler = try await fixture.governor.admit(
+        let used    = await fixture.governor.usage(.admittedMemoryBytes, owner: owner)
+        let filler  = try await fixture.governor.admit(
             .temporaryMemory(bytes: 128 * 1_024 * 1_024 - used - 1_024),
             owner: owner
         )
@@ -992,16 +756,8 @@ struct AddonRuntimeStorageRequestTests {
         #expect(fixture.adapter.ingressTakeAttempts == attempts)
         #expect(fixture.adapter.deliveryReceiptCount == receipts)
         #expect(!fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation))
-        try await fixture.governor.release(
-            filler.id,
-            owner: owner
-        )
-        #expect(
-            try await fixture.consume(
-                fixture.request(),
-                sequence: 1
-            ).result == .acknowledged
-        )
+        try await fixture.governor.release(filler.id, owner: owner)
+        #expect(try await fixture.consume(fixture.request(), sequence: 1).result == .acknowledged)
         await fixture.close()
     }
 
@@ -1016,27 +772,13 @@ struct AddonRuntimeStorageRequestTests {
             completion   : nil,
             checkpoint   : nil
         )
+        #expect(fixture.adapter.stageIngress(output, incarnation: fixture.connection.incarnation) == nil)
         #expect(
-            fixture.adapter.stageIngress(
-                output,
-                incarnation: fixture.connection.incarnation
-            ) == nil
+            await fixture.runtime.receiveStorageRequest(ingress, connection: fixture.connection)
+                == .completed(.acknowledged, .handedOff)
         )
         #expect(
-            await fixture.runtime.receiveStorageRequest(
-                ingress,
-                connection: fixture.connection
-            )
-                == .completed(
-                    .acknowledged,
-                    .handedOff
-                )
-        )
-        #expect(
-            await fixture.runtime.receiveStorageReceipt(
-                try fixture.reply().receipt,
-                connection: fixture.connection
-            )
+            await fixture.runtime.receiveStorageReceipt(try fixture.reply().receipt, connection: fixture.connection)
         )
         await fixture.close()
     }
@@ -1052,16 +794,8 @@ struct AddonRuntimeStorageRequestTests {
             owner       : owner,
             storageClass: .cache
         )
-        #expect(
-            try await fixture.consume(
-                fixture.request(.read),
-                sequence: 1
-            ).result == .missing
-        )
-        _ = try await fixture.consume(
-            fixture.request(value: Data([9])),
-            sequence: 2
-        )
+        #expect(try await fixture.consume(fixture.request(.read), sequence: 1).result == .missing)
+        _ = try await fixture.consume(fixture.request(value: Data([9])), sequence: 2)
         #expect(
             try await coordinator.read(
                 key         : "key",
@@ -1075,18 +809,16 @@ struct AddonRuntimeStorageRequestTests {
     @Test
     func terminalShutdownContextDoesNotCreateRuntimeCoordinatorCycle() async throws {
         var fixture: Fixture? = try await Fixture()
-        weak let weakRuntime = fixture?.runtime
+        weak let weakRuntime     = fixture?.runtime
         weak let weakCoordinator = fixture?.coordinator
         if let current = fixture, let coordinator = current.coordinator {
-            _ = try await coordinator.beginArchiveShutdown(
-                runtime: current.runtime,
-                until  : .seconds(10)
-            )
+            _ = try await coordinator.beginArchiveShutdown(runtime: current.runtime, until: .seconds(10))
             _ = await coordinator.finishArchiveShutdown()
             _ = try await coordinator.close()
             await current.runtime.observeExit(current.connection.incarnation)
             try FileManager.default.removeItem(at: current.root)
         }
+
         fixture = nil
         #expect(weakCoordinator == nil)
         #expect(weakRuntime == nil)
@@ -1095,48 +827,44 @@ struct AddonRuntimeStorageRequestTests {
     @Test(arguments: [false, true])
     func closeDuringRealReadOrRemoveSuppressesReplyWithoutRelabelingMutation(_ remove: Bool) async throws {
         let fixture = try await Fixture()
-        _ = try await fixture.consume(
-            fixture.request(),
-            sequence: 1
-        )
-        let ingress = try fixture.stage(
-            fixture.request(remove ? .remove : .read),
-            sequence: 2
-        )
+        _ = try await fixture.consume(fixture.request(), sequence: 1)
+        let ingress = try fixture.stage(fixture.request(remove ? .remove : .read), sequence: 2)
         await fixture.gate.arm(remove ? .diskResize : .temporary)
         let task = Task {
-            await fixture.runtime.receiveStorageRequest(
-                ingress,
-                connection: fixture.connection
-            )
+            await fixture.runtime.receiveStorageRequest(ingress, connection: fixture.connection)
         }
+
         await fixture.gate.wait()
         if remove {
-            do { #expect(try fixture.diskValue() == nil) } catch {
+            do {
+                #expect(try fixture.diskValue() == nil)
+            } catch {
                 await fixture.gate.resume()
                 _ = await task.value
                 await fixture.close()
                 throw error
             }
         }
-        do { #expect(try await fixture.coordinator?.close() == .draining) } catch {
+
+        do {
+            #expect(try await fixture.coordinator?.close() == .draining)
+        } catch {
             await fixture.gate.resume()
             _ = await task.value
             await fixture.close()
             throw error
         }
+
         _ = await fixture.runtime.requestStop()
         await fixture.gate.resume()
         #expect(
             await task.value
-                == .completed(
-                    remove ? .acknowledged : .failure(.dependencyUnavailable),
-                    .suppressed
-                )
+                == .completed(remove ? .acknowledged : .failure(.dependencyUnavailable), .suppressed)
         )
         #expect(fixture.adapter.currentDelivery(incarnation: fixture.connection.incarnation) == nil)
         await fixture.close()
     }
+
     @Test(arguments: [false, true])
     func sourceAndServiceCreditBlocksStorageAndStaleCompletionCannotFreeReply(_ service: Bool) async throws {
         let root    = URL(fileURLWithPath: "/private/tmp/cascade-storage-service-\(UUID())")
@@ -1161,16 +889,14 @@ struct AddonRuntimeStorageRequestTests {
         } else {
             work = nil
         }
+
         let request = try StorageRequest(
             requestID: UUID(),
             operation: .write,
             key      : "key",
             value    : Data([6])
         )
-        let raw = try StorageFrameCodec.encode(
-            request,
-            profile: .v1_1
-        )
+        let raw         = try StorageFrameCodec.encode(request, profile: .v1_1)
         let busyIngress = try #require(
             fixture.adapter.stageStorageIngress(
                 raw,
@@ -1200,6 +926,7 @@ struct AddonRuntimeStorageRequestTests {
                 )
             )
         }
+
         let ingress = try #require(
             fixture.adapter.stageStorageIngress(
                 raw,
@@ -1208,14 +935,8 @@ struct AddonRuntimeStorageRequestTests {
             )
         )
         #expect(
-            await fixture.runtime.receiveStorageRequest(
-                ingress,
-                connection: fixture.providerConnection
-            )
-                == .completed(
-                    .acknowledged,
-                    .handedOff
-                )
+            await fixture.runtime.receiveStorageRequest(ingress, connection: fixture.providerConnection)
+                == .completed(.acknowledged, .handedOff)
         )
         let delivery = try #require(
             fixture.adapter.currentDelivery(incarnation: fixture.providerConnection.incarnation)
@@ -1236,9 +957,8 @@ struct AddonRuntimeStorageRequestTests {
                 ) == false
             )
         }
-        #expect(
-            fixture.adapter.currentDelivery(incarnation: fixture.providerConnection.incarnation) == delivery
-        )
+
+        #expect(fixture.adapter.currentDelivery(incarnation: fixture.providerConnection.incarnation) == delivery)
         #expect(fixture.indirectProcessGrowth == 16 * 1_024 + 8_192 + 32 * 1_024 + 256 * 1_024 + 640)
         // Both identities share one complete registry and governor; provider bytes remain private.
         let read = try StorageRequest(
@@ -1248,23 +968,14 @@ struct AddonRuntimeStorageRequestTests {
         )
         let consumerIngress = try #require(
             fixture.adapter.stageStorageIngress(
-                StorageFrameCodec.encode(
-                    read,
-                    profile: .v1_1
-                ),
+                StorageFrameCodec.encode(read, profile: .v1_1),
                 incarnation: fixture.consumerConnection.incarnation,
                 sequence   : 1
             )
         )
         #expect(
-            await fixture.runtime.receiveStorageRequest(
-                consumerIngress,
-                connection: fixture.consumerConnection
-            )
-                == .completed(
-                    .missing,
-                    .handedOff
-                )
+            await fixture.runtime.receiveStorageRequest(consumerIngress, connection: fixture.consumerConnection)
+                == .completed(.missing, .handedOff)
         )
         await fixture.stop()
     }
@@ -1281,33 +992,27 @@ struct AddonRuntimeStorageRequestTests {
                 until  : .seconds(10)
             )
         }
+
         let result: AddonRuntime.RuntimeStorageRequestResult
         if mode == 2 {
             result = await Task {
                 withUnsafeCurrentTask { $0?.cancel() }
-                return await fixture.runtime.receiveStorageRequest(
-                    ingress,
-                    connection: fixture.connection
-                )
+                return await fixture.runtime.receiveStorageRequest(ingress, connection: fixture.connection)
             }.value
         } else {
-            result = await fixture.runtime.receiveStorageRequest(
-                ingress,
-                connection: fixture.connection
-            )
+            result = await fixture.runtime.receiveStorageRequest(ingress, connection: fixture.connection)
         }
+
         #expect(result == .refused(.sessionRevoked))
         #expect(fixture.adapter.ingressTakeAttempts == attempts)
         #expect(try fixture.diskValue() == nil)
         await fixture.close()
     }
+
     @Test
     func acceptedReadFailureConsumesSequenceAndNeverReplaysUUID() async throws {
         let fixture = try await Fixture()
-        _ = try await fixture.consume(
-            fixture.request(),
-            sequence: 1
-        )
+        _ = try await fixture.consume(fixture.request(), sequence: 1)
         let file = try AddonKeyedStorageTests.valueFile(
             fixture.keyedRoot,
             identity: fixture.installed.verifiedIdentity,
@@ -1315,28 +1020,17 @@ struct AddonRuntimeStorageRequestTests {
         )
         try Data([0]).write(to: file)
         let request  = try fixture.request(.read)
-        let response = try await fixture.consume(
-            request,
-            sequence: 2
-        )
+        let response = try await fixture.consume(request, sequence: 2)
         #expect(response.result == .failure)
         #expect(response.failureCode == .dependencyUnavailable)
-        let replay = try fixture.stage(
-            request,
-            sequence: 2
-        )
+        let replay = try fixture.stage(request, sequence: 2)
         #expect(
             await fixture.runtime.receiveStorageRequest(
                 replay,
                 connection: fixture.connection
             ) == .refused(.invalidPayload)
         )
-        #expect(
-            try await fixture.consume(
-                request,
-                sequence: 3
-            ).result == .failure
-        )
+        #expect(try await fixture.consume(request, sequence: 3).result == .failure)
         await fixture.close()
     }
 
@@ -1393,14 +1087,10 @@ struct AddonRuntimeStorageRequestTests {
                 ) == .refused(.invalidPayload)
             )
         }
+
         #expect(fixture.adapter.ingressTakeAttempts == attempts)
         #expect(try fixture.diskValue() == nil)
-        #expect(
-            try await fixture.consume(
-                fixture.request(),
-                sequence: 1
-            ).result == .acknowledged
-        )
+        #expect(try await fixture.consume(fixture.request(), sequence: 1).result == .acknowledged)
         await fixture.close()
     }
 
@@ -1425,6 +1115,7 @@ struct AddonRuntimeStorageRequestTests {
         #expect(try fixture.diskValue() == nil)
         await fixture.close()
     }
+
     @Test
     func busyAdmissionRefusesBeforeStorageTakeAndPreservesSequence() async throws {
         let fixture = try await Fixture()
@@ -1457,15 +1148,11 @@ struct AddonRuntimeStorageRequestTests {
             await fixture.close()
             throw error
         }
+
         submitting.cancel()
         await fixture.access.releaseGate()
         _ = await submitting.result
-        #expect(
-            try await fixture.consume(
-                fixture.request(),
-                sequence: 1
-            ).result == .acknowledged
-        )
+        #expect(try await fixture.consume(fixture.request(), sequence: 1).result == .acknowledged)
         await fixture.close()
     }
 }

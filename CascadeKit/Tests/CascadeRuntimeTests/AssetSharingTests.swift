@@ -11,8 +11,9 @@ import Testing
 
 @Suite
 struct AssetSharingTests {
+
     private let identity: VerifiedAddonIdentity
-    private let now = Date(timeIntervalSince1970: 2_000_000_000)
+    private let now      = Date(timeIntervalSince1970: 2_000_000_000)
 
     init() throws {
         identity = VerifiedAddonIdentity(
@@ -30,6 +31,7 @@ struct AssetSharingTests {
         id       : PublicationID? = nil
     ) -> AssetState.Scope {
         let assignedIdentity = identity ?? self.identity
+
         return AssetState.Scope(
             identity        : assignedIdentity,
             verifiedDigest  : digest,
@@ -51,12 +53,12 @@ struct AssetSharingTests {
     ) async throws -> AssetState.AssetHandle {
         try assets.insert(
             backing: await coordinator.create(
-                pixels     : Data([255, 0, 0, 255]),
-                width      : 1,
-                height     : 1,
-                owner      : identity.addonID
+                pixels: Data([255, 0, 0, 255]),
+                width : 1,
+                height: 1,
+                owner : identity.addonID
             ),
-            scope: scope
+            scope  : scope
         )
     }
 
@@ -95,10 +97,7 @@ struct AssetSharingTests {
         try publications.openConnection(
             identity              : identity,
             verifiedDigest        : "test-digest",
-            manifestProtocol      : ProtocolVersion(
-                major       : 1,
-                minimumMinor: 0
-            ),
+            manifestProtocol      : ProtocolVersion(major: 1, minimumMinor: 0),
             offer                 : ProtocolOffer(
                 major         : 1,
                 minimumMinor  : 0,
@@ -130,18 +129,18 @@ struct AssetSharingTests {
             generation: connection.generation,
             sequence  : sequence
         )
+
         let firstScope = try #require(scopes.first)
-        let proposal = try assets.prepareOutput(
+        let proposal   = try assets.prepareOutput(
             prepared,
             connectionToken: firstScope.connectionToken
         ) { publicationID in
             try #require(scopes.first { $0.publicationID == publicationID })
         }
+
         try assets.validatePrepared(proposal)
-        _ = try publications.commitPreparedOutput(
-            prepared,
-            at: now
-        )
+        _ = try publications.commitPreparedOutput(prepared, at: now)
+
         assets.commitPrepared(proposal)
     }
 
@@ -152,25 +151,26 @@ struct AssetSharingTests {
         var assets      = AssetState()
         let token       = UUID()
         let source      = scope(token: token)
-        let target = scope(
-            token  : token,
-            feature: "activity"
-        )
+        let target      = scope(token: token, feature: "activity")
+
         let original = try await importRaster(
             into       : &assets,
             scope      : source,
             coordinator: coordinator
         )
+
         #expect(try assets.sharingAdmissionBytes(
             assetID: original.assetID,
             source : source,
             target : target
         ) == 4_096)
+
         let shared = try assets.share(
             assetID: original.assetID,
             source : source,
             target : target
         )
+
         #expect(shared.assetID != original.assetID)
         #expect(shared.publicationID == target.publicationID)
         #expect(shared.owner == original.owner)
@@ -179,11 +179,10 @@ struct AssetSharingTests {
         #expect(assets.retainedBytes == 8_192)
         #expect(await governor.usage(.assetBytes) == 4)
         #expect(coordinator.status().slots == 1)
+
         var publications = PublicationState(now: { Date(timeIntervalSince1970: 2_000_000_000) })
-        let connection = try connect(
-            publications: &publications,
-            scopes      : [source, target]
-        )
+        let connection   = try connect(publications: &publications, scopes: [source, target])
+
         try commit(
             assets      : &assets,
             publications: &publications,
@@ -195,29 +194,28 @@ struct AssetSharingTests {
                     alias  : original.assetID,
                     privacy: .sensitive
                 ),
-                publication(
-                    scope: target,
-                    alias: shared.assetID
-                )
+                publication(scope: target, alias: shared.assetID)
             ]
         )
+
         let sourceImage = try #require(assets.image(
             assetID            : original.assetID,
             publicationID      : source.publicationID,
             publicationRevision: 1,
             at                 : now
         ))
+
         let targetImage = try #require(assets.image(
             assetID            : shared.assetID,
             publicationID      : target.publicationID,
             publicationRevision: 1,
             at                 : now
         ))
+
         #expect(sourceImage === targetImage)
-        try assets.releaseImport(
-            assetID: original.assetID,
-            scope  : source
-        )
+
+        try assets.releaseImport(assetID: original.assetID, scope: source)
+
         #expect(try assets.sharingAdmissionBytes(
             assetID: shared.assetID,
             source : target,
@@ -245,18 +243,16 @@ struct AssetSharingTests {
         var assets      = AssetState()
         let token       = UUID()
         let source      = scope(token: token)
-        let original = try await importRaster(
+        let original    = try await importRaster(
             into       : &assets,
             scope      : source,
             coordinator: coordinator
         )
+
         let foreignOwner = try #require(AddonID(rawValue: "com.example.other"))
         let incompatible = [
             scope(token: UUID()),
-            scope(
-                token    : token,
-                partition: .isolated(UUID())
-            ),
+            scope(token: token, partition: .isolated(UUID())),
             scope(
                 token   : token,
                 identity: VerifiedAddonIdentity(
@@ -271,17 +267,8 @@ struct AssetSharingTests {
                     addonID  : foreignOwner
                 )
             ),
-            scope(
-                token : token,
-                digest: "different-digest"
-            ),
-            scope(
-                token  : token,
-                feature: String(
-                    repeating: "x",
-                    count    : 129
-                )
-            ),
+            scope(token: token, digest: "different-digest"),
+            scope(token: token, feature: String(repeating: "x", count: 129)),
             scope(
                 token: token,
                 id   : PublicationID(
@@ -291,6 +278,7 @@ struct AssetSharingTests {
                 )
             )
         ]
+
         for target in incompatible {
             #expect(throws: AddonFailure.self) {
                 try assets.sharingAdmissionBytes(
@@ -307,7 +295,8 @@ struct AssetSharingTests {
                 )
             }
         }
-        let target = scope(token: token)
+
+        let target         = scope(token: token)
         let spoofedSources = incompatible + [
             target,
             scope(
@@ -316,6 +305,7 @@ struct AssetSharingTests {
                 id     : source.publicationID
             )
         ]
+
         for spoofed in spoofedSources {
             #expect(throws: AddonFailure.self) {
                 try assets.share(
@@ -325,6 +315,7 @@ struct AssetSharingTests {
                 )
             }
         }
+
         #expect(assets.retainedBytes == 4_096)
         #expect(await governor.usage(.assetBytes) == 4)
         #expect(try assets.sharingAdmissionBytes(
@@ -340,21 +331,17 @@ struct AssetSharingTests {
         var assets      = AssetState()
         let token       = UUID()
         let partition   = AssetPrivacyPartition.isolated(UUID())
-        let source = scope(
-            token    : token,
-            partition: partition
-        )
+        let source      = scope(token: token, partition: partition)
+
         let original = try await importRaster(
             into       : &assets,
             scope      : source,
             coordinator: coordinator
         )
+
         for target in [
             scope(token: token),
-            scope(
-                token    : token,
-                partition: .isolated(UUID())
-            )
+            scope(token: token, partition: .isolated(UUID()))
         ] {
             #expect(throws: AddonFailure.self) {
                 try assets.share(
@@ -364,16 +351,19 @@ struct AssetSharingTests {
                 )
             }
         }
+
         let target = scope(
             token    : token,
             partition: partition,
             feature  : "another-feature"
         )
+
         let shared = try assets.share(
             assetID: original.assetID,
             source : source,
             target : target
         )
+
         #expect(shared.assetID != original.assetID)
         #expect(assets.retainedBytes == 8_192)
     }
@@ -386,11 +376,12 @@ struct AssetSharingTests {
         let token       = UUID()
         let source      = scope(token: token)
         let target      = scope(token: token)
-        let original = try await importRaster(
+        let original    = try await importRaster(
             into       : &assets,
             scope      : source,
             coordinator: coordinator
         )
+
         #expect(throws: AddonFailure.self) {
             try assets.sharingAdmissionBytes(
                 assetID: original.assetID,
@@ -407,10 +398,9 @@ struct AssetSharingTests {
         }
         #expect(assets.retainedBytes == 4_096)
         #expect(coordinator.status().slots == 1)
-        try assets.releaseImport(
-            assetID: original.assetID,
-            scope  : source
-        )
+
+        try assets.releaseImport(assetID: original.assetID, scope: source)
+
         #expect(throws: AddonFailure.self) {
             try assets.share(
                 assetID: original.assetID,
@@ -419,6 +409,7 @@ struct AssetSharingTests {
             )
         }
         #expect(assets.retainedBytes == 0)
+
         try await coordinator.flushDisposed()
         #expect(await governor.usage(.assetBytes) == 0)
     }
@@ -431,21 +422,21 @@ struct AssetSharingTests {
         let token       = UUID()
         let source      = scope(token: token)
         let target      = scope(token: token)
-        let original = try await importRaster(
+        let original    = try await importRaster(
             into       : &assets,
             scope      : source,
             coordinator: coordinator
         )
+
         let shared = try assets.share(
             assetID: original.assetID,
             source : source,
             target : target
         )
+
         var publications = PublicationState(now: { Date(timeIntervalSince1970: 2_000_000_000) })
-        let connection = try connect(
-            publications: &publications,
-            scopes      : [source, target]
-        )
+        let connection   = try connect(publications: &publications, scopes: [source, target])
+
         try commit(
             assets      : &assets,
             publications: &publications,
@@ -457,17 +448,12 @@ struct AssetSharingTests {
                     alias   : original.assetID,
                     duration: 10
                 ),
-                publication(
-                    scope: target,
-                    alias: shared.assetID
-                )
+                publication(scope: target, alias: shared.assetID)
             ]
         )
+
         if expireSource {
-            assets.reconcile(
-                publications: publications,
-                at          : now.addingTimeInterval(10)
-            )
+            assets.reconcile(publications: publications, at: now.addingTimeInterval(10))
         } else {
             try commit(
                 assets      : &assets,
@@ -479,6 +465,7 @@ struct AssetSharingTests {
                 endedIDs    : [source.publicationID]
             )
         }
+
         #expect(throws: AddonFailure.self) {
             try assets.share(
                 assetID: original.assetID,
@@ -486,14 +473,17 @@ struct AssetSharingTests {
                 target : target
             )
         }
+
         var consumer: CGImage? = assets.image(
             assetID            : shared.assetID,
             publicationID      : target.publicationID,
             publicationRevision: 1,
             at                 : now.addingTimeInterval(10)
         )
+
         #expect(consumer?.width == 1)
         #expect(assets.retainedBytes == 7_168)
+
         assets.revokeImports(connectionToken: token)
         #expect(assets.retainedBytes == 3_072)
         #expect(throws: AddonFailure.self) {
@@ -509,13 +499,14 @@ struct AssetSharingTests {
             publicationRevision: 1,
             at                 : now.addingTimeInterval(10)
         ) != nil)
-        assets.reconcile(
-            publications: publications,
-            at          : now.addingTimeInterval(60)
-        )
+
+        assets.reconcile(publications: publications, at: now.addingTimeInterval(60))
+
         #expect(assets.retainedBytes == 0)
+
         try await coordinator.flushDisposed()
         #expect(await governor.usage(.assetBytes) == 4)
+
         consumer = nil
         try await coordinator.flushDisposed()
         #expect(await governor.usage(.assetBytes) == 0)

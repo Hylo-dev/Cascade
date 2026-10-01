@@ -8,8 +8,11 @@ import Foundation
 import Testing
 @testable import CascadeRuntime
 
-@Suite struct AddonRuntimeCrashRetryTests {
-    @Test func classifiedPremetricCrashWithCanonicalInterestRetriesAtCommonDeadline() async throws {
+@Suite
+struct AddonRuntimeCrashRetryTests {
+
+    @Test
+    func classifiedPremetricCrashWithCanonicalInterestRetriesAtCommonDeadline() async throws {
         let fixture = try await CrashServiceFixture()
         let version = try fixture.version()
         #expect(await fixture.runtime.resourceHealthSnapshot(for: version)?.crashRetryCount == 0)
@@ -21,6 +24,7 @@ import Testing
         await #expect(throws: AddonFailure.self) {
             try await fixture.runtime.requestLaunch(owner: fixture.providerID)
         }
+
         #expect(fixture.adapter.startCount(owner: fixture.providerID) == 1)
 
         fixture.advance(1)
@@ -49,18 +53,20 @@ import Testing
         await #expect(throws: AddonFailure.self) {
             try await fixture.runtime.requestLaunch(owner: fixture.providerID)
         }
+
         #expect(fixture.adapter.startCount(owner: fixture.providerID) == 4)
     }
 
-    @Test func unclassifiedAndUndemandedExitsDoNotCreateRetry() async throws {
+    @Test
+    func unclassifiedAndUndemandedExitsDoNotCreateRetry() async throws {
         let fixture = try await CrashServiceFixture()
         let version = try fixture.version()
         await fixture.runtime.observeExit(fixture.provider.incarnation)
         #expect(await fixture.runtime.resourceHealthSnapshot(for: version)?.crashRetryCount == 0)
         #expect(await fixture.runtime.resourceHealthSnapshot(for: version)?.hasPendingRetry == false)
 
-        let solo = try installedFixture("focus", publisher: "TEST-ONLY.solo")
-        let clock = MutableRuntimeClock(instant: fixture.clock.now())
+        let solo    = try installedFixture("focus", publisher: "TEST-ONLY.solo")
+        let clock   = MutableRuntimeClock(instant: fixture.clock.now())
         let adapter = RecordingRuntimeAdapter()
         let runtime = try await AddonRuntime.make(
             catalog    : [solo],
@@ -76,7 +82,7 @@ import Testing
             clock   : clock
         )
         let launch = try await runtime.requestLaunch(owner: solo.manifest.id)
-        let start = try #require(adapter.lastStart(owner: solo.manifest.id))
+        let start  = try #require(adapter.lastStart(owner: solo.manifest.id))
         #expect(start.launchID == launch)
         await runtime.observeExit(start.incarnation, cause: .unexpected)
         let soloVersion = try AddonVersionIdentity(
@@ -87,7 +93,8 @@ import Testing
         #expect(await runtime.resourceHealthSnapshot(for: soloVersion)?.hasPendingRetry == false)
     }
 
-    @Test func connectionLossRetainsOnlyClassifiedExitAuthorityAndWakeCancelsRetry() async throws {
+    @Test
+    func connectionLossRetainsOnlyClassifiedExitAuthorityAndWakeCancelsRetry() async throws {
         let fixture = try await CrashServiceFixture()
         let version = try fixture.version()
         await fixture.runtime.closeConnection(fixture.provider)
@@ -101,18 +108,20 @@ import Testing
         #expect(fixture.adapter.startCount(owner: fixture.providerID) == 1)
     }
 
-    @Test func wakeWhileCrashDemandIsSuspendedCannotMintRetry() async throws {
-        let fixture = try await CrashServiceFixture()
-        let gate = CrashDemandGate()
-        let runtime = fixture.runtime
+    @Test
+    func wakeWhileCrashDemandIsSuspendedCannotMintRetry() async throws {
+        let fixture     = try await CrashServiceFixture()
+        let gate        = CrashDemandGate()
+        let runtime     = fixture.runtime
         let incarnation = fixture.provider.incarnation
-        let exiting = Task {
+        let exiting     = Task {
             await AddonRuntime.$crashDemandCheckpoint.withValue({
                 await gate.pause()
             }) {
                 await runtime.observeExit(incarnation, cause: .unexpected)
             }
         }
+
         let watchdog = Task {
             do {
                 try await Task.sleep(for: .seconds(5))
@@ -125,11 +134,13 @@ import Testing
                 await gate.release()
             }
         }
+
         defer {
             watchdog.cancel()
             exiting.cancel()
             Task { await gate.release() }
         }
+
         #expect(await gate.waitForArrival())
         #expect(try await fixture.runtime.resetProcessMetricsAfterWake() == .deferred)
         await gate.release()
@@ -139,18 +150,20 @@ import Testing
         #expect(await fixture.runtime.resourceHealthSnapshot(for: version)?.hasPendingRetry == false)
     }
 
-    @Test func canonicalInterestExpiringDuringBrokerReadCannotDemandRetry() async throws {
-        let fixture = try await CrashServiceFixture()
-        let gate = CrashDemandGate()
-        let runtime = fixture.runtime
+    @Test
+    func canonicalInterestExpiringDuringBrokerReadCannotDemandRetry() async throws {
+        let fixture     = try await CrashServiceFixture()
+        let gate        = CrashDemandGate()
+        let runtime     = fixture.runtime
         let incarnation = fixture.provider.incarnation
-        let exiting = Task {
+        let exiting     = Task {
             await AddonRuntime.$crashDemandCheckpoint.withValue({
                 await gate.pause()
             }) {
                 await runtime.observeExit(incarnation, cause: .unexpected)
             }
         }
+
         let watchdog = Task {
             do {
                 try await Task.sleep(for: .seconds(5))
@@ -163,11 +176,13 @@ import Testing
                 await gate.release()
             }
         }
+
         defer {
             watchdog.cancel()
             exiting.cancel()
             Task { await gate.release() }
         }
+
         #expect(await gate.waitForArrival())
         fixture.advance(3_600)
         await gate.release()
@@ -177,12 +192,13 @@ import Testing
         #expect(await fixture.runtime.resourceHealthSnapshot(for: version)?.hasPendingRetry == false)
     }
 
-    @Test func refusedProviderReservationKeepsTicketAndRefundsPoolUntilNextDuePass() async throws {
+    @Test
+    func refusedProviderReservationKeepsTicketAndRefundsPoolUntilNextDuePass() async throws {
         let fixture = try await CrashServiceFixture()
         let version = try fixture.version()
         await fixture.runtime.observeExit(fixture.provider.incarnation, cause: .unexpected)
         let baseline = try #require(await fixture.runtime.diagnostics(owner: fixture.providerID)?.reservedStateBytes)
-        let blocker = try await fixture.governor.admit(.provider, owner: fixture.providerID)
+        let blocker  = try await fixture.governor.admit(.provider, owner: fixture.providerID)
         fixture.advance(1)
         _ = try await fixture.runtime.serviceDeadlines()
         #expect(fixture.adapter.startCount(owner: fixture.providerID) == 1)
@@ -194,14 +210,15 @@ import Testing
         #expect(await fixture.runtime.resourceHealthSnapshot(for: version)?.hasPendingRetry == false)
     }
 
-    @Test func demandExpiringAfterDuePoolGrowthRefundsPreparedCapacity() async throws {
+    @Test
+    func demandExpiringAfterDuePoolGrowthRefundsPreparedCapacity() async throws {
         let fixture = try await CrashServiceFixture()
         let version = try fixture.version()
         await fixture.runtime.observeExit(fixture.provider.incarnation, cause: .unexpected)
         let baseline = try #require(await fixture.runtime.diagnostics(owner: fixture.providerID)?.reservedStateBytes)
         fixture.advance(1)
-        let gate = CrashDemandGate(pauseOnCall: 2)
-        let runtime = fixture.runtime
+        let gate         = CrashDemandGate(pauseOnCall: 2)
+        let runtime      = fixture.runtime
         let deadlinePass = Task {
             try await AddonRuntime.$crashDemandCheckpoint.withValue({
                 await gate.pause()
@@ -209,6 +226,7 @@ import Testing
                 try await runtime.serviceDeadlines()
             }
         }
+
         let watchdog = Task {
             do {
                 try await Task.sleep(for: .seconds(5))
@@ -221,11 +239,13 @@ import Testing
                 await gate.release()
             }
         }
+
         defer {
             watchdog.cancel()
             deadlinePass.cancel()
             Task { await gate.release() }
         }
+
         #expect(await gate.waitForArrival())
         fixture.advance(3_600)
         await gate.release()
@@ -236,13 +256,14 @@ import Testing
         #expect(await fixture.governor.usage(.providers, owner: fixture.providerID) == 0)
     }
 
-    @Test func stopDuringDueDemandPrecheckDrainsDeferredShutdown() async throws {
+    @Test
+    func stopDuringDueDemandPrecheckDrainsDeferredShutdown() async throws {
         let fixture = try await CrashServiceFixture()
         let version = try fixture.version()
         await fixture.runtime.observeExit(fixture.provider.incarnation, cause: .unexpected)
         fixture.advance(1)
-        let gate = CrashDemandGate()
-        let runtime = fixture.runtime
+        let gate         = CrashDemandGate()
+        let runtime      = fixture.runtime
         let deadlinePass = Task {
             try await AddonRuntime.$crashDemandCheckpoint.withValue({
                 await gate.pause()
@@ -250,6 +271,7 @@ import Testing
                 try await runtime.serviceDeadlines()
             }
         }
+
         let watchdog = Task {
             do {
                 try await Task.sleep(for: .seconds(5))
@@ -262,11 +284,13 @@ import Testing
                 await gate.release()
             }
         }
+
         defer {
             watchdog.cancel()
             deadlinePass.cancel()
             Task { await gate.release() }
         }
+
         #expect(await gate.waitForArrival())
         let stopping = await fixture.runtime.requestStop()
         #expect(stopping.cleanupPending)
@@ -277,7 +301,8 @@ import Testing
         #expect(await fixture.governor.usage(.providers, owner: fixture.providerID) == 0)
     }
 
-    @Test func lostDemandAtDueConsumesTicketWithoutLaunching() async throws {
+    @Test
+    func lostDemandAtDueConsumesTicketWithoutLaunching() async throws {
         let fixture = try await CrashServiceFixture()
         let version = try fixture.version()
         await fixture.runtime.observeExit(fixture.provider.incarnation, cause: .unexpected)
@@ -297,12 +322,14 @@ import Testing
         } else {
             await fixture.runtime.disable(owner: fixture.providerID)
         }
+
         await fixture.runtime.observeExit(fixture.provider.incarnation, cause: .unexpected)
         #expect(await fixture.runtime.resourceHealthSnapshot(for: version)?.crashRetryCount == 0)
         #expect(await fixture.runtime.resourceHealthSnapshot(for: version)?.hasPendingRetry == false)
     }
 
-    @Test func rejectedDueStartHandoffSpendsTicketWithoutAutomaticReplay() async throws {
+    @Test
+    func rejectedDueStartHandoffSpendsTicketWithoutAutomaticReplay() async throws {
         let host = try await InvocationMessageHost.make(
             governor            : ResourceGovernor(),
             minor               : 4,
@@ -310,7 +337,7 @@ import Testing
         )
         do {
             let providerID = host.provider.identity.addonID
-            let version = try AddonVersionIdentity(
+            let version    = try AddonVersionIdentity(
                 verifiedIdentity: host.provider.identity,
                 version         : SemanticVersion(1, 0, 0)
             )
@@ -333,9 +360,10 @@ import Testing
         }
     }
 
-    @Test func delegatedModerateDuringRetryPreservesExactTicketUntilQuarantine() throws {
+    @Test
+    func delegatedModerateDuringRetryPreservesExactTicketUntilQuarantine() throws {
         let installed = try installedFixture("focus", publisher: "TEST-ONLY.health")
-        let version = try AddonVersionIdentity(
+        let version   = try AddonVersionIdentity(
             verifiedIdentity: installed.verifiedIdentity,
             version         : SemanticVersion(1, 0, 0)
         )
@@ -345,13 +373,19 @@ import Testing
                 monotonic: .seconds(second)
             )
         }
+
         var store = AddonHealthStore()
         _ = try store.register(version)
         let session = try store.bind(version, generation: ConnectionGeneration())
-        guard case .retryAt(let ticket) = try store.crashed(session, demandExists: true, at: instant(0)) else {
+        guard case .retryAt(let ticket) = try store.crashed(
+            session,
+            demandExists: true,
+            at          : instant(0)
+        ) else {
             Issue.record("Demanded crash did not create a ticket.")
             return
         }
+
         #expect(try store.recordModerateDuringRetry(from: ticket, at: instant(1)) == .keep)
         #expect(try store.recordModerateDuringRetry(from: ticket, at: instant(2)) == .keep)
         #expect(store.pendingRetryTickets == [ticket])
@@ -362,9 +396,10 @@ import Testing
         #expect(store.snapshot(for: version)?.isQuarantined == true)
     }
 
-    @Test func queuedActionDemandClosesAtItsExactCanonicalDeadline() throws {
-        let fixture = try ActionFixture()
-        let now = RuntimeInstant(wall: fixture.wall, monotonic: .zero)
+    @Test
+    func queuedActionDemandClosesAtItsExactCanonicalDeadline() throws {
+        let fixture    = try ActionFixture()
+        let now        = RuntimeInstant(wall: fixture.wall, monotonic: .zero)
         var dispatcher = ActionDispatcher()
         _ = try dispatcher.submit(
             fixture.request(),
@@ -372,10 +407,7 @@ import Testing
             at     : now
         )
         let job = try #require(dispatcher.peekReady(at: .zero))
-        #expect(dispatcher.hasCurrentQueuedDemand(
-            owner: fixture.owner,
-            at   : job.deadline - .nanoseconds(1)
-        ))
+        #expect(dispatcher.hasCurrentQueuedDemand(owner: fixture.owner, at: job.deadline - .nanoseconds(1)))
         #expect(!dispatcher.hasCurrentQueuedDemand(owner: fixture.owner, at: job.deadline))
     }
 }

@@ -12,6 +12,7 @@ import Testing
 
 /// RuntimeSharingFixture uses real contracts and two independently assigned addon features.
 struct RuntimeSharingFixture: Sendable {
+
     let runtime   : AddonRuntime
     let governor  : ResourceGovernor
     let access    : GatedRuntimeResourceAccess
@@ -22,10 +23,8 @@ struct RuntimeSharingFixture: Sendable {
     let connection: RuntimeConnection
     let wall      : Date
 
-    static func make(partitions: [AssetPrivacyPartition] = [.addonOwned, .addonOwned]) async throws
-        -> Self
-    {
-        let base = try ActionFixture()
+    static func make(partitions: [AssetPrivacyPartition] = [.addonOwned, .addonOwned]) async throws -> Self {
+        let base      = try ActionFixture()
         let installed = try replacing(
             base.context().installed,
             features: [
@@ -41,23 +40,18 @@ struct RuntimeSharingFixture: Sendable {
                 )
             ]
         )
+
         let governor = ResourceGovernor()
-        let access = GatedRuntimeResourceAccess(target: governor)
-        let adapter = RecordingRuntimeAdapter()
-        let clock = MutableRuntimeClock(
-            instant: RuntimeInstant(
-                wall     : base.wall,
-                monotonic: .zero
-            )
+        let access   = GatedRuntimeResourceAccess(target: governor)
+        let adapter  = RecordingRuntimeAdapter()
+        let clock    = MutableRuntimeClock(
+            instant: RuntimeInstant(wall: base.wall, monotonic: .zero)
         )
+
         let runtime = try await AddonRuntime.make(
-            catalog    : [installed],
-            environment: HostEnvironment(
-                osVersion: SemanticVersion(
-                    14,
-                    0,
-                    0
-                ),
+            catalog               : [installed],
+            environment           : HostEnvironment(
+                osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
                 applications    : [:],
                 grants          : [base.owner: []],
@@ -69,11 +63,9 @@ struct RuntimeSharingFixture: Sendable {
             adapter               : adapter,
             clock                 : clock
         )
+
         var ids: [PublicationID] = []
-        for (
-            index,
-            feature
-        ) in ["controls", "activity"].enumerated() {
+        for (index, feature) in ["controls", "activity"].enumerated() {
             ids.append(
                 try await runtime.assignPublication(
                     owner                : base.owner,
@@ -83,7 +75,8 @@ struct RuntimeSharingFixture: Sendable {
                 )
             )
         }
-        let launch = try await runtime.requestLaunch(owner: base.owner)
+
+        let launch     = try await runtime.requestLaunch(owner: base.owner)
         let connection = try await runtime.attach(
             launchID: launch,
             offer   : ProtocolOffer(
@@ -93,6 +86,7 @@ struct RuntimeSharingFixture: Sendable {
                 contentSchemas: [1]
             )
         )
+
         return Self(
             runtime   : runtime,
             governor  : governor,
@@ -117,6 +111,7 @@ struct RuntimeSharingFixture: Sendable {
             accessibilityLabel: "Image",
             assetIDs          : [asset]
         )
+
         let content = try PresentationSet(
             widget         : index == 0 ? document : nil,
             compactLeading : index == 1 ? document : nil,
@@ -124,6 +119,7 @@ struct RuntimeSharingFixture: Sendable {
             minimal        : index == 1 ? document : nil,
             expanded       : index == 1 ? document : nil
         )
+
         return try Publication(
             id         : ids[index],
             revision   : 1,
@@ -141,9 +137,9 @@ struct RuntimeSharingFixture: Sendable {
         ends          : [PublicationID] = []
     ) async throws -> PublicationAdmission {
         try await receivePublicationOutput(
-            runtime: runtime,
-            adapter: adapter,
-            output : ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
                 publications : publications,
                 operations   : ends.map { .endPublication($0) },

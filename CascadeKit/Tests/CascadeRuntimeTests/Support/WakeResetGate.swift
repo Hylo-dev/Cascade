@@ -11,7 +11,8 @@ import Testing
 /// WakeResetGate has finite waits on both sides of a deterministic read or
 /// post-reset checkpoint; failure releases the blocked worker before it hangs.
 final class WakeResetGate: @unchecked Sendable {
-    private let arrived = DispatchSemaphore(value: 0)
+
+    private let arrived  = DispatchSemaphore(value: 0)
     private let released = DispatchSemaphore(value: 0)
 
     func pause() {

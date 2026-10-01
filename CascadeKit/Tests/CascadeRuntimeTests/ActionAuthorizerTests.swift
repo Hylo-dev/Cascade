@@ -10,6 +10,7 @@ import Testing
 
 @Suite
 struct ActionAuthorizerTests {
+
     @Test
     func currentDeclaredNestedActionIsUsableWithoutResidentProvider() throws {
         let fixture = try ActionFixture()
@@ -41,6 +42,7 @@ struct ActionAuthorizerTests {
             (fixture.context(revision: 2), .staleRevision),
             (fixture.context(otherPayload: Data([8])), .ambiguousPayload)
         ]
+
         for (context, failure) in cases {
             #expect(throws: failure) {
                 try ActionAuthorizer.validate(
@@ -50,7 +52,9 @@ struct ActionAuthorizerTests {
                 )
             }
         }
+
         let foreign = try ActionFixture(ownerName: "com.example.foreign")
+
         #expect(throws: ActionAuthorizer.Failure.identityMismatch) {
             try ActionAuthorizer.validate(
                 request,
@@ -73,7 +77,9 @@ struct ActionAuthorizerTests {
                 content: fixture.presentation(payload: Data([8]))
             )
         ]
+
         let context = try fixture.context(timeline: entries)
+
         #expect(throws: ActionAuthorizer.Failure.unpublishedAction) {
             try ActionAuthorizer.validate(
                 fixture.request(),
@@ -81,11 +87,13 @@ struct ActionAuthorizerTests {
                 at     : fixture.wall
             )
         }
+
         try ActionAuthorizer.validate(
             fixture.request(),
             context: context,
             at     : fixture.wall.addingTimeInterval(3)
         )
+
         #expect(throws: ActionAuthorizer.Failure.payloadMismatch) {
             try ActionAuthorizer.validate(
                 fixture.request(),
@@ -100,22 +108,25 @@ struct ActionAuthorizerTests {
                 at     : fixture.wall.addingTimeInterval(20)
             )
         }
+
         try ActionAuthorizer.validate(
             fixture.request(),
             context: fixture.context(otherPayload: Data([7])),
             at     : fixture.wall
         )
     }
+
     @Test
     func defaultEligibilityAndMissingPublicationFailClosed() throws {
-        let fixture = try ActionFixture()
-        let base = try fixture.context()
+        let fixture        = try ActionFixture()
+        let base           = try fixture.context()
         let defaultContext = ActionAuthorizer.Context(
             installed  : base.installed,
             resolution : base.resolution,
             featureID  : base.featureID,
             publication: base.publication
         )
+
         #expect(throws: ActionAuthorizer.Failure.unavailable) {
             try ActionAuthorizer.validate(
                 fixture.request(),
@@ -123,6 +134,7 @@ struct ActionAuthorizerTests {
                 at     : fixture.wall
             )
         }
+
         let missing = ActionAuthorizer.Context(
             installed  : base.installed,
             resolution : base.resolution,
@@ -130,6 +142,7 @@ struct ActionAuthorizerTests {
             publication: nil,
             eligibility: .available
         )
+
         #expect(throws: ActionAuthorizer.Failure.identityMismatch) {
             try ActionAuthorizer.validate(
                 fixture.request(),
@@ -142,8 +155,8 @@ struct ActionAuthorizerTests {
     @Test
     func missingPayloadIsEmptyAndPublicationExpiryRemainsCivil() throws {
         let fixture = try ActionFixture()
-        let base = try fixture.context()
-        let node = try ContentNode(
+        let base    = try fixture.context()
+        let node    = try ContentNode(
             kind    : .action,
             text    : "Pause",
             assetID : nil,
@@ -152,11 +165,13 @@ struct ActionAuthorizerTests {
             actionID: "pause",
             children: nil
         )
+
         let document = try ContentDocument(
-            root               : node,
-            privacy            : .sensitive,
-            accessibilityLabel : "Controls"
+            root              : node,
+            privacy           : .sensitive,
+            accessibilityLabel: "Controls"
         )
+
         let content = try PresentationSet(
             widget         : document,
             compactLeading : nil,
@@ -164,6 +179,7 @@ struct ActionAuthorizerTests {
             minimal        : nil,
             expanded       : nil
         )
+
         let publication = try Publication(
             id         : fixture.publicationID,
             revision   : 1,
@@ -173,6 +189,7 @@ struct ActionAuthorizerTests {
             expiresAt  : fixture.wall.addingTimeInterval(5),
             stalePolicy: .retainMarked
         )
+
         let context = ActionAuthorizer.Context(
             installed  : base.installed,
             resolution : base.resolution,
@@ -180,11 +197,13 @@ struct ActionAuthorizerTests {
             publication: publication,
             eligibility: .available
         )
+
         try ActionAuthorizer.validate(
             fixture.request(input: Data()),
             context: context,
             at     : fixture.wall
         )
+
         #expect(throws: ActionAuthorizer.Failure.expired) {
             try ActionAuthorizer.validate(
                 fixture.request(input: Data()),
@@ -193,5 +212,4 @@ struct ActionAuthorizerTests {
             )
         }
     }
-
 }

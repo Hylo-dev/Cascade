@@ -10,12 +10,15 @@ import Testing
 
 /// CoordinatorResourceGate delays one real governor result to exercise coordinator reentrancy.
 actor CoordinatorResourceGate: RuntimeResourceAccess {
+
     enum Point {
+
         case stateAdmission
         case temporaryAdmission
     }
 
     nonisolated let resourceGovernorTarget: ResourceGovernor
+
     private var point     : Point?
     private var hasArrived = false
     private var arrival   : CheckedContinuation<Void, Never>?
@@ -40,7 +43,8 @@ actor CoordinatorResourceGate: RuntimeResourceAccess {
 
     private func hold(_ candidate: Point) async {
         guard point == candidate else { return }
-        point = nil
+
+        point      = nil
         hasArrived = true
         arrival?.resume()
         arrival = nil
@@ -51,18 +55,17 @@ actor CoordinatorResourceGate: RuntimeResourceAccess {
         _ request: ResourceRequest,
         owner    : AddonID
     ) async throws -> ResourceReservation {
-        let reservation = try await resourceGovernorTarget.admit(
-            request,
-            owner: owner
-        )
+        let reservation = try await resourceGovernorTarget.admit(request, owner: owner)
+
         switch request {
-        case .state:
-            await hold(.stateAdmission)
-        case .temporaryMemory:
-            await hold(.temporaryAdmission)
-        default:
-            break
+            case .state:
+                await hold(.stateAdmission)
+            case .temporaryMemory:
+                await hold(.temporaryAdmission)
+            default:
+                break
         }
+
         return reservation
     }
 
@@ -70,10 +73,7 @@ actor CoordinatorResourceGate: RuntimeResourceAccess {
         _ reservationID: UUID,
         owner          : AddonID
     ) async throws {
-        try await resourceGovernorTarget.release(
-            reservationID,
-            owner: owner
-        )
+        try await resourceGovernorTarget.release(reservationID, owner: owner)
     }
 
     func reduceStateReservation(

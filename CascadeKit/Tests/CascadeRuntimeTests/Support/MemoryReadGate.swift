@@ -9,7 +9,8 @@ import Testing
 @testable import CascadeRuntime
 
 final class MemoryReadGate: @unchecked Sendable {
-    private let arrived = DispatchSemaphore(value: 0)
+
+    private let arrived  = DispatchSemaphore(value: 0)
     private let released = DispatchSemaphore(value: 0)
 
     func pause() {

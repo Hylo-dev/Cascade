@@ -8,8 +8,9 @@ import Testing
 @testable import CascadeRuntime
 
 final class MetricReadSource: @unchecked Sendable {
-    private let lock = NSLock()
-    private var queued: [UUID: [ProcessMetricReadResult]]
+
+    private let lock     = NSLock()
+    private var queued  : [UUID: [ProcessMetricReadResult]]
     private var captured: [ProcessMetricBinding] = []
 
     init(_ queued: [UUID: [ProcessMetricReadResult]]) {
@@ -26,8 +27,10 @@ final class MetricReadSource: @unchecked Sendable {
             guard var results = queued[binding.token], !results.isEmpty else {
                 return .unavailable(.readFailed(5))
             }
+
             let result = results.removeFirst()
             queued[binding.token] = results
+
             return result
         }
     }

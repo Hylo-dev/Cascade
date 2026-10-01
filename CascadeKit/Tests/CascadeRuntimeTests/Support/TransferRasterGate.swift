@@ -12,7 +12,9 @@ import Testing
 
 /// TransferRasterGate pauses real canonical admission to expose teardown races deterministically.
 actor TransferRasterGate: AssetReservationAccess {
+
     nonisolated let assetGovernor: ResourceGovernor
+
     private var entered = false
     private var arrival: CheckedContinuation<Void, Never>?
     private var blocked: CheckedContinuation<Void, Never>?
@@ -23,22 +25,17 @@ actor TransferRasterGate: AssetReservationAccess {
         bytes: Int,
         owner: AddonID
     ) async throws -> RetainedAssetToken {
-        let token = try await assetGovernor.admitRetainedAsset(
-            bytes: bytes,
-            owner: owner
-        )
-        entered = true
+        let token = try await assetGovernor.admitRetainedAsset(bytes: bytes, owner: owner)
+        entered   = true
         arrival?.resume()
         arrival = nil
         await withCheckedContinuation { blocked = $0 }
+
         return token
     }
 
     func disposeRaster(_ token: RetainedAssetToken) async throws {
-        try await assetGovernor.completeRetainedAsset(
-            token,
-            owner: token.reservation.owner
-        )
+        try await assetGovernor.completeRetainedAsset(token, owner: token.reservation.owner)
     }
 
     func reached() async {

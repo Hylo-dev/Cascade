@@ -12,17 +12,16 @@ import Testing
 
 @Suite(.timeLimit(.minutes(1)))
 struct AddonRuntimeAssetSharingTests {
+
     @Test
     func sharingAcrossFeaturesKeepsOneRasterAndIndependentPublicationLifetimes() async throws {
         let fixture = try await RuntimeSharingFixture.make()
-        let source = try await fixture.runtime.importAsset(
+        let source  = try await fixture.runtime.importAsset(
             encoded      : sharingPNG(),
             publicationID: fixture.ids[0],
             connection   : fixture.connection
         )
-        let before = try #require(
-            await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes
-        )
+        let before = try #require(await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes)
         let shared = try await fixture.runtime.shareAsset(
             assetID   : source.assetID,
             from      : fixture.ids[0],
@@ -32,10 +31,8 @@ struct AddonRuntimeAssetSharingTests {
         #expect(source.assetID != shared.assetID)
         #expect(shared.publicationID == fixture.ids[1])
         #expect(await fixture.governor.usage(.assetBytes) == 4)
-        #expect(
-            await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes == before
-                + 4096
-        )
+        #expect(await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes == before + 4096)
+
         _ = try await fixture.publish(
             [
                 fixture.publication(
@@ -43,23 +40,15 @@ struct AddonRuntimeAssetSharingTests {
                     index  : 0,
                     privacy: .sensitive
                 ),
-                fixture.publication(
-                    shared.assetID,
-                    index: 1
-                )
+                fixture.publication(shared.assetID, index: 1)
             ],
             sequence: 1
         )
-        var sourceImage = await fixture.image(
-            source.assetID,
-            index: 0
-        )
-        var sharedImage = await fixture.image(
-            shared.assetID,
-            index: 1
-        )
+        var sourceImage = await fixture.image(source.assetID, index: 0)
+        var sharedImage = await fixture.image(shared.assetID, index: 1)
         #expect(sourceImage != nil)
         #expect(sourceImage === sharedImage)
+
         try await fixture.runtime.releaseAsset(
             assetID      : source.assetID,
             publicationID: fixture.ids[0],
@@ -73,30 +62,17 @@ struct AddonRuntimeAssetSharingTests {
                 connection: fixture.connection
             )
         }
+
         _ = try await fixture.publish(
             [],
             sequence: 2,
             ends    : [fixture.ids[0]]
         )
-        #expect(
-            await fixture.image(
-                source.assetID,
-                index: 0
-            ) == nil
-        )
-        #expect(
-            await fixture.image(
-                shared.assetID,
-                index: 1
-            ) === sharedImage
-        )
+        #expect(await fixture.image(source.assetID, index: 0) == nil)
+        #expect(await fixture.image(shared.assetID, index: 1) === sharedImage)
+
         await fixture.runtime.observeExit(fixture.connection.incarnation)
-        #expect(
-            await fixture.image(
-                shared.assetID,
-                index: 1
-            ) === sharedImage
-        )
+        #expect(await fixture.image(shared.assetID, index: 1) === sharedImage)
         await #expect(throws: AddonFailure.self) {
             try await fixture.runtime.shareAsset(
                 assetID   : shared.assetID,
@@ -105,23 +81,26 @@ struct AddonRuntimeAssetSharingTests {
                 connection: fixture.connection
             )
         }
+
         await fixture.runtime.stop()
         #expect(await fixture.governor.usage(.assetBytes) == 4)
         #expect(sourceImage?.width == 1)
         #expect(sharedImage?.height == 1)
+
         sourceImage = nil
         sharedImage = nil
         for _ in 0..<1000 {
             if await fixture.governor.usage(.assetBytes) == 0 { break }
             await Task.yield()
         }
+
         #expect(await fixture.governor.usage(.assetBytes) == 0)
     }
 
     @Test
     func hostPartitionIsImmutableAndCannotBeChosenByContentPrivacy() async throws {
         let partition = AssetPrivacyPartition.isolated(UUID())
-        let fixture = try await RuntimeSharingFixture.make(partitions: [.addonOwned, partition])
+        let fixture   = try await RuntimeSharingFixture.make(partitions: [.addonOwned, partition])
         await #expect(throws: AddonFailure.self) {
             try await fixture.runtime.assignPublication(
                 owner                : fixture.owner,
@@ -130,13 +109,12 @@ struct AddonRuntimeAssetSharingTests {
                 assetPrivacyPartition: partition
             )
         }
-        #expect(
-            try await fixture.runtime.assignPublication(
-                owner     : fixture.owner,
-                featureID : "controls",
-                instanceID: fixture.ids[0].instanceID
-            ) == fixture.ids[0]
-        )
+        #expect(try await fixture.runtime.assignPublication(
+            owner     : fixture.owner,
+            featureID : "controls",
+            instanceID: fixture.ids[0].instanceID
+        ) == fixture.ids[0])
+
         let source = try await fixture.runtime.importAsset(
             encoded      : sharingPNG(),
             publicationID: fixture.ids[0],
@@ -151,10 +129,9 @@ struct AddonRuntimeAssetSharingTests {
                 connection: fixture.connection
             )
         }
-        #expect(
-            await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes == before
-        )
+        #expect(await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes == before)
         #expect(await fixture.governor.usage(.assetBytes) == 4)
+
         _ = try await fixture.publish(
             [
                 fixture.publication(
@@ -165,12 +142,8 @@ struct AddonRuntimeAssetSharingTests {
             ],
             sequence: 1
         )
-        #expect(
-            await fixture.image(
-                source.assetID,
-                index: 0
-            )?.width == 1
-        )
+        #expect(await fixture.image(source.assetID, index: 0)?.width == 1)
+
         await fixture.runtime.stop()
         await fixture.runtime.observeExit(fixture.connection.incarnation)
     }
@@ -178,13 +151,14 @@ struct AddonRuntimeAssetSharingTests {
     @Test(arguments: ["cancel", "disable", "exit"])
     func sharingRevalidatesAuthorityAfterMetadataAdmission(interruption: String) async throws {
         let fixture = try await RuntimeSharingFixture.make()
-        let source = try await fixture.runtime.importAsset(
+        let source  = try await fixture.runtime.importAsset(
             encoded      : sharingPNG(),
             publicationID: fixture.ids[0],
             connection   : fixture.connection
         )
         let before = await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes
         await fixture.access.armResize()
+
         let task = Task {
             try await fixture.runtime.shareAsset(
                 assetID   : source.assetID,
@@ -195,19 +169,19 @@ struct AddonRuntimeAssetSharingTests {
         }
         await fixture.access.waitForArrival()
         switch interruption {
-        case "cancel": task.cancel()
-        case "disable": await fixture.runtime.disable(owner: fixture.owner)
-        default: await fixture.runtime.observeExit(fixture.connection.incarnation)
+            case "cancel": task.cancel()
+            case "disable": await fixture.runtime.disable(owner: fixture.owner)
+            default: await fixture.runtime.observeExit(fixture.connection.incarnation)
         }
+
         await fixture.access.releaseGate()
         await #expect(throws: (any Error).self) { try await task.value }
         #expect(await fixture.runtime.snapshot(at: fixture.wall).publications.isEmpty)
+
         if interruption == "cancel" {
-            #expect(
-                await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes
-                    == before
-            )
+            #expect(await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes == before)
             #expect(await fixture.governor.usage(.assetBytes) == 4)
+
             let shared = try await fixture.runtime.shareAsset(
                 assetID   : source.assetID,
                 from      : fixture.ids[0],
@@ -217,29 +191,32 @@ struct AddonRuntimeAssetSharingTests {
             #expect(shared.publicationID == fixture.ids[1])
             #expect(await fixture.governor.usage(.assetBytes) == 4)
         }
+
         await fixture.runtime.stop()
         await fixture.runtime.observeExit(fixture.connection.incarnation)
         for _ in 0..<1000 {
             if await fixture.governor.usage(.assetBytes) == 0 { break }
             await Task.yield()
         }
+
         #expect(await fixture.governor.usage(.assetBytes) == 0)
     }
 
     @Test
     func sharedAliasMetadataDenialDoesNotDecodeOrInvalidateSource() async throws {
         let fixture = try await RuntimeSharingFixture.make()
-        let source = try await fixture.runtime.importAsset(
+        let source  = try await fixture.runtime.importAsset(
             encoded      : sharingPNG(),
             publicationID: fixture.ids[0],
             connection   : fixture.connection
         )
-        let used = await fixture.governor.usage(.retainedStateBytes)
+        let used        = await fixture.governor.usage(.retainedStateBytes)
         let fillerOwner = try #require(AddonID(rawValue: "com.example.sharing-filler"))
-        let filler = try await fixture.governor.admit(
+        let filler      = try await fixture.governor.admit(
             .state(bytes: 8 * 1024 * 1024 - used - 1024),
             owner: fillerOwner
         )
+
         let before = await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes
         await #expect(throws: AddonFailure.self) {
             try await fixture.runtime.shareAsset(
@@ -249,14 +226,10 @@ struct AddonRuntimeAssetSharingTests {
                 connection: fixture.connection
             )
         }
-        #expect(
-            await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes == before
-        )
+        #expect(await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes == before)
         #expect(await fixture.governor.usage(.assetBytes) == 4)
-        try await fixture.governor.release(
-            filler.id,
-            owner: fillerOwner
-        )
+
+        try await fixture.governor.release(filler.id, owner: fillerOwner)
         let shared = try await fixture.runtime.shareAsset(
             assetID   : source.assetID,
             from      : fixture.ids[0],
@@ -265,19 +238,20 @@ struct AddonRuntimeAssetSharingTests {
         )
         #expect(shared.assetID != source.assetID)
         #expect(await fixture.governor.usage(.assetBytes) == 4)
+
         await fixture.runtime.stop()
         await fixture.runtime.observeExit(fixture.connection.incarnation)
     }
+
     @Test(arguments: [0, 1])
     func expiredAssignmentCannotShareBeforeDeadlineCleanup(expiredIndex: Int) async throws {
         let fixture = try await RuntimeSharingFixture.make()
-        let source = try await fixture.runtime.importAsset(
+        let source  = try await fixture.runtime.importAsset(
             encoded      : sharingPNG(),
             publicationID: fixture.ids[0],
             connection   : fixture.connection
         )
-        let local =
-            expiredIndex == 0
+        let local = expiredIndex == 0
             ? source
             : try await fixture.runtime.importAsset(
                 encoded      : sharingPNG(),
@@ -286,19 +260,12 @@ struct AddonRuntimeAssetSharingTests {
             )
         _ = try await fixture.publish(
             [
-                fixture.publication(
-                    local.assetID,
-                    index: expiredIndex
-                )
+                fixture.publication(local.assetID, index: expiredIndex)
             ],
             sequence: 1
         )
-        fixture.clock.set(
-            RuntimeInstant(
-                wall     : fixture.wall.addingTimeInterval(61),
-                monotonic: .seconds(61)
-            )
-        )
+        fixture.clock.set(RuntimeInstant(wall: fixture.wall.addingTimeInterval(61), monotonic: .seconds(61)))
+
         let before = await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes
         await #expect(throws: AddonFailure.self) {
             try await fixture.runtime.shareAsset(
@@ -308,21 +275,19 @@ struct AddonRuntimeAssetSharingTests {
                 connection: fixture.connection
             )
         }
-        #expect(
-            await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes == before
-        )
+        #expect(await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes == before)
+
         await fixture.runtime.stop()
         await fixture.runtime.observeExit(fixture.connection.incarnation)
     }
-
 }
 
 /// sharingPNG supplies a real encoded image to the runtime-owned decoder.
 private func sharingPNG() throws -> Data {
-    let bytes = Data([255, 0, 0, 255])
-    let provider = try #require(CGDataProvider(data: bytes as CFData))
+    let bytes      = Data([255, 0, 0, 255])
+    let provider   = try #require(CGDataProvider(data: bytes as CFData))
     let colorSpace = try #require(CGColorSpace(name: CGColorSpace.sRGB))
-    let image = try #require(
+    let image      = try #require(
         CGImage(
             width            : 1,
             height           : 1,
@@ -337,20 +302,11 @@ private func sharingPNG() throws -> Data {
             intent           : .defaultIntent
         )
     )
-    let data = NSMutableData()
-    let destination = try #require(
-        CGImageDestinationCreateWithData(
-            data,
-            "public.png" as CFString,
-            1,
-            nil
-        )
-    )
-    CGImageDestinationAddImage(
-        destination,
-        image,
-        nil
-    )
+
+    let data        = NSMutableData()
+    let destination = try #require(CGImageDestinationCreateWithData(data, "public.png" as CFString, 1, nil))
+    CGImageDestinationAddImage(destination, image, nil)
     #expect(CGImageDestinationFinalize(destination))
+
     return data as Data
 }

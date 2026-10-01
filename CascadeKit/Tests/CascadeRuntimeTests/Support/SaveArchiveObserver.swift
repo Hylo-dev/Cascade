@@ -13,13 +13,14 @@ import Testing
 
 /// SaveArchiveObserver gates the return of a real filesystem inventory at a chosen operation boundary.
 actor SaveArchiveObserver: SwiftDataArchiveObserving {
-    private var countdown: Int?
+
+    private var countdown : Int?
     private var hasArrived = false
-    private var arrival: CheckedContinuation<Void, Never>?
-    private var resume : CheckedContinuation<Void, Never>?
+    private var arrival   : CheckedContinuation<Void, Never>?
+    private var resume    : CheckedContinuation<Void, Never>?
 
     func arm(after count: Int) {
-        countdown = count
+        countdown  = count
         hasArrived = false
     }
 
@@ -40,10 +41,11 @@ actor SaveArchiveObserver: SwiftDataArchiveObserving {
             root      : root,
             descriptor: descriptor
         )
+
         if let countdown {
             if countdown == 0 {
                 self.countdown = nil
-                hasArrived = true
+                hasArrived     = true
                 arrival?.resume()
                 arrival = nil
                 await withCheckedContinuation { resume = $0 }
@@ -51,6 +53,7 @@ actor SaveArchiveObserver: SwiftDataArchiveObserving {
                 self.countdown = countdown - 1
             }
         }
+
         return result
     }
 }

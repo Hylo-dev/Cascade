@@ -11,6 +11,7 @@ import Testing
 
 /// ArchiveInventoryObserver gates only complete native scans and can conservatively mark one incomplete.
 actor ArchiveInventoryObserver: SwiftDataArchiveObserving {
+
     private var gatedName     : String?
     private var incompleteName: String?
     private var counts        : [String: Int] = [:]
@@ -19,15 +20,20 @@ actor ArchiveInventoryObserver: SwiftDataArchiveObserving {
     private var completion    : CheckedContinuation<Void, Never>?
 
     func markIncomplete(_ name: String?) { incompleteName = name }
+
     func count(_ name: String) -> Int { counts[name, default: 0] }
+
     func arm(_ name: String) {
         gatedName = name
-        arrived = false
+        arrived   = false
     }
+
     func wait() async {
         if arrived { return }
+
         await withCheckedContinuation { arrival = $0 }
     }
+
     func resume() {
         completion?.resume()
         completion = nil
@@ -38,19 +44,18 @@ actor ArchiveInventoryObserver: SwiftDataArchiveObserving {
         root      : URL,
         descriptor: Int32
     ) async -> SwiftDataArchiveInventory {
-        let observation = SwiftDataArchiveDirectory.inventory(
-            root      : root,
-            descriptor: descriptor
-        )
-        let name = root.lastPathComponent
+        let observation = SwiftDataArchiveDirectory.inventory(root: root, descriptor: descriptor)
+        let name        = root.lastPathComponent
         counts[name, default: 0] += 1
+
         if gatedName == name {
             gatedName = nil
-            arrived = true
+            arrived   = true
             arrival?.resume()
             arrival = nil
             await withCheckedContinuation { completion = $0 }
         }
+
         if incompleteName == name {
             return SwiftDataArchiveInventory(
                 bytes            : observation.bytes,
@@ -59,6 +64,7 @@ actor ArchiveInventoryObserver: SwiftDataArchiveObserving {
                 hasUnknownEntries: observation.hasUnknownEntries
             )
         }
+
         return observation
     }
 }

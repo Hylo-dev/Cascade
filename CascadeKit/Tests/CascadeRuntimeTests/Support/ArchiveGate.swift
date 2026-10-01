@@ -12,7 +12,8 @@ import Testing
 
 /// ArchiveGate retains one controlled continuation per side, without polling or waiter arrays.
 actor ArchiveGate {
-    private var entered = false
+
+    private var entered             = false
     private var releaseContinuation: CheckedContinuation<Void, Never>?
     private var enteredContinuation: CheckedContinuation<Void, Never>?
 

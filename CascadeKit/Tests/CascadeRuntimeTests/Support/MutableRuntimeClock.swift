@@ -9,6 +9,7 @@ import Testing
 @testable import CascadeRuntime
 
 final class MutableRuntimeClock: RuntimeClock, @unchecked Sendable {
+
     private var instant: RuntimeInstant
 
     init(instant: RuntimeInstant) {

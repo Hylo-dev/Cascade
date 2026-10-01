@@ -11,9 +11,10 @@ import Testing
 @testable import CascadeRuntime
 
 struct TransferFixture {
+
     let governor   : ResourceGovernor
     let coordinator: AssetDisposalCoordinator
-    let clock      = TransferClock()
+    let clock       = TransferClock()
     let binding    : AssetTransferBinding
     let assembler  : BoundedAssetTransferAssembler
 
@@ -22,8 +23,8 @@ struct TransferFixture {
         decoder : (any AssetImageDecoding)? = nil
     ) throws {
         let incarnation = RuntimeIncarnation()
-        let owner = try #require(AddonID(rawValue: "com.example.transfer"))
-        binding = AssetTransferBinding(
+        let owner       = try #require(AddonID(rawValue: "com.example.transfer"))
+        binding         = AssetTransferBinding(
             incarnation    : incarnation,
             connectionToken: UUID(),
             publicationID  : PublicationID(
@@ -33,9 +34,10 @@ struct TransferFixture {
             ),
             assignmentToken: UUID()
         )
+
         self.governor = governor
-        coordinator = AssetDisposalCoordinator(governor: governor)
-        assembler = BoundedAssetTransferAssembler(
+        coordinator   = AssetDisposalCoordinator(governor: governor)
+        assembler     = BoundedAssetTransferAssembler(
             incarnation: incarnation,
             clock      : clock,
             decoder    : decoder ?? BoundedAssetImageDecoder(coordinator: coordinator)

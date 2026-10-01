@@ -12,6 +12,7 @@ import Testing
 
 /// ArchiveFacadeFixture composes real storage and runtime while exposing no raw archive capability.
 struct ArchiveFacadeFixture: Sendable {
+
     let installed  : InstalledAddon
     let governor   : ResourceGovernor
     let adapter    : RecordingRuntimeAdapter
@@ -20,7 +21,9 @@ struct ArchiveFacadeFixture: Sendable {
     let root       : URL
     let archiveRoot: URL
     let wall       : Date
+
     var owner: AddonID { installed.manifest.id }
+
     var ownerRoot: URL {
         archiveRoot.appendingPathComponent(KeyedStorageRecord.hex(
             KeyedStorageRecord.namespaceDigest(installed.verifiedIdentity)
@@ -32,13 +35,13 @@ struct ArchiveFacadeFixture: Sendable {
         observer     : any SwiftDataArchiveObserving = NativeSwiftDataArchiveObserver(),
         otherIdentity: VerifiedAddonIdentity? = nil
     ) async throws -> Self {
-        let base = try ActionFixture()
-        let installed = try base.context().installed
-        let governor = ResourceGovernor()
-        let root = URL(fileURLWithPath: "/private/tmp/cascade-archive-facade-\(UUID())")
+        let base           = try ActionFixture()
+        let installed      = try base.context().installed
+        let governor       = ResourceGovernor()
+        let root           = URL(fileURLWithPath: "/private/tmp/cascade-archive-facade-\(UUID())")
         let checkpointRoot = root.appendingPathComponent("checkpoints")
-        let keyedRoot = root.appendingPathComponent("keyed")
-        let archiveRoot = root.appendingPathComponent("archives")
+        let keyedRoot      = root.appendingPathComponent("keyed")
+        let archiveRoot    = root.appendingPathComponent("archives")
         for directory in [root, checkpointRoot, keyedRoot, archiveRoot] {
             try FileManager.default.createDirectory(
                 at                         : directory,
@@ -46,16 +49,12 @@ struct ArchiveFacadeFixture: Sendable {
                 attributes                 : [.posixPermissions: 0o700]
             )
         }
-        var registrations = [StateRegistration(
-            identity            : installed.verifiedIdentity,
-            maximumSchemaVersion: 1
-        )]
+
+        var registrations = [StateRegistration(identity: installed.verifiedIdentity, maximumSchemaVersion: 1)]
         if let otherIdentity {
-            registrations.append(StateRegistration(
-                identity            : otherIdentity,
-                maximumSchemaVersion: 1
-            ))
+            registrations.append(StateRegistration(identity: otherIdentity, maximumSchemaVersion: 1))
         }
+
         let coordinator = try await AddonStorageCoordinator.make(
             checkpointRoot : checkpointRoot,
             keyedRoot      : keyedRoot,
@@ -65,14 +64,12 @@ struct ArchiveFacadeFixture: Sendable {
             archiveObserver: observer
         )
         try await coordinator.start()
+
         return Self(
             installed  : installed,
             governor   : governor,
             adapter    : RecordingRuntimeAdapter(),
-            clock      : MutableRuntimeClock(instant: RuntimeInstant(
-                wall     : base.wall,
-                monotonic: .zero
-            )),
+            clock      : MutableRuntimeClock(instant: RuntimeInstant(wall: base.wall, monotonic: .zero)),
             coordinator: coordinator,
             root       : root,
             archiveRoot: archiveRoot,
@@ -86,16 +83,13 @@ struct ArchiveFacadeFixture: Sendable {
         access   : (any RuntimeResourceAccess)? = nil,
         installed: InstalledAddon? = nil
     ) async throws -> AddonRuntime {
-        let selectedGovernor = governor ?? self.governor
+        let selectedGovernor  = governor ?? self.governor
         let selectedInstalled = installed ?? self.installed
+
         return try await AddonRuntime.make(
             catalog    : [selectedInstalled],
             environment: HostEnvironment(
-                osVersion: SemanticVersion(
-                    14,
-                    0,
-                    0
-                ),
+                osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
                 applications    : [:],
                 grants          : [selectedInstalled.manifest.id: []],
@@ -116,7 +110,7 @@ struct ArchiveFacadeFixture: Sendable {
             featureID : "controls",
             instanceID: UUID()
         )
-        let launch = try await runtime.requestLaunch(owner: owner)
+        let launch     = try await runtime.requestLaunch(owner: owner)
         let connection = try await runtime.attach(
             launchID: launch,
             offer   : ProtocolOffer(
@@ -126,6 +120,7 @@ struct ArchiveFacadeFixture: Sendable {
                 contentSchemas: [1]
             )
         )
+
         func presentation(_ text: String) throws -> PresentationSet {
             try PresentationSet(
                 widget: ContentDocument(
@@ -140,20 +135,15 @@ struct ArchiveFacadeFixture: Sendable {
                 expanded       : nil
             )
         }
+
         let publication = try Publication(
-            id         : id,
-            revision   : 0,
-            kind       : .widget,
-            content    : nil,
-            timeline   : [
-                ScheduledEntry(
-                    date   : wall,
-                    content: presentation("Now")
-                ),
-                ScheduledEntry(
-                    date   : wall.addingTimeInterval(20),
-                    content: presentation("Future")
-                )
+            id      : id,
+            revision: 0,
+            kind    : .widget,
+            content : nil,
+            timeline: [
+                ScheduledEntry(date: wall, content: presentation("Now")),
+                ScheduledEntry(date: wall.addingTimeInterval(20), content: presentation("Future"))
             ],
             expiresAt  : wall.addingTimeInterval(100),
             stalePolicy: .retainMarked
@@ -172,6 +162,7 @@ struct ArchiveFacadeFixture: Sendable {
             sequence  : 1
         )
         await runtime.observeExit(connection.incarnation)
+
         return id
     }
 
@@ -189,7 +180,8 @@ struct ArchiveFacadeFixture: Sendable {
                 assetPrivacyPartition: partition
             ))
         }
-        let launch = try await runtime.requestLaunch(owner: owner)
+
+        let launch     = try await runtime.requestLaunch(owner: owner)
         let connection = try await runtime.attach(
             launchID: launch,
             offer   : ProtocolOffer(
@@ -210,7 +202,7 @@ struct ArchiveFacadeFixture: Sendable {
             to        : ids[1],
             connection: connection
         )
-        let aliases = [image.assetID, shared.assetID]
+        let aliases      = [image.assetID, shared.assetID]
         let publications = try ids.indices.map { index in
             func presentation(_ text: String) throws -> PresentationSet {
                 let document = try ContentDocument(
@@ -231,6 +223,7 @@ struct ArchiveFacadeFixture: Sendable {
                     accessibilityLabel: "Shared image",
                     assetIDs          : [aliases[index]]
                 )
+
                 return try PresentationSet(
                     widget         : index == 0 ? nil : document,
                     compactLeading : document,
@@ -239,25 +232,21 @@ struct ArchiveFacadeFixture: Sendable {
                     expanded       : document
                 )
             }
+
             return try Publication(
-                id         : ids[index],
-                revision   : 0,
-                kind       : index == 0 ? .activity : .widget,
-                content    : nil,
-                timeline   : [
-                    ScheduledEntry(
-                        date   : wall,
-                        content: presentation("Now")
-                    ),
-                    ScheduledEntry(
-                        date   : wall.addingTimeInterval(20),
-                        content: presentation("Future")
-                    )
+                id      : ids[index],
+                revision: 0,
+                kind    : index == 0 ? .activity : .widget,
+                content : nil,
+                timeline: [
+                    ScheduledEntry(date: wall, content: presentation("Now")),
+                    ScheduledEntry(date: wall.addingTimeInterval(20), content: presentation("Future"))
                 ],
                 expiresAt  : wall.addingTimeInterval(8 * 3_600),
                 stalePolicy: .retainMarked
             )
         }
+
         _ = try await receivePublicationOutput(
             runtime: runtime,
             adapter: adapter,
@@ -272,6 +261,7 @@ struct ArchiveFacadeFixture: Sendable {
             sequence  : 1
         )
         await runtime.observeExit(connection.incarnation)
+
         return (ids, aliases)
     }
 

@@ -10,15 +10,15 @@ import Testing
 
 @Suite
 struct ActionDispatcherTests {
+
     @Test
     func duplicateRecoveryUsesOriginalRequestAndBindingWithoutReplaying() throws {
         let fixture = try ActionFixture()
         let request = try fixture.request()
-        let now = RuntimeInstant(
-            wall     : fixture.wall,
-            monotonic: .zero
-        )
+        let now     = RuntimeInstant(wall: fixture.wall, monotonic: .zero)
+
         var dispatcher = ActionDispatcher()
+
         #expect(try dispatcher.submit(
             request,
             context: fixture.context(),
@@ -29,6 +29,7 @@ struct ActionDispatcherTests {
             context: fixture.context(revision: 2),
             at     : now
         ) == .duplicate(.queued))
+
         for context in try [
             fixture.context(digest: "changed"),
             fixture.context(publisher: "different"),
@@ -43,12 +44,10 @@ struct ActionDispatcherTests {
                 )
             }
         }
+
         #expect(throws: (any Error).self) {
             try dispatcher.submit(
-                fixture.request(
-                    id   : request.requestID,
-                    input: Data([9])
-                ),
+                fixture.request(id: request.requestID, input: Data([9])),
                 context: fixture.context(),
                 at     : now
             )
@@ -60,10 +59,8 @@ struct ActionDispatcherTests {
     @Test
     func queueAndSharedBudgetRejectionRollBackNewHistory() throws {
         let fixture = try ActionFixture()
-        let now = RuntimeInstant(
-            wall     : fixture.wall,
-            monotonic: .zero
-        )
+        let now     = RuntimeInstant(wall: fixture.wall, monotonic: .zero)
+
         var dispatcher = ActionDispatcher()
         for _ in 0..<4 {
             _ = try dispatcher.submit(
@@ -72,8 +69,10 @@ struct ActionDispatcherTests {
                 at     : now
             )
         }
-        let bytes = dispatcher.retainedBytes
+
+        let bytes    = dispatcher.retainedBytes
         let rejected = try fixture.request()
+
         #expect(throws: (any Error).self) {
             try dispatcher.submit(
                 rejected,
@@ -84,7 +83,9 @@ struct ActionDispatcherTests {
         #expect(dispatcher.historyCount == 4)
         #expect(dispatcher.bindingCount == 4)
         #expect(dispatcher.retainedBytes == bytes)
+
         var tiny = ActionDispatcher(maximumRetainedBytes: 80_000)
+
         #expect(throws: (any Error).self) {
             try tiny.submit(
                 rejected,
@@ -100,33 +101,35 @@ struct ActionDispatcherTests {
     @Test
     func secondIntentRevalidatesRevisionAndTicketsAreOneUse() throws {
         let fixture = try ActionFixture()
-        let now = RuntimeInstant(
-            wall     : fixture.wall,
-            monotonic: .zero
-        )
+        let now     = RuntimeInstant(wall: fixture.wall, monotonic: .zero)
+
         var dispatcher = ActionDispatcher()
-        let first = try fixture.request()
-        let second = try fixture.request()
-        _ = try dispatcher.submit(
+        let first      = try fixture.request()
+        let second     = try fixture.request()
+        _              = try dispatcher.submit(
             first,
             context: fixture.context(),
             at     : now
         )
+
         _ = try dispatcher.submit(
             second,
             context: fixture.context(),
             at     : now
         )
-        let ticketValue = dispatcher.takeReady(at: .zero)
-        let ticket = try #require(ticketValue)
-        let generation = ConnectionGeneration()
+
+        let ticketValue   = dispatcher.takeReady(at: .zero)
+        let ticket        = try #require(ticketValue)
+        let generation    = ConnectionGeneration()
         let deliveryValue = try dispatcher.consume(
             ticket,
             context   : fixture.context(),
             generation: generation,
             at        : now
         )
+
         let delivery = try #require(deliveryValue)
+
         #expect(try dispatcher.consume(
             ticket,
             context   : fixture.context(),
@@ -141,25 +144,30 @@ struct ActionDispatcherTests {
             outcome   : .completed(payload: Data([1])),
             at        : .seconds(1)
         ))
+
         let queuedValue = dispatcher.takeReady(at: .seconds(1))
-        let queued = try #require(queuedValue)
+        let queued      = try #require(queuedValue)
+
         #expect(throws: ActionAuthorizer.Failure.staleRevision) {
             try dispatcher.consume(
                 queued,
                 context   : fixture.context(revision: 2),
                 generation: generation,
-                at        : RuntimeInstant(
-                    wall      : fixture.wall,
-                    monotonic : .seconds(1)
-                )
+                at        : RuntimeInstant(wall: fixture.wall, monotonic: .seconds(1))
             )
         }
+
         let state = try dispatcher.submit(
             second,
             context: fixture.context(revision: 2),
             at     : now
         )
-        guard case .duplicate(.finished(.rejected)) = state else { Issue.record("Stale intent needs rejection"); return }
+
+        guard case .duplicate(.finished(.rejected)) = state else {
+            Issue.record("Stale intent needs rejection")
+            return
+        }
+
         #expect(dispatcher.runningCount == 0)
         #expect(dispatcher.jobCount == 0)
     }
@@ -167,18 +175,18 @@ struct ActionDispatcherTests {
     @Test
     func disableRevokesReservedTicketsAndKeepsSentSlotsUntilActualExit() throws {
         let fixture = try ActionFixture()
-        let now = RuntimeInstant(
-            wall     : fixture.wall,
-            monotonic: .zero
-        )
+        let now     = RuntimeInstant(wall: fixture.wall, monotonic: .zero)
+
         var dispatcher = ActionDispatcher()
-        _ = try dispatcher.submit(
+        _              = try dispatcher.submit(
             fixture.request(),
             context: fixture.context(),
             at     : now
         )
+
         let ticketValue = dispatcher.takeReady(at: .zero)
-        let ticket = try #require(ticketValue)
+        let ticket      = try #require(ticketValue)
+
         #expect(dispatcher.disable(owner: fixture.owner).isEmpty)
         #expect(try dispatcher.consume(
             ticket,
@@ -187,27 +195,31 @@ struct ActionDispatcherTests {
             at        : now
         ) == nil)
         #expect(dispatcher.runningCount == 0)
+
         let request = try fixture.request()
-        _ = try dispatcher.submit(
+        _           = try dispatcher.submit(
             request,
             context: fixture.context(),
             at     : now
         )
-        let nextValue = dispatcher.takeReady(at: .zero)
-        let next = try #require(nextValue)
-        let generation = ConnectionGeneration()
+
+        let nextValue     = dispatcher.takeReady(at: .zero)
+        let next          = try #require(nextValue)
+        let generation    = ConnectionGeneration()
         let deliveryValue = try dispatcher.consume(
             next,
             context   : fixture.context(),
             generation: generation,
             at        : now
         )
+
         let delivery = try #require(deliveryValue)
-        _ = try dispatcher.submit(
+        _            = try dispatcher.submit(
             fixture.request(),
             context: fixture.context(),
             at     : now
         )
+
         #expect(dispatcher.disable(owner: fixture.owner) == [delivery])
         #expect(dispatcher.runningCount == 1)
         #expect(try !dispatcher.complete(
@@ -243,21 +255,20 @@ struct ActionDispatcherTests {
 
     @Test
     func timeoutUsesMonotonicDeadlineAndHistoryExpiresWithoutFreeingRealWork() throws {
-        let fixture = try ActionFixture()
-        let request = try fixture.request()
+        let fixture    = try ActionFixture()
+        let request    = try fixture.request()
         var dispatcher = ActionDispatcher()
-        _ = try dispatcher.submit(
+        _              = try dispatcher.submit(
             request,
             context: fixture.context(),
-            at     : RuntimeInstant(
-                wall     : fixture.wall,
-                monotonic: .seconds(100)
-            )
+            at     : RuntimeInstant(wall: fixture.wall, monotonic: .seconds(100))
         )
+
         #expect(dispatcher.nextDeadline == .seconds(120))
-        let ticketValue = dispatcher.takeReady(at: .seconds(101))
-        let ticket = try #require(ticketValue)
-        let generation = ConnectionGeneration()
+
+        let ticketValue   = dispatcher.takeReady(at: .seconds(101))
+        let ticket        = try #require(ticketValue)
+        let generation    = ConnectionGeneration()
         let deliveryValue = try dispatcher.consume(
             ticket,
             context   : fixture.context(),
@@ -267,7 +278,9 @@ struct ActionDispatcherTests {
                 monotonic: .seconds(101)
             )
         )
+
         let delivery = try #require(deliveryValue)
+
         #expect(dispatcher.expire(at: .seconds(120)) == [delivery])
         #expect(dispatcher.nextDeadline == .seconds(700))
         #expect(dispatcher.runningCount == 1)
@@ -278,6 +291,7 @@ struct ActionDispatcherTests {
             outcome   : .completed(payload: Data()),
             at        : .seconds(121)
         ))
+
         _ = dispatcher.expire(at: .seconds(700))
         #expect(dispatcher.historyCount == 0)
         #expect(dispatcher.bindingCount == 1)
@@ -286,10 +300,7 @@ struct ActionDispatcherTests {
             try dispatcher.submit(
                 request,
                 context: fixture.context(),
-                at     : RuntimeInstant(
-                    wall     : fixture.wall,
-                    monotonic: .seconds(700)
-                )
+                at     : RuntimeInstant(wall: fixture.wall, monotonic: .seconds(700))
             )
         }
         #expect(try dispatcher.observeExit(
@@ -299,14 +310,13 @@ struct ActionDispatcherTests {
         ))
         #expect(dispatcher.bindingCount == 0)
         #expect(dispatcher.retainedBytes == 0)
+
         _ = try dispatcher.submit(
             request,
             context: fixture.context(),
-            at     : RuntimeInstant(
-                wall     : fixture.wall,
-                monotonic: .seconds(701)
-            )
+            at     : RuntimeInstant(wall: fixture.wall, monotonic: .seconds(701))
         )
+
         #expect(try !dispatcher.observeExit(
             delivery,
             owner     : fixture.owner,
@@ -320,60 +330,61 @@ struct ActionDispatcherTests {
         var dispatcher = ActionDispatcher()
         for name in ["com.example.one", "com.example.two", "com.example.three"] {
             let fixture = try ActionFixture(ownerName: name)
-            _ = try dispatcher.submit(
+            _           = try dispatcher.submit(
                 fixture.request(),
                 context: fixture.context(),
-                at     : RuntimeInstant(
-                    wall     : fixture.wall,
-                    monotonic: .zero
-                )
+                at     : RuntimeInstant(wall: fixture.wall, monotonic: .zero)
             )
         }
+
         #expect(dispatcher.takeReady(at: .zero) != nil)
         #expect(dispatcher.takeReady(at: .zero) != nil)
         #expect(dispatcher.takeReady(at: .zero) == nil)
+
         _ = dispatcher.stop()
         #expect(dispatcher.runningCount == 0)
         #expect(dispatcher.jobCount == 0)
+
         let fixture = try ActionFixture()
+
         #expect(throws: (any Error).self) {
             try dispatcher.submit(
                 fixture.request(),
                 context: fixture.context(),
-                at     : RuntimeInstant(
-                    wall     : fixture.wall,
-                    monotonic: .zero
-                )
+                at     : RuntimeInstant(wall: fixture.wall, monotonic: .zero)
             )
         }
+
         _ = dispatcher.expire(at: .seconds(600))
         #expect(dispatcher.bindingCount == 0)
         #expect(dispatcher.retainedBytes == 0)
     }
+
     @Test
     func disconnectAfterAcknowledgementKeepsUnknownOutcomeAndSlotUntilExit() throws {
         let fixture = try ActionFixture()
         let request = try fixture.request()
-        let now = RuntimeInstant(
-            wall     : fixture.wall,
-            monotonic: .zero
-        )
+        let now     = RuntimeInstant(wall: fixture.wall, monotonic: .zero)
+
         let generation = ConnectionGeneration()
         var dispatcher = ActionDispatcher()
-        _ = try dispatcher.submit(
+        _              = try dispatcher.submit(
             request,
             context: fixture.context(),
             at     : now
         )
-        let ticketValue = dispatcher.takeReady(at: .zero)
-        let ticket = try #require(ticketValue)
+
+        let ticketValue   = dispatcher.takeReady(at: .zero)
+        let ticket        = try #require(ticketValue)
         let deliveryValue = try dispatcher.consume(
             ticket,
             context   : fixture.context(),
             generation: generation,
             at        : now
         )
+
         let delivery = try #require(deliveryValue)
+
         #expect(dispatcher.acknowledge(
             delivery,
             owner     : fixture.owner,
@@ -426,21 +437,21 @@ struct ActionDispatcherTests {
     @Test
     func finalDeliveryChecksCurrentPermissionAndUnsentDeadline() throws {
         let fixture = try ActionFixture()
-        let now = RuntimeInstant(
-            wall     : fixture.wall,
-            monotonic: .zero
-        )
+        let now     = RuntimeInstant(wall: fixture.wall, monotonic: .zero)
+
         for expired in [false, true] {
-            let request = try fixture.request()
+            let request    = try fixture.request()
             var dispatcher = ActionDispatcher()
-            _ = try dispatcher.submit(
+            _              = try dispatcher.submit(
                 request,
                 context: fixture.context(),
                 at     : now
             )
-            let value = dispatcher.takeReady(at: .zero)
-            let ticket = try #require(value)
+
+            let value   = dispatcher.takeReady(at: .zero)
+            let ticket  = try #require(value)
             let context = try fixture.context(eligibility: expired ? .available : .privacyRedacted)
+
             #expect(throws: (any Error).self) {
                 try dispatcher.consume(
                     ticket,
@@ -452,14 +463,19 @@ struct ActionDispatcherTests {
                     )
                 )
             }
+
             guard case .duplicate(.finished(.rejected)) = try dispatcher.submit(
                 request,
                 context: fixture.context(),
                 at     : now
-            )
-            else { Issue.record("Unsent work must be rejected"); continue }
+            ) else {
+                Issue.record("Unsent work must be rejected")
+                continue
+            }
+
             #expect(dispatcher.runningCount == 0)
             #expect(dispatcher.jobCount == 0)
+
             _ = dispatcher.expire(at: .seconds(600))
             #expect(dispatcher.retainedBytes == 0)
         }
@@ -469,27 +485,28 @@ struct ActionDispatcherTests {
     func completedOutcomeRetainsBindingAndMaximumResultWithinSharedBudget() throws {
         let fixture = try ActionFixture()
         let request = try fixture.request()
-        let now = RuntimeInstant(
-            wall     : fixture.wall,
-            monotonic: .zero
-        )
+        let now     = RuntimeInstant(wall: fixture.wall, monotonic: .zero)
+
         let generation = ConnectionGeneration()
         var dispatcher = ActionDispatcher(maximumRetainedBytes: 100_000)
-        _ = try dispatcher.submit(
+        _              = try dispatcher.submit(
             request,
             context: fixture.context(),
             at     : now
         )
-        let value = dispatcher.takeReady(at: .zero)
+
+        let value  = dispatcher.takeReady(at: .zero)
         let ticket = try #require(value)
-        let sent = try dispatcher.consume(
+        let sent   = try dispatcher.consume(
             ticket,
             context   : fixture.context(),
             generation: generation,
             at        : now
         )
+
         let delivery = try #require(sent)
-        let foreign = try ActionFixture(ownerName: "com.example.foreign")
+        let foreign  = try ActionFixture(ownerName: "com.example.foreign")
+
         #expect(try !dispatcher.complete(
             delivery,
             owner     : foreign.owner,
@@ -536,8 +553,10 @@ struct ActionDispatcherTests {
                 at     : now
             )
         }
+
         _ = dispatcher.expire(at: .seconds(599))
         #expect(dispatcher.bindingCount == 1)
+
         _ = dispatcher.expire(at: .seconds(600))
         #expect(dispatcher.bindingCount == 0)
         #expect(dispatcher.retainedBytes == 0)
@@ -547,11 +566,9 @@ struct ActionDispatcherTests {
     func completedResultRecoverySurvivesPublicationRemovalWithoutRenewingHistory() throws {
         let fixture = try ActionFixture()
         let request = try fixture.request()
-        let live = try fixture.context()
-        let now = RuntimeInstant(
-            wall     : fixture.wall,
-            monotonic: .zero
-        )
+        let live    = try fixture.context()
+        let now     = RuntimeInstant(wall: fixture.wall, monotonic: .zero)
+
         let generation = ConnectionGeneration()
 
         func withoutPublication(_ context: ActionAuthorizer.Context) -> ActionAuthorizer.Context {
@@ -565,20 +582,23 @@ struct ActionDispatcherTests {
         }
 
         var dispatcher = ActionDispatcher()
-        _ = try dispatcher.submit(
+        _              = try dispatcher.submit(
             request,
             context: live,
             at     : now
         )
-        let ticketValue = dispatcher.takeReady(at: .zero)
-        let ticket = try #require(ticketValue)
+
+        let ticketValue   = dispatcher.takeReady(at: .zero)
+        let ticket        = try #require(ticketValue)
         let deliveryValue = try dispatcher.consume(
             ticket,
             context   : live,
             generation: generation,
             at        : now
         )
+
         let delivery = try #require(deliveryValue)
+
         #expect(try dispatcher.complete(
             delivery,
             owner     : fixture.owner,
@@ -586,10 +606,13 @@ struct ActionDispatcherTests {
             outcome   : .completed(payload: Data([42])),
             at        : .seconds(1)
         ))
+
         let retainedBytes = dispatcher.retainedBytes
+
         #expect(dispatcher.nextDeadline == .seconds(600))
 
         let recovery = withoutPublication(live)
+
         #expect(try dispatcher.submit(
             request,
             context: recovery,
@@ -623,12 +646,10 @@ struct ActionDispatcherTests {
                 )
             }
         }
+
         #expect(throws: AddonFailure.self) {
             try dispatcher.submit(
-                fixture.request(
-                    id   : request.requestID,
-                    input: Data([9])
-                ),
+                fixture.request(id: request.requestID, input: Data([9])),
                 context: recovery,
                 at     : now
             )
@@ -642,6 +663,7 @@ struct ActionDispatcherTests {
                 monotonic: .seconds(599)
             )
         ) == .duplicate(.finished(.completed(payload: Data([42])))))
+
         _ = dispatcher.expire(at: .seconds(600))
         #expect(dispatcher.historyCount == 0)
         #expect(dispatcher.bindingCount == 0)
@@ -659,6 +681,7 @@ struct ActionDispatcherTests {
         // No stored result exists in this coordinator: nil publication cannot
         // admit a new effect, nor authorize final delivery of an earlier intent.
         var fresh = ActionDispatcher()
+
         #expect(throws: ActionAuthorizer.Failure.identityMismatch) {
             try fresh.submit(
                 request,
@@ -668,13 +691,16 @@ struct ActionDispatcherTests {
         }
         #expect(fresh.historyCount == 0)
         #expect(fresh.retainedBytes == 0)
+
         _ = try fresh.submit(
             request,
             context: live,
             at     : now
         )
+
         let reservedValue = fresh.takeReady(at: .zero)
-        let reserved = try #require(reservedValue)
+        let reserved      = try #require(reservedValue)
+
         #expect(throws: ActionAuthorizer.Failure.identityMismatch) {
             try fresh.consume(
                 reserved,
@@ -686,5 +712,4 @@ struct ActionDispatcherTests {
         #expect(fresh.jobCount == 0)
         #expect(fresh.runningCount == 0)
     }
-
 }

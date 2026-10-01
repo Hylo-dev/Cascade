@@ -28,14 +28,17 @@ import Testing
 /// Its hold and fault points exist only so the tests can drive a physically in-flight exchange
 /// deterministically, without sleeps or polling.
 final class RuntimeAssetChannelBridge: AddonAssetMessageChannel, @unchecked Sendable {
+
     /// ExchangeHoldPoint names the one deterministic suspension a test can arm.
     enum ExchangeHoldPoint: Sendable {
+
         case beforeReceive
         case afterHandoff
     }
 
     /// Fault injects one bounded physical reply fault after the host has handed off its reply.
     enum Fault: Sendable {
+
         case mismatchedReceipt
         case transportError
     }
@@ -43,17 +46,17 @@ final class RuntimeAssetChannelBridge: AddonAssetMessageChannel, @unchecked Send
     let generation: ConnectionGeneration
     let profile   : AssetTransferFrameProfile?
 
-    private let runtime      : AddonRuntime
-    private let adapter      : RecordingRuntimeAdapter
-    private let connection   : RuntimeConnection
+    private let runtime     : AddonRuntime
+    private let adapter     : RecordingRuntimeAdapter
+    private let connection  : RuntimeConnection
     private let stateLock    = NSLock()
     private let exchangeGate = BridgeExchangeGate()
-    private var lastSequence : UInt64 = 0
-    private var inFlight     : Task<Data, any Error>?
-    private var closeTask    : Task<Void, Never>?
+    private var lastSequence: UInt64 = 0
+    private var inFlight    : Task<Data, any Error>?
+    private var closeTask   : Task<Void, Never>?
     private var isRevoked    = false
-    private var holdPoint    : ExchangeHoldPoint?
-    private var armedFault   : Fault?
+    private var holdPoint   : ExchangeHoldPoint?
+    private var armedFault  : Fault?
 
     private var drainedInFlightExchange = false
 
@@ -62,11 +65,11 @@ final class RuntimeAssetChannelBridge: AddonAssetMessageChannel, @unchecked Send
         adapter   : RecordingRuntimeAdapter,
         connection: RuntimeConnection
     ) {
-        self.runtime = runtime
-        self.adapter = adapter
+        self.runtime    = runtime
+        self.adapter    = adapter
         self.connection = connection
         self.generation = connection.publicationConnection.generation
-        self.profile = connection.publicationConnection.negotiatedProtocol.assetFrameProfile
+        self.profile    = connection.publicationConnection.negotiatedProtocol.assetFrameProfile
     }
 
     // MARK: Test-only deterministic points
@@ -92,7 +95,10 @@ final class RuntimeAssetChannelBridge: AddonAssetMessageChannel, @unchecked Send
 
     // MARK: AddonAssetMessageChannel
 
-    func exchange(_ frame: Data, sequence: UInt64) async throws -> Data {
+    func exchange(
+        _ frame : Data,
+        sequence: UInt64
+    ) async throws -> Data {
         let work = try claimExchangeSlot(frame, sequence: sequence)
         let reply: Data
         do {
@@ -101,7 +107,9 @@ final class RuntimeAssetChannelBridge: AddonAssetMessageChannel, @unchecked Send
             releaseExchangeSlot()
             throw error
         }
+
         releaseExchangeSlot()
+
         return reply
     }
 
@@ -111,8 +119,10 @@ final class RuntimeAssetChannelBridge: AddonAssetMessageChannel, @unchecked Send
             isRevoked = true
             let created = Task { await self.performClose() }
             closeTask = created
+
             return created
         }
+
         await work.value
     }
 
@@ -120,8 +130,8 @@ final class RuntimeAssetChannelBridge: AddonAssetMessageChannel, @unchecked Send
 
     /// claimExchangeSlot takes the single bounded slot synchronously before any await.
     private func claimExchangeSlot(
-        _ frame   : Data,
-        sequence  : UInt64
+        _ frame : Data,
+        sequence: UInt64
     ) throws -> Task<Data, any Error> {
         try stateLock.withLock {
             guard !isRevoked else {
@@ -130,27 +140,32 @@ final class RuntimeAssetChannelBridge: AddonAssetMessageChannel, @unchecked Send
                     reason: "The bridge connection is revoked."
                 )
             }
+
             guard inFlight == nil else {
                 throw AddonFailure(
                     code  : .resourceDenied,
                     reason: "The bridge carries one physical exchange at a time."
                 )
             }
+
             guard sequence > lastSequence else {
                 throw AddonFailure(
                     code  : .invalidPayload,
                     reason: "The bridge requires a strictly increasing physical sequence."
                 )
             }
+
             guard frame.count > 0, frame.count <= AssetTransferFrameCodec.maximumEncodedBytes else {
                 throw AddonFailure(
                     code  : .invalidPayload,
                     reason: "The bridge refuses an out-of-bound encoded frame."
                 )
             }
+
             lastSequence = sequence
             let created = Task { try await self.performExchange(frame, sequence: sequence) }
             inFlight = created
+
             return created
         }
     }
@@ -161,8 +176,8 @@ final class RuntimeAssetChannelBridge: AddonAssetMessageChannel, @unchecked Send
 
     /// performExchange stages, sends, correlates and consumes exactly one real host reply.
     private func performExchange(
-        _ frame   : Data,
-        sequence  : UInt64
+        _ frame : Data,
+        sequence: UInt64
     ) async throws -> Data {
         let holdPoint = stateLock.withLock { self.holdPoint }
         guard
@@ -177,49 +192,42 @@ final class RuntimeAssetChannelBridge: AddonAssetMessageChannel, @unchecked Send
                 reason: "The bridge could not stage the bounded asset frame."
             )
         }
+
         var ingressTaken = false
         defer {
             if !ingressTaken {
-                adapter.rejectAssetIngress(
-                    handle,
-                    incarnation: connection.incarnation
-                )
+                adapter.rejectAssetIngress(handle, incarnation: connection.incarnation)
             }
         }
+
         if holdPoint == .beforeReceive {
             await exchangeGate.arrivalPoint()
             try checkRevoked()
         }
-        let result = await runtime.receiveAssetRequest(
-            handle,
-            connection: connection
-        )
+
+        let result = await runtime.receiveAssetRequest(handle, connection: connection)
         // The runtime always disposes its ingress claim before this call returns.
         ingressTaken = true
         switch result {
-        case .refused(let code):
-            throw AddonFailure(
-                code  : code,
-                reason: "The host refused the asset frame."
-            )
-        case .completed(_, let disposition):
-            guard disposition == .handedOff else {
-                throw AddonFailure(
-                    code  : .resourceDenied,
-                    reason: "The host did not hand off an asset reply."
-                )
-            }
+            case .refused(let code):
+                throw AddonFailure(code: code, reason: "The host refused the asset frame.")
+
+            case .completed(_, let disposition):
+                guard disposition == .handedOff else {
+                    throw AddonFailure(
+                        code  : .resourceDenied,
+                        reason: "The host did not hand off an asset reply."
+                    )
+                }
         }
-        guard
-            case .assetResponse(let delivery)? = adapter.currentDelivery(
-                incarnation: connection.incarnation
-            )
-        else {
+
+        guard case .assetResponse(let delivery)? = adapter.currentDelivery(incarnation: connection.incarnation) else {
             throw AddonFailure(
                 code  : .dependencyUnavailable,
                 reason: "The bridge did not observe an asset reply."
             )
         }
+
         var receiptConsumed = false
         defer {
             if !receiptConsumed {
@@ -228,10 +236,12 @@ final class RuntimeAssetChannelBridge: AddonAssetMessageChannel, @unchecked Send
                 adapter.deliveryWasReceived(incarnation: connection.incarnation)
             }
         }
+
         if holdPoint == .afterHandoff {
             await exchangeGate.arrivalPoint()
             try checkRevoked()
         }
+
         let receipt = try correlatedReceipt(delivery: delivery, sequence: sequence)
         guard await runtime.receiveAssetReceipt(
             receipt,
@@ -243,7 +253,9 @@ final class RuntimeAssetChannelBridge: AddonAssetMessageChannel, @unchecked Send
                 reason: "The bridge could not consume the exact asset receipt."
             )
         }
+
         receiptConsumed = true
+
         return delivery.payload
     }
 
@@ -256,32 +268,36 @@ final class RuntimeAssetChannelBridge: AddonAssetMessageChannel, @unchecked Send
         let fault = stateLock.withLock { () -> Fault? in
             let armed = armedFault
             armedFault = nil
+
             return armed
         }
+
         let receipt: RuntimeAssetReceipt
         switch fault {
-        case .mismatchedReceipt:
-            receipt = RuntimeAssetReceipt(
-                token          : delivery.receipt.token,
-                incarnation    : delivery.receipt.incarnation,
-                connectionToken: delivery.receipt.connectionToken,
-                sequence       : delivery.receipt.sequence &+ 1,
-                requestID      : delivery.receipt.requestID,
-                operation      : delivery.receipt.operation
-            )
-        case .transportError:
-            refuseReuseAfterFault()
-            throw AddonFailure(
-                code  : .dependencyUnavailable,
-                reason: "The bridge observed a physical transport error after handoff."
-            )
-        case .none:
-            receipt = delivery.receipt
+            case .mismatchedReceipt:
+                receipt = RuntimeAssetReceipt(
+                    token          : delivery.receipt.token,
+                    incarnation    : delivery.receipt.incarnation,
+                    connectionToken: delivery.receipt.connectionToken,
+                    sequence       : delivery.receipt.sequence &+ 1,
+                    requestID      : delivery.receipt.requestID,
+                    operation      : delivery.receipt.operation
+                )
+
+            case .transportError:
+                refuseReuseAfterFault()
+                throw AddonFailure(
+                    code  : .dependencyUnavailable,
+                    reason: "The bridge observed a physical transport error after handoff."
+                )
+
+            case .none:
+                receipt = delivery.receipt
         }
-        guard
-            receipt.incarnation == connection.incarnation,
-            receipt.connectionToken == connection.token,
-            receipt.sequence == sequence
+
+        guard receipt.incarnation == connection.incarnation,
+              receipt.connectionToken == connection.token,
+              receipt.sequence == sequence
         else {
             refuseReuseAfterFault()
             throw AddonFailure(
@@ -289,16 +305,14 @@ final class RuntimeAssetChannelBridge: AddonAssetMessageChannel, @unchecked Send
                 reason: "The bridge observed a mismatched physical reply receipt."
             )
         }
+
         return receipt
     }
 
     /// checkRevoked revalidates the scalar closure after any suspension before send or consume.
     private func checkRevoked() throws {
         guard !stateLock.withLock({ isRevoked }) else {
-            throw AddonFailure(
-                code  : .sessionRevoked,
-                reason: "The bridge connection is revoked."
-            )
+            throw AddonFailure(code: .sessionRevoked, reason: "The bridge connection is revoked.")
         }
     }
 
@@ -317,6 +331,7 @@ final class RuntimeAssetChannelBridge: AddonAssetMessageChannel, @unchecked Send
         await runtime.closeConnection(connection)
         await exchangeGate.release()
         guard let inFlightWork = stateLock.withLock({ inFlight }) else { return }
+
         _ = try? await inFlightWork.value
         stateLock.withLock { drainedInFlightExchange = true }
     }

@@ -12,33 +12,33 @@ import Testing
 
 /// FacadeReductionRefusal injects one failed refund while every successful operation uses the real governor.
 actor FacadeReductionRefusal: RuntimeResourceAccess {
+
     nonisolated let resourceGovernorTarget: ResourceGovernor
-    private let gate: GatedRuntimeResourceAccess
+
+    private let gate            : GatedRuntimeResourceAccess
     private var refusesReduction = false
 
     init(gate: GatedRuntimeResourceAccess) {
-        self.gate = gate
+        self.gate              = gate
         resourceGovernorTarget = gate.resourceGovernorTarget
     }
+
     func refuseNextReduction() { refusesReduction = true }
+
     func admit(
         _ request: ResourceRequest,
         owner    : AddonID
     ) async throws -> ResourceReservation {
-        try await gate.admit(
-            request,
-            owner: owner
-        )
+        try await gate.admit(request, owner: owner)
     }
+
     func release(
         _ reservationID: UUID,
         owner          : AddonID
     ) async throws {
-        try await gate.release(
-            reservationID,
-            owner: owner
-        )
+        try await gate.release(reservationID, owner: owner)
     }
+
     /// reduceStateReservation may refuse one refund; accepted refunds always reach the real governor.
     func reduceStateReservation(
         _ reservationID: UUID,
@@ -49,12 +49,14 @@ actor FacadeReductionRefusal: RuntimeResourceAccess {
             refusesReduction = false
             return false
         }
+
         return await gate.reduceStateReservation(
             reservationID,
             owner  : owner,
             toBytes: toBytes
         )
     }
+
     func resizeStateReservation(
         _ reservationID: UUID,
         owner          : AddonID,
@@ -68,6 +70,7 @@ actor FacadeReductionRefusal: RuntimeResourceAccess {
             toBytes  : toBytes
         )
     }
+
     func resizeDiskReservation(
         _ reservationID: UUID,
         owner          : AddonID,

@@ -9,33 +9,35 @@ import Testing
 @testable import CascadeRuntime
 
 struct MemoryHarness {
-    let runtime: AddonRuntime
-    let governor: ResourceGovernor
-    let adapter: RecordingRuntimeAdapter
-    let clock: MutableRuntimeClock
-    let owner: AddonID
+
+    let runtime      : AddonRuntime
+    let governor     : ResourceGovernor
+    let adapter      : RecordingRuntimeAdapter
+    let clock        : MutableRuntimeClock
+    let owner        : AddonID
     let publicationID: PublicationID
-    let connection: RuntimeConnection
-    let incarnation: RuntimeIncarnation
-    let binding: ProcessMetricBinding
-    let version: AddonVersionIdentity
-    private let wall: Date
+    let connection   : RuntimeConnection
+    let incarnation  : RuntimeIncarnation
+    let binding      : ProcessMetricBinding
+    let version      : AddonVersionIdentity
+
+    private let wall        : Date
     private let presentation: PresentationSet
 
     init(
-        userTicks : [UInt64?]? = nil,
+        userTicks  : [UInt64?]? = nil,
         systemTicks: [UInt64?]? = nil,
-        footprints: [UInt64?]
+        footprints : [UInt64?]
     ) async throws {
-        let fixture = try ActionFixture()
+        let fixture   = try ActionFixture()
         let installed = try fixture.context().installed
-        owner = fixture.owner
-        wall = fixture.wall
+        owner        = fixture.owner
+        wall         = fixture.wall
         presentation = try fixture.presentation()
-        governor = ResourceGovernor()
-        adapter = RecordingRuntimeAdapter()
-        clock = MutableRuntimeClock(instant: Self.instant(fixture.wall, 0))
-        binding = ProcessMetricBinding(
+        governor     = ResourceGovernor()
+        adapter      = RecordingRuntimeAdapter()
+        clock        = MutableRuntimeClock(instant: Self.instant(fixture.wall, 0))
+        binding      = ProcessMetricBinding(
             pid               : 42,
             birthAbsoluteTicks: 100,
             executableUUID    : UUID(),
@@ -79,11 +81,11 @@ struct MemoryHarness {
         )
         incarnation = connection.incarnation
         _ = try await receivePublicationOutput(
-            runtime   : runtime,
-            adapter   : adapter,
-            output    : ProviderOutput(
+            runtime: runtime,
+            adapter: adapter,
+            output : ProviderOutput(
                 schemaVersion: 1,
-                publications: [try Publication(
+                publications : [try Publication(
                     id         : publicationID,
                     revision   : 1,
                     kind       : .widget,
@@ -99,10 +101,7 @@ struct MemoryHarness {
             connection: connection,
             sequence  : 1
         )
-        _ = try await runtime.registerProcessMetrics(
-            incarnation: incarnation,
-            binding    : binding
-        )
+        _ = try await runtime.registerProcessMetrics(incarnation: incarnation, binding: binding)
         version = try AddonVersionIdentity(
             verifiedIdentity: installed.verifiedIdentity,
             version         : try #require(SemanticVersion(installed.manifest.version))
@@ -156,13 +155,16 @@ struct MemoryHarness {
         )
     }
 
-    func publish(on connection: RuntimeConnection, revision: UInt64) async throws {
+    func publish(
+        on connection: RuntimeConnection,
+        revision     : UInt64
+    ) async throws {
         _ = try await receivePublicationOutput(
-            runtime   : runtime,
-            adapter   : adapter,
-            output    : ProviderOutput(
+            runtime: runtime,
+            adapter: adapter,
+            output : ProviderOutput(
                 schemaVersion: 1,
-                publications: [try Publication(
+                publications : [try Publication(
                     id         : publicationID,
                     revision   : revision,
                     kind       : .widget,
@@ -180,17 +182,16 @@ struct MemoryHarness {
         )
     }
 
-    func firstObservation(
-        _ result: AddonRuntime.ResourceSampleResult
-    ) -> AddonRuntime.ResourceOwnerObservation? {
+    func firstObservation(_ result: AddonRuntime.ResourceSampleResult) -> AddonRuntime.ResourceOwnerObservation? {
         guard case .sampled(let observations) = result else { return nil }
+
         return observations.first
     }
 
-    private static func instant(_ wall: Date, _ second: Int) -> RuntimeInstant {
-        RuntimeInstant(
-            wall     : wall.addingTimeInterval(Double(second)),
-            monotonic: .seconds(second)
-        )
+    private static func instant(
+        _ wall  : Date,
+        _ second: Int
+    ) -> RuntimeInstant {
+        RuntimeInstant(wall: wall.addingTimeInterval(Double(second)), monotonic: .seconds(second))
     }
 }

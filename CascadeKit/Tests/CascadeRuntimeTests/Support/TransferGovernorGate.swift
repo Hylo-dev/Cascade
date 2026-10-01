@@ -13,16 +13,19 @@ import Testing
 /// TransferGovernorGate holds a real actor hop on a detached test worker, with no wall sleep.
 /// Every test releases and awaits its worker before inspecting final accounting.
 final class TransferGovernorGate: @unchecked Sendable {
+
     private let condition = NSCondition()
-    private var entered = false
+
+    private var entered  = false
     private var released = false
-    private var arrival: CheckedContinuation<Void, Never>?
+    private var arrival : CheckedContinuation<Void, Never>?
 
     func hold() {
         condition.lock()
         entered = true
         arrival?.resume()
         arrival = nil
+
         while !released { condition.wait() }
         condition.unlock()
     }
@@ -30,8 +33,11 @@ final class TransferGovernorGate: @unchecked Sendable {
     func reached() async {
         await withCheckedContinuation { continuation in
             condition.lock()
-            if entered { continuation.resume() }
-            else { arrival = continuation }
+            if entered {
+                continuation.resume()
+            } else {
+                arrival = continuation
+            }
             condition.unlock()
         }
     }

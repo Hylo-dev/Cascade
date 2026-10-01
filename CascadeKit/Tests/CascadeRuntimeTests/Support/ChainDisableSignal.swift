@@ -10,6 +10,7 @@ import Testing
 @testable import CascadeRuntime
 
 final class ChainDisableSignal: @unchecked Sendable {
+
     private let arrived = DispatchSemaphore(value: 0)
 
     func signal() { arrived.signal() }

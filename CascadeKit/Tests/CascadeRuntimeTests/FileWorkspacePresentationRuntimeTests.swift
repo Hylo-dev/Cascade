@@ -11,13 +11,14 @@ import Testing
 
 @Suite
 struct FileWorkspacePresentationRuntimeTests {
+
     @Test
     func actionAuthorizationUsesThePublishedWorkspaceDescriptor() throws {
-        let fixture = try ActionFixture()
-        let base = try fixture.context()
+        let fixture      = try ActionFixture()
+        let base         = try fixture.context()
         let presentation = try workspace(
             thumbnail: nil,
-            action: ActionDescriptor(
+            action   : ActionDescriptor(
                 id     : "pause",
                 label  : "Pause",
                 payload: Data([7])
@@ -70,17 +71,14 @@ struct FileWorkspacePresentationRuntimeTests {
 
     @Test
     func archiveRemappingRewritesWorkspaceThumbnailsAndPreservesActions() throws {
-        let fixture = try ActionFixture()
+        let fixture    = try ActionFixture()
         let descriptor = try ActionDescriptor(
             id     : "pause",
             label  : "Pause",
             payload: Data([7])
         )
-        let presentation = try workspace(
-            thumbnail: "old-thumbnail",
-            action   : descriptor
-        )
-        let document = try ContentDocument(
+        let presentation = try workspace(thumbnail: "old-thumbnail", action: descriptor)
+        let document     = try ContentDocument(
             schemaVersion     : 3,
             root              : .fileWorkspace(presentation),
             accessibilityLabel: "File shelf",
@@ -114,10 +112,7 @@ struct FileWorkspacePresentationRuntimeTests {
         )
         #expect(remapped.content?.widget?.root.fileWorkspace?.actions.first?.descriptor == descriptor)
         #expect(throws: AddonFailure.self) {
-            try RuntimeArchiveRemapping.publication(
-                publication,
-                aliases: [:]
-            )
+            try RuntimeArchiveRemapping.publication(publication, aliases: [:])
         }
     }
 
@@ -133,8 +128,9 @@ struct FileWorkspacePresentationRuntimeTests {
             ownership       : .externalReference,
             thumbnailAssetID: thumbnail
         )
+
         return try FileWorkspacePresentation(
-            snapshot: FileWorkspaceSnapshot(
+            snapshot        : FileWorkspaceSnapshot(
                 revision  : 1,
                 entries   : [entry],
                 totalCount: 1,
@@ -146,10 +142,7 @@ struct FileWorkspacePresentationRuntimeTests {
             formats         : [],
             selectedFormatID: nil,
             actions         : [
-                FileWorkspaceActionBinding(
-                    role      : .openList,
-                    descriptor: action
-                ),
+                FileWorkspaceActionBinding(role: .openList, descriptor: action),
             ]
         )
     }

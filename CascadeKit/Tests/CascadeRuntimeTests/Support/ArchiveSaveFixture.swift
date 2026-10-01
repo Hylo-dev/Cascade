@@ -13,6 +13,7 @@ import Testing
 
 /// ArchiveSaveFixture composes real runtime, native decoding, governor and SwiftData with fake transport only.
 struct ArchiveSaveFixture: Sendable {
+
     let runtime   : AddonRuntime
     let governor  : ResourceGovernor
     let adapter   : RecordingRuntimeAdapter
@@ -23,7 +24,8 @@ struct ArchiveSaveFixture: Sendable {
     let archive   : SwiftDataArchive
     let root      : URL
     let wall      : Date
-    var owner     : AddonID { installed.manifest.id }
+
+    var owner: AddonID { installed.manifest.id }
 
     static func make(
         partitions: [AssetPrivacyPartition] = [.addonOwned],
@@ -34,29 +36,25 @@ struct ArchiveSaveFixture: Sendable {
         let governor  = ResourceGovernor()
         let adapter   = RecordingRuntimeAdapter()
         let clock     = MutableRuntimeClock(
-            instant: RuntimeInstant(
-                wall     : base.wall,
-                monotonic: .zero
-            )
+            instant: RuntimeInstant(wall: base.wall, monotonic: .zero)
         )
+
         let runtime = try await AddonRuntime.make(
             catalog    : [installed],
             environment: HostEnvironment(
-                osVersion: SemanticVersion(
-                    14,
-                    0,
-                    0
-                ),
+                osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
                 applications    : [:],
                 grants          : [base.owner: []],
                 explicitBindings: []
             ),
-            governor: governor,
-            adapter : adapter,
-            clock   : clock
+            governor   : governor,
+            adapter    : adapter,
+            clock      : clock
         )
+
         var ids: [PublicationID] = []
+
         for (index, partition) in partitions.enumerated() {
             ids.append(
                 try await runtime.assignPublication(
@@ -67,6 +65,7 @@ struct ArchiveSaveFixture: Sendable {
                 )
             )
         }
+
         let launch     = try await runtime.requestLaunch(owner: base.owner)
         let connection = try await runtime.attach(
             launchID: launch,
@@ -77,12 +76,14 @@ struct ArchiveSaveFixture: Sendable {
                 contentSchemas: [1]
             )
         )
+
         let root = URL(fileURLWithPath: "/private/tmp/cascade-runtime-save-\(UUID())")
         try FileManager.default.createDirectory(
             at                         : root,
             withIntermediateDirectories: false,
             attributes                 : [.posixPermissions: 0o700]
         )
+
         let archive = try await SwiftDataArchive.make(
             identity: installed.verifiedIdentity,
             root    : root,
@@ -90,6 +91,7 @@ struct ArchiveSaveFixture: Sendable {
             observer: observer
         )
         _ = try await archive.start()
+
         return Self(
             runtime   : runtime,
             governor  : governor,
@@ -109,7 +111,7 @@ struct ArchiveSaveFixture: Sendable {
         asset: String? = nil
     ) throws -> PresentationSet {
         try PresentationSet(
-            widget: ContentDocument(
+            widget         : ContentDocument(
                 root              : .text(text),
                 privacy           : .publicContent,
                 accessibilityLabel: text,
@@ -144,9 +146,9 @@ struct ArchiveSaveFixture: Sendable {
         ends          : [PublicationID] = []
     ) async throws {
         _ = try await receivePublicationOutput(
-            runtime: runtime,
-            adapter: adapter,
-            output : ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
                 publications : publications,
                 operations   : ends.map { .endPublication($0) },
@@ -162,6 +164,7 @@ struct ArchiveSaveFixture: Sendable {
     func matches(_ check: @Sendable (RuntimeArchiveEnvelope) throws -> Bool) async throws -> Bool {
         try await archive.withGeneration { generation in
             guard let generation else { return false }
+
             return try await governor.withAssetDecodeReservation(
                 bytes: RuntimeArchiveEnvelope.retentionReservationBytes() + generation.payload.count,
                 owner: owner

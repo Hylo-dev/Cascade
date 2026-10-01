@@ -11,9 +11,10 @@ import Testing
 /// CPUHealthReadGate pauses only the second native read with a bounded timeout.
 /// Tests can revoke runtime authority while the coordinator owns a real reduction.
 final class CPUHealthReadGate: @unchecked Sendable {
-    private let lock = NSLock()
-    private let arrived = DispatchSemaphore(value: 0)
-    private let released = DispatchSemaphore(value: 0)
+
+    private let lock      = NSLock()
+    private let arrived   = DispatchSemaphore(value: 0)
+    private let released  = DispatchSemaphore(value: 0)
     private var readCount = 0
 
     func pauseOnSecondRead() {
@@ -21,7 +22,9 @@ final class CPUHealthReadGate: @unchecked Sendable {
             readCount += 1
             return readCount == 2
         }
+
         guard shouldPause else { return }
+
         arrived.signal()
         _ = released.wait(timeout: .now() + 5)
     }

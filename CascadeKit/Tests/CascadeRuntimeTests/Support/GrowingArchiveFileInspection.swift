@@ -12,6 +12,7 @@ import Testing
 
 /// GrowingArchiveFileInspection changes one real file between the two real stat operations.
 struct GrowingArchiveFileInspection: SwiftDataArchiveFileInspecting {
+
     func openFile(
         _ descriptor: Int32,
         name        : String
@@ -21,15 +22,13 @@ struct GrowingArchiveFileInspection: SwiftDataArchiveFileInspecting {
             name,
             O_WRONLY | O_NOFOLLOW | O_CLOEXEC
         )
+
         guard file >= 0 else { throw SwiftDataArchiveFailure.unsafePath }
+
         defer { close(file) }
-        guard ftruncate(
-            file,
-            101
-        ) == 0 else { throw SwiftDataArchiveFailure.unsafePath }
-        return try NativeSwiftDataArchiveFileInspection().openFile(
-            descriptor,
-            name: name
-        )
+
+        guard ftruncate(file, 101) == 0 else { throw SwiftDataArchiveFailure.unsafePath }
+
+        return try NativeSwiftDataArchiveFileInspection().openFile(descriptor, name: name)
     }
 }

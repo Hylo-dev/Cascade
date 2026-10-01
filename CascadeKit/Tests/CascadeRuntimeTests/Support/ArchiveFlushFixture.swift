@@ -6,12 +6,12 @@
 import CascadeContracts
 import Foundation
 import Testing
-
 @testable import CascadeRuntime
 
 /// ArchiveFlushFixture reuses validated ActionFixture contracts and real runtime/governor/storage actors.
 /// Only the existing recording adapter substitutes for provider transport; no native provider launches.
 struct ArchiveFlushFixture: Sendable {
+
     let installed  : [InstalledAddon]
     let governor   : ResourceGovernor
     let adapter    : RecordingRuntimeAdapter
@@ -37,12 +37,8 @@ struct ArchiveFlushFixture: Sendable {
         let installed = try bases.map { try $0.context().installed }
         let wall      = try #require(bases.first).wall
         let adapter   = RecordingRuntimeAdapter()
-        let clock     = MutableRuntimeClock(
-            instant: RuntimeInstant(
-                wall     : wall,
-                monotonic: .zero
-            )
-        )
+        let clock     = MutableRuntimeClock(instant: RuntimeInstant(wall: wall, monotonic: .zero))
+
         let root           = URL(fileURLWithPath: "/private/tmp/cascade-archive-flush-\(UUID())")
         let checkpointRoot = root.appendingPathComponent("checkpoints")
         let keyedRoot      = root.appendingPathComponent("keyed")
@@ -54,20 +50,19 @@ struct ArchiveFlushFixture: Sendable {
                 attributes                 : [.posixPermissions: 0o700]
             )
         }
+
         let coordinator = try await AddonStorageCoordinator.make(
-            checkpointRoot: checkpointRoot,
-            keyedRoot     : keyedRoot,
-            archiveRoot   : archiveRoot,
-            registrations : installed.map {
-                StateRegistration(
-                    identity            : $0.verifiedIdentity,
-                    maximumSchemaVersion: 1
-                )
+            checkpointRoot : checkpointRoot,
+            keyedRoot      : keyedRoot,
+            archiveRoot    : archiveRoot,
+            registrations  : installed.map {
+                StateRegistration(identity: $0.verifiedIdentity, maximumSchemaVersion: 1)
             },
             governor       : governor,
             resourceAccess : storageAccess,
             archiveObserver: observer
         )
+
         try await coordinator.start()
         let runtime = try await makeRuntime(
             installed: installed,
@@ -76,6 +71,7 @@ struct ArchiveFlushFixture: Sendable {
             clock    : clock,
             access   : access
         )
+
         var ids        : [PublicationID] = []
         var connections: [RuntimeConnection] = []
         for addon in installed {
@@ -86,6 +82,7 @@ struct ArchiveFlushFixture: Sendable {
                     instanceID: UUID()
                 )
             )
+
             let launch = try await runtime.requestLaunch(owner: addon.manifest.id)
             connections.append(
                 try await runtime.attach(
@@ -99,6 +96,7 @@ struct ArchiveFlushFixture: Sendable {
                 )
             )
         }
+
         return Self(
             installed  : installed,
             governor   : governor,
@@ -123,13 +121,9 @@ struct ArchiveFlushFixture: Sendable {
         access   : (any RuntimeResourceAccess)? = nil
     ) async throws -> AddonRuntime {
         try await AddonRuntime.make(
-            catalog    : installed,
-            environment: HostEnvironment(
-                osVersion: SemanticVersion(
-                    14,
-                    0,
-                    0
-                ),
+            catalog               : installed,
+            environment           : HostEnvironment(
+                osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
                 applications    : [:],
                 grants          : Dictionary(uniqueKeysWithValues: installed.map { ($0.manifest.id, []) }),
@@ -158,12 +152,8 @@ struct ArchiveFlushFixture: Sendable {
         ownerIndex: Int,
         revision  : UInt64
     ) -> Bool {
-        guard
-            case .committed(
-                let owner,
-                let outcome
-            ) = result
-        else { return false }
+        guard case .committed(let owner, let outcome) = result else { return false }
+
         return owner == owners[ownerIndex] && outcome.revision == revision
     }
 
@@ -187,6 +177,7 @@ struct ArchiveFlushFixture: Sendable {
                 accessibilityLabel: text,
                 assetIDs          : []
             )
+
             return try PresentationSet(
                 widget         : document,
                 compactLeading : document,
@@ -195,17 +186,15 @@ struct ArchiveFlushFixture: Sendable {
                 expanded       : kind == .notice ? nil : document
             )
         }
+
         return try Publication(
-            id      : ids[index],
-            revision: revision,
-            kind    : kind,
-            content : timeline ? nil : presentation("Revision \(revision)"),
-            timeline: timeline
+            id         : ids[index],
+            revision   : revision,
+            kind       : kind,
+            content    : timeline ? nil : presentation("Revision \(revision)"),
+            timeline   : timeline
                 ? [
-                    ScheduledEntry(
-                        date   : wall,
-                        content: presentation("Now")
-                    ),
+                    ScheduledEntry(date: wall, content: presentation("Now")),
                     ScheduledEntry(
                         date   : wall.addingTimeInterval(20),
                         content: presentation("Future")
@@ -224,9 +213,9 @@ struct ArchiveFlushFixture: Sendable {
         sequence    : UInt64
     ) async throws {
         _ = try await receivePublicationOutput(
-            runtime: runtime,
-            adapter: adapter,
-            output : ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
                 publications : publications,
                 operations   : operations,
@@ -243,5 +232,6 @@ struct ArchiveFlushFixture: Sendable {
         await runtime.stop()
         _ = try? await coordinator.close()
     }
+
     func removeFiles() { try? FileManager.default.removeItem(at: root) }
 }

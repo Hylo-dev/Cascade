@@ -12,19 +12,25 @@ import Testing
 
 /// DecoderRasterGate pauses real canonical admission to expose teardown races deterministically.
 actor DecoderRasterGate: AssetReservationAccess {
+
     nonisolated let assetGovernor: ResourceGovernor
+
     private var entered = false
     private var arrival: CheckedContinuation<Void, Never>?
     private var blocked: CheckedContinuation<Void, Never>?
 
     init(governor: ResourceGovernor) { assetGovernor = governor }
 
-    func reserveRaster(bytes: Int, owner: AddonID) async throws -> RetainedAssetToken {
+    func reserveRaster(
+        bytes: Int,
+        owner: AddonID
+    ) async throws -> RetainedAssetToken {
         let token = try await assetGovernor.admitRetainedAsset(bytes: bytes, owner: owner)
-        entered = true
+        entered   = true
         arrival?.resume()
         arrival = nil
         await withCheckedContinuation { blocked = $0 }
+
         return token
     }
 

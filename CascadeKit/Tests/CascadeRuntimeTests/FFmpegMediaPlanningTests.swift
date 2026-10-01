@@ -10,6 +10,7 @@ import Testing
 
 @Suite
 struct FFmpegMediaPlanningTests {
+
     @Test
     func realTracksExcludeCoverArtAndDriveExactPlans() throws {
         let media = try FFmpegMediaPlanning.decodeProbe(
@@ -51,12 +52,13 @@ struct FFmpegMediaPlanningTests {
     @Test
     func coverArtNeverCreatesVideoCapabilityOrOverridesAudioDuration() throws {
         let audioWithCover = try decode(
-            streams: """
+            streams       : """
             {"index": 0, "codec_type": "video", "codec_name": "mjpeg", "duration": "700", "disposition": {"attached_pic": 1}},
             {"index": 1, "codec_type": "audio", "codec_name": "flac", "duration": "12.25"}
             """,
             formatDuration: "900"
         )
+
         #expect(!audioWithCover.hasVideo)
         #expect(audioWithCover.hasAudio)
         #expect(
@@ -113,10 +115,7 @@ struct FFmpegMediaPlanningTests {
         )
         #expect(try FFmpegMediaPlanning.formats(for: [audio, silentVideo]).isEmpty)
 
-        let silentPlan = try FFmpegMediaPlanning.preset(
-            formatID: "mp4",
-            for     : silentVideo
-        )
+        let silentPlan = try FFmpegMediaPlanning.preset(formatID: "mp4", for: silentVideo)
         #expect(silentPlan.outputArguments == [
             "-map", "0:5", "-an",
             "-c:v", "h264_videotoolbox", "-pix_fmt", "nv12",
@@ -174,6 +173,7 @@ struct FFmpegMediaPlanningTests {
             {"index": 0, "codec_type": "audio", "codec_name": "aac"}
             """
         )
+
         #expect(throws: FFmpegMediaPlanning.Failure.invalidSelection) {
             _ = try FFmpegMediaPlanning.formats(for: [])
         }
@@ -185,6 +185,7 @@ struct FFmpegMediaPlanningTests {
         #expect(throws: FFmpegMediaPlanning.Failure.probeLimitExceeded) {
             _ = try FFmpegMediaPlanning.decodeProbe(oversized)
         }
+
         for malformed in [
             Data("[]".utf8),
             Data("{\"streams\": [{\"index\": -1, \"codec_type\": \"audio\", \"codec_name\": \"aac\"}]}".utf8),
@@ -199,9 +200,7 @@ struct FFmpegMediaPlanningTests {
             "{\"index\": \(index), \"codec_type\": \"audio\", \"codec_name\": \"aac\"}"
         }.joined(separator: ",")
         #expect(throws: FFmpegMediaPlanning.Failure.probeLimitExceeded) {
-            _ = try FFmpegMediaPlanning.decodeProbe(
-                Data("{\"streams\":[\(streams)]}".utf8)
-            )
+            _ = try FFmpegMediaPlanning.decodeProbe(Data("{\"streams\":[\(streams)]}".utf8))
         }
     }
 
@@ -220,7 +219,7 @@ struct FFmpegMediaPlanningTests {
         }
 
         let fallback = try decode(
-            streams: """
+            streams       : """
             {"index": 0, "codec_type": "audio", "codec_name": "aac"}
             """,
             formatDuration: "7.5"
@@ -231,7 +230,7 @@ struct FFmpegMediaPlanningTests {
         )
 
         let unrelatedContainer = try decode(
-            streams: """
+            streams       : """
             {"index": 0, "codec_type": "audio", "codec_name": "aac"},
             {"index": 1, "codec_type": "video", "codec_name": "mjpeg", "duration": "80", "disposition": {"attached_pic": 1}}
             """,
@@ -246,12 +245,11 @@ struct FFmpegMediaPlanningTests {
     }
 
     private func decode(
-        streams      : String,
+        streams       : String,
         formatDuration: String? = nil
     ) throws -> FFmpegMediaPlanning.Media {
         let format = formatDuration.map { "\"format\": {\"duration\": \"\($0)\"}," } ?? ""
-        return try FFmpegMediaPlanning.decodeProbe(
-            Data("{\(format)\"streams\":[\(streams)]}".utf8)
-        )
+
+        return try FFmpegMediaPlanning.decodeProbe(Data("{\(format)\"streams\":[\(streams)]}".utf8))
     }
 }

@@ -11,13 +11,16 @@ import Testing
 
 /// ArchiveRasterConstruction preserves native provider ownership while varying image metadata.
 struct ArchiveRasterConstruction: AssetRasterConstruction {
+
     enum Mode: CaseIterable, Sendable {
+
         case alpha
         case colorSpace
         case interpolation
     }
 
     let mode: Mode
+
     private let native = NativeAssetRasterConstruction()
 
     func allocate(bytes: Int) -> UnsafeMutableRawPointer? {
@@ -28,10 +31,7 @@ struct ArchiveRasterConstruction: AssetRasterConstruction {
         _ pointer: UnsafeMutableRawPointer,
         bytes    : Int
     ) {
-        native.deallocate(
-            pointer,
-            bytes: bytes
-        )
+        native.deallocate(pointer, bytes: bytes)
     }
 
     func provider(context: AssetRasterProviderContext) -> CGDataProvider? {
@@ -48,6 +48,7 @@ struct ArchiveRasterConstruction: AssetRasterConstruction {
         colorSpace: CGColorSpace
     ) -> CGImage? {
         let alphaInfo = mode == .alpha ? CGImageAlphaInfo.last : CGImageAlphaInfo.premultipliedLast
+
         return CGImage(
             width            : layout.width,
             height           : layout.height,

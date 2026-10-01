@@ -10,12 +10,13 @@ import Testing
 
 /// ActionFixture uses real validated contracts and a deterministic civil clock.
 struct ActionFixture {
-    let wall = Date(timeIntervalSince1970: 2_000_000_000)
-    let owner: AddonID
+
+    let wall          = Date(timeIntervalSince1970: 2_000_000_000)
+    let owner        : AddonID
     let publicationID: PublicationID
 
     init(ownerName: String = "com.example.actions") throws {
-        owner = try #require(AddonID(rawValue: ownerName))
+        owner         = try #require(AddonID(rawValue: ownerName))
         publicationID = PublicationID(
             addonID   : owner,
             instanceID: UUID(),
@@ -46,15 +47,16 @@ struct ActionFixture {
     ) throws -> PresentationSet {
         func document(_ payload: Data) throws -> ContentDocument {
             try ContentDocument(
-                root               : .column([.row([.action(ActionDescriptor(
+                root: .column([.row([.action(ActionDescriptor(
                     id     : action,
                     label  : "Pause",
                     payload: payload
                 ))])]),
-                privacy            : .publicContent,
-                accessibilityLabel : "Controls"
+                privacy           : .publicContent,
+                accessibilityLabel: "Controls"
             )
         }
+
         return try PresentationSet(
             widget         : document(payload),
             compactLeading : nil,
@@ -86,21 +88,18 @@ struct ActionFixture {
         "bundledLibraries":[],"REQUIRES":[],"PROVIDES":[],"features":[],"permissions":[],
         "resources":{"profile":"eventDriven","requestedMemoryMiB":32,"maximumConcurrentWork":1,"background":"none"}}
         """.utf8)
-        let base = try JSONDecoder().decode(
-            AddonManifest.self,
-            from: data
-        )
+        let base     = try JSONDecoder().decode(AddonManifest.self, from: data)
         let manifest = try AddonManifest(
-            manifestVersion  : 1,
-            id               : owner,
-            version          : base.version,
-            compatibility    : base.compatibility,
-            execution        : base.execution,
-            sourceApp        : nil,
-            bundledLibraries : [],
-            requires         : [],
-            provides         : [],
-            features         : [
+            manifestVersion : 1,
+            id              : owner,
+            version         : base.version,
+            compatibility   : base.compatibility,
+            execution       : base.execution,
+            sourceApp       : nil,
+            bundledLibraries: [],
+            requires        : [],
+            provides        : [],
+            features        : [
                 AddonFeature(
                     id      : "controls",
                     requires: [],
@@ -112,58 +111,44 @@ struct ActionFixture {
                     actions : declarations
                 )
             ],
-            permissions      : [],
-            resources        : base.resources
+            permissions: [],
+            resources  : base.resources
         )
-        let failure = AddonFailure(
-            code  : .permissionDenied,
-            reason: "Denied"
-        )
+        let failure    = AddonFailure(code: .permissionDenied, reason: "Denied")
         let resolution = Resolution(
-            acceptedAddons    : [owner],
-            blockedAddons     : blockedRoot ? [BlockedAddon(
-                addonID: owner,
-                failure: failure
-            )] : [],
-            enabledFeatures   : [
-                ResolvedFeature(
-                    addonID   : owner,
-                    featureID : "controls"
-                ),
-                ResolvedFeature(
-                    addonID   : owner,
-                    featureID : "other"
-                )
+            acceptedAddons : [owner],
+            blockedAddons  : blockedRoot ? [BlockedAddon(addonID: owner, failure: failure)] : [],
+            enabledFeatures: [
+                ResolvedFeature(addonID: owner, featureID: "controls"),
+                ResolvedFeature(addonID: owner, featureID: "other")
             ],
-            blockedFeatures   : blockedFeature.map {
+            blockedFeatures: blockedFeature.map {
                 [BlockedFeature(
                     addonID  : owner,
                     featureID: $0,
                     failure  : failure
                 )]
             } ?? [],
-            startOrder        : [owner],
-            bindings          : [],
-            reverseDependents : [:]
+            startOrder       : [owner],
+            bindings         : [],
+            reverseDependents: [:]
         )
         let installed = try InstalledAddon(
-            manifest         : manifest,
-            verifiedIdentity : VerifiedAddonIdentity(
-                publisher: publisher,
-                addonID  : owner
-            ),
-            digest           : digest,
-            enabled          : enabled
+            manifest        : manifest,
+            verifiedIdentity: VerifiedAddonIdentity(publisher: publisher, addonID: owner),
+            digest          : digest,
+            enabled         : enabled
         )
+
         return try ActionAuthorizer.Context(
             installed  : installed,
             resolution : resolution,
             featureID  : feature,
             publication: Publication(
-                id         : publicationID,
-                revision   : revision,
-                kind       : .widget,
-                content    : timeline == nil
+                id      : publicationID,
+                revision: revision,
+                kind    : .widget,
+                content : timeline == nil
                     ? presentation(
                         payload     : payload,
                         action      : action,

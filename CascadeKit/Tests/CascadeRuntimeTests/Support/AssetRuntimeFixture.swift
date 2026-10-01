@@ -11,6 +11,7 @@ import Testing
 @testable import CascadeRuntime
 
 struct AssetRuntimeFixture: Sendable {
+
     let runtime   : AddonRuntime
     let governor  : ResourceGovernor
     let access    : GatedRuntimeResourceAccess
@@ -20,7 +21,8 @@ struct AssetRuntimeFixture: Sendable {
     let ids       : [PublicationID]
     let connection: RuntimeConnection
     let wall      : Date
-    var offer     : ProtocolOffer {
+
+    var offer: ProtocolOffer {
         get throws {
             try ProtocolOffer(
                 major         : 1,
@@ -30,25 +32,20 @@ struct AssetRuntimeFixture: Sendable {
             )
         }
     }
+
     static func make(count: Int = 1) async throws -> Self {
-        let base = try ActionFixture()
+        let base     = try ActionFixture()
         let governor = ResourceGovernor()
-        let access = GatedRuntimeResourceAccess(target: governor)
-        let adapter = RecordingRuntimeAdapter()
-        let clock = MutableRuntimeClock(
-            instant: RuntimeInstant(
-                wall     : base.wall,
-                monotonic: .zero
-            )
+        let access   = GatedRuntimeResourceAccess(target: governor)
+        let adapter  = RecordingRuntimeAdapter()
+        let clock    = MutableRuntimeClock(
+            instant: RuntimeInstant(wall: base.wall, monotonic: .zero)
         )
+
         let runtime = try await AddonRuntime.make(
-            catalog    : [base.context().installed],
-            environment: HostEnvironment(
-                osVersion: SemanticVersion(
-                    14,
-                    0,
-                    0
-                ),
+            catalog               : [base.context().installed],
+            environment           : HostEnvironment(
+                osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
                 applications    : [:],
                 grants          : [base.owner: []],
@@ -60,6 +57,7 @@ struct AssetRuntimeFixture: Sendable {
             adapter               : adapter,
             clock                 : clock
         )
+
         var ids: [PublicationID] = []
         for _ in 0..<count {
             ids.append(
@@ -70,7 +68,8 @@ struct AssetRuntimeFixture: Sendable {
                 )
             )
         }
-        let launch = try await runtime.requestLaunch(owner: base.owner)
+
+        let launch     = try await runtime.requestLaunch(owner: base.owner)
         let connection = try await runtime.attach(
             launchID: launch,
             offer   : ProtocolOffer(
@@ -80,6 +79,7 @@ struct AssetRuntimeFixture: Sendable {
                 contentSchemas: [1]
             )
         )
+
         return Self(
             runtime   : runtime,
             governor  : governor,
@@ -92,9 +92,10 @@ struct AssetRuntimeFixture: Sendable {
             wall      : base.wall
         )
     }
+
     func content(_ asset: String?) throws -> PresentationSet {
         try PresentationSet(
-            widget: ContentDocument(
+            widget         : ContentDocument(
                 root              : .text("Image"),
                 privacy           : .publicContent,
                 accessibilityLabel: "Image",
@@ -106,6 +107,7 @@ struct AssetRuntimeFixture: Sendable {
             expanded       : nil
         )
     }
+
     func publication(
         asset   : String?,
         index   : Int = 0,
@@ -121,6 +123,7 @@ struct AssetRuntimeFixture: Sendable {
             stalePolicy: .remove
         )
     }
+
     func publish(
         _ publications: [Publication],
         sequence      : UInt64,
@@ -128,9 +131,9 @@ struct AssetRuntimeFixture: Sendable {
         ends          : [PublicationID] = []
     ) async throws -> PublicationAdmission {
         try await receivePublicationOutput(
-            runtime: runtime,
-            adapter: adapter,
-            output : ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
                 publications : publications,
                 operations   : ends.map { .endPublication($0) },
@@ -141,6 +144,7 @@ struct AssetRuntimeFixture: Sendable {
             sequence  : sequence
         )
     }
+
     func image(
         _ asset : String,
         revision: UInt64 = 1

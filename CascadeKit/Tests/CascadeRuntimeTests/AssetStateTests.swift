@@ -11,8 +11,9 @@ import Testing
 
 @Suite
 struct AssetStateTests {
+
     private let owner: AddonID
-    private let now = Date(timeIntervalSince1970: 2_000_000_000)
+    private let now   = Date(timeIntervalSince1970: 2_000_000_000)
 
     init() throws {
         owner = try #require(AddonID(rawValue: "com.example.assets"))
@@ -26,10 +27,7 @@ struct AssetStateTests {
         feature  : String = "widget"
     ) -> AssetState.Scope {
         AssetState.Scope(
-            identity       : VerifiedAddonIdentity(
-                publisher: publisher,
-                addonID  : owner
-            ),
+            identity       : VerifiedAddonIdentity(publisher: publisher, addonID: owner),
             verifiedDigest : digest,
             featureID      : feature,
             publicationID  : id
@@ -84,10 +82,7 @@ struct AssetStateTests {
         try state.openConnection(
             identity              : scopes[0].identity,
             verifiedDigest        : scopes[0].verifiedDigest,
-            manifestProtocol      : ProtocolVersion(
-                major       : 1,
-                minimumMinor: 0
-            ),
+            manifestProtocol      : ProtocolVersion(major: 1, minimumMinor: 0),
             offer                 : ProtocolOffer(
                 major         : 1,
                 minimumMinor  : 0,
@@ -131,26 +126,20 @@ struct AssetStateTests {
     @Test
     func opaqueImportRequiresExactScopeAndCurrentToken() async throws {
         let coordinator = AssetDisposalCoordinator(governor: ResourceGovernor())
-        var assets = AssetState()
-        let original = scope()
-        let alias = try assets.insert(
+        var assets      = AssetState()
+        let original    = scope()
+        let alias       = try assets.insert(
             backing: await backing(coordinator),
             scope  : original
         ).assetID
         _ = try content([alias])
         var publications = PublicationState(now: { Date(timeIntervalSince1970: 2_000_000_000) })
-        let connection = try connect(
-            &publications,
-            scopes: [original]
-        )
-        let prepared = try prepare(
+        let connection   = try connect(&publications, scopes: [original])
+        let prepared     = try prepare(
             publications,
             connection  : connection,
             publications: [
-                publication(
-                    original,
-                    ids: [alias]
-                )
+                publication(original, ids: [alias])
             ]
         )
         for wrong in [
@@ -178,6 +167,7 @@ struct AssetStateTests {
                 ) { _ in wrong }
             }
         }
+
         let pins = try assets.prepareOutput(
             prepared,
             connectionToken: original.connectionToken
@@ -190,11 +180,9 @@ struct AssetStateTests {
                 at                 : now
             ) == nil
         )
+
         try assets.validatePrepared(pins)
-        _ = try publications.commitPreparedOutput(
-            prepared,
-            at: now
-        )
+        _ = try publications.commitPreparedOutput(prepared, at: now)
         assets.commitPrepared(pins)
         #expect(
             assets.image(
@@ -225,44 +213,29 @@ struct AssetStateTests {
     @Test
     func rejectedBatchDoesNotPartiallyBindAndCrossPublicationIsDenied() async throws {
         let coordinator = AssetDisposalCoordinator(governor: ResourceGovernor())
-        var assets = AssetState()
-        let first  = scope()
-        let second = scope()
-        let alias = try assets.insert(
+        var assets      = AssetState()
+        let first       = scope()
+        let second      = scope()
+        let alias       = try assets.insert(
             backing: await backing(coordinator),
             scope  : first
         ).assetID
         var publications = PublicationState(now: { Date(timeIntervalSince1970: 2_000_000_000) })
-        let connection = try connect(
-            &publications,
-            scopes: [first, second]
-        )
-        let prepared = try prepare(
+        let connection   = try connect(&publications, scopes: [first, second])
+        let prepared     = try prepare(
             publications,
             connection  : connection,
             publications: [
-                publication(
-                    first,
-                    ids: [alias]
-                ),
-                publication(
-                    second,
-                    ids: [alias]
-                ),
+                publication(first, ids: [alias]),
+                publication(second, ids: [alias]),
             ]
         )
         let bytes = assets.retainedBytes
         #expect(throws: AddonFailure.self) {
-            try assets.prepareOutput(
-                prepared,
-                connectionToken: first.connectionToken
-            ) { id in
+            try assets.prepareOutput(prepared, connectionToken: first.connectionToken) { id in
                 id == first.publicationID
                     ? first
-                    : scope(
-                        id   : second.publicationID,
-                        token: first.connectionToken
-                    )
+                    : scope(id: second.publicationID, token: first.connectionToken)
             }
         }
         #expect(assets.retainedBytes == bytes)
@@ -279,25 +252,19 @@ struct AssetStateTests {
     @Test
     func connectionExitKeepsPublicationButRejectsReconnectAliasAndStaleProposal() async throws {
         let coordinator = AssetDisposalCoordinator(governor: ResourceGovernor())
-        var assets = AssetState()
-        let original = scope()
-        let alias = try assets.insert(
+        var assets      = AssetState()
+        let original    = scope()
+        let alias       = try assets.insert(
             backing: await backing(coordinator),
             scope  : original
         ).assetID
         var publications = PublicationState(now: { Date(timeIntervalSince1970: 2_000_000_000) })
-        let connection = try connect(
-            &publications,
-            scopes: [original]
-        )
-        let prepared = try prepare(
+        let connection   = try connect(&publications, scopes: [original])
+        let prepared     = try prepare(
             publications,
             connection  : connection,
             publications: [
-                publication(
-                    original,
-                    ids: [alias]
-                )
+                publication(original, ids: [alias])
             ]
         )
         let pins = try assets.prepareOutput(
@@ -305,12 +272,10 @@ struct AssetStateTests {
             connectionToken: original.connectionToken
         ) { _ in original }
         try assets.validatePrepared(pins)
-        _ = try publications.commitPreparedOutput(
-            prepared,
-            at: now
-        )
+        _ = try publications.commitPreparedOutput(prepared, at: now)
         assets.commitPrepared(pins)
         #expect(throws: AddonFailure.self) { try assets.validatePrepared(pins) }
+
         assets.revokeImports(connectionToken: original.connectionToken)
         #expect(
             assets.image(
@@ -320,6 +285,7 @@ struct AssetStateTests {
                 at                 : now
             ) != nil
         )
+
         let next = try prepare(
             publications,
             connection  : connection,
@@ -353,42 +319,31 @@ struct AssetStateTests {
                 at                 : now.addingTimeInterval(60)
             ) == nil
         )
-        assets.reconcile(
-            publications: publications,
-            at          : now.addingTimeInterval(60)
-        )
+
+        assets.reconcile(publications: publications, at: now.addingTimeInterval(60))
         #expect(assets.retainedBytes == 0)
     }
 
     @Test
     func futureTimelineImageSurvivesUntilPublicationAndLastConsumerRelease() async throws {
-        let governor = ResourceGovernor()
+        let governor    = ResourceGovernor()
         let coordinator = AssetDisposalCoordinator(governor: governor)
-        var assets = AssetState()
-        let original = scope()
-        let alias = try assets.insert(
+        var assets      = AssetState()
+        let original    = scope()
+        let alias       = try assets.insert(
             backing: await backing(coordinator),
             scope  : original
         ).assetID
         var publications = PublicationState(now: { Date(timeIntervalSince1970: 2_000_000_000) })
-        let connection = try connect(
-            &publications,
-            scopes: [original]
-        )
-        let value = try publication(
+        let connection   = try connect(&publications, scopes: [original])
+        let value        = try publication(
             original,
             ids     : [],
             timeline: [
-                ScheduledEntry(
-                    date   : now,
-                    content: content([])
-                ),
+                ScheduledEntry(date: now, content: content([])),
                 ScheduledEntry(
                     date   : now.addingTimeInterval(30),
-                    content: content(
-                        [alias],
-                        privacy: .sensitive
-                    )
+                    content: content([alias], privacy: .sensitive)
                 ),
             ]
         )
@@ -403,12 +358,10 @@ struct AssetStateTests {
                 connectionToken: original.connectionToken
             ) { _ in original }
             try assets.validatePrepared(pins)
-            _ = try publications.commitPreparedOutput(
-                prepared,
-                at: now
-            )
+            _ = try publications.commitPreparedOutput(prepared, at: now)
             assets.commitPrepared(pins)
         }
+
         assets.revokeImports(connectionToken: original.connectionToken)
         var image: CGImage? = assets.image(
             assetID            : alias,
@@ -417,10 +370,13 @@ struct AssetStateTests {
             at                 : now
         )
         #expect(image?.width == 1)
+
         assets.removeOwner(owner)
         #expect(assets.retainedBytes(owner: owner) == 0)
+
         try await coordinator.flushDisposed()
         #expect(await governor.usage(.assetBytes) == 4)
+
         image = nil
         try await coordinator.flushDisposed()
         #expect(await governor.usage(.assetBytes) == 0)
@@ -429,44 +385,30 @@ struct AssetStateTests {
     @Test
     func quotaRejectsBeforeCanonicalGrowthAndMutationInvalidatesPrepare() async throws {
         let coordinator = AssetDisposalCoordinator(governor: ResourceGovernor())
-        let raster = try await backing(coordinator)
-        let original = scope()
-        var denied = AssetState(maximumRetainedBytes: 0)
+        let raster      = try await backing(coordinator)
+        let original    = scope()
+        var denied      = AssetState(maximumRetainedBytes: 0)
         #expect(throws: AddonFailure.self) {
-            try denied.insert(
-                backing: raster,
-                scope  : original
-            )
+            try denied.insert(backing: raster, scope: original)
         }
         #expect(denied.retainedBytes == 0)
-        var assets = AssetState()
-        let alias = try assets.insert(
-            backing: raster,
-            scope  : original
-        ).assetID
+
+        var assets       = AssetState()
+        let alias        = try assets.insert(backing: raster, scope: original).assetID
         var publications = PublicationState(now: { Date(timeIntervalSince1970: 2_000_000_000) })
-        let connection = try connect(
-            &publications,
-            scopes: [original]
-        )
-        let output = try prepare(
+        let connection   = try connect(&publications, scopes: [original])
+        let output       = try prepare(
             publications,
             connection  : connection,
             publications: [
-                publication(
-                    original,
-                    ids: [alias]
-                )
+                publication(original, ids: [alias])
             ]
         )
         let pins = try assets.prepareOutput(
             output,
             connectionToken: original.connectionToken
         ) { _ in original }
-        _ = try assets.insert(
-            backing: raster,
-            scope  : original
-        )
+        _ = try assets.insert(backing: raster, scope: original)
         #expect(throws: AddonFailure.self) { try assets.validatePrepared(pins) }
         #expect(
             assets.image(
@@ -476,22 +418,15 @@ struct AssetStateTests {
                 at                 : now
             ) == nil
         )
+
         let bytes = assets.retainedBytes
         #expect(bytes == assets.retainedBytes(owner: owner))
+
         var limited = AssetState(maximumRetainedBytes: bytes)
-        _ = try limited.insert(
-            backing: raster,
-            scope  : original
-        )
-        _ = try limited.insert(
-            backing: raster,
-            scope  : original
-        )
+        _ = try limited.insert(backing: raster, scope: original)
+        _ = try limited.insert(backing: raster, scope: original)
         #expect(throws: AddonFailure.self) {
-            try limited.insert(
-                backing: raster,
-                scope  : original
-            )
+            try limited.insert(backing: raster, scope: original)
         }
         #expect(throws: AddonFailure.self) { try limited.preparationBytes(output) }
         #expect(limited.retainedBytes == bytes)
@@ -499,41 +434,28 @@ struct AssetStateTests {
 
     @Test
     func endRevokesImportsWhileUnpublishedAssignmentsSurviveReconciliation() async throws {
-        let coordinator = AssetDisposalCoordinator(governor: ResourceGovernor())
-        var assets = AssetState()
+        let coordinator  = AssetDisposalCoordinator(governor: ResourceGovernor())
+        var assets       = AssetState()
         let original     = scope()
         let notPublished = scope()
-        let handle = try assets.insert(
-            backing: await backing(coordinator),
-            scope  : original
-        )
-        let pending = try assets.insert(
-            backing: await backing(coordinator),
-            scope  : notPublished
-        )
+        let handle       = try assets.insert(backing: await backing(coordinator), scope: original)
+        let pending      = try assets.insert(backing: await backing(coordinator), scope: notPublished)
         #expect(handle.owner == owner)
         #expect(handle.publicationID == original.publicationID)
         #expect(handle.rasterRevision == 1)
         #expect(handle.width == 1 && handle.height == 1 && handle.byteCount == 4)
+
         var publications = PublicationState(now: { Date(timeIntervalSince1970: 2_000_000_000) })
-        let connection = try connect(
-            &publications,
-            scopes: [original, notPublished]
-        )
-        assets.reconcile(
-            publications: publications,
-            at          : now
-        )
+        let connection   = try connect(&publications, scopes: [original, notPublished])
+        assets.reconcile(publications: publications, at: now)
         #expect(assets.retainedBytes == 8_192)
+
         do {
             let output = try prepare(
                 publications,
                 connection  : connection,
                 publications: [
-                    publication(
-                        original,
-                        ids: [handle.assetID]
-                    )
+                    publication(original, ids: [handle.assetID])
                 ]
             )
             let proposal = try assets.prepareOutput(
@@ -543,13 +465,12 @@ struct AssetStateTests {
             #expect(proposal.retainedBytesAfter == 11_264)
             #expect(proposal.requiredGrowth == 3_072)
             #expect(proposal.estimatedBytes >= proposal.requiredGrowth)
+
             try assets.validatePrepared(proposal)
-            _ = try publications.commitPreparedOutput(
-                output,
-                at: now
-            )
+            _ = try publications.commitPreparedOutput(output, at: now)
             assets.commitPrepared(proposal)
         }
+
         do {
             let output = try prepare(
                 publications,
@@ -563,12 +484,10 @@ struct AssetStateTests {
                 connectionToken: original.connectionToken
             ) { _ in original }
             try assets.validatePrepared(proposal)
-            _ = try publications.commitPreparedOutput(
-                output,
-                at: now
-            )
+            _ = try publications.commitPreparedOutput(output, at: now)
             assets.commitPrepared(proposal)
         }
+
         #expect(assets.retainedBytes == 4_096)
         #expect(
             assets.image(
@@ -578,18 +497,13 @@ struct AssetStateTests {
                 at                 : now
             ) == nil
         )
-        assets.reconcile(
-            publications: publications,
-            at          : now
-        )
+
+        assets.reconcile(publications: publications, at: now)
         let output = try prepare(
             publications,
             connection  : connection,
             publications: [
-                publication(
-                    notPublished,
-                    ids: [pending.assetID]
-                )
+                publication(notPublished, ids: [pending.assetID])
             ],
             sequence    : 3
         )
@@ -598,10 +512,7 @@ struct AssetStateTests {
             connectionToken: notPublished.connectionToken
         ) { _ in notPublished }
         try assets.validatePrepared(proposal)
-        _ = try publications.commitPreparedOutput(
-            output,
-            at: now
-        )
+        _ = try publications.commitPreparedOutput(output, at: now)
         assets.commitPrepared(proposal)
         #expect(
             assets.image(
@@ -616,17 +527,14 @@ struct AssetStateTests {
     @Test
     func replacementInvalidatesOldPublicationRevisionAndForeignProposalIsDenied() async throws {
         let coordinator = AssetDisposalCoordinator(governor: ResourceGovernor())
-        var assets = AssetState()
-        let original = scope()
-        let alias = try assets.insert(
+        var assets      = AssetState()
+        let original    = scope()
+        let alias       = try assets.insert(
             backing: await backing(coordinator),
             scope  : original
         ).assetID
         var publications = PublicationState(now: { Date(timeIntervalSince1970: 2_000_000_000) })
-        let connection = try connect(
-            &publications,
-            scopes: [original]
-        )
+        let connection   = try connect(&publications, scopes: [original])
         for revision: UInt64 in [1, 2] {
             let output = try prepare(
                 publications,
@@ -646,13 +554,12 @@ struct AssetStateTests {
             ) { _ in original }
             let foreign = AssetState()
             #expect(throws: AddonFailure.self) { try foreign.validatePrepared(proposal) }
+
             try assets.validatePrepared(proposal)
-            _ = try publications.commitPreparedOutput(
-                output,
-                at: now
-            )
+            _ = try publications.commitPreparedOutput(output, at: now)
             assets.commitPrepared(proposal)
         }
+
         #expect(
             assets.image(
                 assetID            : alias,
@@ -669,41 +576,35 @@ struct AssetStateTests {
                 at                 : now
             ) == nil
         )
+
         assets.revokeImports(connectionToken: original.connectionToken)
         #expect(assets.retainedBytes == 0)
     }
 
     @Test
     func assetlessOutputRequiresNoAssetMetadataAtFullQuota() throws {
-        var assets = AssetState(maximumRetainedBytes: 0)
-        let original = scope()
+        var assets       = AssetState(maximumRetainedBytes: 0)
+        let original     = scope()
         var publications = PublicationState(now: { Date(timeIntervalSince1970: 2_000_000_000) })
-        let connection = try connect(
-            &publications,
-            scopes: [original]
-        )
-        let output = try prepare(
+        let connection   = try connect(&publications, scopes: [original])
+        let output       = try prepare(
             publications,
             connection  : connection,
             publications: [
-                publication(
-                    original,
-                    ids: []
-                )
+                publication(original, ids: [])
             ]
         )
         #expect(try assets.preparationBytes(output) == 0)
+
         let proposal = try assets.prepareOutput(
             output,
             connectionToken: original.connectionToken
         ) { _ in original }
         #expect(proposal.estimatedBytes == 0)
         #expect(proposal.retainedBytesAfter == 0)
+
         try assets.validatePrepared(proposal)
-        _ = try publications.commitPreparedOutput(
-            output,
-            at: now
-        )
+        _ = try publications.commitPreparedOutput(output, at: now)
         assets.commitPrepared(proposal)
         let ended = try prepare(
             publications,
@@ -713,29 +614,24 @@ struct AssetStateTests {
             ends        : [original.publicationID]
         )
         #expect(try assets.preparationBytes(ended) == 0)
+
         let endedProposal = try assets.prepareOutput(
             ended,
             connectionToken: original.connectionToken
         ) { _ in original }
         try assets.validatePrepared(endedProposal)
-        _ = try publications.commitPreparedOutput(
-            ended,
-            at: now
-        )
+        _ = try publications.commitPreparedOutput(ended, at: now)
         assets.commitPrepared(endedProposal)
         #expect(assets.retainedBytes == 0)
     }
 
     @Test
     func releaseImportRejectsForeignScopesAndRevokesUnpublishedAlias() async throws {
-        let governor = ResourceGovernor()
+        let governor    = ResourceGovernor()
         let coordinator = AssetDisposalCoordinator(governor: governor)
-        var assets = AssetState()
-        let original = scope()
-        let handle = try assets.insert(
-            backing: await backing(coordinator),
-            scope  : original
-        )
+        var assets      = AssetState()
+        let original    = scope()
+        let handle      = try assets.insert(backing: await backing(coordinator), scope: original)
         for foreign in [
             scope(id: original.publicationID),
             scope(
@@ -756,44 +652,28 @@ struct AssetStateTests {
             scope(token: original.connectionToken),
         ] {
             #expect(throws: AddonFailure.self) {
-                try assets.releaseImport(
-                    assetID: handle.assetID,
-                    scope  : foreign
-                )
+                try assets.releaseImport(assetID: handle.assetID, scope: foreign)
             }
             #expect(assets.retainedBytes == 4_096)
         }
         #expect(throws: AddonFailure.self) {
-            try assets.releaseImport(
-                assetID: "asset-unknown",
-                scope  : original
-            )
+            try assets.releaseImport(assetID: "asset-unknown", scope: original)
         }
         #expect(assets.retainedBytes == 4_096)
-        try assets.releaseImport(
-            assetID: handle.assetID,
-            scope  : original
-        )
+
+        try assets.releaseImport(assetID: handle.assetID, scope: original)
         #expect(assets.retainedBytes == 0)
         #expect(throws: AddonFailure.self) {
-            try assets.releaseImport(
-                assetID: handle.assetID,
-                scope  : original
-            )
+            try assets.releaseImport(assetID: handle.assetID, scope: original)
         }
+
         var publications = PublicationState(now: { Date(timeIntervalSince1970: 2_000_000_000) })
-        let connection = try connect(
-            &publications,
-            scopes: [original]
-        )
-        let output = try prepare(
+        let connection   = try connect(&publications, scopes: [original])
+        let output       = try prepare(
             publications,
             connection  : connection,
             publications: [
-                publication(
-                    original,
-                    ids: [handle.assetID]
-                )
+                publication(original, ids: [handle.assetID])
             ]
         )
         #expect(throws: AddonFailure.self) {
@@ -802,34 +682,26 @@ struct AssetStateTests {
                 connectionToken: original.connectionToken
             ) { _ in original }
         }
+
         try await coordinator.flushDisposed()
         #expect(await governor.usage(.assetBytes) == 0)
     }
 
     @Test
     func releasedImportKeepsPublishedPinUntilReplacementAndFinalImageRelease() async throws {
-        let governor = ResourceGovernor()
-        let coordinator = AssetDisposalCoordinator(governor: governor)
-        var assets = AssetState()
-        let original = scope()
-        let handle = try assets.insert(
-            backing: await backing(coordinator),
-            scope  : original
-        )
+        let governor     = ResourceGovernor()
+        let coordinator  = AssetDisposalCoordinator(governor: governor)
+        var assets       = AssetState()
+        let original     = scope()
+        let handle       = try assets.insert(backing: await backing(coordinator), scope: original)
         var publications = PublicationState(now: { Date(timeIntervalSince1970: 2_000_000_000) })
-        let connection = try connect(
-            &publications,
-            scopes: [original]
-        )
+        let connection   = try connect(&publications, scopes: [original])
         do {
             let output = try prepare(
                 publications,
                 connection  : connection,
                 publications: [
-                    publication(
-                        original,
-                        ids: [handle.assetID]
-                    )
+                    publication(original, ids: [handle.assetID])
                 ]
             )
             let proposal = try assets.prepareOutput(
@@ -837,17 +709,13 @@ struct AssetStateTests {
                 connectionToken: original.connectionToken
             ) { _ in original }
             try assets.validatePrepared(proposal)
-            _ = try publications.commitPreparedOutput(
-                output,
-                at: now
-            )
+            _ = try publications.commitPreparedOutput(output, at: now)
             assets.commitPrepared(proposal)
         }
-        try assets.releaseImport(
-            assetID: handle.assetID,
-            scope  : original
-        )
+
+        try assets.releaseImport(assetID: handle.assetID, scope: original)
         #expect(assets.retainedBytes == 3_072)
+
         var consumer: CGImage? = assets.image(
             assetID            : handle.assetID,
             publicationID      : original.publicationID,
@@ -855,8 +723,10 @@ struct AssetStateTests {
             at                 : now
         )
         #expect(consumer?.width == 1)
+
         try await coordinator.flushDisposed()
         #expect(await governor.usage(.assetBytes) == 4)
+
         do {
             let output = try prepare(
                 publications,
@@ -875,12 +745,10 @@ struct AssetStateTests {
                 connectionToken: original.connectionToken
             ) { _ in original }
             try assets.validatePrepared(proposal)
-            _ = try publications.commitPreparedOutput(
-                output,
-                at: now
-            )
+            _ = try publications.commitPreparedOutput(output, at: now)
             assets.commitPrepared(proposal)
         }
+
         #expect(assets.retainedBytes == 0)
         #expect(
             assets.image(
@@ -890,8 +758,10 @@ struct AssetStateTests {
                 at                 : now
             ) == nil
         )
+
         try await coordinator.flushDisposed()
         #expect(await governor.usage(.assetBytes) == 4)
+
         consumer = nil
         try await coordinator.flushDisposed()
         #expect(await governor.usage(.assetBytes) == 0)
@@ -899,27 +769,18 @@ struct AssetStateTests {
 
     @Test(arguments: [false, true])
     func removalAtFullAssetMetadataQuotaNeedsNoGrowth(replaceWithAssetlessContent: Bool) async throws {
-        let coordinator = AssetDisposalCoordinator(governor: ResourceGovernor())
-        var assets = AssetState(maximumRetainedBytes: 7_168)
-        let original = scope()
-        let handle = try assets.insert(
-            backing: await backing(coordinator),
-            scope  : original
-        )
+        let coordinator  = AssetDisposalCoordinator(governor: ResourceGovernor())
+        var assets       = AssetState(maximumRetainedBytes: 7_168)
+        let original     = scope()
+        let handle       = try assets.insert(backing: await backing(coordinator), scope: original)
         var publications = PublicationState(now: { Date(timeIntervalSince1970: 2_000_000_000) })
-        let connection = try connect(
-            &publications,
-            scopes: [original]
-        )
+        let connection   = try connect(&publications, scopes: [original])
         do {
             let output = try prepare(
                 publications,
                 connection  : connection,
                 publications: [
-                    publication(
-                        original,
-                        ids: [handle.assetID]
-                    )
+                    publication(original, ids: [handle.assetID])
                 ]
             )
             let proposal = try assets.prepareOutput(
@@ -927,13 +788,12 @@ struct AssetStateTests {
                 connectionToken: original.connectionToken
             ) { _ in original }
             try assets.validatePrepared(proposal)
-            _ = try publications.commitPreparedOutput(
-                output,
-                at: now
-            )
+            _ = try publications.commitPreparedOutput(output, at: now)
             assets.commitPrepared(proposal)
         }
+
         #expect(assets.retainedBytes == 7_168)
+
         let output = try prepare(
             publications,
             connection  : connection,
@@ -949,16 +809,15 @@ struct AssetStateTests {
             ends        : replaceWithAssetlessContent ? [] : [original.publicationID]
         )
         #expect(try assets.preparationBytes(output) == 0)
+
         let proposal = try assets.prepareOutput(
             output,
             connectionToken: original.connectionToken
         ) { _ in original }
         #expect(proposal.estimatedBytes == 0)
+
         try assets.validatePrepared(proposal)
-        _ = try publications.commitPreparedOutput(
-            output,
-            at: now
-        )
+        _ = try publications.commitPreparedOutput(output, at: now)
         assets.commitPrepared(proposal)
         #expect(assets.retainedBytes == (replaceWithAssetlessContent ? 4_096 : 0))
         #expect(
@@ -973,32 +832,20 @@ struct AssetStateTests {
 
     @Test
     func mixedBatchCannotFundNewPinsUsingProposedRemovalRefunds() async throws {
-        let coordinator = AssetDisposalCoordinator(governor: ResourceGovernor())
-        var assets = AssetState(maximumRetainedBytes: 11_264)
-        let original = scope()
-        let other = scope(token: original.connectionToken)
-        let originalHandle = try assets.insert(
-            backing: await backing(coordinator),
-            scope  : original
-        )
-        let otherHandle = try assets.insert(
-            backing: await backing(coordinator),
-            scope  : other
-        )
-        var publications = PublicationState(now: { Date(timeIntervalSince1970: 2_000_000_000) })
-        let connection = try connect(
-            &publications,
-            scopes: [original, other]
-        )
+        let coordinator    = AssetDisposalCoordinator(governor: ResourceGovernor())
+        var assets         = AssetState(maximumRetainedBytes: 11_264)
+        let original       = scope()
+        let other          = scope(token: original.connectionToken)
+        let originalHandle = try assets.insert(backing: await backing(coordinator), scope: original)
+        let otherHandle    = try assets.insert(backing: await backing(coordinator), scope: other)
+        var publications   = PublicationState(now: { Date(timeIntervalSince1970: 2_000_000_000) })
+        let connection     = try connect(&publications, scopes: [original, other])
         do {
             let output = try prepare(
                 publications,
                 connection  : connection,
                 publications: [
-                    publication(
-                        original,
-                        ids: [originalHandle.assetID]
-                    )
+                    publication(original, ids: [originalHandle.assetID])
                 ]
             )
             let proposal = try assets.prepareOutput(
@@ -1006,13 +853,12 @@ struct AssetStateTests {
                 connectionToken: original.connectionToken
             ) { _ in original }
             try assets.validatePrepared(proposal)
-            _ = try publications.commitPreparedOutput(
-                output,
-                at: now
-            )
+            _ = try publications.commitPreparedOutput(output, at: now)
             assets.commitPrepared(proposal)
         }
+
         #expect(assets.retainedBytes == 11_264)
+
         let output = try prepare(
             publications,
             connection  : connection,
@@ -1022,10 +868,7 @@ struct AssetStateTests {
                     ids     : [],
                     revision: 2
                 ),
-                publication(
-                    other,
-                    ids: [otherHandle.assetID]
-                ),
+                publication(other, ids: [otherHandle.assetID]),
             ],
             sequence    : 2
         )
@@ -1056,5 +899,4 @@ struct AssetStateTests {
             ) == nil
         )
     }
-
 }

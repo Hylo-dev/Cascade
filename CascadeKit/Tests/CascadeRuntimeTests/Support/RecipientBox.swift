@@ -10,7 +10,8 @@ import Testing
 @testable import CascadeRuntime
 
 final class RecipientBox: @unchecked Sendable {
-    private let lock = NSLock()
+
+    private let lock   = NSLock()
     private var stored: [VerifiedAddonIdentity] = []
 
     var value: [VerifiedAddonIdentity] { lock.withLock { stored } }

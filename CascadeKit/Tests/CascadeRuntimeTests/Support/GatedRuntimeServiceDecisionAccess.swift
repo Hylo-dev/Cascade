@@ -10,16 +10,18 @@ import Foundation
 /// GatedRuntimeServiceDecisionAccess withholds one post-consume return after forwarding
 /// the real private-broker decision exactly once.
 actor GatedRuntimeServiceDecisionAccess: RuntimeServiceDecisionAccess {
+
     nonisolated let serviceBrokerTarget: ServiceBroker
-    private var shouldGateInvocation = false
-    private var shouldGateSource = false
-    private var shouldGateDeadline = false
+
+    private var shouldGateInvocation            = false
+    private var shouldGateSource                = false
+    private var shouldGateDeadline              = false
     private var shouldGateCompletionPreparation = false
     private var gateBeforeCompletionPreparation = false
-    private var hasArrived = false
-    private var isReleased = false
-    private var arrivalContinuation: CheckedContinuation<Void, Never>?
-    private var releaseContinuation: CheckedContinuation<Void, Never>?
+    private var hasArrived                      = false
+    private var isReleased                      = false
+    private var arrivalContinuation            : CheckedContinuation<Void, Never>?
+    private var releaseContinuation            : CheckedContinuation<Void, Never>?
 
     init(target: ServiceBroker) {
         serviceBrokerTarget = target
@@ -27,32 +29,33 @@ actor GatedRuntimeServiceDecisionAccess: RuntimeServiceDecisionAccess {
 
     func armInvocation() {
         shouldGateInvocation = true
-        hasArrived = false
-        isReleased = false
+        hasArrived           = false
+        isReleased           = false
     }
 
     func armSource() {
         shouldGateSource = true
-        hasArrived = false
-        isReleased = false
+        hasArrived       = false
+        isReleased       = false
     }
 
     func armDeadline() {
         shouldGateDeadline = true
-        hasArrived = false
-        isReleased = false
+        hasArrived         = false
+        isReleased         = false
     }
 
     /// armCompletionPreparation parks one real preparation before invocation or after its successful return.
     func armCompletionPreparation(beforePreparation: Bool = false) {
         shouldGateCompletionPreparation = true
         gateBeforeCompletionPreparation = beforePreparation
-        hasArrived = false
-        isReleased = false
+        hasArrived                      = false
+        isReleased                      = false
     }
 
     func waitForArrival() async {
         if hasArrived || isReleased { return }
+
         await withCheckedContinuation { continuation in
             arrivalContinuation = continuation
         }
@@ -68,6 +71,7 @@ actor GatedRuntimeServiceDecisionAccess: RuntimeServiceDecisionAccess {
 
     private func waitForRelease() async {
         if isReleased { return }
+
         await withTaskCancellationHandler {
             await withCheckedContinuation { continuation in
                 releaseContinuation = continuation
@@ -92,21 +96,22 @@ actor GatedRuntimeServiceDecisionAccess: RuntimeServiceDecisionAccess {
     ) async throws -> UUID {
         let shouldGate = shouldGateInvocation
         shouldGateInvocation = false
+
         let result: UUID
         do {
-            result = try await serviceBrokerTarget.consumeInvocation(
-                id,
-                now: now
-            )
+            result = try await serviceBrokerTarget.consumeInvocation(id, now: now)
         } catch {
             if shouldGate { reportTerminalArrival() }
             throw error
         }
+
         guard shouldGate else { return result }
+
         hasArrived = true
         arrivalContinuation?.resume()
         arrivalContinuation = nil
         if isReleased { return result }
+
         await waitForRelease()
         return result
     }
@@ -117,40 +122,43 @@ actor GatedRuntimeServiceDecisionAccess: RuntimeServiceDecisionAccess {
     ) async throws -> ServiceSourceDescriptor {
         let shouldGate = shouldGateSource
         shouldGateSource = false
+
         let result: ServiceSourceDescriptor
         do {
-            result = try await serviceBrokerTarget.consumeSourceStart(
-                id,
-                now: now
-            )
+            result = try await serviceBrokerTarget.consumeSourceStart(id, now: now)
         } catch {
             if shouldGate { reportTerminalArrival() }
             throw error
         }
+
         guard shouldGate else { return result }
+
         hasArrived = true
         arrivalContinuation?.resume()
         arrivalContinuation = nil
         if isReleased { return result }
+
         await waitForRelease()
         return result
     }
 
     func prepareInvocationCompletion(
-        _ id       : UUID,
-        response   : ServiceResponse,
-        receivedAt : RuntimeInstant
+        _ id      : UUID,
+        response  : ServiceResponse,
+        receivedAt: RuntimeInstant
     ) async throws -> ServiceBroker.CompletionPreparation {
         let shouldGate = shouldGateCompletionPreparation
         shouldGateCompletionPreparation = false
         let gateBefore = gateBeforeCompletionPreparation
         gateBeforeCompletionPreparation = false
+
         if shouldGate, gateBefore {
             hasArrived = true
             arrivalContinuation?.resume()
             arrivalContinuation = nil
             if !isReleased { await waitForRelease() }
         }
+
         let result: ServiceBroker.CompletionPreparation
         do {
             result = try await serviceBrokerTarget.prepareInvocationCompletion(
@@ -162,11 +170,14 @@ actor GatedRuntimeServiceDecisionAccess: RuntimeServiceDecisionAccess {
             if shouldGate { reportTerminalArrival() }
             throw error
         }
+
         guard shouldGate, !gateBefore else { return result }
+
         hasArrived = true
         arrivalContinuation?.resume()
         arrivalContinuation = nil
         if isReleased { return result }
+
         await waitForRelease()
         return result
     }
@@ -174,12 +185,15 @@ actor GatedRuntimeServiceDecisionAccess: RuntimeServiceDecisionAccess {
     func nextDeadline() async -> Duration? {
         let shouldGate = shouldGateDeadline
         shouldGateDeadline = false
+
         let result = await serviceBrokerTarget.nextDeadline()
         guard shouldGate else { return result }
+
         hasArrived = true
         arrivalContinuation?.resume()
         arrivalContinuation = nil
         if isReleased { return result }
+
         await waitForRelease()
         return result
     }

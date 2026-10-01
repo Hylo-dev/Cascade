@@ -17,22 +17,20 @@ import Testing
 /// It does not qualify any native OS transport: the bridge is test-only.
 @Suite(.timeLimit(.minutes(1)))
 struct MessageAddonAssetIntegrationTests {
+
     @Test
     func messageImportPublishesSharesAndReleasesCanonicalAliases() async throws {
         let fixture = try await AssetMessageFixture.make()
-        let client = MessageAddonAssetClient(channel: fixture.channel)
-        let png = try randomPNG(
-            width: 192,
-            height: 192
-        )
+        let client  = MessageAddonAssetClient(channel: fixture.channel)
+        let png     = try randomPNG(width: 192, height: 192)
+
         #expect(png.count > AssetTransferFrameCodec.maximumChunkBytes)
 
-        let imported = try await client.importAsset(
-            png,
-            publicationID: fixture.ids[0]
-        )
+        let imported = try await client.importAsset(png, publicationID: fixture.ids[0])
+
         #expect(imported.width == 192)
         #expect(imported.publicationID == fixture.ids[0])
+
         // The alias is canonical but not yet reachable through a publication revision.
         #expect(
             await fixture.runtime.assetImage(
@@ -41,15 +39,14 @@ struct MessageAddonAssetIntegrationTests {
                 publicationRevision: 1
             ) == nil
         )
+
         _ = try await fixture.publish(
             [
-                fixture.publication(
-                    id: fixture.ids[0],
-                    asset: imported.assetID
-                )
+                fixture.publication(id: fixture.ids[0], asset: imported.assetID)
             ],
             sequence: 1
         )
+
         #expect(
             await fixture.runtime.assetImage(
                 assetID            : imported.assetID,
@@ -58,22 +55,19 @@ struct MessageAddonAssetIntegrationTests {
             )?.width == 192
         )
 
-        let shared = try await client.shareAsset(
-            imported,
-            to: fixture.ids[1]
-        )
+        let shared = try await client.shareAsset(imported, to: fixture.ids[1])
+
         #expect(shared.assetID != imported.assetID)
         #expect(shared.owner == imported.owner)
         #expect(shared.publicationID == fixture.ids[1])
+
         _ = try await fixture.publish(
             [
-                fixture.publication(
-                    id: fixture.ids[1],
-                    asset: shared.assetID
-                )
+                fixture.publication(id: fixture.ids[1], asset: shared.assetID)
             ],
             sequence: 2
         )
+
         #expect(
             await fixture.runtime.assetImage(
                 assetID            : shared.assetID,
@@ -91,12 +85,11 @@ struct MessageAddonAssetIntegrationTests {
                 publicationRevision: 1
             )?.width == 192
         )
+
         await #expect(throws: AddonFailure.self) {
-            try await client.shareAsset(
-                imported,
-                to: fixture.ids[1]
-            )
+            try await client.shareAsset(imported, to: fixture.ids[1])
         }
+
         #expect(
             await fixture.runtime.assetImage(
                 assetID            : shared.assetID,
@@ -104,6 +97,7 @@ struct MessageAddonAssetIntegrationTests {
                 publicationRevision: 1
             )?.width == 192
         )
+
         await client.close()
         await fixture.tearDown()
     }
@@ -111,49 +105,45 @@ struct MessageAddonAssetIntegrationTests {
     @Test
     func foreignSequenceAndOversizedIngressAreRefusedWithoutDisturbingTheTransfer() async throws {
         let fixture = try await AssetMessageFixture.make()
-        let png = try randomPNG(
-            width: 32,
-            height: 32
-        )
+        let png     = try randomPNG(width: 32, height: 32)
+
         let begin = try AssetTransferRequest(
             requestID    : UUID(),
             operation    : .begin,
             publicationID: fixture.ids[0],
             totalBytes   : png.count
         )
-        let beginFrame = try AssetTransferFrameCodec.encode(
-            begin,
-            profile: .v1
-        )
+
+        let beginFrame = try AssetTransferFrameCodec.encode(begin, profile: .v1)
+
         let begun = try AssetTransferFrameCodec.decodeResponse(
-            try await fixture.channel.exchange(
-                beginFrame,
-                sequence: 1
-            ),
+            try await fixture.channel.exchange(beginFrame, sequence: 1),
             profile: .v1
         )
+
         let transferID = try #require(begun.transferID)
         // A duplicate/stale sequence is refused before the runtime takes the bytes.
         await #expect(throws: AddonFailure.self) {
-            _ = try await fixture.channel.exchange(
-                beginFrame,
-                sequence: 1
-            )
+            _ = try await fixture.channel.exchange(beginFrame, sequence: 1)
         }
+
         // A mismatched actual size is refused after taking and before mutation.
         let mismatchedHandle = try #require(
             fixture.adapter.stageAssetIngress(
                 Data([0x01, 0x02]),
-                incarnation: fixture.connection.incarnation,
-                sequence: 3,
+                incarnation    : fixture.connection.incarnation,
+                sequence       : 3,
                 advertisedBytes: 4
             )
         )
+
         let mismatched = await fixture.runtime.receiveAssetRequest(
             mismatchedHandle,
             connection: fixture.connection
         )
+
         #expect(mismatched == .refused(.invalidPayload))
+
         // The original transfer is still live and completes normally.
         let chunk = try AssetTransferRequest(
             requestID : UUID(),
@@ -162,30 +152,29 @@ struct MessageAddonAssetIntegrationTests {
             offset    : 0,
             bytes     : png
         )
+
         _ = try await fixture.channel.exchange(
-            try AssetTransferFrameCodec.encode(
-                chunk,
-                profile: .v1
-            ),
+            try AssetTransferFrameCodec.encode(chunk, profile: .v1),
             sequence: 4
         )
+
         let finish = try AssetTransferRequest(
             requestID : UUID(),
             operation : .finish,
             transferID: transferID
         )
+
         let imported = try AssetTransferFrameCodec.decodeResponse(
             try await fixture.channel.exchange(
-                try AssetTransferFrameCodec.encode(
-                    finish,
-                    profile: .v1
-                ),
+                try AssetTransferFrameCodec.encode(finish, profile: .v1),
                 sequence: 5
             ),
             profile: .v1
         )
+
         #expect(imported.result == .imported)
         #expect(imported.assetHandle != nil)
+
         await fixture.tearDown()
     }
 
@@ -198,123 +187,123 @@ struct MessageAddonAssetIntegrationTests {
             instanceID: UUID(),
             sessionID : UUID()
         )
+
         let foreignBegin = try AssetTransferRequest(
             requestID    : UUID(),
             operation    : .begin,
             publicationID: foreign,
             totalBytes   : 16
         )
+
         let foreignResponse = try AssetTransferFrameCodec.decodeResponse(
             try await fixture.channel.exchange(
-                try AssetTransferFrameCodec.encode(
-                    foreignBegin,
-                    profile: .v1
-                ),
+                try AssetTransferFrameCodec.encode(foreignBegin, profile: .v1),
                 sequence: 1
             ),
             profile: .v1
         )
+
         #expect(foreignResponse.result == .failure)
         #expect(foreignResponse.failureCode == .permissionDenied)
 
         // A live transfer expires after the nonrenewable 30-second deadline is serviced.
-        let png = try randomPNG(
-            width: 32,
-            height: 32
-        )
+        let png = try randomPNG(width: 32, height: 32)
+
         let begin = try AssetTransferRequest(
             requestID    : UUID(),
             operation    : .begin,
             publicationID: fixture.ids[0],
             totalBytes   : png.count
         )
+
         let begun = try AssetTransferFrameCodec.decodeResponse(
             try await fixture.channel.exchange(
-                try AssetTransferFrameCodec.encode(
-                    begin,
-                    profile: .v1
-                ),
+                try AssetTransferFrameCodec.encode(begin, profile: .v1),
                 sequence: 2
             ),
             profile: .v1
         )
+
         let transferID = try #require(begun.transferID)
-        let chunk = try AssetTransferRequest(
+        let chunk      = try AssetTransferRequest(
             requestID : UUID(),
             operation : .chunk,
             transferID: transferID,
             offset    : 0,
             bytes     : png
         )
+
         _ = try await fixture.channel.exchange(
-            try AssetTransferFrameCodec.encode(
-                chunk,
-                profile: .v1
-            ),
+            try AssetTransferFrameCodec.encode(chunk, profile: .v1),
             sequence: 3
         )
+
         fixture.clock.set(
-            RuntimeInstant(
-                wall     : fixture.wall.addingTimeInterval(31),
-                monotonic: .seconds(31)
-            )
+            RuntimeInstant(wall: fixture.wall.addingTimeInterval(31), monotonic: .seconds(31))
         )
+
         let charged = await fixture.governor.usage(.admittedMemoryBytes)
-        _ = try await fixture.runtime.serviceDeadlines()
+        _           = try await fixture.runtime.serviceDeadlines()
         // Expiry is the existing deferred cleanup path: it refunds the idle assembly exactly.
         #expect(await fixture.governor.usage(.admittedMemoryBytes) < charged)
+
         let finish = try AssetTransferRequest(
             requestID : UUID(),
             operation : .finish,
             transferID: transferID
         )
+
         let expired = try AssetTransferFrameCodec.decodeResponse(
             try await fixture.channel.exchange(
-                try AssetTransferFrameCodec.encode(
-                    finish,
-                    profile: .v1
-                ),
+                try AssetTransferFrameCodec.encode(finish, profile: .v1),
                 sequence: 4
             ),
             profile: .v1
         )
+
         #expect(expired.result == .failure)
+
         await fixture.tearDown()
     }
 
     @Test
     func stopWithoutObservedExitDrainsIdleAssembly() async throws {
-        let fixture = try await AssetMessageFixture.make()
-        let totalBytes = 1_048_576
+        let fixture      = try await AssetMessageFixture.make()
+        let totalBytes   = 1_048_576
         let beforeMemory = await fixture.governor.usage(.admittedMemoryBytes)
-        let begin = try AssetTransferRequest(
+        let begin        = try AssetTransferRequest(
             requestID    : UUID(),
             operation    : .begin,
             publicationID: fixture.ids[0],
             totalBytes   : totalBytes
         )
+
         let begun = try AssetTransferFrameCodec.decodeResponse(
             try await fixture.channel.exchange(
-                try AssetTransferFrameCodec.encode(
-                    begin,
-                    profile: .v1
-                ),
+                try AssetTransferFrameCodec.encode(begin, profile: .v1),
                 sequence: 1
             ),
             profile: .v1
         )
+
         #expect(begun.result == .begun)
+
         // One protected transfer holds two encoded-sized buffers plus control bytes.
         let charged = beforeMemory + 2 * totalBytes + 4_096
+
         #expect(await fixture.governor.usage(.admittedMemoryBytes) == charged)
+
         // Synchronous stop revokes authority immediately and keeps the process record.
         let stopped = await fixture.runtime.requestStop()
+
         #expect(stopped.cleanupPending && stopped.retainedProcessCount == 1)
         #expect(await fixture.governor.usage(.admittedMemoryBytes) == charged)
+
         // Bounded deferred cleanup releases the idle assembly with no observed exit.
         await fixture.runtime.stop()
         #expect(await fixture.governor.usage(.admittedMemoryBytes) == beforeMemory)
         #expect(await fixture.runtime.requestStop().cleanupPending == false)
+
         await fixture.runtime.observeExit(fixture.connection.incarnation)
         try? FileManager.default.removeItem(at: fixture.root)
     }
@@ -322,32 +311,31 @@ struct MessageAddonAssetIntegrationTests {
     @Test
     func publicationEndRevokesIdleReceivingTransferWithoutWaitingForDeadline() async throws {
         let fixture = try await AssetMessageFixture.make()
-        _ = try await fixture.publish(
+        _           = try await fixture.publish(
             [
-                fixture.publication(
-                    id   : fixture.ids[0],
-                    asset: nil
-                )
+                fixture.publication(id: fixture.ids[0], asset: nil)
             ],
             sequence: 1
         )
-        let totalBytes = 1_048_576
+
+        let totalBytes   = 1_048_576
         let beforeMemory = await fixture.governor.usage(.admittedMemoryBytes)
-        let begin = try AssetTransferRequest(
+        let begin        = try AssetTransferRequest(
             requestID    : UUID(),
             operation    : .begin,
             publicationID: fixture.ids[0],
             totalBytes   : totalBytes
         )
-        let begun = try await fixture.exchange(
-            begin,
-            sequence: 2
-        )
+
+        let begun = try await fixture.exchange(begin, sequence: 2)
+
         let transferID = try #require(begun.transferID)
+
         #expect(begun.result == .begun)
         #expect(
             await fixture.governor.usage(.admittedMemoryBytes) == beforeMemory + 2 * totalBytes + 4_096
         )
+
         // Ending the exact bound publication revokes the idle receiving transfer at once,
         // without process exit and without waiting out the 30-second transfer deadline.
         _ = try await fixture.publish(
@@ -355,25 +343,27 @@ struct MessageAddonAssetIntegrationTests {
             sequence: 3,
             ends    : [fixture.ids[0]]
         )
+
         #expect(await fixture.governor.usage(.admittedMemoryBytes) == beforeMemory)
+
         // The revoked transfer no longer owns a runtime identity and is refused.
         let finish = try AssetTransferRequest(
             requestID : UUID(),
             operation : .finish,
             transferID: transferID
         )
-        let refused = try await fixture.exchange(
-            finish,
-            sequence: 4
-        )
+
+        let refused = try await fixture.exchange(finish, sequence: 4)
+
         #expect(refused.result == .failure)
+
         await fixture.tearDown()
     }
 
     @Test
     func publicationExpiryRevokesIdleReceivingTransferBeforeTransferDeadline() async throws {
         let fixture = try await AssetMessageFixture.make()
-        let expiry = try Publication(
+        let expiry  = try Publication(
             id         : fixture.ids[0],
             revision   : 1,
             kind       : .widget,
@@ -382,97 +372,93 @@ struct MessageAddonAssetIntegrationTests {
             expiresAt  : fixture.wall.addingTimeInterval(5),
             stalePolicy: .remove
         )
-        _ = try await fixture.publish(
-            [expiry],
-            sequence: 1
-        )
-        let totalBytes = 1_048_576
+
+        _ = try await fixture.publish([expiry], sequence: 1)
+
+        let totalBytes   = 1_048_576
         let beforeMemory = await fixture.governor.usage(.admittedMemoryBytes)
-        let begin = try AssetTransferRequest(
+        let begin        = try AssetTransferRequest(
             requestID    : UUID(),
             operation    : .begin,
             publicationID: fixture.ids[0],
             totalBytes   : totalBytes
         )
-        let begun = try await fixture.exchange(
-            begin,
-            sequence: 2
-        )
+
+        let begun = try await fixture.exchange(begin, sequence: 2)
+
         #expect(begun.result == .begun)
+
         // The publication expires well before the nonrenewable 30-second transfer deadline.
         fixture.clock.set(
-            RuntimeInstant(
-                wall     : fixture.wall.addingTimeInterval(10),
-                monotonic: .seconds(10)
-            )
+            RuntimeInstant(wall: fixture.wall.addingTimeInterval(10), monotonic: .seconds(10))
         )
+
         _ = try await fixture.runtime.serviceDeadlines()
         #expect(await fixture.governor.usage(.admittedMemoryBytes) == beforeMemory)
+
         await fixture.tearDown()
     }
 
     @Test
     func finishMetadataDenialDisposesExactTransferAndReconcilesPool() async throws {
         let fixture = try await AssetMessageFixture.make()
-        let png = try randomPNG(
-            width : 64,
-            height: 64
-        )
+        let png     = try randomPNG(width: 64, height: 64)
+
         #expect(png.count <= AssetTransferFrameCodec.maximumChunkBytes)
-        let beforePool = await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes
+
+        let beforePool   = await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes
         let beforeMemory = await fixture.governor.usage(.admittedMemoryBytes)
-        let begin = try AssetTransferRequest(
+        let begin        = try AssetTransferRequest(
             requestID    : UUID(),
             operation    : .begin,
             publicationID: fixture.ids[0],
             totalBytes   : png.count
         )
-        let begun = try await fixture.exchange(
-            begin,
-            sequence: 1
-        )
+
+        let begun = try await fixture.exchange(begin, sequence: 1)
+
         let transferID = try #require(begun.transferID)
-        let chunk = try AssetTransferRequest(
+        let chunk      = try AssetTransferRequest(
             requestID : UUID(),
             operation : .chunk,
             transferID: transferID,
             offset    : 0,
             bytes     : png
         )
-        let chunked = try await fixture.exchange(
-            chunk,
-            sequence: 2
-        )
+
+        let chunked = try await fixture.exchange(chunk, sequence: 2)
+
         #expect(chunked.result == .acknowledged)
+
         // Fill the retained-state ceiling so the finish metadata admission is refused before any
         // decode borrows the protected assembly.
         let fillerOwner = try #require(AddonID(rawValue: "com.example.asset-message-quota"))
-        let retained = await fixture.governor.usage(.retainedStateBytes)
+        let retained    = await fixture.governor.usage(.retainedStateBytes)
         // Leave 2 KiB of retained-state headroom: enough for the request's 1 KiB scratch entry,
         // but far less than the 4 KiB import metadata admission the finish must request.
         let filler = try await fixture.governor.admit(
             .state(bytes: 8 * 1_024 * 1_024 - retained - 2_048),
             owner: fillerOwner
         )
+
         let finish = try AssetTransferRequest(
             requestID : UUID(),
             operation : .finish,
             transferID: transferID
         )
-        let refused = try await fixture.exchange(
-            finish,
-            sequence: 3
-        )
+
+        let refused = try await fixture.exchange(finish, sequence: 3)
+
         #expect(refused.result == .failure)
+
         // The exact receiving transfer and its protected reservation are both disposed.
         #expect(await fixture.governor.usage(.admittedMemoryBytes) == beforeMemory)
         #expect(
             await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes == beforePool
         )
-        try await fixture.governor.release(
-            filler.id,
-            owner: fillerOwner
-        )
+
+        try await fixture.governor.release(filler.id, owner: fillerOwner)
+
         // The same process assembler remains usable for a later protected transfer.
         let retried = try AssetTransferRequest(
             requestID    : UUID(),
@@ -480,12 +466,13 @@ struct MessageAddonAssetIntegrationTests {
             publicationID: fixture.ids[0],
             totalBytes   : png.count
         )
-        let retriedBegin = try await fixture.exchange(
-            retried,
-            sequence: 4
-        )
+
+        let retriedBegin = try await fixture.exchange(retried, sequence: 4)
+
         let retriedID = try #require(retriedBegin.transferID)
+
         #expect(retriedBegin.result == .begun)
+
         let retriedChunk = try AssetTransferRequest(
             requestID : UUID(),
             operation : .chunk,
@@ -493,68 +480,67 @@ struct MessageAddonAssetIntegrationTests {
             offset    : 0,
             bytes     : png
         )
-        let retriedChunked = try await fixture.exchange(
-            retriedChunk,
-            sequence: 5
-        )
+
+        let retriedChunked = try await fixture.exchange(retriedChunk, sequence: 5)
+
         #expect(retriedChunked.result == .acknowledged)
+
         let retriedFinish = try AssetTransferRequest(
             requestID : UUID(),
             operation : .finish,
             transferID: retriedID
         )
-        let imported = try await fixture.exchange(
-            retriedFinish,
-            sequence: 6
-        )
+
+        let imported = try await fixture.exchange(retriedFinish, sequence: 6)
+
         #expect(imported.result == .imported)
+
         await fixture.tearDown()
     }
 
     @Test
     func messageImportAndReleaseReconcilePoolCharges() async throws {
         let fixture = try await AssetMessageFixture.make()
-        let png = try randomPNG(
-            width : 48,
-            height: 48
-        )
-        let beforePool = await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes
+        let png     = try randomPNG(width: 48, height: 48)
+
+        let beforePool     = await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes
         let beforeRetained = await fixture.governor.usage(.retainedStateBytes)
-        let begin = try AssetTransferRequest(
+        let begin          = try AssetTransferRequest(
             requestID    : UUID(),
             operation    : .begin,
             publicationID: fixture.ids[0],
             totalBytes   : png.count
         )
-        let begun = try await fixture.exchange(
-            begin,
-            sequence: 1
-        )
+
+        let begun = try await fixture.exchange(begin, sequence: 1)
+
         let transferID = try #require(begun.transferID)
-        let chunk = try AssetTransferRequest(
+        let chunk      = try AssetTransferRequest(
             requestID : UUID(),
             operation : .chunk,
             transferID: transferID,
             offset    : 0,
             bytes     : png
         )
-        _ = try await fixture.exchange(
-            chunk,
-            sequence: 2
-        )
+
+        _ = try await fixture.exchange(chunk, sequence: 2)
+
         let finish = try AssetTransferRequest(
             requestID : UUID(),
             operation : .finish,
             transferID: transferID
         )
-        let imported = try await fixture.exchange(
-            finish,
-            sequence: 3
-        )
+
+        let imported = try await fixture.exchange(finish, sequence: 3)
+
         let handle = try #require(imported.assetHandle)
+
         #expect(imported.result == .imported)
+
         let afterImport = await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes
+
         #expect((afterImport ?? 0) > (beforePool ?? 0))
+
         // Releasing the message-minted alias must reconcile the pooled metadata quote exactly;
         // this fails if pendingAssetMetadataBytes outlives the protected import.
         let release = try AssetTransferRequest(
@@ -562,97 +548,97 @@ struct MessageAddonAssetIntegrationTests {
             operation   : .release,
             sourceHandle: handle
         )
-        let released = try await fixture.exchange(
-            release,
-            sequence: 4
-        )
+
+        let released = try await fixture.exchange(release, sequence: 4)
+
         #expect(released.result == .acknowledged)
         #expect(
             await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes == beforePool
         )
         #expect(await fixture.governor.usage(.retainedStateBytes) == beforeRetained)
+
         await fixture.tearDown()
     }
 
     @Test
     func failedMessageDecodeReconcilesImportMetadataAndAssembler() async throws {
-        let fixture = try await AssetMessageFixture.make()
-        let beforePool = await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes
-        let beforeMemory = await fixture.governor.usage(.admittedMemoryBytes)
+        let fixture        = try await AssetMessageFixture.make()
+        let beforePool     = await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes
+        let beforeMemory   = await fixture.governor.usage(.admittedMemoryBytes)
         let beforeRetained = await fixture.governor.usage(.retainedStateBytes)
-        let begin = try AssetTransferRequest(
+        let begin          = try AssetTransferRequest(
             requestID    : UUID(),
             operation    : .begin,
             publicationID: fixture.ids[0],
             totalBytes   : 3
         )
-        let begun = try await fixture.exchange(
-            begin,
-            sequence: 1
-        )
+
+        let begun = try await fixture.exchange(begin, sequence: 1)
+
         let transferID = try #require(begun.transferID)
-        let chunk = try AssetTransferRequest(
+        let chunk      = try AssetTransferRequest(
             requestID : UUID(),
             operation : .chunk,
             transferID: transferID,
             offset    : 0,
             bytes     : Data([1, 2, 3])
         )
-        let chunked = try await fixture.exchange(
-            chunk,
-            sequence: 2
-        )
+
+        let chunked = try await fixture.exchange(chunk, sequence: 2)
+
         #expect(chunked.result == .acknowledged)
+
         let finish = try AssetTransferRequest(
             requestID : UUID(),
             operation : .finish,
             transferID: transferID
         )
-        let failed = try await fixture.exchange(
-            finish,
-            sequence: 3
-        )
+
+        let failed = try await fixture.exchange(finish, sequence: 3)
+
         #expect(failed.result == .failure)
+
         // The prepaid import quote was set before the protected decode; it must not survive it.
         #expect(
             await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes == beforePool
         )
         #expect(await fixture.governor.usage(.retainedStateBytes) == beforeRetained)
         #expect(await fixture.governor.usage(.admittedMemoryBytes) == beforeMemory)
+
         await fixture.tearDown()
     }
 
     @Test
     func messageShareAndReleaseReconcileSharedPoolCharges() async throws {
         let fixture = try await AssetMessageFixture.make()
-        let png = try randomPNG(
-            width : 48,
-            height: 48
-        )
+        let png     = try randomPNG(width: 48, height: 48)
+
         let beforePool = await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes
-        let imported = try await fixture.importAlias(
+        let imported   = try await fixture.importAlias(
             png,
             publicationID: fixture.ids[0],
             sequences    : (1, 2, 3)
         )
-        let afterImport = await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes
+
+        let afterImport         = await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes
         let afterImportRetained = await fixture.governor.usage(.retainedStateBytes)
-        let share = try AssetTransferRequest(
+        let share               = try AssetTransferRequest(
             requestID    : UUID(),
             operation    : .share,
             publicationID: fixture.ids[1],
             sourceHandle : imported
         )
-        let shared = try await fixture.exchange(
-            share,
-            sequence: 4
-        )
+
+        let shared = try await fixture.exchange(share, sequence: 4)
+
         let sharedHandle = try #require(shared.assetHandle)
+
         #expect(shared.result == .shared)
         #expect(
             (await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes ?? 0)
                 > (afterImport ?? 0)
         )
+
         // Releasing only the shared alias must reconcile the sharing quote exactly; this fails
         // if pendingAssetMetadataBytes outlives the protected share.
         let releaseShared = try AssetTransferRequest(
@@ -660,28 +646,28 @@ struct MessageAddonAssetIntegrationTests {
             operation   : .release,
             sourceHandle: sharedHandle
         )
-        let releasedShared = try await fixture.exchange(
-            releaseShared,
-            sequence: 5
-        )
+
+        let releasedShared = try await fixture.exchange(releaseShared, sequence: 5)
+
         #expect(releasedShared.result == .acknowledged)
         #expect(
             await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes == afterImport
         )
         #expect(await fixture.governor.usage(.retainedStateBytes) == afterImportRetained)
+
         let releaseImported = try AssetTransferRequest(
             requestID   : UUID(),
             operation   : .release,
             sourceHandle: imported
         )
-        let releasedImported = try await fixture.exchange(
-            releaseImported,
-            sequence: 6
-        )
+
+        let releasedImported = try await fixture.exchange(releaseImported, sequence: 6)
+
         #expect(releasedImported.result == .acknowledged)
         #expect(
             await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes == beforePool
         )
+
         await fixture.tearDown()
     }
 
@@ -694,23 +680,24 @@ struct MessageAddonAssetIntegrationTests {
                 publicationID: fixture.ids[1],
                 connection   : fixture.connection
             )
+
             _ = try await fixture.publish(
                 [fixture.publication(id: fixture.ids[1], asset: pinned.assetID)],
                 sequence: 1
             )
         }
-        let pinnedBytes = await fixture.governor.usage(.assetBytes)
+
+        let pinnedBytes  = await fixture.governor.usage(.assetBytes)
         let beforeMemory = await fixture.governor.usage(.admittedMemoryBytes)
-        let begin = try AssetTransferRequest(
+        let begin        = try AssetTransferRequest(
             requestID    : UUID(),
             operation    : .begin,
             publicationID: fixture.ids[0],
             totalBytes   : 1_048_576
         )
-        let frame = try AssetTransferFrameCodec.encode(
-            begin,
-            profile: .v1
-        )
+
+        let frame = try AssetTransferFrameCodec.encode(begin, profile: .v1)
+
         await fixture.channel.armHold(at: .afterHandoff)
         let exchange = Task { try await fixture.channel.exchange(frame, sequence: 1) }
         await fixture.channel.waitForHoldArrival()
@@ -718,6 +705,7 @@ struct MessageAddonAssetIntegrationTests {
         // assembler still holds its protected reservation.
         #expect(fixture.adapter.currentDelivery(incarnation: fixture.connection.incarnation) != nil)
         #expect(await fixture.governor.usage(.admittedMemoryBytes) > beforeMemory)
+
         if quiescing {
             _ = try await fixture.runtime.beginArchiveQuiescence(until: .seconds(10))
             // Shared publication staging must also be disposed, independently of the held
@@ -732,8 +720,9 @@ struct MessageAddonAssetIntegrationTests {
                 ),
                 incarnation: fixture.connection.incarnation
             ))
+
             let current = fixture.connection
-            let stale = RuntimeConnection(
+            let stale   = RuntimeConnection(
                 token                : current.token,
                 incarnation          : RuntimeIncarnation(),
                 identity             : current.identity,
@@ -742,11 +731,13 @@ struct MessageAddonAssetIntegrationTests {
                 serviceSession       : current.serviceSession,
                 authorityRevision    : current.authorityRevision
             )
+
             await fixture.runtime.closeConnection(stale)
             #expect(fixture.adapter.stopCount(incarnation: current.incarnation) == 0)
             #expect(fixture.adapter.hasIngress(incarnation: current.incarnation))
             #expect(fixture.adapter.currentDelivery(incarnation: current.incarnation) != nil)
         }
+
         // Repeated and concurrent close callers all await the one real drain, not a closed flag.
         async let firstClose: Void = fixture.channel.close()
         async let secondClose: Void = fixture.channel.close()
@@ -757,24 +748,30 @@ struct MessageAddonAssetIntegrationTests {
         #expect(fixture.adapter.stopCount(incarnation: fixture.connection.incarnation) == 1)
         #expect(fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation) == false)
         #expect(fixture.adapter.currentDelivery(incarnation: fixture.connection.incarnation) == nil)
+
         // The exact idle assembler is refunded once the real drain completes.
         #expect(await fixture.governor.usage(.admittedMemoryBytes) == beforeMemory)
         #expect(await fixture.governor.usage(.providers, owner: fixture.owner) == 1)
         #expect(await fixture.runtime.diagnostics(owner: fixture.owner)?.hasProcess == true)
+
         if quiescing {
             #expect(pinnedBytes > 0)
             #expect(await fixture.governor.usage(.assetBytes) == pinnedBytes)
             #expect(await fixture.governor.usage(.publications) == 1)
         }
+
         // The in-flight caller is drained to a real bounded refusal, not merely cancelled.
         await #expect(throws: AddonFailure.self) {
             _ = try await exchange.value
         }
+
         // The same connection cannot carry another frame after close.
         await #expect(throws: AddonFailure.self) {
             _ = try await fixture.channel.exchange(frame, sequence: 2)
         }
+
         #expect(fixture.adapter.stopCount(incarnation: fixture.connection.incarnation) == 1)
+
         // Even a fresh bridge over the exact same RuntimeConnection cannot revive the physical
         // slot: close revoked the real connection, not just the bridge's local flag.
         let revived = RuntimeAssetChannelBridge(
@@ -782,26 +779,28 @@ struct MessageAddonAssetIntegrationTests {
             adapter   : fixture.adapter,
             connection: fixture.connection
         )
+
         await #expect(throws: AddonFailure.self) {
             _ = try await revived.exchange(frame, sequence: 1)
         }
+
         #expect(fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation) == false)
+
         await fixture.tearDown()
     }
 
     @Test
     func cancellingTheCallerDoesNotAbandonTheHeldPhysicalExchange() async throws {
         let fixture = try await AssetMessageFixture.make()
-        let begin = try AssetTransferRequest(
+        let begin   = try AssetTransferRequest(
             requestID    : UUID(),
             operation    : .begin,
             publicationID: fixture.ids[0],
             totalBytes   : 1_048_576
         )
-        let frame = try AssetTransferFrameCodec.encode(
-            begin,
-            profile: .v1
-        )
+
+        let frame = try AssetTransferFrameCodec.encode(begin, profile: .v1)
+
         await fixture.channel.armHold(at: .beforeReceive)
         let exchange = Task { try await fixture.channel.exchange(frame, sequence: 1) }
         await fixture.channel.waitForHoldArrival()
@@ -811,72 +810,79 @@ struct MessageAddonAssetIntegrationTests {
         // held and the runtime has not stopped anything.
         #expect(fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation))
         #expect(fixture.adapter.stopCount(incarnation: fixture.connection.incarnation) == 0)
+
         // Only the explicit drain releases it, and it ends in a real refusal.
         await fixture.channel.close()
         #expect(fixture.channel.didDrainInFlightExchange)
         #expect(fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation) == false)
+
         await #expect(throws: AddonFailure.self) {
             _ = try await exchange.value
         }
+
         await fixture.tearDown()
     }
 
     @Test
     func secondExchangeWhileOneIsHeldIsRefusedWithoutNewStaging() async throws {
         let fixture = try await AssetMessageFixture.make()
-        let begin = try AssetTransferRequest(
+        let begin   = try AssetTransferRequest(
             requestID    : UUID(),
             operation    : .begin,
             publicationID: fixture.ids[0],
             totalBytes   : 1_048_576
         )
-        let frame = try AssetTransferFrameCodec.encode(
-            begin,
-            profile: .v1
-        )
+
+        let frame = try AssetTransferFrameCodec.encode(begin, profile: .v1)
+
         await fixture.channel.armHold(at: .beforeReceive)
         let held = Task { try await fixture.channel.exchange(frame, sequence: 1) }
         await fixture.channel.waitForHoldArrival()
         #expect(fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation))
+
         // The bounded slot refuses a second concurrent exchange before any new staging.
         await #expect(throws: AddonFailure.self) {
             _ = try await fixture.channel.exchange(frame, sequence: 2)
         }
+
         #expect(fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation))
+
         // Close drains exactly the held frame.
         await fixture.channel.close()
         #expect(fixture.channel.didDrainInFlightExchange)
+
         await #expect(throws: AddonFailure.self) {
             _ = try await held.value
         }
+
         #expect(fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation) == false)
+
         await fixture.tearDown()
     }
 
     @Test
     func duplicateSequenceIsRefusedBeforePhysicalStaging() async throws {
         let fixture = try await AssetMessageFixture.make()
-        let begin = try AssetTransferRequest(
+        let begin   = try AssetTransferRequest(
             requestID    : UUID(),
             operation    : .begin,
             publicationID: fixture.ids[0],
             totalBytes   : 1_048_576
         )
-        let begun = try await fixture.exchange(
-            begin,
-            sequence: 1
-        )
+
+        let begun = try await fixture.exchange(begin, sequence: 1)
+
         #expect(begun.result == .begun)
+
         let takeAttempts = fixture.adapter.ingressTakeAttempts
         await #expect(throws: AddonFailure.self) {
-            _ = try await fixture.exchange(
-                begin,
-                sequence: 1
-            )
+            _ = try await fixture.exchange(begin, sequence: 1)
         }
+
         // The bridge refused the duplicate before staging, so the host never saw a second take.
         #expect(fixture.adapter.ingressTakeAttempts == takeAttempts)
         #expect(fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation) == false)
+
         await fixture.channel.close()
         await fixture.tearDown()
     }
@@ -884,60 +890,58 @@ struct MessageAddonAssetIntegrationTests {
     @Test
     func receiptMismatchDisposesRawReplyAndRefusesReuse() async throws {
         let fixture = try await AssetMessageFixture.make()
-        let begin = try AssetTransferRequest(
+        let begin   = try AssetTransferRequest(
             requestID    : UUID(),
             operation    : .begin,
             publicationID: fixture.ids[0],
             totalBytes   : 1_048_576
         )
+
         fixture.channel.armFault(.mismatchedReceipt)
         await #expect(throws: AddonFailure.self) {
-            _ = try await fixture.exchange(
-                begin,
-                sequence: 1
-            )
+            _ = try await fixture.exchange(begin, sequence: 1)
         }
+
         // The mismatched physical receipt invalidates the bounded reply: its raw staging is
         // disposed and the channel refuses further frames until close revokes the connection.
         #expect(fixture.adapter.currentDelivery(incarnation: fixture.connection.incarnation) == nil)
         #expect(fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation) == false)
+
         await #expect(throws: AddonFailure.self) {
-            _ = try await fixture.exchange(
-                begin,
-                sequence: 2
-            )
+            _ = try await fixture.exchange(begin, sequence: 2)
         }
+
         await fixture.channel.close()
         #expect(fixture.adapter.stopCount(incarnation: fixture.connection.incarnation) == 1)
+
         await fixture.tearDown()
     }
 
     @Test
     func postHandoffTransportErrorDisposesRawReplyAndRefusesReuse() async throws {
         let fixture = try await AssetMessageFixture.make()
-        let begin = try AssetTransferRequest(
+        let begin   = try AssetTransferRequest(
             requestID    : UUID(),
             operation    : .begin,
             publicationID: fixture.ids[0],
             totalBytes   : 1_048_576
         )
+
         fixture.channel.armFault(.transportError)
         await #expect(throws: AddonFailure.self) {
-            _ = try await fixture.exchange(
-                begin,
-                sequence: 1
-            )
+            _ = try await fixture.exchange(begin, sequence: 1)
         }
+
         #expect(fixture.adapter.currentDelivery(incarnation: fixture.connection.incarnation) == nil)
         #expect(fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation) == false)
+
         await #expect(throws: AddonFailure.self) {
-            _ = try await fixture.exchange(
-                begin,
-                sequence: 2
-            )
+            _ = try await fixture.exchange(begin, sequence: 2)
         }
+
         await fixture.channel.close()
         #expect(fixture.adapter.stopCount(incarnation: fixture.connection.incarnation) == 1)
+
         await fixture.tearDown()
     }
 
@@ -946,22 +950,21 @@ struct MessageAddonAssetIntegrationTests {
     @Test
     func assetFramesShareOneTypedIngressWithPublicationAndStorage() async throws {
         let fixture = try await AssetMessageFixture.make()
-        let begin = try AssetTransferRequest(
+        let begin   = try AssetTransferRequest(
             requestID    : UUID(),
             operation    : .begin,
             publicationID: fixture.ids[0],
             totalBytes   : 8
         )
+
         let handle = try #require(
             fixture.adapter.stageAssetIngress(
-                try AssetTransferFrameCodec.encode(
-                    begin,
-                    profile: .v1
-                ),
+                try AssetTransferFrameCodec.encode(begin, profile: .v1),
                 incarnation: fixture.connection.incarnation,
                 sequence   : 1
             )
         )
+
         // The one shared typed slot refuses a publication or storage frame while the asset
         // frame is staged. This is the physical counterpart of the runtime's single ingress credit.
         #expect(
@@ -992,15 +995,18 @@ struct MessageAddonAssetIntegrationTests {
                 .handedOff
             )
         )
+
         // Only the exact accepted receipt frees the shared delivery credit.
         let delivery = try #require(
             fixture.adapter.currentDelivery(incarnation: fixture.connection.incarnation)
         )
+
         guard case .assetResponse(let assetDelivery) = delivery else {
             Issue.record("Expected an asset response delivery")
             await fixture.tearDown()
             return
         }
+
         #expect(
             await fixture.runtime.receiveAssetReceipt(
                 assetDelivery.receipt,
@@ -1008,22 +1014,22 @@ struct MessageAddonAssetIntegrationTests {
             )
         )
         #expect(fixture.adapter.currentDelivery(incarnation: fixture.connection.incarnation) == nil)
+
         await fixture.tearDown()
     }
 
     @Test
     func acceptedAssetReplyBlocksASecondFrameAndCrossChannelReceiptsCannotFreeIt() async throws {
         let fixture = try await AssetMessageFixture.make()
-        let begin = try AssetTransferRequest(
+        let begin   = try AssetTransferRequest(
             requestID    : UUID(),
             operation    : .begin,
             publicationID: fixture.ids[0],
             totalBytes   : 8
         )
-        let frame = try AssetTransferFrameCodec.encode(
-            begin,
-            profile: .v1
-        )
+
+        let frame = try AssetTransferFrameCodec.encode(begin, profile: .v1)
+
         let first = try #require(
             fixture.adapter.stageAssetIngress(
                 frame,
@@ -1031,6 +1037,7 @@ struct MessageAddonAssetIntegrationTests {
                 sequence   : 1
             )
         )
+
         #expect(
             await fixture.runtime.receiveAssetRequest(
                 first,
@@ -1040,14 +1047,17 @@ struct MessageAddonAssetIntegrationTests {
                 .handedOff
             )
         )
+
         let delivery = try #require(
             fixture.adapter.currentDelivery(incarnation: fixture.connection.incarnation)
         )
+
         guard case .assetResponse(let assetDelivery) = delivery else {
             Issue.record("Expected an asset response delivery")
             await fixture.tearDown()
             return
         }
+
         // A second frame is refused by the shared delivery credit before any backend take, so
         // the outstanding accepted reply is not disturbed.
         let second = try #require(
@@ -1057,7 +1067,9 @@ struct MessageAddonAssetIntegrationTests {
                 sequence   : 2
             )
         )
+
         let attempts = fixture.adapter.ingressTakeAttempts
+
         #expect(
             await fixture.runtime.receiveAssetRequest(
                 second,
@@ -1066,6 +1078,7 @@ struct MessageAddonAssetIntegrationTests {
         )
         #expect(fixture.adapter.ingressTakeAttempts == attempts)
         #expect(fixture.adapter.currentDelivery(incarnation: fixture.connection.incarnation) != nil)
+
         // A cross-channel receipt (foreign incarnation and connection token) and a stale receipt
         // (wrong sequence) cannot free unrelated accepted work.
         let crossChannel = RuntimeAssetReceipt(
@@ -1076,12 +1089,14 @@ struct MessageAddonAssetIntegrationTests {
             requestID      : assetDelivery.receipt.requestID,
             operation      : assetDelivery.receipt.operation
         )
+
         #expect(
             await fixture.runtime.receiveAssetReceipt(
                 crossChannel,
                 connection: fixture.connection
             ) == false
         )
+
         let stale = RuntimeAssetReceipt(
             token          : assetDelivery.receipt.token,
             incarnation    : fixture.connection.incarnation,
@@ -1090,6 +1105,7 @@ struct MessageAddonAssetIntegrationTests {
             requestID      : assetDelivery.receipt.requestID,
             operation      : assetDelivery.receipt.operation
         )
+
         #expect(
             await fixture.runtime.receiveAssetReceipt(
                 stale,
@@ -1097,6 +1113,7 @@ struct MessageAddonAssetIntegrationTests {
             ) == false
         )
         #expect(fixture.adapter.currentDelivery(incarnation: fixture.connection.incarnation) != nil)
+
         // Only the exact receipt frees the payload.
         #expect(
             await fixture.runtime.receiveAssetReceipt(
@@ -1105,6 +1122,7 @@ struct MessageAddonAssetIntegrationTests {
             )
         )
         #expect(fixture.adapter.currentDelivery(incarnation: fixture.connection.incarnation) == nil)
+
         await fixture.tearDown()
     }
 
@@ -1112,7 +1130,7 @@ struct MessageAddonAssetIntegrationTests {
 
     @Test
     func wrongIncarnationZeroSequenceAndOversizedAssetIngressAreRefusedWithoutTake() async throws {
-        let fixture = try await AssetMessageFixture.make()
+        let fixture  = try await AssetMessageFixture.make()
         let attempts = fixture.adapter.ingressTakeAttempts
         for handle in [
             RuntimeAssetIngressHandle(
@@ -1141,8 +1159,10 @@ struct MessageAddonAssetIntegrationTests {
                 ) == .refused(.invalidPayload)
             )
         }
+
         // None of the illegal handles reached the backend or advanced the shared sequence.
         #expect(fixture.adapter.ingressTakeAttempts == attempts)
+
         let begun = try await fixture.exchange(
             try AssetTransferRequest(
                 requestID    : UUID(),
@@ -1152,21 +1172,25 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 1
         )
+
         #expect(begun.result == .begun)
+
         await fixture.tearDown()
     }
 
     @Test(arguments: ["{}", "[]", "not-json"])
     func malformedRawAssetFramesAreRefusedWithoutReceipt(_ text: String) async throws {
         let fixture = try await AssetMessageFixture.make()
-        let handle = try #require(
+        let handle  = try #require(
             fixture.adapter.stageAssetIngress(
                 Data(text.utf8),
                 incarnation: fixture.connection.incarnation,
                 sequence   : 1
             )
         )
+
         let receipts = fixture.adapter.deliveryReceiptCount
+
         #expect(
             await fixture.runtime.receiveAssetRequest(
                 handle,
@@ -1175,6 +1199,7 @@ struct MessageAddonAssetIntegrationTests {
         )
         #expect(fixture.adapter.deliveryReceiptCount == receipts)
         #expect(fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation) == false)
+
         // The same process still admits a legitimate frame afterwards.
         let begun = try await fixture.exchange(
             try AssetTransferRequest(
@@ -1185,17 +1210,17 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 1
         )
+
         #expect(begun.result == .begun)
+
         await fixture.tearDown()
     }
 
     @Test
     func actuallyOversizedChunkFrameIsRefusedWhileTheLiveTransferSurvives() async throws {
         let fixture = try await AssetMessageFixture.make()
-        let png = try randomPNG(
-            width : 32,
-            height: 32
-        )
+        let png     = try randomPNG(width: 32, height: 32)
+
         let begun = try await fixture.exchange(
             try AssetTransferRequest(
                 requestID    : UUID(),
@@ -1205,11 +1230,16 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 1
         )
+
         let transferID = try #require(begun.transferID)
         // A real frame whose encoded size is within the 192 KiB frame cap but whose decoded
         // chunk payload is 65,537 bytes: one byte past the 64 KiB chunk bound. Encoding it
         // through the public initializer is (correctly) impossible, so the JSON is hand-crafted.
-        let oversizedBytes = Data(repeating: 0x41, count: AssetTransferFrameCodec.maximumChunkBytes + 1)
+        let oversizedBytes = Data(
+            repeating: 0x41,
+            count    : AssetTransferFrameCodec.maximumChunkBytes + 1
+        )
+
         let raw = try JSONSerialization.data(
             withJSONObject: [
                 "schemaVersion": 1,
@@ -1219,9 +1249,11 @@ struct MessageAddonAssetIntegrationTests {
                 "offset": 0,
                 "bytes": oversizedBytes.base64EncodedString(),
             ],
-            options: [.sortedKeys]
+            options       : [.sortedKeys]
         )
+
         #expect(raw.count <= AssetTransferFrameCodec.maximumEncodedBytes)
+
         let handle = try #require(
             fixture.adapter.stageAssetIngress(
                 raw,
@@ -1229,12 +1261,14 @@ struct MessageAddonAssetIntegrationTests {
                 sequence   : 2
             )
         )
+
         #expect(
             await fixture.runtime.receiveAssetRequest(
                 handle,
                 connection: fixture.connection
             ) == .refused(.invalidPayload)
         )
+
         // The legitimate transfer was never revoked and finishes with the real chunk.
         let chunk = try AssetTransferRequest(
             requestID : UUID(),
@@ -1243,11 +1277,11 @@ struct MessageAddonAssetIntegrationTests {
             offset    : 0,
             bytes     : png
         )
-        let ack = try await fixture.exchange(
-            chunk,
-            sequence: 2
-        )
+
+        let ack = try await fixture.exchange(chunk, sequence: 2)
+
         #expect(ack.result == .acknowledged)
+
         let imported = try await fixture.exchange(
             try AssetTransferRequest(
                 requestID : UUID(),
@@ -1256,17 +1290,17 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 3
         )
+
         #expect(imported.result == .imported)
+
         await fixture.tearDown()
     }
 
     @Test
     func admissionIsReleasedBetweenChunksSoUnrelatedWorkCompletes() async throws {
         let fixture = try await AssetMessageFixture.make()
-        let png = try randomPNG(
-            width : 32,
-            height: 32
-        )
+        let png     = try randomPNG(width: 32, height: 32)
+
         let begun = try await fixture.exchange(
             try AssetTransferRequest(
                 requestID    : UUID(),
@@ -1276,8 +1310,9 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 1
         )
+
         let transferID = try #require(begun.transferID)
-        let ack = try await fixture.exchange(
+        let ack        = try await fixture.exchange(
             try AssetTransferRequest(
                 requestID : UUID(),
                 operation : .chunk,
@@ -1287,18 +1322,18 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 2
         )
+
         #expect(ack.result == .acknowledged)
+
         // The chunk frame's global admission ended with its reply: an unrelated, authorized
         // publication output completes on the same connection while the transfer is still live.
         _ = try await fixture.publish(
             [
-                fixture.publication(
-                    id   : fixture.ids[0],
-                    asset: nil
-                )
+                fixture.publication(id: fixture.ids[0], asset: nil)
             ],
             sequence: 1
         )
+
         let imported = try await fixture.exchange(
             try AssetTransferRequest(
                 requestID : UUID(),
@@ -1307,14 +1342,17 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 3
         )
+
         #expect(imported.result == .imported)
+
         await fixture.tearDown()
     }
 
     @Test
     func suppressedBeginHandoffRollsBackTheNewTransferAndKeepsTheAssemblerUsable() async throws {
-        let fixture = try await AssetMessageFixture.make()
+        let fixture      = try await AssetMessageFixture.make()
         let beforeMemory = await fixture.governor.usage(.admittedMemoryBytes)
+
         fixture.adapter.rejectedAssetOperations = [.begin]
         let begin = try AssetTransferRequest(
             requestID    : UUID(),
@@ -1322,6 +1360,7 @@ struct MessageAddonAssetIntegrationTests {
             publicationID: fixture.ids[0],
             totalBytes   : 8
         )
+
         #expect(
             try await fixture.rawResult(
                 begin,
@@ -1331,45 +1370,44 @@ struct MessageAddonAssetIntegrationTests {
                 .rejectedBeforeHandoff
             )
         )
+
         // Only the newly created transfer was rolled back: its reservation is refunded and the
         // adapter staging is drained.
         #expect(await fixture.governor.usage(.admittedMemoryBytes) == beforeMemory)
         #expect(fixture.adapter.currentDelivery(incarnation: fixture.connection.incarnation) == nil)
         #expect(fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation) == false)
+
         fixture.adapter.rejectedAssetOperations = []
-        let begun = try await fixture.exchange(
-            begin,
-            sequence: 2
-        )
+        let begun = try await fixture.exchange(begin, sequence: 2)
+
         #expect(begun.result == .begun)
+
         await fixture.tearDown()
     }
 
     @Test
     func suppressedImportHandoffReleasesOnlyTheNewAliasAndKeepsIndependentPins() async throws {
         let fixture = try await AssetMessageFixture.make()
-        let png = try randomPNG(
-            width : 32,
-            height: 32
-        )
+        let png     = try randomPNG(width: 32, height: 32)
+
         // An independent, already published pin that the rollback must not touch.
         let pinned = try await fixture.importAlias(
             png,
             publicationID: fixture.ids[0],
             sequences    : (1, 2, 3)
         )
+
         _ = try await fixture.publish(
             [
-                fixture.publication(
-                    id   : fixture.ids[0],
-                    asset: pinned.assetID
-                )
+                fixture.publication(id: fixture.ids[0], asset: pinned.assetID)
             ],
             sequence: 1
         )
-        let beforePool = await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes
-        let beforeBytes = await fixture.governor.usage(.assetBytes)
+
+        let beforePool     = await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes
+        let beforeBytes    = await fixture.governor.usage(.assetBytes)
         let beforeRetained = await fixture.governor.usage(.retainedStateBytes)
+
         // A second import whose finish reply cannot be handed off.
         fixture.adapter.rejectedAssetOperations = [.finish]
         let begun = try await fixture.rawExchange(
@@ -1381,8 +1419,9 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 4
         )
+
         let transferID = try #require(begun.transferID)
-        _ = try await fixture.rawExchange(
+        _              = try await fixture.rawExchange(
             try AssetTransferRequest(
                 requestID : UUID(),
                 operation : .chunk,
@@ -1392,6 +1431,7 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 5
         )
+
         #expect(
             try await fixture.rawResult(
                 try AssetTransferRequest(
@@ -1405,10 +1445,12 @@ struct MessageAddonAssetIntegrationTests {
                 .rejectedBeforeHandoff
             )
         )
+
         for _ in 0..<1_000 {
             if await fixture.governor.usage(.assetBytes) == beforeBytes { break }
             await Task.yield()
         }
+
         // The newly minted alias and its metadata quote are released; the independent pin stays.
         #expect(await fixture.governor.usage(.assetBytes) == beforeBytes)
         #expect(
@@ -1424,23 +1466,24 @@ struct MessageAddonAssetIntegrationTests {
         )
         #expect(fixture.adapter.currentDelivery(incarnation: fixture.connection.incarnation) == nil)
         #expect(fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation) == false)
+
         await fixture.tearDown()
     }
 
     @Test
     func suppressedShareHandoffReleasesOnlyTheNewAliasAndKeepsTheSource() async throws {
         let fixture = try await AssetMessageFixture.make()
-        let png = try randomPNG(
-            width : 32,
-            height: 32
-        )
+        let png     = try randomPNG(width: 32, height: 32)
+
         let source = try await fixture.importAlias(
             png,
             publicationID: fixture.ids[0],
             sequences    : (1, 2, 3)
         )
-        let beforePool = await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes
+
+        let beforePool  = await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes
         let beforeBytes = await fixture.governor.usage(.assetBytes)
+
         fixture.adapter.rejectedAssetOperations = [.share]
         #expect(
             try await fixture.rawResult(
@@ -1460,16 +1503,15 @@ struct MessageAddonAssetIntegrationTests {
         #expect(
             await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes == beforePool
         )
+
         // The source alias is untouched and still authorizes a real publication pin.
         _ = try await fixture.publish(
             [
-                fixture.publication(
-                    id   : fixture.ids[0],
-                    asset: source.assetID
-                )
+                fixture.publication(id: fixture.ids[0], asset: source.assetID)
             ],
             sequence: 1
         )
+
         #expect(
             await fixture.runtime.assetImage(
                 assetID            : source.assetID,
@@ -1477,6 +1519,7 @@ struct MessageAddonAssetIntegrationTests {
                 publicationRevision: 1
             )?.width == 32
         )
+
         await fixture.tearDown()
     }
 
@@ -1485,10 +1528,8 @@ struct MessageAddonAssetIntegrationTests {
     @Test
     func foreignTransferIDAndForgedConnectionsCannotRevokeTheLiveTransfer() async throws {
         let fixture = try await AssetMessageFixture.make()
-        let png = try randomPNG(
-            width : 32,
-            height: 32
-        )
+        let png     = try randomPNG(width: 32, height: 32)
+
         let begun = try await fixture.exchange(
             try AssetTransferRequest(
                 requestID    : UUID(),
@@ -1498,6 +1539,7 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 1
         )
+
         let transferID = try #require(begun.transferID)
         // A foreign transfer ID is refused and must not clear or revoke the live transfer.
         let foreignChunk = try AssetTransferRequest(
@@ -1507,11 +1549,11 @@ struct MessageAddonAssetIntegrationTests {
             offset    : 0,
             bytes     : Data([1])
         )
-        let refusedChunk = try await fixture.exchange(
-            foreignChunk,
-            sequence: 2
-        )
+
+        let refusedChunk = try await fixture.exchange(foreignChunk, sequence: 2)
+
         #expect(refusedChunk.result == .failure)
+
         // Forged connection copies (foreign token, digest, previous authority revision) are all
         // refused before the shared ingress is taken and never touch the live transfer.
         let forgedConnections = [
@@ -1543,6 +1585,7 @@ struct MessageAddonAssetIntegrationTests {
                 authorityRevision    : fixture.connection.authorityRevision &+ 1
             ),
         ]
+
         for forged in forgedConnections {
             let raw = try AssetTransferFrameCodec.encode(
                 try AssetTransferRequest(
@@ -1554,6 +1597,7 @@ struct MessageAddonAssetIntegrationTests {
                 ),
                 profile: .v1
             )
+
             let handle = try #require(
                 fixture.adapter.stageAssetIngress(
                     raw,
@@ -1561,7 +1605,9 @@ struct MessageAddonAssetIntegrationTests {
                     sequence   : 3
                 )
             )
+
             let attempts = fixture.adapter.ingressTakeAttempts
+
             #expect(
                 await fixture.runtime.receiveAssetRequest(
                     handle,
@@ -1570,6 +1616,7 @@ struct MessageAddonAssetIntegrationTests {
             )
             #expect(fixture.adapter.ingressTakeAttempts == attempts)
         }
+
         // The legitimate transfer still completes with the real chunk and finish.
         let ack = try await fixture.exchange(
             try AssetTransferRequest(
@@ -1581,7 +1628,9 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 3
         )
+
         #expect(ack.result == .acknowledged)
+
         let imported = try await fixture.exchange(
             try AssetTransferRequest(
                 requestID : UUID(),
@@ -1590,22 +1639,23 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 4
         )
+
         #expect(imported.result == .imported)
+
         await fixture.tearDown()
     }
 
     @Test
     func crossPrivateSharingIsRefusedAndPreservesTheSourceAlias() async throws {
         let fixture = try await AssetMessageFixture.make(mixedPrivacy: true)
-        let png = try randomPNG(
-            width : 32,
-            height: 32
-        )
+        let png     = try randomPNG(width: 32, height: 32)
+
         let imported = try await fixture.importAlias(
             png,
             publicationID: fixture.ids[0],
             sequences    : (1, 2, 3)
         )
+
         // The target assignment has a different host privacy partition, so the canonical
         // sharing check refuses the alias while leaving the source alias intact.
         let share = try AssetTransferRequest(
@@ -1614,21 +1664,19 @@ struct MessageAddonAssetIntegrationTests {
             publicationID: fixture.ids[1],
             sourceHandle : imported
         )
-        let refused = try await fixture.exchange(
-            share,
-            sequence: 4
-        )
+
+        let refused = try await fixture.exchange(share, sequence: 4)
+
         #expect(refused.result == .failure)
         #expect(refused.failureCode == .permissionDenied)
+
         _ = try await fixture.publish(
             [
-                fixture.publication(
-                    id   : fixture.ids[0],
-                    asset: imported.assetID
-                )
+                fixture.publication(id: fixture.ids[0], asset: imported.assetID)
             ],
             sequence: 1
         )
+
         #expect(
             await fixture.runtime.assetImage(
                 assetID            : imported.assetID,
@@ -1636,6 +1684,7 @@ struct MessageAddonAssetIntegrationTests {
                 publicationRevision: 1
             )?.width == 32
         )
+
         let released = try await fixture.exchange(
             try AssetTransferRequest(
                 requestID   : UUID(),
@@ -1644,7 +1693,9 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 5
         )
+
         #expect(released.result == .acknowledged)
+
         await fixture.tearDown()
     }
 
@@ -1653,15 +1704,13 @@ struct MessageAddonAssetIntegrationTests {
     @Test
     func endingOnePublicationMustNotDisableTheLiveProcessAssetCapability() async throws {
         let fixture = try await AssetMessageFixture.make()
-        _ = try await fixture.publish(
+        _           = try await fixture.publish(
             [
-                fixture.publication(
-                    id   : fixture.ids[0],
-                    asset: nil
-                )
+                fixture.publication(id: fixture.ids[0], asset: nil)
             ],
             sequence: 1
         )
+
         let begun = try await fixture.exchange(
             try AssetTransferRequest(
                 requestID    : UUID(),
@@ -1671,13 +1720,16 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 1
         )
+
         #expect(begun.result == .begun)
+
         // Ending the exact bound publication revokes only that transfer.
         _ = try await fixture.publish(
             [],
             sequence: 2,
             ends    : [fixture.ids[0]]
         )
+
         // Ending a publication revokes only the exact bound transfer. The process stays
         // connected and the other assignment is still authorized, so a later legitimate import
         // MUST still be admitted on the same per-process assembler instead of being permanently
@@ -1691,17 +1743,17 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 2
         )
+
         #expect(later.result == .begun)
+
         await fixture.tearDown()
     }
 
     @Test
     func expiringOnePublicationMustNotDisableTheLiveProcessAssetCapability() async throws {
         let fixture = try await AssetMessageFixture.make()
-        let png = try randomPNG(
-            width : 32,
-            height: 32
-        )
+        let png     = try randomPNG(width: 32, height: 32)
+
         // The first assignment expires well before the nonrenewable 30-second transfer deadline.
         let expiry = try Publication(
             id         : fixture.ids[0],
@@ -1712,10 +1764,9 @@ struct MessageAddonAssetIntegrationTests {
             expiresAt  : fixture.wall.addingTimeInterval(5),
             stalePolicy: .remove
         )
-        _ = try await fixture.publish(
-            [expiry],
-            sequence: 1
-        )
+
+        _ = try await fixture.publish([expiry], sequence: 1)
+
         let begun = try await fixture.exchange(
             try AssetTransferRequest(
                 requestID    : UUID(),
@@ -1725,15 +1776,15 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 1
         )
+
         #expect(begun.result == .begun)
+
         // Expiry is serviced through the shared deadline event and must revoke only the exact
         // transfer, not close the assembler of the still-connected live process.
         fixture.clock.set(
-            RuntimeInstant(
-                wall     : fixture.wall.addingTimeInterval(10),
-                monotonic: .seconds(10)
-            )
+            RuntimeInstant(wall: fixture.wall.addingTimeInterval(10), monotonic: .seconds(10))
         )
+
         _ = try await fixture.runtime.serviceDeadlines()
         // The second authorized assignment completes a full import on the SAME process
         // assembler, proving the sole reservation token was refunded and the assembler reused.
@@ -1742,38 +1793,40 @@ struct MessageAddonAssetIntegrationTests {
             publicationID: fixture.ids[1],
             sequences    : (2, 3, 4)
         )
+
         #expect(imported.publicationID == fixture.ids[1])
         #expect(imported.width == 32)
+
         await fixture.tearDown()
     }
 
     @Test
     func deferredRefundFailureKeepsTheSoleTokenAndReconcilesBeforeReuse() async throws {
         let fixture = try await AssetMessageFixture.make()
-        _ = try await fixture.publish(
+        _           = try await fixture.publish(
             [
-                fixture.publication(
-                    id   : fixture.ids[0],
-                    asset: nil
-                )
+                fixture.publication(id: fixture.ids[0], asset: nil)
             ],
             sequence: 1
         )
-        let totalBytes = 1_048_576
+
+        let totalBytes   = 1_048_576
         let beforeMemory = await fixture.governor.usage(.admittedMemoryBytes)
-        let begin = try AssetTransferRequest(
+        let begin        = try AssetTransferRequest(
             requestID    : UUID(),
             operation    : .begin,
             publicationID: fixture.ids[0],
             totalBytes   : totalBytes
         )
-        let begun = try await fixture.exchange(
-            begin,
-            sequence: 1
-        )
+
+        let begun = try await fixture.exchange(begin, sequence: 1)
+
         #expect(begun.result == .begun)
+
         let charged = beforeMemory + 2 * totalBytes + 4_096
+
         #expect(await fixture.governor.usage(.admittedMemoryBytes) == charged)
+
         // One real protected-refund failure is injected before the bound publication ends, so the
         // exact nonterminal revocation leaves the sole reservation token retained and observable.
         await fixture.governor.armAssetTransferRefundFailureForTesting()
@@ -1782,29 +1835,29 @@ struct MessageAddonAssetIntegrationTests {
             sequence: 2,
             ends    : [fixture.ids[0]]
         )
+
         #expect(await fixture.governor.usage(.admittedMemoryBytes) == charged)
+
         // The next admission drains the retained exact token before admitting new work; the refund
         // then releases it once and the same live assembler commits a later authorized import.
-        let png = try randomPNG(
-            width : 8,
-            height: 8
-        )
+        let png = try randomPNG(width: 8, height: 8)
+
         let imported = try await fixture.importAlias(
             png,
             publicationID: fixture.ids[1],
             sequences    : (2, 3, 4)
         )
+
         #expect(imported.publicationID == fixture.ids[1])
+
         await fixture.tearDown()
     }
 
     @Test(arguments: [false, true])
     func suspendedFinishNeverCommitsAnAliasWhenProviderIsDisabledOrStopped(_ disable: Bool) async throws {
         let fixture = try await AssetMessageFixture.make()
-        let png = try randomPNG(
-            width : 64,
-            height: 64
-        )
+        let png     = try randomPNG(width: 64, height: 64)
+
         // The publication expires five seconds after the begin, well before the 30-second
         // transfer deadline, so the race is specifically a publication-lifetime revocation.
         _ = try await fixture.publish(
@@ -1821,6 +1874,7 @@ struct MessageAddonAssetIntegrationTests {
             ],
             sequence: 1
         )
+
         let begun = try await fixture.exchange(
             try AssetTransferRequest(
                 requestID    : UUID(),
@@ -1830,8 +1884,9 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 1
         )
+
         let transferID = try #require(begun.transferID)
-        let chunked = try await fixture.exchange(
+        let chunked    = try await fixture.exchange(
             try AssetTransferRequest(
                 requestID : UUID(),
                 operation : .chunk,
@@ -1841,8 +1896,10 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 2
         )
+
         #expect(chunked.result == .acknowledged)
-        let beforeBytes = await fixture.governor.usage(.assetBytes)
+
+        let beforeBytes  = await fixture.governor.usage(.assetBytes)
         let beforeMemory = await fixture.governor.usage(.admittedMemoryBytes)
         // Park the real finish inside growPool, which forwards the actual governor resize once.
         await fixture.access.armResize()
@@ -1860,12 +1917,11 @@ struct MessageAddonAssetIntegrationTests {
                 sequence   : 3
             )
         )
+
         let finish = Task {
-            await fixture.runtime.receiveAssetRequest(
-                handle,
-                connection: fixture.connection
-            )
+            await fixture.runtime.receiveAssetRequest(handle, connection: fixture.connection)
         }
+
         await fixture.access.waitForArrival()
         // The provider is disabled (or the whole runtime is stopped) while the exact finish is
         // suspended after its metadata quote and before any decode or synchronous alias insert.
@@ -1877,6 +1933,7 @@ struct MessageAddonAssetIntegrationTests {
         } else {
             _ = await fixture.runtime.requestStop()
         }
+
         await fixture.access.releaseGate()
         let result = await finish.value
         if case .completed(.failure, _) = result {
@@ -1886,6 +1943,7 @@ struct MessageAddonAssetIntegrationTests {
         } else {
             Issue.record("Expected a bounded finish failure, got \(result)")
         }
+
         // No alias was committed, the exact assembler charge is refunded and the adapter staging
         // is drained on every outcome.
         #expect(await fixture.governor.usage(.assetBytes) == beforeBytes)
@@ -1893,6 +1951,7 @@ struct MessageAddonAssetIntegrationTests {
         #expect(await fixture.governor.usage(.admittedMemoryBytes) < beforeMemory)
         #expect(fixture.adapter.currentDelivery(incarnation: fixture.connection.incarnation) == nil)
         #expect(fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation) == false)
+
         await fixture.tearDown()
     }
 
@@ -1901,24 +1960,21 @@ struct MessageAddonAssetIntegrationTests {
     @Test
     func messageImportKeepsPinsAndABorrowedImageUntilRealDisposal() async throws {
         let fixture = try await AssetMessageFixture.make()
-        let png = try randomPNG(
-            width : 32,
-            height: 32
-        )
+        let png     = try randomPNG(width: 32, height: 32)
+
         let imported = try await fixture.importAlias(
             png,
             publicationID: fixture.ids[0],
             sequences    : (1, 2, 3)
         )
+
         _ = try await fixture.publish(
             [
-                fixture.publication(
-                    id   : fixture.ids[0],
-                    asset: imported.assetID
-                )
+                fixture.publication(id: fixture.ids[0], asset: imported.assetID)
             ],
             sequence: 1
         )
+
         let shared = try await fixture.exchange(
             try AssetTransferRequest(
                 requestID    : UUID(),
@@ -1928,24 +1984,27 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 4
         )
+
         let sharedHandle = try #require(shared.assetHandle)
-        _ = try await fixture.publish(
+        _                = try await fixture.publish(
             [
-                fixture.publication(
-                    id   : fixture.ids[1],
-                    asset: sharedHandle.assetID
-                )
+                fixture.publication(id: fixture.ids[1], asset: sharedHandle.assetID)
             ],
             sequence: 2
         )
+
         var borrowed: CGImage? = await fixture.runtime.assetImage(
             assetID            : imported.assetID,
             publicationID      : fixture.ids[0],
             publicationRevision: 1
         )
+
         #expect(borrowed?.width == 32)
+
         let chargedBytes = await fixture.governor.usage(.assetBytes)
+
         #expect(chargedBytes > 0)
+
         // Releasing both import aliases leaves the independent publication pins and the
         // borrowed actual CGImage owning the raster bytes.
         _ = try await fixture.exchange(
@@ -1956,6 +2015,7 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 5
         )
+
         _ = try await fixture.exchange(
             try AssetTransferRequest(
                 requestID   : UUID(),
@@ -1964,6 +2024,7 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 6
         )
+
         #expect(
             await fixture.runtime.assetImage(
                 assetID            : imported.assetID,
@@ -1979,6 +2040,7 @@ struct MessageAddonAssetIntegrationTests {
             )?.width == 32
         )
         #expect(await fixture.governor.usage(.assetBytes) == chargedBytes)
+
         // Provider revocation removes connection aliases but keeps published content alive.
         await fixture.runtime.observeExit(fixture.connection.incarnation)
         #expect(
@@ -1989,14 +2051,13 @@ struct MessageAddonAssetIntegrationTests {
             )?.width == 32
         )
         #expect(borrowed?.height == 32)
+
         // Final real disposal: the expired publication pins release the lookup, but the raster
         // bytes stay charged until the borrowed CGImage is dropped.
         fixture.clock.set(
-            RuntimeInstant(
-                wall     : fixture.wall.addingTimeInterval(61),
-                monotonic: .seconds(61)
-            )
+            RuntimeInstant(wall: fixture.wall.addingTimeInterval(61), monotonic: .seconds(61))
         )
+
         _ = try await fixture.runtime.serviceDeadlines()
         #expect(
             await fixture.runtime.assetImage(
@@ -2007,6 +2068,7 @@ struct MessageAddonAssetIntegrationTests {
         )
         #expect(borrowed?.width == 32)
         #expect(await fixture.governor.usage(.assetBytes) == chargedBytes)
+
         borrowed = nil
         // A time deadline, not a yield count: under the full parallel run a
         // thousand yields can elapse before the release reaches the governor.
@@ -2014,31 +2076,30 @@ struct MessageAddonAssetIntegrationTests {
         while await fixture.governor.usage(.assetBytes) != 0, ContinuousClock.now < deadline {
             try await Task.sleep(for: .milliseconds(1))
         }
+
         #expect(await fixture.governor.usage(.assetBytes) == 0)
+
         await fixture.tearDown()
     }
 
     @Test
     func bridgeClosePreservesDurablePublicationsAndActualAssetPins() async throws {
         let fixture = try await AssetMessageFixture.make()
-        let png = try randomPNG(
-            width : 32,
-            height: 32
-        )
+        let png     = try randomPNG(width: 32, height: 32)
+
         let imported = try await fixture.importAlias(
             png,
             publicationID: fixture.ids[0],
             sequences    : (1, 2, 3)
         )
+
         _ = try await fixture.publish(
             [
-                fixture.publication(
-                    id   : fixture.ids[0],
-                    asset: imported.assetID
-                )
+                fixture.publication(id: fixture.ids[0], asset: imported.assetID)
             ],
             sequence: 1
         )
+
         #expect(
             await fixture.runtime.assetImage(
                 assetID            : imported.assetID,
@@ -2046,8 +2107,11 @@ struct MessageAddonAssetIntegrationTests {
                 publicationRevision: 1
             )?.width == 32
         )
+
         let assetBytes = await fixture.governor.usage(.assetBytes)
+
         #expect(assetBytes > 0)
+
         // Closing import authority must retain the durable publication and its physical raster.
         await fixture.channel.close()
         #expect(
@@ -2061,6 +2125,7 @@ struct MessageAddonAssetIntegrationTests {
         #expect(await fixture.governor.usage(.publications) == 1)
         #expect(await fixture.governor.usage(.assetBytes) == assetBytes)
         #expect(await fixture.governor.usage(.providers, owner: fixture.owner) == 1)
+
         await #expect(throws: AddonFailure.self) {
             _ = try await fixture.runtime.releaseAsset(
                 assetID      : imported.assetID,
@@ -2068,6 +2133,7 @@ struct MessageAddonAssetIntegrationTests {
                 connection   : fixture.connection
             )
         }
+
         await fixture.runtime.observeExit(fixture.connection.incarnation)
         #expect(await fixture.governor.usage(.providers, owner: fixture.owner) == 0)
         #expect(await fixture.runtime.snapshot(at: fixture.wall).publications.count == 1)
@@ -2079,15 +2145,16 @@ struct MessageAddonAssetIntegrationTests {
             )?.width == 32
         )
         #expect(await fixture.governor.usage(.assetBytes) == assetBytes)
+
         await fixture.tearDown()
     }
 
     @Test(arguments: ["token", "incarnation", "identity", "digest", "revision"])
     func forgedCloseCannotRevokeTheCanonicalConnection(field: String) async throws {
-        let fixture = try await AssetMessageFixture.make()
-        let current = fixture.connection
+        let fixture         = try await AssetMessageFixture.make()
+        let current         = fixture.connection
         let foreignIdentity = try installedFixture("consumer").verifiedIdentity
-        let forged = RuntimeConnection(
+        let forged          = RuntimeConnection(
             token                : field == "token" ? UUID() : current.token,
             incarnation          : field == "incarnation" ? RuntimeIncarnation() : current.incarnation,
             identity             : field == "identity" ? foreignIdentity : current.identity,
@@ -2096,8 +2163,10 @@ struct MessageAddonAssetIntegrationTests {
             serviceSession       : current.serviceSession,
             authorityRevision    : field == "revision" ? current.authorityRevision + 1 : current.authorityRevision
         )
+
         await fixture.runtime.closeConnection(forged)
         #expect(fixture.adapter.stopCount(incarnation: current.incarnation) == 0)
+
         let reply = try await fixture.exchange(
             AssetTransferRequest(
                 requestID    : UUID(),
@@ -2107,7 +2176,9 @@ struct MessageAddonAssetIntegrationTests {
             ),
             sequence: 1
         )
+
         #expect(reply.result == .begun)
+
         await fixture.tearDown()
     }
 
@@ -2115,7 +2186,7 @@ struct MessageAddonAssetIntegrationTests {
     func staleBridgeCloseCannotStopOrRevokeReplacementTraffic() async throws {
         let fixture = try await AssetMessageFixture.make()
         await fixture.runtime.observeExit(fixture.connection.incarnation)
-        let launch = try await fixture.runtime.requestLaunch(owner: fixture.owner)
+        let launch      = try await fixture.runtime.requestLaunch(owner: fixture.owner)
         let replacement = try await fixture.runtime.attach(
             launchID: launch,
             offer   : ProtocolOffer(
@@ -2125,29 +2196,31 @@ struct MessageAddonAssetIntegrationTests {
                 contentSchemas: [1]
             )
         )
+
         let channel = RuntimeAssetChannelBridge(
             runtime   : fixture.runtime,
             adapter   : fixture.adapter,
             connection: replacement
         )
+
         let request = try AssetTransferRequest(
             requestID    : UUID(),
             operation    : .begin,
             publicationID: fixture.ids[0],
             totalBytes   : 4
         )
+
         let ingress = try #require(fixture.adapter.stageAssetIngress(
-            AssetTransferFrameCodec.encode(
-                request,
-                profile: .v1
-            ),
+            AssetTransferFrameCodec.encode(request, profile: .v1),
             incarnation: replacement.incarnation,
             sequence   : 1
         ))
+
         #expect(await fixture.runtime.receiveAssetRequest(
             ingress,
             connection: replacement
         ) == .completed(.accepted, .handedOff))
+
         guard case .assetResponse(let delivery)? = fixture.adapter.currentDelivery(
             incarnation: replacement.incarnation
         ) else {
@@ -2156,6 +2229,7 @@ struct MessageAddonAssetIntegrationTests {
             Issue.record("Expected the replacement's real asset reply.")
             return
         }
+
         // Close the old bridge while the replacement physically owns a reply and assembly.
         await fixture.channel.close()
         await fixture.runtime.closeConnection(fixture.connection)
@@ -2166,11 +2240,11 @@ struct MessageAddonAssetIntegrationTests {
             delivery.receipt,
             connection: replacement
         ))
-        let response = try AssetTransferFrameCodec.decodeResponse(
-            delivery.payload,
-            profile: .v1
-        )
+
+        let response = try AssetTransferFrameCodec.decodeResponse(delivery.payload, profile: .v1)
+
         #expect(response.result == .begun)
+
         let chunk = try AssetTransferRequest(
             requestID : UUID(),
             operation : .chunk,
@@ -2178,17 +2252,17 @@ struct MessageAddonAssetIntegrationTests {
             offset    : 0,
             bytes     : Data([1, 2, 3, 4])
         )
+
         let continued = try AssetTransferFrameCodec.decodeResponse(
             await channel.exchange(
-                AssetTransferFrameCodec.encode(
-                    chunk,
-                    profile: .v1
-                ),
+                AssetTransferFrameCodec.encode(chunk, profile: .v1),
                 sequence: 2
             ),
             profile: .v1
         )
+
         #expect(continued.result == .acknowledged)
+
         await channel.close()
         await fixture.runtime.observeExit(replacement.incarnation)
         await fixture.tearDown()
@@ -2197,15 +2271,14 @@ struct MessageAddonAssetIntegrationTests {
     @Test
     func connectionCloseDisposesUnpinnedImportsWithoutWaitingForProcessExit() async throws {
         let fixture = try await AssetMessageFixture.make()
-        _ = try await fixture.importAlias(
-            randomPNG(
-                width : 32,
-                height: 32
-            ),
+        _           = try await fixture.importAlias(
+            randomPNG(width: 32, height: 32),
             publicationID: fixture.ids[0],
             sequences    : (1, 2, 3)
         )
+
         #expect(await fixture.governor.usage(.assetBytes) > 0)
+
         let beforePool = try #require(await fixture.runtime.diagnostics(owner: fixture.owner)).reservedStateBytes
         await fixture.channel.close()
         // Raster disposal refunds asynchronously after the last actual reference is dropped.
@@ -2213,42 +2286,50 @@ struct MessageAddonAssetIntegrationTests {
             if await fixture.governor.usage(.assetBytes) == 0 { break }
             await Task.yield()
         }
+
         #expect(await fixture.governor.usage(.assetBytes) == 0)
         #expect(await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes ?? Int.max < beforePool)
         #expect(await fixture.runtime.diagnostics(owner: fixture.owner)?.hasProcess == true)
         #expect(await fixture.governor.usage(.providers, owner: fixture.owner) == 1)
+
         await fixture.tearDown()
     }
 
     @Test
     func closeAfterServiceInducedStopDisposesImportsAndSessionsWithoutExit() async throws {
         let fixture = try await AddonRuntimeSlotOwnershipTests.ServiceFixture()
-        let owner = fixture.provider.manifest.id
+        let owner   = fixture.provider.manifest.id
         let current = fixture.providerConnection
-        _ = try await fixture.runtime.importAsset(
+        _           = try await fixture.runtime.importAsset(
             encoded      : randomPNG(width: 32, height: 32),
             publicationID: fixture.publicationID,
             connection   : current
         )
+
         let acquisition = try await fixture.acquire()
+
         #expect(try await fixture.runtime.receiveSourceStartupCompletion(
             acquisition.sourceID,
             connection: current
         ))
+
         let work = try await fixture.runtime.beginServiceInvocation(
             connection: fixture.consumerConnection,
             grantID   : acquisition.grant.id,
             invocation: fixture.invocation()
         )
+
         #expect(try await fixture.runtime.pumpServiceInvocation(work.id))
+
         // Revoking the consumer's grant invokes real broker reconciliation, which requests
         // provider stop while retaining its canonical connection and uncertain physical job.
         await fixture.runtime.closeConnection(fixture.consumerConnection)
         #expect(fixture.adapter.stopCount(incarnation: current.incarnation) == 1)
         #expect(await fixture.governor.usage(.assetBytes) > 0)
-        let beforePool = try #require(await fixture.runtime.diagnostics(owner: owner)).reservedStateBytes
+
+        let beforePool  = try #require(await fixture.runtime.diagnostics(owner: owner)).reservedStateBytes
         let beforeState = await fixture.governor.usage(.retainedStateBytes, owner: owner)
-        let stale = RuntimeConnection(
+        let stale       = RuntimeConnection(
             token                : UUID(),
             incarnation          : current.incarnation,
             identity             : current.identity,
@@ -2257,8 +2338,10 @@ struct MessageAddonAssetIntegrationTests {
             serviceSession       : current.serviceSession,
             authorityRevision    : current.authorityRevision
         )
+
         await fixture.runtime.closeConnection(stale)
         #expect(await fixture.governor.usage(.retainedStateBytes, owner: owner) == beforeState)
+
         // Foreign component handles must be ignored even for an already-stopping process.
         let supplied = RuntimeConnection(
             token                : current.token,
@@ -2269,23 +2352,30 @@ struct MessageAddonAssetIntegrationTests {
             serviceSession       : fixture.consumerConnection.serviceSession,
             authorityRevision    : current.authorityRevision
         )
+
         let channel = RuntimeAssetChannelBridge(
             runtime   : fixture.runtime,
             adapter   : fixture.adapter,
             connection: supplied
         )
+
         await channel.close()
         for _ in 0..<1_000 {
             if await fixture.governor.usage(.assetBytes) == 0 { break }
             await Task.yield()
         }
+
         #expect(await fixture.governor.usage(.assetBytes) == 0)
-        let afterPool = try #require(await fixture.runtime.diagnostics(owner: owner)).reservedStateBytes
+
+        let afterPool  = try #require(await fixture.runtime.diagnostics(owner: owner)).reservedStateBytes
         let afterState = await fixture.governor.usage(.retainedStateBytes, owner: owner)
+
         #expect(afterPool < beforePool)
+
         // The broker session has a separate governor reservation outside the owner's runtime
         // pool. Both that session and the pool's publication session/import metadata must go.
         #expect(beforeState - afterState > beforePool - afterPool)
+
         await fixture.runtime.closeConnection(current)
         #expect(await fixture.governor.usage(.retainedStateBytes, owner: owner) == afterState)
         #expect(fixture.adapter.stopCount(incarnation: current.incarnation) == 1)
@@ -2294,58 +2384,57 @@ struct MessageAddonAssetIntegrationTests {
         #expect(await fixture.governor.usage(.commands, owner: fixture.consumer.manifest.id) == 1)
         #expect(await fixture.runtime.diagnostics(owner: owner)?.hasProcess == true)
         #expect(await fixture.runtime.snapshot(at: fixture.action.wall).publications.count == 1)
+
         await fixture.runtime.observeExit(current.incarnation)
         #expect(await fixture.governor.usage(.jobs, owner: owner) == 0)
         #expect(await fixture.governor.usage(.commands, owner: fixture.consumer.manifest.id) == 0)
         #expect(await fixture.governor.usage(.providers) == 1)
+
         await fixture.stop()
     }
 }
 
 /// randomPNG encodes an incompressible image so the compressed payload spans several 64 KiB chunks.
-private func randomPNG(width: Int, height: Int) throws -> Data {
+private func randomPNG(
+    width : Int,
+    height: Int
+) throws -> Data {
     let colorSpace = try #require(CGColorSpace(name: CGColorSpace.sRGB))
-    var bytes = [UInt8](
-        repeating: 0,
-        count: width * height * 4
-    )
+    var bytes      = [UInt8](repeating: 0, count: width * height * 4)
+
     var state: UInt64 = 0x9E37_79B9_7F4A_7C15
     for index in bytes.indices {
-        state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+        state        = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
         bytes[index] = UInt8(truncatingIfNeeded: state >> 33)
     }
-    let provider = try #require(
-        CGDataProvider(data: Data(bytes) as CFData)
-    )
-    let image = try #require(
+
+    let provider = try #require(CGDataProvider(data: Data(bytes) as CFData))
+    let image    = try #require(
         CGImage(
-            width             : width,
-            height            : height,
-            bitsPerComponent  : 8,
-            bitsPerPixel      : 32,
-            bytesPerRow       : width * 4,
-            space             : colorSpace,
-            bitmapInfo        : CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
-            provider          : provider,
-            decode            : nil,
-            shouldInterpolate : false,
-            intent            : .defaultIntent
+            width            : width,
+            height           : height,
+            bitsPerComponent : 8,
+            bitsPerPixel     : 32,
+            bytesPerRow      : width * 4,
+            space            : colorSpace,
+            bitmapInfo       : CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
+            provider         : provider,
+            decode           : nil,
+            shouldInterpolate: false,
+            intent           : .defaultIntent
         )
     )
-    let data = NSMutableData()
-    let destination = try #require(
-        CGImageDestinationCreateWithData(
-            data,
-            "public.png" as CFString,
-            1,
-            nil
-        )
-    )
+
+    let data        = NSMutableData()
+    let destination = try #require(CGImageDestinationCreateWithData(data, "public.png" as CFString, 1, nil))
+
     CGImageDestinationAddImage(
         destination,
         image,
         nil
     )
+
     #expect(CGImageDestinationFinalize(destination))
+
     return data as Data
 }

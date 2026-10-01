@@ -9,6 +9,7 @@ import Testing
 @testable import CascadeRuntime
 
 struct FixedWorkspaceClock: RuntimeClock {
+
     let instant: RuntimeInstant
 
     init(_ instant: RuntimeInstant) {

@@ -11,28 +11,26 @@ import Testing
 
 @Suite
 struct AssetArchiveTests {
-    private let owner: AddonID
+
+    private let owner       : AddonID
     private let foreignOwner: AddonID
-    private let now = Date(timeIntervalSince1970: 2_000_000_000)
+    private let now          = Date(timeIntervalSince1970: 2_000_000_000)
 
     init() throws {
-        owner = try #require(AddonID(rawValue: "com.example.archive-assets"))
+        owner        = try #require(AddonID(rawValue: "com.example.archive-assets"))
         foreignOwner = try #require(AddonID(rawValue: "com.example.foreign-assets"))
     }
 
     private var identity: VerifiedAddonIdentity {
-        VerifiedAddonIdentity(
-            publisher: "test.publisher",
-            addonID  : owner
-        )
+        VerifiedAddonIdentity(publisher: "test.publisher", addonID: owner)
     }
 
     private func scope() -> AssetState.Scope {
         AssetState.Scope(
-            identity       : identity,
-            verifiedDigest : "verified",
-            featureID      : "widget",
-            publicationID  : PublicationID(
+            identity      : identity,
+            verifiedDigest: "verified",
+            featureID     : "widget",
+            publicationID : PublicationID(
                 addonID   : owner,
                 instanceID: UUID(),
                 sessionID : UUID()
@@ -46,7 +44,7 @@ struct AssetArchiveTests {
         privacy: ContentDocument.Privacy = .publicContent
     ) throws -> PresentationSet {
         try PresentationSet(
-            widget         : ContentDocument(
+            widget: ContentDocument(
                 root              : .text("Archive"),
                 privacy           : privacy,
                 accessibilityLabel: "Archive",
@@ -66,16 +64,10 @@ struct AssetArchiveTests {
         future  : Bool = false
     ) throws -> Publication {
         let timeline: [ScheduledEntry]? = future ? [
-            try ScheduledEntry(
-                date   : now.addingTimeInterval(10),
-                content: presentation(aliases: aliases)
-            ),
+            try ScheduledEntry(date: now.addingTimeInterval(10), content: presentation(aliases: aliases)),
             try ScheduledEntry(
                 date   : now.addingTimeInterval(20),
-                content: presentation(
-                    aliases: aliases,
-                    privacy: .sensitive
-                )
+                content: presentation(aliases: aliases, privacy: .sensitive)
             ),
         ] : nil
         return try Publication(
@@ -128,14 +120,11 @@ struct AssetArchiveTests {
         publication: Publication
     ) throws {
         var publications = PublicationState(now: { Date(timeIntervalSince1970: 2_000_000_000) })
-        let connection = try publications.openConnection(
-            identity              : identity,
-            verifiedDigest        : scope.verifiedDigest,
-            manifestProtocol      : ProtocolVersion(
-                major       : 1,
-                minimumMinor: 0
-            ),
-            offer                 : ProtocolOffer(
+        let connection   = try publications.openConnection(
+            identity        : identity,
+            verifiedDigest  : scope.verifiedDigest,
+            manifestProtocol: ProtocolVersion(major: 1, minimumMinor: 0),
+            offer           : ProtocolOffer(
                 major         : 1,
                 minimumMinor  : 0,
                 maximumMinor  : 0,
@@ -155,29 +144,20 @@ struct AssetArchiveTests {
             generation: connection.generation,
             sequence  : 1
         )
-        let proposal = try assets.prepareOutput(
-            output,
-            connectionToken: scope.connectionToken
-        ) { _ in scope }
+        let proposal = try assets.prepareOutput(output, connectionToken: scope.connectionToken) { _ in scope }
         try assets.validatePrepared(proposal)
-        _ = try publications.commitPreparedOutput(
-            output,
-            at: now
-        )
+        _ = try publications.commitPreparedOutput(output, at: now)
         assets.commitPrepared(proposal)
     }
 
     @Test
     func captureSurvivesImportRevocationAndIncludesFuturePrivacy() async throws {
         let coordinator = AssetDisposalCoordinator(governor: ResourceGovernor())
-        let backing = try await raster(coordinator)
-        let original = scope()
-        var assets = AssetState()
-        let handle = try assets.insert(
-            backing: backing,
-            scope  : original
-        )
-        let content = try publication(
+        let backing     = try await raster(coordinator)
+        let original    = scope()
+        var assets      = AssetState()
+        let handle      = try assets.insert(backing: backing, scope: original)
+        let content     = try publication(
             id     : original.publicationID,
             aliases: [handle.assetID],
             future : true
@@ -200,29 +180,21 @@ struct AssetArchiveTests {
             #expect(captured === backing)
             #expect(hasPublic && hasSensitive)
         }
+
         #expect(count == 1)
         #expect(assets.retainedBytes == bytes)
         #expect(throws: AddonFailure.self) {
-            try assets.releaseImport(
-                assetID: handle.assetID,
-                scope  : original
-            )
+            try assets.releaseImport(assetID: handle.assetID, scope: original)
         }
     }
 
     @Test
     func captureRejectsWrongOwnerRevisionExpiryAndReferenceSetBeforeVisitor() async throws {
         let coordinator = AssetDisposalCoordinator(governor: ResourceGovernor())
-        let original = scope()
-        var assets = AssetState()
-        let alias = try assets.insert(
-            backing: await raster(coordinator),
-            scope  : original
-        ).assetID
-        let content = try publication(
-            id     : original.publicationID,
-            aliases: [alias]
-        )
+        let original    = scope()
+        var assets      = AssetState()
+        let alias       = try assets.insert(backing: await raster(coordinator), scope: original).assetID
+        let content     = try publication(id: original.publicationID, aliases: [alias])
         try publishImported(
             assets     : &assets,
             scope      : original,
@@ -242,15 +214,9 @@ struct AssetArchiveTests {
             expiresAt  : now.addingTimeInterval(30),
             stalePolicy: content.stalePolicy
         )
-        let missingReference = try publication(
-            id     : original.publicationID,
-            aliases: []
-        )
-        let extraReference = try publication(
-            id     : original.publicationID,
-            aliases: [alias, "extra"]
-        )
-        let wrongPrivacy = try publication(
+        let missingReference = try publication(id: original.publicationID, aliases: [])
+        let extraReference   = try publication(id: original.publicationID, aliases: [alias, "extra"])
+        let wrongPrivacy     = try publication(
             id     : original.publicationID,
             aliases: [alias],
             future : true
@@ -273,13 +239,12 @@ struct AssetArchiveTests {
                     at         : date
                 ) { _, _, _, _ in visits += 1 }
             }
+
             #expect(visits == 0)
         }
-        let assetless = try publication(
-            id     : scope().publicationID,
-            aliases: []
-        )
-        var visits = 0
+
+        let assetless = try publication(id: scope().publicationID, aliases: [])
+        var visits    = 0
         try assets.forEachArchivedPin(
             publication: assetless,
             owner      : owner,
@@ -291,36 +256,24 @@ struct AssetArchiveTests {
     @Test
     func directPinsHaveExactChargeAndNoImportAuthority() async throws {
         let coordinator = AssetDisposalCoordinator(governor: ResourceGovernor())
-        let backing = try await raster(coordinator)
-        let original = scope()
-        let content = try publication(
+        let backing     = try await raster(coordinator)
+        let original    = scope()
+        let content     = try publication(
             id     : original.publicationID,
             aliases: ["fresh-a", "fresh-b"],
             future : true
         )
         var publications = PublicationState()
-        let restoration = try restored(
-            [content],
-            in: publications
-        )
-        let inputs = [content.id: ["fresh-a": backing, "fresh-b": backing]]
-        var assets = AssetState(maximumRetainedBytes: 4_096)
-        #expect(try assets.restorationPreparationBytes(
-            restoration,
-            backings: inputs
-        ) == 4_096)
-        let proposal = try assets.prepareRestoration(
-            restoration,
-            backings: inputs
-        )
+        let restoration  = try restored([content], in: publications)
+        let inputs       = [content.id: ["fresh-a": backing, "fresh-b": backing]]
+        var assets       = AssetState(maximumRetainedBytes: 4_096)
+        #expect(try assets.restorationPreparationBytes(restoration, backings: inputs) == 4_096)
+        let proposal = try assets.prepareRestoration(restoration, backings: inputs)
         #expect(proposal.estimatedBytes == 4_096)
         #expect(proposal.requiredGrowth == 4_096)
         #expect(proposal.retainedBytesAfter == 4_096)
         #expect(assets.retainedBytes == 0)
-        try publications.validatePreparedRestoration(
-            restoration,
-            at: now
-        )
+        try publications.validatePreparedRestoration(restoration, at: now)
         try assets.validatePrepared(proposal)
         publications.commitPreparedRestoration(restoration)
         assets.commitPrepared(proposal)
@@ -335,35 +288,25 @@ struct AssetArchiveTests {
             #expect(captured === backing)
             #expect(hasPublic && hasSensitive)
         }
+
         #expect(visits == 2)
         #expect(throws: AddonFailure.self) {
-            try assets.releaseImport(
-                assetID: "fresh-a",
-                scope  : original
-            )
+            try assets.releaseImport(assetID: "fresh-a", scope: original)
         }
+
         #expect(throws: AddonFailure.self) {
-            try assets.prepareRestoration(
-                restoration,
-                backings: inputs
-            )
+            try assets.prepareRestoration(restoration, backings: inputs)
         }
     }
 
     @Test
     func directRestorationRejectsIncompleteForeignAndTerminalInputsAtomically() async throws {
         let coordinator = AssetDisposalCoordinator(governor: ResourceGovernor())
-        let backing = try await raster(coordinator)
-        let foreign = try await raster(
-            coordinator,
-            owner: foreignOwner
-        )
-        let content = try publication(
-            id     : scope().publicationID,
-            aliases: ["fresh"]
-        )
+        let backing     = try await raster(coordinator)
+        let foreign     = try await raster(coordinator, owner: foreignOwner)
+        let content     = try publication(id: scope().publicationID, aliases: ["fresh"])
         let restoration = try restored([content])
-        let assets = AssetState()
+        let assets      = AssetState()
         for input in [
             [:],
             [content.id: [:]],
@@ -372,69 +315,43 @@ struct AssetArchiveTests {
             [scope().publicationID: ["fresh": backing]],
         ] as [[PublicationID: [String: AssetRasterBacking]]] {
             #expect(throws: AddonFailure.self) {
-                try assets.prepareRestoration(
-                    restoration,
-                    backings: input
-                )
+                try assets.prepareRestoration(restoration, backings: input)
             }
+
             #expect(assets.retainedBytes == 0)
         }
-        let elapsed = try restored(
-            [content],
-            at: content.expiresAt
-        )
+
+        let elapsed = try restored([content], at: content.expiresAt)
         #expect(throws: AddonFailure.self) {
-            try assets.prepareRestoration(
-                elapsed,
-                backings: [content.id: ["fresh": backing]]
-            )
+            try assets.prepareRestoration(elapsed, backings: [content.id: ["fresh": backing]])
         }
-        let terminalProposal = try assets.prepareRestoration(
-            elapsed,
-            backings: [:]
-        )
+
+        let terminalProposal = try assets.prepareRestoration(elapsed, backings: [:])
         #expect(terminalProposal.estimatedBytes == 0)
         #expect(terminalProposal.requiredGrowth == 0)
         let tooSmall = AssetState(maximumRetainedBytes: 3_071)
         #expect(throws: AddonFailure.self) {
-            try tooSmall.restorationPreparationBytes(
-                restoration,
-                backings: [content.id: ["fresh": backing]]
-            )
+            try tooSmall.restorationPreparationBytes(restoration, backings: [content.id: ["fresh": backing]])
         }
+
         #expect(tooSmall.retainedBytes == 0)
     }
 
     @Test
     func copiedDivergentHistoriesRejectProposalWithEqualNumericRevision() async throws {
         let coordinator = AssetDisposalCoordinator(governor: ResourceGovernor())
-        let backing = try await raster(coordinator)
-        let original = scope()
-        let empty = AssetState()
-        var first = empty
-        var second = empty
-        let handle = try first.insert(
-            backing: backing,
-            scope  : original
-        )
-        try first.releaseImport(
-            assetID: handle.assetID,
-            scope  : original
-        )
-        _ = try second.insert(
-            backing: backing,
-            scope  : original
-        )
-        _ = try second.insert(
-            backing: backing,
-            scope  : original
-        )
-        let content = try publication(
-            id     : scope().publicationID,
-            aliases: ["fresh"]
-        )
+        let backing     = try await raster(coordinator)
+        let original    = scope()
+        let empty       = AssetState()
+        var first       = empty
+        var second      = empty
+        let handle      = try first.insert(backing: backing, scope: original)
+        try first.releaseImport(assetID: handle.assetID, scope: original)
+        _ = try second.insert(backing: backing, scope: original)
+        _ = try second.insert(backing: backing, scope: original)
+        let content     = try publication(id: scope().publicationID, aliases: ["fresh"])
         let restoration = try restored([content])
-        let proposal = try first.prepareRestoration(
+        let proposal    = try first.prepareRestoration(
             restoration,
             backings: [content.id: ["fresh": backing]]
         )
@@ -457,19 +374,16 @@ struct AssetArchiveTests {
 
     @Test
     func canonicalCopyPreservesNativeBytesWithinPrepaidScopes() async throws {
-        let governor = ResourceGovernor()
+        let governor    = ResourceGovernor()
         let coordinator = AssetDisposalCoordinator(governor: governor)
-        let pixels = Data([255, 0, 0, 255, 0, 128, 0, 128])
-        let backing = try await coordinator.create(
+        let pixels      = Data([255, 0, 0, 255, 0, 128, 0, 128])
+        let backing     = try await coordinator.create(
             pixels: pixels,
             width : 2,
             height: 1,
             owner : owner
         )
-        let scratch = try AssetRasterArchiveCopy.scratchBytes(
-            backing: backing,
-            owner  : owner
-        )
+        let scratch = try AssetRasterArchiveCopy.scratchBytes(backing: backing, owner: owner)
         #expect(scratch == 16)
         let worker = AssetRasterArchiveCopy()
         try await governor.withAssetDecodeReservation(
@@ -480,53 +394,35 @@ struct AssetArchiveTests {
                 bytes: scratch,
                 owner: owner
             ) {
-                let copied = try await worker.copy(
-                    backing: backing,
-                    owner  : owner
-                )
+                let copied = try await worker.copy(backing: backing, owner: owner)
                 #expect(copied == pixels)
             }
         }
+
         #expect(throws: AddonFailure.self) {
-            try AssetRasterArchiveCopy.scratchBytes(
-                backing: backing,
-                owner  : foreignOwner
-            )
+            try AssetRasterArchiveCopy.scratchBytes(backing: backing, owner: foreignOwner)
         }
+
         await #expect(throws: AddonFailure.self) {
-            try await worker.copy(
-                backing: backing,
-                owner  : foreignOwner
-            )
+            try await worker.copy(backing: backing, owner: foreignOwner)
         }
     }
 
     @Test
     func restorationRejectsCurrentAndBatchAliasCollisionsWithoutChangingOwnership() async throws {
         let coordinator = AssetDisposalCoordinator(governor: ResourceGovernor())
-        let backing = try await raster(coordinator)
-        let original = scope()
-        var assets = AssetState()
-        let alias = try assets.insert(
-            backing: backing,
-            scope  : original
-        ).assetID
-        let content = try publication(
-            id     : scope().publicationID,
-            aliases: [alias]
-        )
-        let proposal = try restored([content])
+        let backing     = try await raster(coordinator)
+        let original    = scope()
+        var assets      = AssetState()
+        let alias       = try assets.insert(backing: backing, scope: original).assetID
+        let content     = try publication(id: scope().publicationID, aliases: [alias])
+        let proposal    = try restored([content])
         #expect(throws: AddonFailure.self) {
-            try assets.prepareRestoration(
-                proposal,
-                backings: [content.id: [alias: backing]]
-            )
+            try assets.prepareRestoration(proposal, backings: [content.id: [alias: backing]])
         }
+
         #expect(assets.retainedBytes == 4_096)
-        let originalContent = try publication(
-            id     : original.publicationID,
-            aliases: [alias]
-        )
+        let originalContent = try publication(id: original.publicationID, aliases: [alias])
         try publishImported(
             assets     : &assets,
             scope      : original,
@@ -534,16 +430,11 @@ struct AssetArchiveTests {
         )
         assets.revokeImports(connectionToken: original.connectionToken)
         #expect(throws: AddonFailure.self) {
-            try assets.prepareRestoration(
-                proposal,
-                backings: [content.id: [alias: backing]]
-            )
+            try assets.prepareRestoration(proposal, backings: [content.id: [alias: backing]])
         }
+
         #expect(assets.retainedBytes == 3_072)
-        let other = try publication(
-            id     : scope().publicationID,
-            aliases: [alias]
-        )
+        let other = try publication(id: scope().publicationID, aliases: [alias])
         let batch = try restored([content, other])
         #expect(throws: AddonFailure.self) {
             try AssetState().prepareRestoration(
@@ -555,8 +446,8 @@ struct AssetArchiveTests {
 
     @Test
     func allRepresentationsContributeDistinctAndCombinedPrivacyFlags() async throws {
-        let coordinator = AssetDisposalCoordinator(governor: ResourceGovernor())
-        let backing = try await raster(coordinator)
+        let coordinator    = AssetDisposalCoordinator(governor: ResourceGovernor())
+        let backing        = try await raster(coordinator)
         let publicDocument = try ContentDocument(
             root              : .text("Public"),
             privacy           : .publicContent,
@@ -570,10 +461,10 @@ struct AssetArchiveTests {
             assetIDs          : ["sensitive", "both"]
         )
         let content = try Publication(
-            id         : scope().publicationID,
-            revision   : 0,
-            kind       : .activity,
-            content    : PresentationSet(
+            id      : scope().publicationID,
+            revision: 0,
+            kind    : .activity,
+            content : PresentationSet(
                 widget         : publicDocument,
                 compactLeading : sensitiveDocument,
                 compactTrailing: publicDocument,
@@ -584,7 +475,7 @@ struct AssetArchiveTests {
             expiresAt  : now.addingTimeInterval(60),
             stalePolicy: .retainMarked
         )
-        var assets = AssetState()
+        var assets   = AssetState()
         let proposal = try assets.prepareRestoration(
             restored([content]),
             backings: [content.id: ["public": backing, "sensitive": backing, "both": backing]]
@@ -602,43 +493,37 @@ struct AssetArchiveTests {
             #expect(hasPublic == (alias != "sensitive"))
             #expect(hasSensitive == (alias != "public"))
         }
+
         #expect(aliases == ["public", "sensitive", "both"])
     }
 
     @Test(arguments: ArchiveRasterConstruction.Mode.allCases)
     fileprivate func copyRejectsNoncanonicalNativeFormats(_ mode: ArchiveRasterConstruction.Mode) async throws {
-        let governor = ResourceGovernor()
+        let governor    = ResourceGovernor()
         let coordinator = AssetDisposalCoordinator(
             governor    : governor,
             construction: ArchiveRasterConstruction(mode: mode)
         )
         let backing = try await raster(coordinator)
         #expect(throws: AddonFailure.self) {
-            try AssetRasterArchiveCopy.scratchBytes(
-                backing: backing,
-                owner  : owner
-            )
+            try AssetRasterArchiveCopy.scratchBytes(backing: backing, owner: owner)
         }
+
         await #expect(throws: AddonFailure.self) {
-            try await AssetRasterArchiveCopy().copy(
-                backing: backing,
-                owner  : owner
-            )
+            try await AssetRasterArchiveCopy().copy(backing: backing, owner: owner)
         }
+
         #expect(await governor.usage(.assetBytes) == 4)
     }
 
     @Test
     func restoredPinAndBorrowedImageKeepActualRasterAlive() async throws {
-        let governor = ResourceGovernor()
+        let governor    = ResourceGovernor()
         let coordinator = AssetDisposalCoordinator(governor: governor)
-        var assets = AssetState()
-        let content = try publication(
-            id     : scope().publicationID,
-            aliases: ["fresh"]
-        )
+        var assets      = AssetState()
+        let content     = try publication(id: scope().publicationID, aliases: ["fresh"])
         do {
-            let backing = try await raster(coordinator)
+            let backing  = try await raster(coordinator)
             let proposal = try assets.prepareRestoration(
                 restored([content]),
                 backings: [content.id: ["fresh": backing]]
@@ -646,6 +531,7 @@ struct AssetArchiveTests {
             try assets.validatePrepared(proposal)
             assets.commitPrepared(proposal)
         }
+
         var borrowed = assets.image(
             assetID            : "fresh",
             publicationID      : content.id,

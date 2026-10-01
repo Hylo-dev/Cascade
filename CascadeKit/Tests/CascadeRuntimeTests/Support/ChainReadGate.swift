@@ -10,7 +10,8 @@ import Testing
 @testable import CascadeRuntime
 
 final class ChainReadGate: @unchecked Sendable {
-    private let arrived = DispatchSemaphore(value: 0)
+
+    private let arrived  = DispatchSemaphore(value: 0)
     private let released = DispatchSemaphore(value: 0)
 
     func pause() {

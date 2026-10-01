@@ -17,24 +17,27 @@ import Testing
 /// exchange before awaiting it, so a genuine close never depends on a sleep, a poll or an
 /// external timer. The flags make arming and release order-independent.
 actor BridgeExchangeGate {
+
     private var isArmed    = false
     private var hasArrived = false
     private var isReleased = false
-    private var arrival    : CheckedContinuation<Void, Never>?
-    private var completion : CheckedContinuation<Void, Never>?
+    private var arrival   : CheckedContinuation<Void, Never>?
+    private var completion: CheckedContinuation<Void, Never>?
 
     func arm() {
-        isArmed = true
+        isArmed    = true
         hasArrived = false
         isReleased = false
     }
 
     func arrivalPoint() async {
         guard isArmed else { return }
-        isArmed = false
+
+        isArmed    = false
         hasArrived = true
         arrival?.resume()
         arrival = nil
+
         if isReleased { return }
         await withCheckedContinuation { completion = $0 }
     }

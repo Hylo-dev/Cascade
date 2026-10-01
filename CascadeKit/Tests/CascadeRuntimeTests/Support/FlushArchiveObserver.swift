@@ -6,20 +6,20 @@
 import CascadeContracts
 import Foundation
 import Testing
-
 @testable import CascadeRuntime
 
 /// FlushArchiveObserver forwards native filesystem inventory and parks one selected return.
 /// The bounded gate exposes the real postcommit boundary without substituting storage results.
 actor FlushArchiveObserver: SwiftDataArchiveObserving {
+
     private var countdown: Int?
-    private var arrived = false
-    private var arrival: CheckedContinuation<Void, Never>?
-    private var resume : CheckedContinuation<Void, Never>?
+    private var arrived   = false
+    private var arrival  : CheckedContinuation<Void, Never>?
+    private var resume   : CheckedContinuation<Void, Never>?
 
     func arm(after count: Int) {
         countdown = count
-        arrived = false
+        arrived   = false
     }
 
     func waitForArrival() async {
@@ -40,10 +40,11 @@ actor FlushArchiveObserver: SwiftDataArchiveObserving {
             root      : root,
             descriptor: descriptor
         )
+
         if let countdown {
             if countdown == 0 {
                 self.countdown = nil
-                arrived = true
+                arrived        = true
                 arrival?.resume()
                 arrival = nil
                 await withCheckedContinuation { resume = $0 }
@@ -51,6 +52,7 @@ actor FlushArchiveObserver: SwiftDataArchiveObserving {
                 self.countdown = countdown - 1
             }
         }
+
         return inventory
     }
 }

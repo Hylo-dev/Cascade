@@ -11,18 +11,21 @@ import Testing
 
 @Suite
 struct FileWorkspaceHostTests {
+
     @Test
     func prepareAllItemsCoversEveryPageInOrderWithoutASnapshot() async throws {
         let fixture = try HostFixture()
-        let host = try fixture.host()
+        let host    = try fixture.host()
         try await host.restore()
         var ids: [UUID] = []
         for batch in 0..<2 {
             let sources = try (0..<20).map { index in
                 try fixture.file(name: "file-\(batch)-\(index).txt", contents: "\(batch)-\(index)")
             }
+
             ids += try await host.addOriginals(sources)
         }
+
         try await host.close()
 
         // A fresh process lifetime that never asks for a snapshot, as at launch.
@@ -41,13 +44,17 @@ struct FileWorkspaceHostTests {
     @Test
     func renameOriginalPreservesContentsAndIdentityAcrossRestore() async throws {
         let fixture = try HostFixture()
-        let host = try fixture.host()
+        let host    = try fixture.host()
         try await host.restore()
-        let source = try fixture.file(name: "before.txt", contents: "keep me")
-        let id = try #require(try await host.addOriginals([source]).first)
-        let before = try await host.snapshot()
+        let source      = try fixture.file(name: "before.txt", contents: "keep me")
+        let id          = try #require(try await host.addOriginals([source]).first)
+        let before      = try await host.snapshot()
         let oldPrepared = try #require(try await host.prepareItems(ids: [id]).first)
-        try await host.renameExternalReference(id: id, newName: "after.txt", revision: before.revision)
+        try await host.renameExternalReference(
+            id      : id,
+            newName : "after.txt",
+            revision: before.revision
+        )
         let renamedURL = source.deletingLastPathComponent().appendingPathComponent("after.txt")
         #expect(!FileManager.default.fileExists(atPath: source.path))
         #expect(try String(contentsOf: renamedURL, encoding: .utf8) == "keep me")
@@ -58,6 +65,7 @@ struct FileWorkspaceHostTests {
         await #expect(throws: FileWorkspaceError.unavailable) {
             try await host.copy(oldPrepared, to: fixture.output.appendingPathComponent("old.txt"))
         }
+
         try await host.close()
         let restored = try fixture.host()
         try await restored.restore()
@@ -65,28 +73,39 @@ struct FileWorkspaceHostTests {
         let prepared = try #require(try await restored.prepareItems(ids: [id]).first)
         try await restored.copy(prepared, to: fixture.output.appendingPathComponent(prepared.name))
         #expect(try String(contentsOf: renamedURL, encoding: .utf8) == "keep me")
-        #expect(try String(contentsOf: fixture.output.appendingPathComponent("after.txt"), encoding: .utf8) == "keep me")
+        #expect(
+            try String(contentsOf: fixture.output.appendingPathComponent("after.txt"), encoding: .utf8) == "keep me"
+        )
     }
 
     @Test
     func renameRejectsCollisionsAndInvalidNamesWithoutChangingTheOriginal() async throws {
         let fixture = try HostFixture()
-        let host = try fixture.host()
+        let host    = try fixture.host()
         try await host.restore()
-        let source = try fixture.file(name: "source.txt", contents: "source")
+        let source   = try fixture.file(name: "source.txt", contents: "source")
         let existing = try fixture.file(name: "existing.txt", contents: "existing")
-        let id = try #require(try await host.addOriginals([source]).first)
-        let before = try await host.snapshot()
+        let id       = try #require(try await host.addOriginals([source]).first)
+        let before   = try await host.snapshot()
         for name in ["", "..", "../escape.txt", "dir/name.txt", "bad:name", "existing.txt"] {
             await #expect(throws: (any Error).self) {
-                try await host.renameExternalReference(id: id, newName: name, revision: before.revision)
+                try await host.renameExternalReference(
+                    id      : id,
+                    newName : name,
+                    revision: before.revision
+                )
             }
         }
+
         #expect(try String(contentsOf: source, encoding: .utf8) == "source")
         #expect(try String(contentsOf: existing, encoding: .utf8) == "existing")
         #expect(try await host.snapshot().revision == before.revision)
         await #expect(throws: FileWorkspaceError.staleRevision) {
-            try await host.renameExternalReference(id: id, newName: "after.txt", revision: before.revision + 1)
+            try await host.renameExternalReference(
+                id      : id,
+                newName : "after.txt",
+                revision: before.revision + 1
+            )
         }
     }
 
@@ -98,6 +117,7 @@ struct FileWorkspaceHostTests {
         let sources = try (0..<25).map {
             try fixture.file(name: "item-\($0).txt", contents: "\($0)")
         }
+
         _ = try await host.addOriginals(sources)
 
         let first  = try await host.snapshot()
@@ -115,9 +135,9 @@ struct FileWorkspaceHostTests {
         let fixture = try HostFixture()
         let host    = try fixture.host()
         try await host.restore()
-        let source = try fixture.file(name: "source.txt", contents: "original")
-        let id = try #require(try await host.addOriginals([source]).first)
-        let prepared = try #require(try await host.prepareItems(ids: [id]).first)
+        let source      = try fixture.file(name: "source.txt", contents: "original")
+        let id          = try #require(try await host.addOriginals([source]).first)
+        let prepared    = try #require(try await host.prepareItems(ids: [id]).first)
         let destination = fixture.output.appendingPathComponent("copied.txt")
 
         try await host.copy(prepared, to: destination)
@@ -132,9 +152,9 @@ struct FileWorkspaceHostTests {
         let fixture = try HostFixture()
         let host    = try fixture.host()
         try await host.restore()
-        let source = try fixture.file(name: "source.txt", contents: "source")
-        let id = try #require(try await host.addOriginals([source]).first)
-        let prepared = try #require(try await host.prepareItems(ids: [id]).first)
+        let source      = try fixture.file(name: "source.txt", contents: "source")
+        let id          = try #require(try await host.addOriginals([source]).first)
+        let prepared    = try #require(try await host.prepareItems(ids: [id]).first)
         let destination = fixture.output.appendingPathComponent("existing.txt")
         try Data("existing".utf8).write(to: destination)
 
@@ -151,10 +171,10 @@ struct FileWorkspaceHostTests {
         let fixture = try HostFixture()
         let host    = try fixture.host()
         try await host.restore()
-        let first = try fixture.file(name: "first.txt", contents: "first")
-        let second = try fixture.file(name: "second.txt", contents: "second")
-        let ids = try await host.addOriginals([first, second])
-        let before = try await host.snapshot()
+        let first    = try fixture.file(name: "first.txt", contents: "first")
+        let second   = try fixture.file(name: "second.txt", contents: "second")
+        let ids      = try await host.addOriginals([first, second])
+        let before   = try await host.snapshot()
         let prepared = try #require(try await host.prepareItems(ids: [ids[0]]).first)
         try FileManager.default.removeItem(at: first)
         let replacement = try fixture.file(name: "replacement.txt", contents: "replacement")
@@ -170,11 +190,9 @@ struct FileWorkspaceHostTests {
         #expect(after.entries.map(\.name) == ["replacement.txt", "second.txt"])
         #expect(after.revision == before.revision + 1)
         await #expect(throws: FileWorkspaceError.unavailable) {
-            try await host.copy(
-                prepared,
-                to: fixture.output.appendingPathComponent("stale.txt")
-            )
+            try await host.copy(prepared, to: fixture.output.appendingPathComponent("stale.txt"))
         }
+
         #expect(!FileManager.default.fileExists(atPath: fixture.output.appendingPathComponent("stale.txt").path))
     }
 
@@ -183,8 +201,8 @@ struct FileWorkspaceHostTests {
         let fixture = try HostFixture()
         let host    = try fixture.host()
         try await host.restore()
-        let source = try fixture.file(name: "kept.txt", contents: "kept")
-        let id = try #require(try await host.addOriginals([source]).first)
+        let source   = try fixture.file(name: "kept.txt", contents: "kept")
+        let id       = try #require(try await host.addOriginals([source]).first)
         let revision = try await host.snapshot().revision
 
         try await host.removeExternalReference(id: id, revision: revision)
@@ -201,9 +219,9 @@ struct FileWorkspaceHostTests {
         let fixture = try HostFixture()
         let host    = try fixture.host()
         try await host.restore()
-        let first  = try fixture.file(name: "first.txt", contents: "first")
-        let second = try fixture.file(name: "second.txt", contents: "second")
-        let ids = try await host.addOriginals([first, second])
+        let first    = try fixture.file(name: "first.txt", contents: "first")
+        let second   = try fixture.file(name: "second.txt", contents: "second")
+        let ids      = try await host.addOriginals([first, second])
         let prepared = try await host.prepareItems(ids: ids)
 
         async let firstCopy: Void = host.copy(
@@ -218,10 +236,7 @@ struct FileWorkspaceHostTests {
         _ = try await (firstCopy, secondCopy, refresh)
 
         #expect(try await host.snapshot().entries.isEmpty)
-        #expect(try String(
-            contentsOf: fixture.output.appendingPathComponent("first.txt"),
-            encoding  : .utf8
-        ) == "first")
+        #expect(try String(contentsOf: fixture.output.appendingPathComponent("first.txt"), encoding: .utf8) == "first")
         #expect(try String(
             contentsOf: fixture.output.appendingPathComponent("second.txt"),
             encoding  : .utf8
@@ -235,14 +250,15 @@ struct FileWorkspaceHostTests {
         try await host.restore()
         let source = try fixture.file(name: "tool", contents: "executable")
         #expect(chmod(source.path, 0o751) == 0)
-        let attribute = Data("shelf-metadata".utf8)
+        let attribute     = Data("shelf-metadata".utf8)
         let attributeName = "com.example.cascade-shelf-test"
-        let setResult = attribute.withUnsafeBytes { bytes in
+        let setResult     = attribute.withUnsafeBytes { bytes in
             setxattr(source.path, attributeName, bytes.baseAddress, bytes.count, 0, 0)
         }
+
         #expect(setResult == 0)
-        let id = try #require(try await host.addOriginals([source]).first)
-        let prepared = try #require(try await host.prepareItems(ids: [id]).first)
+        let id          = try #require(try await host.addOriginals([source]).first)
+        let prepared    = try #require(try await host.prepareItems(ids: [id]).first)
         let destination = fixture.output.appendingPathComponent("tool")
 
         try await host.copy(prepared, to: destination)
@@ -253,9 +269,10 @@ struct FileWorkspaceHostTests {
         let size = getxattr(destination.path, attributeName, nil, 0, 0, 0)
         #expect(size == attribute.count)
         var copiedAttribute = Data(count: max(0, size))
-        let read = copiedAttribute.withUnsafeMutableBytes { bytes in
+        let read            = copiedAttribute.withUnsafeMutableBytes { bytes in
             getxattr(destination.path, attributeName, bytes.baseAddress, bytes.count, 0, 0)
         }
+
         #expect(read == attribute.count)
         #expect(copiedAttribute == attribute)
     }
@@ -264,15 +281,15 @@ struct FileWorkspaceHostTests {
     func cancellationAfterLeaseSettlesDeliveryAndHostCanReopen() async throws {
         let fixture = try HostFixture()
         let barrier = DeliveryLeaseBarrier()
-        let host = try FileWorkspaceHost(
-            directory        : fixture.workspace,
-            governor         : fixture.governor,
+        let host    = try FileWorkspaceHost(
+            directory         : fixture.workspace,
+            governor          : fixture.governor,
             afterDeliveryLease: { await barrier.suspend() }
         )
         try await host.restore()
-        let source = try fixture.file(name: "source.txt", contents: "source")
-        let id = try #require(try await host.addOriginals([source]).first)
-        let prepared = try #require(try await host.prepareItems(ids: [id]).first)
+        let source      = try fixture.file(name: "source.txt", contents: "source")
+        let id          = try #require(try await host.addOriginals([source]).first)
+        let prepared    = try #require(try await host.prepareItems(ids: [id]).first)
         let destination = fixture.output.appendingPathComponent("cancelled.txt")
 
         let copy = Task { try await host.copy(prepared, to: destination) }

@@ -11,31 +11,31 @@ import Testing
 
 /// ArchiveInventoryFixture owns only private temporary roots and a complete fixed two-owner registry.
 struct ArchiveInventoryFixture {
+
     let root          : URL
     let checkpointRoot: URL
     let keyedRoot     : URL
     let archiveRoot   : URL
     let identities    : [VerifiedAddonIdentity]
+
     var registrations: [StateRegistration] {
         identities.map {
-            StateRegistration(
-                identity            : $0,
-                maximumSchemaVersion: 1
-            )
+            StateRegistration(identity: $0, maximumSchemaVersion: 1)
         }
     }
 
     init() throws {
-        root = URL(fileURLWithPath: "/private/tmp/cascade-archive-inventory-\(UUID())")
+        root           = URL(fileURLWithPath: "/private/tmp/cascade-archive-inventory-\(UUID())")
         checkpointRoot = root.appendingPathComponent("checkpoints")
         keyedRoot      = root.appendingPathComponent("keyed")
         archiveRoot    = root.appendingPathComponent("archives")
-        identities = try ["one", "two"].map {
+        identities     = try ["one", "two"].map {
             VerifiedAddonIdentity(
                 publisher: "publisher.inventory",
                 addonID  : try #require(AddonID(rawValue: "com.example.inventory.\($0)"))
             )
         }
+
         for directory in [root, checkpointRoot, keyedRoot, archiveRoot] {
             try FileManager.default.createDirectory(
                 at                         : directory,
@@ -71,9 +71,10 @@ struct ArchiveInventoryFixture {
 
     /// createOwner uses the production verified namespace naming without opening a framework store.
     func createOwner(index: Int) throws -> URL {
-        let name = KeyedStorageRecord.hex(KeyedStorageRecord.namespaceDigest(identities[index]))
+        let name      = KeyedStorageRecord.hex(KeyedStorageRecord.namespaceDigest(identities[index]))
         let directory = archiveRoot.appendingPathComponent(name)
         try createDirectory(directory)
+
         return directory
     }
 
@@ -83,10 +84,7 @@ struct ArchiveInventoryFixture {
         to url: URL
     ) throws {
         try data.write(to: url)
-        try FileManager.default.setAttributes(
-            [.posixPermissions: 0o600],
-            ofItemAtPath: url.path
-        )
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
     }
 
     func names(in root: URL) throws -> [String] {

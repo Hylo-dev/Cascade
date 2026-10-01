@@ -9,10 +9,11 @@ import Testing
 @testable import CascadeRuntime
 
 final class MemoryReadSource: @unchecked Sendable {
-    private let lock = NSLock()
+
+    private let lock    = NSLock()
     private let binding: ProcessMetricBinding
     private var samples: [(UInt64?, UInt64?, UInt64?)]
-    private var index = 0
+    private var index   = 0
 
     init(
         binding    : ProcessMetricBinding,
@@ -21,7 +22,7 @@ final class MemoryReadSource: @unchecked Sendable {
         footprints : [UInt64?]
     ) {
         self.binding = binding
-        samples = Array(zip(zip(userTicks, systemTicks), footprints)).map { pair, footprint in
+        samples      = Array(zip(zip(userTicks, systemTicks), footprints)).map { pair, footprint in
             (pair.0, pair.1, footprint)
         }
     }
@@ -31,11 +32,14 @@ final class MemoryReadSource: @unchecked Sendable {
             guard requested == binding, index < samples.count else {
                 return .unavailable(.readFailed(5))
             }
+
             defer { index += 1 }
             let sample = samples[index]
+
             guard let user = sample.0, let system = sample.1, let footprint = sample.2 else {
                 return .unavailable(.readFailed(5))
             }
+
             return .sample(ProcessMetricObservation(
                 binding       : binding,
                 userTicks     : user,
@@ -45,7 +49,7 @@ final class MemoryReadSource: @unchecked Sendable {
                     startTicks: UInt64(200 + index * 100),
                     endTicks  : UInt64(201 + index * 100)
                 ),
-                timebase: ProcessMetricTimebase(numer: 1, denom: 1)
+                timebase      : ProcessMetricTimebase(numer: 1, denom: 1)
             ))
         }
     }

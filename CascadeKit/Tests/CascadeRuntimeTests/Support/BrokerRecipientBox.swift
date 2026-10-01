@@ -10,7 +10,8 @@ import Testing
 @testable import CascadeRuntime
 
 final class BrokerRecipientBox: @unchecked Sendable {
-    private let lock = NSLock()
+
+    private let lock   = NSLock()
     private var stored: [VerifiedAddonIdentity] = []
 
     var value: [VerifiedAddonIdentity] {

@@ -13,12 +13,13 @@ import Testing
 /// ControlledArchiveObserver forwards every real scan and can conservatively add measured debt.
 /// Artificial bytes qualify accounting outcomes, not a physical SwiftData growth bound.
 actor ControlledArchiveObserver: SwiftDataArchiveObserving {
-    private var additionalBytes = 0
-    private var pendingBytes: Int?
+
+    private var additionalBytes       = 0
+    private var pendingBytes         : Int?
     private var remainingObservations = 0
-    private var gate: ArchiveGate?
-    private var gateDelay    = 0
-    private var isIncomplete = false
+    private var gate                 : ArchiveGate?
+    private var gateDelay             = 0
+    private var isIncomplete          = false
 
     func setIncomplete(_ value: Bool) { isIncomplete = value }
 
@@ -51,10 +52,12 @@ actor ControlledArchiveObserver: SwiftDataArchiveObserving {
                 gateDelay -= 1
             }
         }
+
         let observed = await NativeSwiftDataArchiveObserver().inventory(
             root      : root,
             descriptor: descriptor
         )
+
         if let pendingBytes {
             if remainingObservations == 0 {
                 additionalBytes   = pendingBytes
@@ -63,6 +66,7 @@ actor ControlledArchiveObserver: SwiftDataArchiveObserving {
                 remainingObservations -= 1
             }
         }
+
         return SwiftDataArchiveInventory(
             bytes            : observed.bytes + additionalBytes,
             isComplete       : observed.isComplete && !isIncomplete,

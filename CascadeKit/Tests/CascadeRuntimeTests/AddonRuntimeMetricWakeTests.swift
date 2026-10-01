@@ -8,8 +8,11 @@ import Foundation
 import Testing
 @testable import CascadeRuntime
 
-@Suite struct AddonRuntimeMetricWakeTests {
-    @Test func wakeDuringPositiveReadDefersResetAndKeepsCPUAdmissionPaused() async throws {
+@Suite
+struct AddonRuntimeMetricWakeTests {
+
+    @Test
+    func wakeDuringPositiveReadDefersResetAndKeepsCPUAdmissionPaused() async throws {
         let fixture = try await WakeFixture()
         _ = try await fixture.runtime.sampleResources(reason: .jobBoundary)
         fixture.clock.set(fixture.instant(1))
@@ -24,6 +27,7 @@ import Testing
             sampling.cancel()
             fixture.reader.release()
         }
+
         #expect(fixture.reader.waitForArrival(), "The native-read checkpoint must arrive within five seconds.")
         #expect(try await fixture.runtime.resetProcessMetricsAfterWake() == .deferred)
         #expect(try await fixture.runtime.sampleResources(reason: .jobBoundary) == .busy)
@@ -46,11 +50,16 @@ import Testing
         try await expectNewActionDenied(fixture)
     }
 
-    @Test func wakeBaselinePreservesNegativeDebtUntilMeasuredRecovery() async throws {
+    @Test
+    func wakeBaselinePreservesNegativeDebtUntilMeasuredRecovery() async throws {
         let fixture = try await WakeFixture()
         _ = try await fixture.runtime.sampleResources(reason: .jobBoundary)
         fixture.clock.set(fixture.instant(1))
-        #expect(firstObservation(try await fixture.runtime.sampleResources(reason: .jobBoundary))?.classification == .moderate)
+        #expect(
+            firstObservation(
+                try await fixture.runtime.sampleResources(reason: .jobBoundary)
+            )?.classification == .moderate
+        )
         try await expectNewActionDenied(fixture)
         fixture.clock.set(fixture.instant(2))
         let readsBeforeWake = fixture.reader.readCount
@@ -65,20 +74,23 @@ import Testing
         try await expectNewActionDenied(fixture)
     }
 
-    @Test func newerWakeDuringResetStaysPendingUntilNextDeadlinePass() async throws {
+    @Test
+    func newerWakeDuringResetStaysPendingUntilNextDeadlinePass() async throws {
         let fixture = try await WakeFixture()
         _ = try await fixture.runtime.sampleResources(reason: .jobBoundary)
         fixture.clock.set(fixture.instant(1))
         let checkpoint = WakeResetGate()
-        let resetting = Task {
+        let resetting  = Task {
             try await AddonRuntime.$cpuWakeResetCheckpoint.withValue({ checkpoint.pause() }) {
                 try await fixture.runtime.resetProcessMetricsAfterWake()
             }
         }
+
         defer {
             resetting.cancel()
             checkpoint.release()
         }
+
         #expect(checkpoint.waitForArrival(), "The reset checkpoint must arrive within five seconds.")
         #expect(try await fixture.runtime.resetProcessMetricsAfterWake() == .deferred)
         #expect(try await fixture.runtime.sampleResources(reason: .jobBoundary) == .busy)
@@ -94,8 +106,9 @@ import Testing
         #expect(firstObservation(baseline)?.classification == .unavailable)
     }
 
-    @Test func stoppedRuntimeIgnoresLateWakeWithoutReading() async throws {
-        let fixture = try await WakeFixture()
+    @Test
+    func stoppedRuntimeIgnoresLateWakeWithoutReading() async throws {
+        let fixture         = try await WakeFixture()
         let readsBeforeStop = fixture.reader.readCount
         await fixture.runtime.stop()
         #expect(try await fixture.runtime.resetProcessMetricsAfterWake() == .completed)
@@ -107,6 +120,7 @@ import Testing
         _ result: AddonRuntime.ResourceSampleResult
     ) -> AddonRuntime.ResourceOwnerObservation? {
         guard case .sampled(let observations) = result else { return nil }
+
         return observations.first
     }
 
@@ -118,21 +132,23 @@ import Testing
         } catch let error as AddonFailure {
             #expect(error.code == .resourceDenied)
         }
+
         #expect(await fixture.runtime.actionState(request.requestID, owner: fixture.action.owner) == nil)
     }
 
     private struct WakeFixture {
-        let action: ActionFixture
-        let runtime: AddonRuntime
-        let clock: MutableRuntimeClock
-        let reader: WakeReadSource
+
+        let action       : ActionFixture
+        let runtime      : AddonRuntime
+        let clock        : MutableRuntimeClock
+        let reader       : WakeReadSource
         let publicationID: PublicationID
-        let version: AddonVersionIdentity
+        let version      : AddonVersionIdentity
 
         init() async throws {
             action = try ActionFixture()
             let installed = try action.context().installed
-            let adapter = RecordingRuntimeAdapter()
+            let adapter   = RecordingRuntimeAdapter()
             clock = MutableRuntimeClock(instant: RuntimeInstant(wall: action.wall, monotonic: .zero))
             let binding = ProcessMetricBinding(
                 pid               : 71,
@@ -141,7 +157,7 @@ import Testing
                 token             : UUID(),
                 clockDomain       : UUID()
             )
-            reader = WakeReadSource(binding: binding)
+            reader  = WakeReadSource(binding: binding)
             runtime = try await AddonRuntime.make(
                 catalog    : [installed],
                 environment: HostEnvironment(
@@ -161,7 +177,7 @@ import Testing
                 featureID : "controls",
                 instanceID: UUID()
             )
-            let launch = try await runtime.requestLaunch(owner: action.owner)
+            let launch     = try await runtime.requestLaunch(owner: action.owner)
             let connection = try await runtime.attach(
                 launchID: launch,
                 offer   : ProtocolOffer(
@@ -172,11 +188,11 @@ import Testing
                 )
             )
             _ = try await receivePublicationOutput(
-                runtime   : runtime,
-                adapter   : adapter,
-                output    : ProviderOutput(
+                runtime: runtime,
+                adapter: adapter,
+                output : ProviderOutput(
                     schemaVersion: 1,
-                    publications: [try Publication(
+                    publications : [try Publication(
                         id         : publicationID,
                         revision   : 1,
                         kind       : .widget,
@@ -203,10 +219,7 @@ import Testing
         }
 
         func instant(_ second: Int) -> RuntimeInstant {
-            RuntimeInstant(
-                wall     : action.wall.addingTimeInterval(Double(second)),
-                monotonic: .seconds(second)
-            )
+            RuntimeInstant(wall: action.wall.addingTimeInterval(Double(second)), monotonic: .seconds(second))
         }
 
         func request() throws -> ActionRequest {

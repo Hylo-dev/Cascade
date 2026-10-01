@@ -9,45 +9,44 @@ import Testing
 @testable import CascadeRuntime
 
 final class RecordingRuntimeAdapter: AddonRuntimeStorageAdapter, AddonRuntimeAssetAdapter, @unchecked Sendable {
+
     private enum IngressValue {
-        case publication(
-            RuntimeIngressHandle,
-            ProviderOutput
-        )
-        case storage(
-            RuntimeStorageIngressHandle,
-            Data
-        )
-        case asset(
-            RuntimeAssetIngressHandle,
-            Data
-        )
+
+        case publication(RuntimeIngressHandle, ProviderOutput)
+        case storage    (RuntimeStorageIngressHandle, Data)
+        case asset      (RuntimeAssetIngressHandle, Data)
     }
+
     private struct IngressSlot {
-        let value: IngressValue
+
+        let value        : IngressValue
         var isTransferred = false
     }
+
     private var ingressSlots     : [RuntimeIncarnation: IngressSlot] = [:]
     private var ingressCapacities: [RuntimeIncarnation: (publication: Int, storage: Int, asset: Int, delivery: Int)] = [:]
+
     var rejectStorageReplies = false
+
     /// rejectedAssetOperations forces the bounded adapter to refuse the handoff of an exact asset
     /// reply operation, so tests can exercise the runtime's real rollback of a committed transfer
     /// or alias. It is test support only: the production handoff path is never bypassed.
     var rejectedAssetOperations: Set<AssetTransferOperation> = []
+
     private(set) var deliveryReceiptCount = 0
 
-    private var dataSlots: [RuntimeIncarnation: RuntimeAdapterDelivery] = [:]
-    private var starts: [AddonID: RuntimeStartDelivery] = [:]
-    private var liveIncarnations: Set<RuntimeIncarnation> = []
-    private var startAttemptCounts: [AddonID: Int] = [:]
-    private var startOrder: [AddonID] = []
-    private var stopCounts: [RuntimeIncarnation: Int] = [:]
-    private var stopReasons: [RuntimeIncarnation: RuntimeStopReason] = [:]
-    private var stopOrder: [RuntimeIncarnation] = []
+    private var dataSlots               : [RuntimeIncarnation: RuntimeAdapterDelivery] = [:]
+    private var starts                  : [AddonID: RuntimeStartDelivery] = [:]
+    private var liveIncarnations        : Set<RuntimeIncarnation> = []
+    private var startAttemptCounts      : [AddonID: Int] = [:]
+    private var startOrder              : [AddonID] = []
+    private var stopCounts              : [RuntimeIncarnation: Int] = [:]
+    private var stopReasons             : [RuntimeIncarnation: RuntimeStopReason] = [:]
+    private var stopOrder               : [RuntimeIncarnation] = []
     private(set) var ingressTakeAttempts = 0
-    private var serviceCount = 0
-    private var sourceCount = 0
-    private let rejectedStartOwners: Set<AddonID>
+    private var serviceCount             = 0
+    private var sourceCount              = 0
+    private let rejectedStartOwners     : Set<AddonID>
 
     init(rejectedStartOwners: Set<AddonID> = []) {
         self.rejectedStartOwners = rejectedStartOwners
@@ -56,6 +55,7 @@ final class RecordingRuntimeAdapter: AddonRuntimeStorageAdapter, AddonRuntimeAss
     var lastAction: ActionDispatcher.Delivery? {
         dataSlots.values.compactMap { slot -> ActionDispatcher.Delivery? in
             guard case .action(let delivery) = slot else { return nil }
+
             return delivery
         }.first
     }
@@ -77,35 +77,30 @@ final class RecordingRuntimeAdapter: AddonRuntimeStorageAdapter, AddonRuntimeAss
     /// ingressIsTransferred reads only the current typed slot, without retaining history.
     func ingressIsTransferred(_ handle: RuntimeIngressHandle) -> Bool {
         guard let slot = ingressSlots[handle.incarnation],
-            case .publication(
-                let current,
-                _
-            ) = slot.value
+              case .publication(let current, _) = slot.value
         else { return false }
+
         return current == handle && slot.isTransferred
     }
 
     func storageIngressIsTransferred(_ handle: RuntimeStorageIngressHandle) -> Bool {
         guard let slot = ingressSlots[handle.incarnation],
-            case .storage(
-                let current,
-                _
-            ) = slot.value
+              case .storage(let current, _) = slot.value
         else { return false }
+
         return current == handle && slot.isTransferred
     }
 
     func assetIngressIsTransferred(_ handle: RuntimeAssetIngressHandle) -> Bool {
         guard let slot = ingressSlots[handle.incarnation],
-            case .asset(
-                let current,
-                _
-            ) = slot.value
+              case .asset(let current, _) = slot.value
         else { return false }
+
         return current == handle && slot.isTransferred
     }
 
     func hasIngress(incarnation: RuntimeIncarnation) -> Bool { ingressSlots[incarnation] != nil }
+
     func currentDelivery(incarnation: RuntimeIncarnation) -> RuntimeAdapterDelivery? {
         dataSlots[incarnation]
     }
@@ -115,28 +110,21 @@ final class RecordingRuntimeAdapter: AddonRuntimeStorageAdapter, AddonRuntimeAss
         incarnation : RuntimeIncarnation,
         maximumBytes: Int = .max
     ) -> RuntimeIngressHandle? {
-        guard liveIncarnations.contains(incarnation), ingressSlots[incarnation] == nil,
-            let capacity = ingressCapacities[incarnation],
-            let bytes    = try? JSONEncoder().encode(output).count,
-            bytes
-                <= min(
-                    capacity.publication,
-                    maximumBytes
-                )
+        guard liveIncarnations.contains(incarnation),
+              ingressSlots[incarnation] == nil,
+              let capacity = ingressCapacities[incarnation],
+              let bytes    = try? JSONEncoder().encode(output).count,
+              bytes <= min(capacity.publication, maximumBytes)
         else { return nil }
+
         let handle = RuntimeIngressHandle(
             token           : UUID(),
             incarnation     : incarnation,
             encodedBytes    : bytes,
-            isCompletionOnly: output.completion != nil && output.publications.isEmpty
-                && output.operations.isEmpty
+            isCompletionOnly: output.completion != nil && output.publications.isEmpty && output.operations.isEmpty
         )
-        ingressSlots[incarnation] = IngressSlot(
-            value: .publication(
-                handle,
-                output
-            )
-        )
+        ingressSlots[incarnation] = IngressSlot(value: .publication(handle, output))
+
         return handle
     }
 
@@ -148,9 +136,13 @@ final class RecordingRuntimeAdapter: AddonRuntimeStorageAdapter, AddonRuntimeAss
         sequence       : UInt64,
         advertisedBytes: Int? = nil
     ) -> RuntimeStorageIngressHandle? {
-        guard liveIncarnations.contains(incarnation), ingressSlots[incarnation] == nil,
-            let capacity = ingressCapacities[incarnation], raw.count <= capacity.storage, capacity.storage > 0
+        guard liveIncarnations.contains(incarnation),
+              ingressSlots[incarnation] == nil,
+              let capacity = ingressCapacities[incarnation],
+              raw.count <= capacity.storage,
+              capacity.storage > 0
         else { return nil }
+
         let handle = RuntimeStorageIngressHandle(
             token       : UUID(),
             incarnation : incarnation,
@@ -158,12 +150,8 @@ final class RecordingRuntimeAdapter: AddonRuntimeStorageAdapter, AddonRuntimeAss
             sequence    : sequence
         )
         let compact = raw.withUnsafeBytes { Data($0) }
-        ingressSlots[incarnation] = IngressSlot(
-            value: .storage(
-                handle,
-                compact
-            )
-        )
+        ingressSlots[incarnation] = IngressSlot(value: .storage(handle, compact))
+
         return handle
     }
 
@@ -172,13 +160,13 @@ final class RecordingRuntimeAdapter: AddonRuntimeStorageAdapter, AddonRuntimeAss
         incarnation: RuntimeIncarnation
     ) -> ProviderOutput? {
         if ingressTakeAttempts < Int.max { ingressTakeAttempts += 1 }
-        guard var slot = ingressSlots[incarnation], !slot.isTransferred,
-            case .publication(
-                let current,
-                let output
-            ) = slot.value, current == handle
+        guard var slot = ingressSlots[incarnation],
+              !slot.isTransferred,
+              case .publication(let current, let output) = slot.value,
+              current == handle
         else { return nil }
-        slot.isTransferred = true
+
+        slot.isTransferred        = true
         ingressSlots[incarnation] = slot
         return output
     }
@@ -188,13 +176,13 @@ final class RecordingRuntimeAdapter: AddonRuntimeStorageAdapter, AddonRuntimeAss
         incarnation: RuntimeIncarnation
     ) -> Data? {
         if ingressTakeAttempts < Int.max { ingressTakeAttempts += 1 }
-        guard var slot = ingressSlots[incarnation], !slot.isTransferred,
-            case .storage(
-                let current,
-                let raw
-            ) = slot.value, current == handle
+        guard var slot = ingressSlots[incarnation],
+              !slot.isTransferred,
+              case .storage(let current, let raw) = slot.value,
+              current == handle
         else { return nil }
-        slot.isTransferred = true
+
+        slot.isTransferred        = true
         ingressSlots[incarnation] = slot
         return raw
     }
@@ -207,9 +195,13 @@ final class RecordingRuntimeAdapter: AddonRuntimeStorageAdapter, AddonRuntimeAss
         sequence       : UInt64,
         advertisedBytes: Int? = nil
     ) -> RuntimeAssetIngressHandle? {
-        guard liveIncarnations.contains(incarnation), ingressSlots[incarnation] == nil,
-            let capacity = ingressCapacities[incarnation], raw.count <= capacity.asset, capacity.asset > 0
+        guard liveIncarnations.contains(incarnation),
+              ingressSlots[incarnation] == nil,
+              let capacity = ingressCapacities[incarnation],
+              raw.count <= capacity.asset,
+              capacity.asset > 0
         else { return nil }
+
         let handle = RuntimeAssetIngressHandle(
             token       : UUID(),
             incarnation : incarnation,
@@ -217,12 +209,8 @@ final class RecordingRuntimeAdapter: AddonRuntimeStorageAdapter, AddonRuntimeAss
             sequence    : sequence
         )
         let compact = raw.withUnsafeBytes { Data($0) }
-        ingressSlots[incarnation] = IngressSlot(
-            value: .asset(
-                handle,
-                compact
-            )
-        )
+        ingressSlots[incarnation] = IngressSlot(value: .asset(handle, compact))
+
         return handle
     }
 
@@ -231,13 +219,13 @@ final class RecordingRuntimeAdapter: AddonRuntimeStorageAdapter, AddonRuntimeAss
         incarnation: RuntimeIncarnation
     ) -> Data? {
         if ingressTakeAttempts < Int.max { ingressTakeAttempts += 1 }
-        guard var slot = ingressSlots[incarnation], !slot.isTransferred,
-            case .asset(
-                let current,
-                let raw
-            ) = slot.value, current == handle
+        guard var slot = ingressSlots[incarnation],
+              !slot.isTransferred,
+              case .asset(let current, let raw) = slot.value,
+              current == handle
         else { return nil }
-        slot.isTransferred = true
+
+        slot.isTransferred        = true
         ingressSlots[incarnation] = slot
         return raw
     }
@@ -246,101 +234,99 @@ final class RecordingRuntimeAdapter: AddonRuntimeStorageAdapter, AddonRuntimeAss
         _ handle   : RuntimeIngressHandle,
         incarnation: RuntimeIncarnation
     ) {
-        guard let slot = ingressSlots[incarnation], !slot.isTransferred,
-            case .publication(
-                let current,
-                _
-            ) = slot.value, current == handle
+        guard let slot = ingressSlots[incarnation],
+              !slot.isTransferred,
+              case .publication(let current, _) = slot.value,
+              current == handle
         else { return }
+
         ingressSlots.removeValue(forKey: incarnation)
     }
+
     func cancelIngress(
         _ handle   : RuntimeIngressHandle,
         incarnation: RuntimeIncarnation
     ) {
-        guard let slot = ingressSlots[incarnation], slot.isTransferred,
-            case .publication(
-                let current,
-                _
-            ) = slot.value, current == handle
+        guard let slot = ingressSlots[incarnation],
+              slot.isTransferred,
+              case .publication(let current, _) = slot.value,
+              current == handle
         else { return }
+
         ingressSlots.removeValue(forKey: incarnation)
     }
+
     func finishIngress(
         _ handle   : RuntimeIngressHandle,
         incarnation: RuntimeIncarnation
     ) {
-        cancelIngress(
-            handle,
-            incarnation: incarnation
-        )
+        cancelIngress(handle, incarnation: incarnation)
     }
+
     func rejectStorageIngress(
         _ handle   : RuntimeStorageIngressHandle,
         incarnation: RuntimeIncarnation
     ) {
-        guard let slot = ingressSlots[incarnation], !slot.isTransferred,
-            case .storage(
-                let current,
-                _
-            ) = slot.value, current == handle
+        guard let slot = ingressSlots[incarnation],
+              !slot.isTransferred,
+              case .storage(let current, _) = slot.value,
+              current == handle
         else { return }
+
         ingressSlots.removeValue(forKey: incarnation)
     }
+
     func cancelStorageIngress(
         _ handle   : RuntimeStorageIngressHandle,
         incarnation: RuntimeIncarnation
     ) {
-        guard let slot = ingressSlots[incarnation], slot.isTransferred,
-            case .storage(
-                let current,
-                _
-            ) = slot.value, current == handle
+        guard let slot = ingressSlots[incarnation],
+              slot.isTransferred,
+              case .storage(let current, _) = slot.value,
+              current == handle
         else { return }
+
         ingressSlots.removeValue(forKey: incarnation)
     }
+
     func finishStorageIngress(
         _ handle   : RuntimeStorageIngressHandle,
         incarnation: RuntimeIncarnation
     ) {
-        cancelStorageIngress(
-            handle,
-            incarnation: incarnation
-        )
+        cancelStorageIngress(handle, incarnation: incarnation)
     }
 
     func rejectAssetIngress(
         _ handle   : RuntimeAssetIngressHandle,
         incarnation: RuntimeIncarnation
     ) {
-        guard let slot = ingressSlots[incarnation], !slot.isTransferred,
-            case .asset(
-                let current,
-                _
-            ) = slot.value, current == handle
+        guard let slot = ingressSlots[incarnation],
+              !slot.isTransferred,
+              case .asset(let current, _) = slot.value,
+              current == handle
         else { return }
+
         ingressSlots.removeValue(forKey: incarnation)
     }
+
     func cancelAssetIngress(
         _ handle   : RuntimeAssetIngressHandle,
         incarnation: RuntimeIncarnation
     ) {
-        guard let slot = ingressSlots[incarnation], slot.isTransferred,
-            case .asset(
-                let current,
-                _
-            ) = slot.value, current == handle
+        guard let slot = ingressSlots[incarnation],
+              slot.isTransferred,
+              case .asset(let current, _) = slot.value,
+              current == handle
         else { return }
+
         ingressSlots.removeValue(forKey: incarnation)
     }
+
     func finishAssetIngress(
         _ handle   : RuntimeAssetIngressHandle,
         incarnation: RuntimeIncarnation
     ) {
-        cancelAssetIngress(
-            handle,
-            incarnation: incarnation
-        )
+        cancelAssetIngress(handle, incarnation: incarnation)
     }
 
     func tryHandoff(
@@ -355,28 +341,36 @@ final class RecordingRuntimeAdapter: AddonRuntimeStorageAdapter, AddonRuntimeAss
             guard !rejectedStartOwners.contains(start.identity.addonID) else {
                 return .rejectedBeforeHandoff
             }
+
             starts[start.identity.addonID] = start
             liveIncarnations.insert(incarnation)
             ingressCapacities[incarnation] = (
-                start.maximumIngressBytes, start.maximumStorageIngressBytes,
-                start.maximumAssetIngressBytes, start.maximumDeliveryBytes
+                start.maximumIngressBytes,
+                start.maximumStorageIngressBytes,
+                start.maximumAssetIngressBytes,
+                start.maximumDeliveryBytes
             )
             return .accepted
         }
+
         guard liveIncarnations.contains(incarnation), dataSlots[incarnation] == nil else {
             return .rejectedBeforeHandoff
         }
+
         if case .storageResponse(let response) = delivery {
-            guard !rejectStorageReplies, response.receipt.incarnation == incarnation,
-                response.payload.count <= (ingressCapacities[incarnation]?.delivery ?? 0)
+            guard !rejectStorageReplies,
+                  response.receipt.incarnation == incarnation,
+                  response.payload.count <= (ingressCapacities[incarnation]?.delivery ?? 0)
             else { return .rejectedBeforeHandoff }
         }
+
         if case .assetResponse(let response) = delivery {
             guard !rejectedAssetOperations.contains(response.receipt.operation),
-                response.receipt.incarnation == incarnation,
-                response.payload.count <= (ingressCapacities[incarnation]?.delivery ?? 0)
+                  response.receipt.incarnation == incarnation,
+                  response.payload.count <= (ingressCapacities[incarnation]?.delivery ?? 0)
             else { return .rejectedBeforeHandoff }
         }
+
         dataSlots[incarnation] = delivery
         if case .service = delivery { serviceCount += 1 }
         if case .source = delivery { sourceCount += 1 }
@@ -394,10 +388,13 @@ final class RecordingRuntimeAdapter: AddonRuntimeStorageAdapter, AddonRuntimeAss
                 stopCounts.removeValue(forKey: retired)
                 stopReasons.removeValue(forKey: retired)
             }
+
             stopOrder.append(incarnation)
         }
+
         let count = stopCounts[incarnation, default: 0]
         if count < Int.max { stopCounts[incarnation] = count + 1 }
+
         dataSlots.removeValue(forKey: incarnation)
         ingressSlots.removeValue(forKey: incarnation)
         ingressCapacities.removeValue(forKey: incarnation)

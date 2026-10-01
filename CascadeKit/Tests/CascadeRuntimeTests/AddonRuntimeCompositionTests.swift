@@ -10,15 +10,13 @@ import Testing
 
 @Suite
 struct AddonRuntimeCompositionTests {
+
     @Test
     func brokerUsesTheInjectedForwarderToReachItsCanonicalGovernor() async throws {
         let fixture  = BrokerFixture()
         let governor = ResourceGovernor()
         let access   = CountingRuntimeResourceAccess(target: governor)
-        let broker   = ServiceBroker(
-            governor      : governor,
-            resourceAccess: access
-        )
+        let broker   = ServiceBroker(governor: governor, resourceAccess: access)
 
         _ = try await broker.authorize(fixture.permission())
 
@@ -28,12 +26,9 @@ struct AddonRuntimeCompositionTests {
 
     @Test
     func dispatcherQuotesWithoutRetentionAndConditionallyTakesTheInspectedJob() throws {
-        let fixture = try ActionFixture()
-        let request = try fixture.request()
-        let instant = RuntimeInstant(
-            wall     : fixture.wall,
-            monotonic: .zero
-        )
+        let fixture    = try ActionFixture()
+        let request    = try fixture.request()
+        let instant    = RuntimeInstant(wall: fixture.wall, monotonic: .zero)
         var dispatcher = ActionDispatcher()
 
         let classification = try dispatcher.classify(
@@ -53,55 +48,43 @@ struct AddonRuntimeCompositionTests {
             context: fixture.context(),
             at     : instant
         )
+
         let inspected = try #require(dispatcher.peekReady(at: .zero))
-        #expect(dispatcher.takeReady(
-            expectedJobID: UUID(),
-            at           : .zero
-        ) == nil)
+        #expect(dispatcher.takeReady(expectedJobID: UUID(), at: .zero) == nil)
         #expect(dispatcher.runningCount == 0)
-        #expect(dispatcher.takeReady(
-            expectedJobID: inspected.id,
-            at           : .zero
-        ) != nil)
+        #expect(dispatcher.takeReady(expectedJobID: inspected.id, at: .zero) != nil)
         #expect(dispatcher.runningCount == 1)
     }
 
     @Test
     func resourceGateCancellationReleasesItsStructuredChild() async throws {
-        let owner = try ActionFixture().owner
+        let owner    = try ActionFixture().owner
         let governor = ResourceGovernor()
-        let access = GatedRuntimeResourceAccess(target: governor)
+        let access   = GatedRuntimeResourceAccess(target: governor)
         await access.armJobAdmission()
-        let reservation = try await withThrowingTaskGroup(
-            of: ResourceReservation.self
-        ) { group in
+
+        let reservation = try await withThrowingTaskGroup(of: ResourceReservation.self) { group in
             group.addTask {
-                try await access.admit(
-                    .job,
-                    owner: owner
-                )
+                try await access.admit(.job, owner: owner)
             }
             await access.waitForArrival()
             group.cancelAll()
             return try #require(try await group.next())
         }
-        try await governor.release(
-            reservation.id,
-            owner: owner
-        )
+        try await governor.release(reservation.id, owner: owner)
         #expect(await governor.usage(.jobs, owner: owner) == 0)
     }
 
     @Test
     func oversizedHostProjectionIsRejectedBeforeCatalogRetention() async throws {
-        let fixture = try ActionFixture()
-        let governor = ResourceGovernor()
+        let fixture      = try ActionFixture()
+        let governor     = ResourceGovernor()
         let capabilities = Dictionary(uniqueKeysWithValues: (0..<129).map {
             ("capability.\($0)", SemanticVersion(1, 0, 0))
         })
         await #expect(throws: AddonFailure.self) {
             _ = try await AddonRuntime.make(
-                catalog: [fixture.context().installed],
+                catalog    : [fixture.context().installed],
                 environment: HostEnvironment(
                     osVersion       : SemanticVersion(14, 0, 0),
                     hostCapabilities: capabilities,
@@ -109,8 +92,8 @@ struct AddonRuntimeCompositionTests {
                     grants          : [fixture.owner: []],
                     explicitBindings: []
                 ),
-                governor: governor,
-                adapter : RecordingRuntimeAdapter()
+                governor   : governor,
+                adapter    : RecordingRuntimeAdapter()
             )
         }
         #expect(await governor.usage(.retainedStateBytes, owner: fixture.owner) == 0)
@@ -122,7 +105,7 @@ struct AddonRuntimeCompositionTests {
                 actions : nil
             )
         }
-        let base = try installedFixture("consumer")
+        let base               = try installedFixture("consumer")
         let resultHeavyCatalog = try (0..<32).map { index in
             try replacing(
                 base,
@@ -137,7 +120,7 @@ struct AddonRuntimeCompositionTests {
         })
         await #expect(throws: AddonFailure.self) {
             _ = try await AddonRuntime.make(
-                catalog: resultHeavyCatalog,
+                catalog    : resultHeavyCatalog,
                 environment: HostEnvironment(
                     osVersion       : SemanticVersion(14, 0, 0),
                     hostCapabilities: [:],
@@ -145,8 +128,8 @@ struct AddonRuntimeCompositionTests {
                     grants          : resultHeavyGrants,
                     explicitBindings: []
                 ),
-                governor: governor,
-                adapter : RecordingRuntimeAdapter()
+                governor   : governor,
+                adapter    : RecordingRuntimeAdapter()
             )
         }
         #expect(await governor.usage(.retainedStateBytes) == 0)
@@ -154,7 +137,7 @@ struct AddonRuntimeCompositionTests {
         let oversizedKey = String(repeating: "x", count: 192 * 1_024)
         await #expect(throws: AddonFailure.self) {
             _ = try await AddonRuntime.make(
-                catalog: [fixture.context().installed],
+                catalog    : [fixture.context().installed],
                 environment: HostEnvironment(
                     osVersion       : SemanticVersion(14, 0, 0),
                     hostCapabilities: [oversizedKey: SemanticVersion(1, 0, 0)],
@@ -162,8 +145,8 @@ struct AddonRuntimeCompositionTests {
                     grants          : [fixture.owner: []],
                     explicitBindings: []
                 ),
-                governor: governor,
-                adapter : RecordingRuntimeAdapter()
+                governor   : governor,
+                adapter    : RecordingRuntimeAdapter()
             )
         }
         #expect(await governor.usage(.retainedStateBytes, owner: fixture.owner) == 0)
@@ -181,11 +164,11 @@ struct AddonRuntimeCompositionTests {
             applications    : [:],
             grants          : [fixture.owner: []],
             explicitBindings: [ServiceBinding(
-                requirementID  : "short",
-                consumer       : fixture.owner,
-                provider       : fixture.owner,
+                requirementID   : "short",
+                consumer        : fixture.owner,
+                provider        : fixture.owner,
                 providerIdentity: try fixture.context().installed.verifiedIdentity,
-                contractVersion: oversizedVersion,
+                contractVersion : oversizedVersion,
                 digest          : "short",
                 featureID       : "controls"
             )]
@@ -204,11 +187,11 @@ struct AddonRuntimeCompositionTests {
 
     @Test
     func endedPublicationAssignmentsBecomeReusableAfterExactExit() async throws {
-        let fixture = try ActionFixture()
+        let fixture  = try ActionFixture()
         let governor = ResourceGovernor()
-        let adapter = RecordingRuntimeAdapter()
-        let runtime = try await AddonRuntime.make(
-            catalog: [fixture.context().installed],
+        let adapter  = RecordingRuntimeAdapter()
+        let runtime  = try await AddonRuntime.make(
+            catalog    : [fixture.context().installed],
             environment: HostEnvironment(
                 osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
@@ -216,14 +199,15 @@ struct AddonRuntimeCompositionTests {
                 grants          : [fixture.owner: []],
                 explicitBindings: []
             ),
-            governor: governor,
-            adapter : adapter,
-            clock   : FixedRuntimeClock(instant: RuntimeInstant(
+            governor   : governor,
+            adapter    : adapter,
+            clock      : FixedRuntimeClock(instant: RuntimeInstant(
                 wall     : fixture.wall,
                 monotonic: .zero
             ))
         )
         var ids: [PublicationID] = []
+
         for _ in 0..<16 {
             ids.append(try await runtime.assignPublication(
                 owner     : fixture.owner,
@@ -231,7 +215,8 @@ struct AddonRuntimeCompositionTests {
                 instanceID: UUID()
             ))
         }
-        let launch = try await runtime.requestLaunch(owner: fixture.owner)
+
+        let launch     = try await runtime.requestLaunch(owner: fixture.owner)
         let connection = try await runtime.attach(
             launchID: launch,
             offer   : ProtocolOffer(
@@ -241,20 +226,20 @@ struct AddonRuntimeCompositionTests {
                 contentSchemas: [1]
             )
         )
-        let document = try #require(fixture.presentation().widget)
+        let document        = try #require(fixture.presentation().widget)
         let activityContent = try PresentationSet(
-            widget          : nil,
-            compactLeading  : document,
-            compactTrailing : document,
-            minimal         : document,
-            expanded        : document
+            widget         : nil,
+            compactLeading : document,
+            compactTrailing: document,
+            minimal        : document,
+            expanded       : document
         )
         let noticeContent = try PresentationSet(
-            widget          : nil,
-            compactLeading  : document,
-            compactTrailing : document,
-            minimal         : document,
-            expanded        : nil
+            widget         : nil,
+            compactLeading : document,
+            compactTrailing: document,
+            minimal        : document,
+            expanded       : nil
         )
         let publications = try ids.enumerated().map { index, id in
             try Publication(
@@ -270,14 +255,14 @@ struct AddonRuntimeCompositionTests {
             )
         }
         _ = try await receivePublicationOutput(
-            runtime: runtime,
-            adapter: adapter,
-            output : try ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : try ProviderOutput(
                 schemaVersion: 1,
-                publications: publications,
-                operations  : [],
-                completion  : nil,
-                checkpoint  : nil
+                publications : publications,
+                operations   : [],
+                completion   : nil,
+                checkpoint   : nil
             ),
             connection: connection,
             sequence  : 1
@@ -285,15 +270,16 @@ struct AddonRuntimeCompositionTests {
         #expect(await governor.usage(.publications, owner: fixture.owner) == 16)
         #expect(await governor.usage(.activities, owner: fixture.owner) == 1)
         #expect(await governor.usage(.notices, owner: fixture.owner) == 1)
+
         _ = try await receivePublicationOutput(
-            runtime: runtime,
-            adapter: adapter,
-            output : try ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : try ProviderOutput(
                 schemaVersion: 1,
-                publications: [],
-                operations  : ids.map { .endPublication($0) },
-                completion  : nil,
-                checkpoint  : nil
+                publications : [],
+                operations   : ids.map { .endPublication($0) },
+                completion   : nil,
+                checkpoint   : nil
             ),
             connection: connection,
             sequence  : 2
@@ -301,22 +287,24 @@ struct AddonRuntimeCompositionTests {
         #expect(await governor.usage(.publications, owner: fixture.owner) == 0)
         #expect(await governor.usage(.activities, owner: fixture.owner) == 0)
         #expect(await governor.usage(.notices, owner: fixture.owner) == 0)
+
         _ = try await runtime.serviceDeadlines()
         await #expect(throws: AddonFailure.self) {
             _ = try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : ProviderOutput(
+                runtime   : runtime,
+                adapter   : adapter,
+                output    : ProviderOutput(
                     schemaVersion: 1,
-                    publications: [publications[0]],
-                    operations  : [],
-                    completion  : nil,
-                    checkpoint  : nil
+                    publications : [publications[0]],
+                    operations   : [],
+                    completion   : nil,
+                    checkpoint   : nil
                 ),
                 connection: connection,
                 sequence  : 3
             )
         }
+
         await runtime.observeExit(connection.incarnation)
         _ = try await runtime.serviceDeadlines()
         _ = try await runtime.assignPublication(
@@ -331,22 +319,22 @@ struct AddonRuntimeCompositionTests {
         let consumer = try installedFixture("consumer", publisher: "shared.publisher")
         let provider = try installedFixture("focus", publisher: "shared.publisher")
         let governor = ResourceGovernor()
-        let access = GatedRuntimeResourceAccess(target: governor)
-        let adapter = RecordingRuntimeAdapter()
-        let runtime = try await AddonRuntime.make(
-            catalog: [consumer, provider],
-            environment: HostEnvironment(
+        let access   = GatedRuntimeResourceAccess(target: governor)
+        let adapter  = RecordingRuntimeAdapter()
+        let runtime  = try await AddonRuntime.make(
+            catalog               : [consumer, provider],
+            environment           : HostEnvironment(
                 osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
                 applications    : [:],
                 grants          : [consumer.manifest.id: [], provider.manifest.id: []],
                 explicitBindings: []
             ),
-            governor             : governor,
-            resourceAccess       : access,
+            governor              : governor,
+            resourceAccess        : access,
             serviceDecisionFactory: { $0 },
-            adapter              : adapter,
-            clock                : FixedRuntimeClock(instant: RuntimeInstant(
+            adapter               : adapter,
+            clock                 : FixedRuntimeClock(instant: RuntimeInstant(
                 wall     : Date(timeIntervalSince1970: 2_000_000_000),
                 monotonic: .zero
             ))
@@ -357,15 +345,9 @@ struct AddonRuntimeCompositionTests {
             maximumMinor  : 0,
             contentSchemas: [1]
         )
-        let launch = try await runtime.requestLaunch(owner: consumer.manifest.id)
-        let connection = try await runtime.attach(
-            launchID: launch,
-            offer   : offer
-        )
-        let scope = try ServiceScope(
-            featureID: "summary",
-            operation: "read"
-        )
+        let launch     = try await runtime.requestLaunch(owner: consumer.manifest.id)
+        let connection = try await runtime.attach(launchID: launch, offer: offer)
+        let scope      = try ServiceScope(featureID: "summary", operation: "read")
         await access.armStateAdmission()
         async let authorizing = runtime.authorizeService(
             connection           : connection,
@@ -377,17 +359,17 @@ struct AddonRuntimeCompositionTests {
         await access.waitForArrival()
         await runtime.disable(owner: consumer.manifest.id)
         await access.releaseGate()
+
         do {
             _ = try await authorizing
             Issue.record("Disabled authority completed a suspended service authorization.")
         } catch is AddonFailure {}
+
         await runtime.observeExit(connection.incarnation)
         try await runtime.enable(owner: consumer.manifest.id)
+
         let replacementLaunch = try await runtime.requestLaunch(owner: consumer.manifest.id)
-        let replacement = try await runtime.attach(
-            launchID: replacementLaunch,
-            offer   : offer
-        )
+        let replacement       = try await runtime.attach(launchID: replacementLaunch, offer: offer)
         _ = try await runtime.authorizeService(
             connection           : replacement,
             requirementID        : "com.example.focus.sessions",
@@ -399,12 +381,9 @@ struct AddonRuntimeCompositionTests {
 
     @Test
     func synchronousNeverHandedOffRejectionRetainsRecoverableHistory() throws {
-        let fixture = try ActionFixture()
-        let request = try fixture.request()
-        let instant = RuntimeInstant(
-            wall     : fixture.wall,
-            monotonic: .zero
-        )
+        let fixture    = try ActionFixture()
+        let request    = try fixture.request()
+        let instant    = RuntimeInstant(wall: fixture.wall, monotonic: .zero)
         let generation = ConnectionGeneration()
         var dispatcher = ActionDispatcher()
         _ = try dispatcher.submit(
@@ -412,13 +391,11 @@ struct AddonRuntimeCompositionTests {
             context: fixture.context(),
             at     : instant
         )
-        let inspected = try #require(dispatcher.peekReady(at: .zero))
-        let ticketValue = dispatcher.takeReady(
-            expectedJobID: inspected.id,
-            at           : .zero
-        )
-        let ticket = try #require(ticketValue)
-        let delivery = try #require(try dispatcher.consume(
+
+        let inspected   = try #require(dispatcher.peekReady(at: .zero))
+        let ticketValue = dispatcher.takeReady(expectedJobID: inspected.id, at: .zero)
+        let ticket      = try #require(ticketValue)
+        let delivery    = try #require(try dispatcher.consume(
             ticket,
             context   : fixture.context(),
             generation: generation,
@@ -429,10 +406,7 @@ struct AddonRuntimeCompositionTests {
             reason: "The transport rejected the delivery before handoff."
         )
 
-        let firstRejection = dispatcher.rejectNeverHandedOff(
-            delivery: delivery,
-            failure : failure
-        )
+        let firstRejection    = dispatcher.rejectNeverHandedOff(delivery: delivery, failure: failure)
         let repeatedRejection = dispatcher.rejectNeverHandedOff(
             delivery: delivery,
             failure : failure
@@ -450,14 +424,14 @@ struct AddonRuntimeCompositionTests {
 
     @Test
     func tightGovernorDenialsLeaveCatalogLaunchAndConnectionTransactional() async throws {
-        let fixture = try ActionFixture()
-        let installed = try fixture.context().installed
+        let fixture        = try ActionFixture()
+        let installed      = try fixture.context().installed
         let deniedGovernor = ResourceGovernor(policy: ResourcePolicy(
             maximumRetainedStateBytes: 214_015
         ))
         await #expect(throws: AddonFailure.self) {
             try await AddonRuntime.make(
-                catalog: [installed],
+                catalog    : [installed],
                 environment: HostEnvironment(
                     osVersion       : SemanticVersion(14, 0, 0),
                     hostCapabilities: [:],
@@ -465,9 +439,9 @@ struct AddonRuntimeCompositionTests {
                     grants          : [fixture.owner: []],
                     explicitBindings: []
                 ),
-                governor: deniedGovernor,
-                adapter : RecordingRuntimeAdapter(),
-                clock   : FixedRuntimeClock(instant: RuntimeInstant(
+                governor   : deniedGovernor,
+                adapter    : RecordingRuntimeAdapter(),
+                clock      : FixedRuntimeClock(instant: RuntimeInstant(
                     wall     : fixture.wall,
                     monotonic: .zero
                 ))
@@ -476,9 +450,9 @@ struct AddonRuntimeCompositionTests {
         #expect(await deniedGovernor.usage(.retainedStateBytes) == 0)
 
         let governor = ResourceGovernor()
-        let adapter = RecordingRuntimeAdapter()
-        let runtime = try await AddonRuntime.make(
-            catalog: [installed],
+        let adapter  = RecordingRuntimeAdapter()
+        let runtime  = try await AddonRuntime.make(
+            catalog    : [installed],
             environment: HostEnvironment(
                 osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
@@ -486,16 +460,16 @@ struct AddonRuntimeCompositionTests {
                 grants          : [fixture.owner: []],
                 explicitBindings: []
             ),
-            governor: governor,
-            adapter : adapter,
-            clock   : FixedRuntimeClock(instant: RuntimeInstant(
+            governor   : governor,
+            adapter    : adapter,
+            clock      : FixedRuntimeClock(instant: RuntimeInstant(
                 wall     : fixture.wall,
                 monotonic: .zero
             ))
         )
-        let baseline = await governor.usage(.retainedStateBytes)
+        let baseline    = await governor.usage(.retainedStateBytes)
         let fillerOwner = AddonID(rawValue: "com.example.runtime-pressure-filler")!
-        var filler = try await governor.admit(
+        var filler      = try await governor.admit(
             .state(bytes: 8 * 1_024 * 1_024 - baseline - 1_024),
             owner: fillerOwner
         )
@@ -505,14 +479,12 @@ struct AddonRuntimeCompositionTests {
         #expect(adapter.startCount(owner: fixture.owner) == 0)
         #expect(await governor.usage(.providers, owner: fixture.owner) == 0)
         #expect(await runtime.diagnostics(owner: fixture.owner)?.hasProcess == false)
-        try await governor.release(
-            filler.id,
-            owner: fillerOwner
-        )
 
-        let launch = try await runtime.requestLaunch(owner: fixture.owner)
+        try await governor.release(filler.id, owner: fillerOwner)
+
+        let launch           = try await runtime.requestLaunch(owner: fixture.owner)
         let beforeConnection = await governor.usage(.retainedStateBytes)
-        filler = try await governor.admit(
+        filler               = try await governor.admit(
             .state(bytes: 8 * 1_024 * 1_024 - beforeConnection - 1_024),
             owner: fillerOwner
         )
@@ -529,10 +501,8 @@ struct AddonRuntimeCompositionTests {
         }
         #expect(await runtime.diagnostics(owner: fixture.owner)?.hasProcess == true)
         #expect(await governor.usage(.retainedStateBytes) == 8 * 1_024 * 1_024)
-        try await governor.release(
-            filler.id,
-            owner: fillerOwner
-        )
+
+        try await governor.release(filler.id, owner: fillerOwner)
         _ = try await runtime.attach(
             launchID: launch,
             offer   : ProtocolOffer(
@@ -551,19 +521,19 @@ struct AddonRuntimeCompositionTests {
             enabled         : false
         )
         let disabledGovernor = ResourceGovernor()
-        let disabledAdapter = RecordingRuntimeAdapter()
-        let disabledRuntime = try await AddonRuntime.make(
-            catalog: [disabled],
+        let disabledAdapter  = RecordingRuntimeAdapter()
+        let disabledRuntime  = try await AddonRuntime.make(
+            catalog    : [disabled],
             environment: HostEnvironment(
-                osVersion         : SemanticVersion(14, 0, 0),
-                hostCapabilities  : [:],
-                applications      : [:],
-                grants            : [fixture.owner: []],
-                explicitBindings  : []
+                osVersion       : SemanticVersion(14, 0, 0),
+                hostCapabilities: [:],
+                applications    : [:],
+                grants          : [fixture.owner: []],
+                explicitBindings: []
             ),
-            governor: disabledGovernor,
-            adapter : disabledAdapter,
-            clock   : FixedRuntimeClock(instant: RuntimeInstant(
+            governor   : disabledGovernor,
+            adapter    : disabledAdapter,
+            clock      : FixedRuntimeClock(instant: RuntimeInstant(
                 wall     : fixture.wall,
                 monotonic: .zero
             ))
@@ -587,12 +557,12 @@ struct AddonRuntimeCompositionTests {
             monotonic: .zero
         ))
         let environment = HostEnvironment(
-            osVersion         : SemanticVersion(14, 0, 0),
-            hostCapabilities  : [:],
-            applications      : [:],
-            grants            : [fixture.owner: []],
-            explicitBindings  : [],
-            protocolVersion   : (1, 0),
+            osVersion          : SemanticVersion(14, 0, 0),
+            hostCapabilities   : [:],
+            applications       : [:],
+            grants             : [fixture.owner: []],
+            explicitBindings   : [],
+            protocolVersion    : (1, 0),
             serviceAccessGrants: []
         )
         let runtime = try await AddonRuntime.make(
@@ -607,7 +577,7 @@ struct AddonRuntimeCompositionTests {
             featureID : "controls",
             instanceID: UUID()
         )
-        let launchID = try await runtime.requestLaunch(owner: fixture.owner)
+        let launchID   = try await runtime.requestLaunch(owner: fixture.owner)
         let connection = try await runtime.attach(
             launchID: launchID,
             offer   : ProtocolOffer(
@@ -632,38 +602,35 @@ struct AddonRuntimeCompositionTests {
         )
         await #expect(throws: AddonFailure.self) {
             try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-                ProviderOutput(
+                runtime   : runtime,
+                adapter   : adapter,
+                output    : ProviderOutput(
                     schemaVersion: 1,
-                    publications: [publication],
-                    operations  : [],
-                    completion  : nil,
-                    checkpoint  : nil
+                    publications : [publication],
+                    operations   : [],
+                    completion   : nil,
+                    checkpoint   : nil
                 ),
                 connection: connection,
                 sequence  : 1
             )
         }
-        try await governor.release(
-            memoryFiller.id,
-            owner: fixture.owner
-        )
+
+        try await governor.release(memoryFiller.id, owner: fixture.owner)
         _ = try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-            ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
-                publications: [publication],
-                operations  : [],
-                completion  : nil,
-                checkpoint  : nil
+                publications : [publication],
+                operations   : [],
+                completion   : nil,
+                checkpoint   : nil
             ),
             connection: connection,
             sequence  : 1
         )
+
         let updatedPublication = try Publication(
             id         : publicationID,
             revision   : 2,
@@ -674,7 +641,7 @@ struct AddonRuntimeCompositionTests {
             stalePolicy: .retainMarked
         )
         let unassignedPublication = try Publication(
-            id: PublicationID(
+            id         : PublicationID(
                 addonID   : fixture.owner,
                 instanceID: UUID(),
                 sessionID : UUID()
@@ -688,35 +655,35 @@ struct AddonRuntimeCompositionTests {
         )
         await #expect(throws: AddonFailure.self) {
             try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-                ProviderOutput(
+                runtime   : runtime,
+                adapter   : adapter,
+                output    : ProviderOutput(
                     schemaVersion: 1,
-                    publications: [updatedPublication, unassignedPublication],
-                    operations  : [],
-                    completion  : nil,
-                    checkpoint  : nil
+                    publications : [updatedPublication, unassignedPublication],
+                    operations   : [],
+                    completion   : nil,
+                    checkpoint   : nil
                 ),
                 connection: connection,
                 sequence  : 2
             )
         }
         #expect(await runtime.snapshot(at: fixture.wall).publications == [publication])
+
         _ = try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-            ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
-                publications: [updatedPublication],
-                operations  : [],
-                completion  : nil,
-                checkpoint  : nil
+                publications : [updatedPublication],
+                operations   : [],
+                completion   : nil,
+                checkpoint   : nil
             ),
             connection: connection,
             sequence  : 2
         )
+
         let request = try ActionRequest(
             schemaVersion   : 1,
             requestID       : UUID(),
@@ -727,12 +694,11 @@ struct AddonRuntimeCompositionTests {
             observedRevision: 2
         )
         var commandFillers: [ResourceReservation] = []
+
         for _ in 0..<4 {
-            commandFillers.append(try await governor.admit(
-                .command,
-                owner: fixture.owner
-            ))
+            commandFillers.append(try await governor.admit(.command, owner: fixture.owner))
         }
+
         let stateBeforeDeniedCommand = await governor.usage(
             .retainedStateBytes,
             owner: fixture.owner
@@ -742,17 +708,18 @@ struct AddonRuntimeCompositionTests {
         }
         #expect(await runtime.actionState(request.requestID, owner: fixture.owner) == nil)
         #expect(await governor.usage(.retainedStateBytes, owner: fixture.owner) == stateBeforeDeniedCommand)
+
         for reservation in commandFillers {
-            try await governor.release(
-                reservation.id,
-                owner: fixture.owner
-            )
+            try await governor.release(reservation.id, owner: fixture.owner)
         }
+
         #expect(try await runtime.submitAction(request) == .admitted)
         #expect(try await runtime.pumpReady())
         #expect(try await !runtime.pumpReady())
         #expect(await runtime.diagnostics(owner: fixture.owner)?.hasOutstandingDelivery == true)
+
         _ = try #require(adapter.lastAction)
+
         let completedPublication = try Publication(
             id         : publicationID,
             revision   : 3,
@@ -764,18 +731,17 @@ struct AddonRuntimeCompositionTests {
         )
         await #expect(throws: AddonFailure.self) {
             try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-                ProviderOutput(
+                runtime   : runtime,
+                adapter   : adapter,
+                output    : ProviderOutput(
                     schemaVersion: 1,
-                    publications: [completedPublication],
-                    operations  : [],
-                    completion  : .action(
+                    publications : [completedPublication],
+                    operations   : [],
+                    completion   : .action(
                         requestID: UUID(),
                         outcome  : .completed(payload: Data([9]))
                     ),
-                    checkpoint: nil
+                    checkpoint   : nil
                 ),
                 connection: connection,
                 sequence  : 3
@@ -784,33 +750,32 @@ struct AddonRuntimeCompositionTests {
         #expect(await runtime.snapshot(at: fixture.wall).publications == [updatedPublication])
         await #expect(throws: AddonFailure.self) {
             try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-                ProviderOutput(
+                runtime   : runtime,
+                adapter   : adapter,
+                output    : ProviderOutput(
                     schemaVersion: 1,
-                    publications: [completedPublication],
-                    operations  : [],
-                    completion  : nil,
-                    checkpoint  : Data([1])
+                    publications : [completedPublication],
+                    operations   : [],
+                    completion   : nil,
+                    checkpoint   : Data([1])
                 ),
                 connection: connection,
                 sequence  : 3
             )
         }
+
         let correlatedAdmission = try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-            ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
-                publications: [completedPublication],
-                operations  : [],
-                completion  : .action(
+                publications : [completedPublication],
+                operations   : [],
+                completion   : .action(
                     requestID: request.requestID,
                     outcome  : .completed(payload: Data([9]))
                 ),
-                checkpoint: nil
+                checkpoint   : nil
             ),
             connection: connection,
             sequence  : 3
@@ -824,9 +789,10 @@ struct AddonRuntimeCompositionTests {
         #expect(await governor.usage(.jobs, owner: fixture.owner) == 0)
         #expect(await governor.usage(.providers, owner: fixture.owner) == 1)
         #expect(await runtime.snapshot(at: fixture.wall).publications == [completedPublication])
-        let usedState = await governor.usage(.retainedStateBytes)
+
+        let usedState   = await governor.usage(.retainedStateBytes)
         let fillerOwner = AddonID(rawValue: "com.example.runtime-filler")!
-        let filler = try await governor.admit(
+        let filler      = try await governor.admit(
             .state(bytes: 8 * 1_024 * 1_024 - usedState - 1_024),
             owner: fillerOwner
         )
@@ -834,10 +800,8 @@ struct AddonRuntimeCompositionTests {
         #expect(try await runtime.submitAction(request) == .duplicate(.finished(
             .completed(payload: Data([9]))
         )))
-        try await governor.release(
-            filler.id,
-            owner: fillerOwner
-        )
+
+        try await governor.release(filler.id, owner: fillerOwner)
 
         let firstAtRevisionThree = try ActionRequest(
             schemaVersion   : 1,
@@ -860,6 +824,7 @@ struct AddonRuntimeCompositionTests {
         _ = try await runtime.submitAction(firstAtRevisionThree)
         _ = try await runtime.submitAction(secondAtRevisionThree)
         #expect(try await runtime.pumpReady())
+
         let revisionFour = try Publication(
             id         : publicationID,
             revision   : 4,
@@ -870,18 +835,17 @@ struct AddonRuntimeCompositionTests {
             stalePolicy: .retainMarked
         )
         _ = try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-            ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
-                publications: [revisionFour],
-                operations  : [],
-                completion  : .action(
+                publications : [revisionFour],
+                operations   : [],
+                completion   : .action(
                     requestID: firstAtRevisionThree.requestID,
                     outcome  : .completed(payload: Data())
                 ),
-                checkpoint: nil
+                checkpoint   : nil
             ),
             connection: connection,
             sequence  : 4
@@ -903,29 +867,27 @@ struct AddonRuntimeCompositionTests {
         )
         _ = try await runtime.submitAction(maximumResultRequest)
         #expect(try await runtime.pumpReady())
-        let runningState = await governor.usage(.retainedStateBytes)
+
+        let runningState     = await governor.usage(.retainedStateBytes)
         let completionFiller = try await governor.admit(
             .state(bytes: 8 * 1_024 * 1_024 - runningState - 1_024),
             owner: fillerOwner
         )
         #expect(await governor.usage(.retainedStateBytes) == 8 * 1_024 * 1_024)
-        let maximumResult = Data(
-            repeating: 9,
-            count    : 65_536
-        )
+
+        let maximumResult = Data(repeating: 9, count: 65_536)
         _ = try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-            ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
-                publications: [],
-                operations  : [],
-                completion  : .action(
+                publications : [],
+                operations   : [],
+                completion   : .action(
                     requestID: maximumResultRequest.requestID,
                     outcome  : .completed(payload: maximumResult)
                 ),
-                checkpoint: nil
+                checkpoint   : nil
             ),
             connection: connection,
             sequence  : 5
@@ -934,10 +896,8 @@ struct AddonRuntimeCompositionTests {
             maximumResultRequest.requestID,
             owner: fixture.owner
         ) == .finished(.completed(payload: maximumResult)))
-        try await governor.release(
-            completionFiller.id,
-            owner: fillerOwner
-        )
+
+        try await governor.release(completionFiller.id, owner: fillerOwner)
 
         let uncertain = try ActionRequest(
             schemaVersion   : 1,
@@ -950,28 +910,25 @@ struct AddonRuntimeCompositionTests {
         )
         _ = try await runtime.submitAction(uncertain)
         #expect(try await runtime.pumpReady())
+
         let uncertainDelivery = try #require(adapter.lastAction)
-        #expect(try await runtime.receiveAcknowledgment(
-            uncertainDelivery,
-            connection: connection
-        ))
+        #expect(try await runtime.receiveAcknowledgment(uncertainDelivery, connection: connection))
         #expect(await governor.usage(.commands, owner: fixture.owner) == 1)
         #expect(await governor.usage(.jobs, owner: fixture.owner) == 1)
         #expect(await governor.usage(.providers, owner: fixture.owner) == 1)
+
         clock.set(RuntimeInstant(
             wall     : fixture.wall.addingTimeInterval(700),
             monotonic: .seconds(700)
         ))
         _ = try await runtime.serviceDeadlines()
-        #expect(await runtime.actionState(
-            uncertain.requestID,
-            owner: fixture.owner
-        ) == nil)
+        #expect(await runtime.actionState(uncertain.requestID, owner: fixture.owner) == nil)
         #expect(await governor.usage(.commands, owner: fixture.owner) == 1)
         #expect(await governor.usage(.jobs, owner: fixture.owner) == 1)
         #expect(await governor.usage(.providers, owner: fixture.owner) == 1)
         #expect(await runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes ?? 0 >= 884_736)
         #expect(adapter.stopCount(incarnation: connection.incarnation) == 1)
+
         await runtime.disable(owner: fixture.owner)
         #expect(adapter.stopCount(incarnation: connection.incarnation) == 1)
         await #expect(throws: AddonFailure.self) {
@@ -985,6 +942,7 @@ struct AddonRuntimeCompositionTests {
         await #expect(throws: AddonFailure.self) {
             try await runtime.requestLaunch(owner: fixture.owner)
         }
+
         await runtime.observeExit(connection.incarnation)
         #expect(adapter.tryHandoff(
             incarnation: connection.incarnation,
@@ -993,9 +951,11 @@ struct AddonRuntimeCompositionTests {
         #expect(await governor.usage(.commands, owner: fixture.owner) == 0)
         #expect(await governor.usage(.jobs, owner: fixture.owner) == 0)
         #expect(await governor.usage(.providers, owner: fixture.owner) == 0)
+
         try await runtime.enable(owner: fixture.owner)
+
         let replacementLaunch = try await runtime.requestLaunch(owner: fixture.owner)
-        let replacement = try await runtime.attach(
+        let replacement       = try await runtime.attach(
             launchID: replacementLaunch,
             offer   : ProtocolOffer(
                 major         : 1,
@@ -1008,20 +968,20 @@ struct AddonRuntimeCompositionTests {
         #expect(await governor.usage(.providers, owner: fixture.owner) == 1)
         await #expect(throws: AddonFailure.self) {
             try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-                ProviderOutput(
+                runtime   : runtime,
+                adapter   : adapter,
+                output    : ProviderOutput(
                     schemaVersion: 1,
-                    publications: [updatedPublication],
-                    operations  : [],
-                    completion  : nil,
-                    checkpoint  : nil
+                    publications : [updatedPublication],
+                    operations   : [],
+                    completion   : nil,
+                    checkpoint   : nil
                 ),
                 connection: connection,
-                    sequence  : 6
+                sequence  : 6
             )
         }
+
         await runtime.stop()
         await runtime.observeExit(replacement.incarnation)
         #expect(await governor.usage(.providers, owner: fixture.owner) == 0)
@@ -1033,14 +993,14 @@ struct AddonRuntimeCompositionTests {
     @Test
     func directServiceWorkCompetesForSharedCommandAndJobPermits() async throws {
         let serviceConsumer = try installedFixture("consumer", publisher: "shared.publisher")
-        let actionFixture = try ActionFixture()
-        let actionAddon = try actionFixture.context().installed
-        let consumer = try replacing(
+        let actionFixture   = try ActionFixture()
+        let actionAddon     = try actionFixture.context().installed
+        let consumer        = try replacing(
             serviceConsumer,
             features: serviceConsumer.manifest.features + actionAddon.manifest.features
         )
         let baseProvider = try installedFixture("focus", publisher: "shared.publisher")
-        let leafService = try ProvidedService(
+        let leafService  = try ProvidedService(
             kind   : .service,
             id     : "com.example.runtime.leaf",
             version: "1.0.0"
@@ -1058,37 +1018,37 @@ struct AddonRuntimeCompositionTests {
             requires: [requirement("com.example.runtime.leaf", ">=1.0.0 <2.0.0")],
             features: baseProvider.manifest.features + actionAddon.manifest.features
         )
-        let governor = ResourceGovernor()
+        let governor       = ResourceGovernor()
         let resourceAccess = GatedRuntimeResourceAccess(target: governor)
-        let adapter  = RecordingRuntimeAdapter()
-        let decisionBox = RuntimeServiceDecisionAccessBox()
-        let now = RuntimeInstant(
+        let adapter        = RecordingRuntimeAdapter()
+        let decisionBox    = RuntimeServiceDecisionAccessBox()
+        let now            = RuntimeInstant(
             wall     : Date(timeIntervalSince1970: 2_000_000_000),
             monotonic: .seconds(10)
         )
-        let clock = MutableRuntimeClock(instant: now)
+        let clock   = MutableRuntimeClock(instant: now)
         let runtime = try await AddonRuntime.make(
-            catalog: [consumer, provider, leaf],
-            environment: HostEnvironment(
+            catalog               : [consumer, provider, leaf],
+            environment           : HostEnvironment(
                 osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
                 applications    : [:],
-                grants: [
+                grants          : [
                     consumer.manifest.id: [],
                     provider.manifest.id: [],
                     leaf.manifest.id    : []
                 ],
                 explicitBindings: []
             ),
-            governor      : governor,
-            resourceAccess: resourceAccess,
+            governor              : governor,
+            resourceAccess        : resourceAccess,
             serviceDecisionFactory: { broker in
-                let access = GatedRuntimeServiceDecisionAccess(target: broker)
+                let access         = GatedRuntimeServiceDecisionAccess(target: broker)
                 decisionBox.access = access
                 return access
             },
-            adapter: adapter,
-            clock  : clock
+            adapter               : adapter,
+            clock                 : clock
         )
         let offer = try ProtocolOffer(
             major         : 1,
@@ -1106,12 +1066,9 @@ struct AddonRuntimeCompositionTests {
             featureID : "controls",
             instanceID: UUID()
         )
-        let consumerLaunch = try await runtime.requestLaunch(owner: consumer.manifest.id)
-        let consumerConnection = try await runtime.attach(
-            launchID: consumerLaunch,
-            offer   : offer
-        )
-        let actionPublication = try Publication(
+        let consumerLaunch     = try await runtime.requestLaunch(owner: consumer.manifest.id)
+        let consumerConnection = try await runtime.attach(launchID: consumerLaunch, offer: offer)
+        let actionPublication  = try Publication(
             id         : actionPublicationID,
             revision   : 1,
             kind       : .widget,
@@ -1121,23 +1078,20 @@ struct AddonRuntimeCompositionTests {
             stalePolicy: .remove
         )
         _ = try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-            ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
-                publications: [actionPublication],
-                operations  : [],
-                completion  : nil,
-                checkpoint  : nil
+                publications : [actionPublication],
+                operations   : [],
+                completion   : nil,
+                checkpoint   : nil
             ),
             connection: consumerConnection,
             sequence  : 1
         )
-        let scope = try ServiceScope(
-            featureID: "summary",
-            operation: "read"
-        )
+
+        let scope = try ServiceScope(featureID: "summary", operation: "read")
         await #expect(throws: AddonFailure.self) {
             try await runtime.authorizeService(
                 connection           : consumerConnection,
@@ -1150,6 +1104,7 @@ struct AddonRuntimeCompositionTests {
                 crossPublisherConsent: true
             )
         }
+
         let permissionID = try await runtime.authorizeService(
             connection           : consumerConnection,
             requirementID        : "com.example.focus.sessions",
@@ -1157,6 +1112,7 @@ struct AddonRuntimeCompositionTests {
             partition            : "account-a",
             crossPublisherConsent: true
         )
+
         do {
             _ = try await runtime.acquireService(
                 connection  : consumerConnection,
@@ -1167,18 +1123,18 @@ struct AddonRuntimeCompositionTests {
         } catch let failure as AddonFailure {
             #expect(failure.code == .dependencyUnavailable)
         }
-        let leafStart = try #require(adapter.lastStart(owner: leaf.manifest.id))
+
+        let leafStart     = try #require(adapter.lastStart(owner: leaf.manifest.id))
         let providerStart = try #require(adapter.lastStart(owner: provider.manifest.id))
         #expect(adapter.startOwners.suffix(2) == [
             leaf.manifest.id,
             provider.manifest.id
         ])
-        let leafConnection = try await runtime.attach(
-            launchID: leafStart.launchID,
-            offer   : offer
-        )
+
+        let leafConnection = try await runtime.attach(launchID: leafStart.launchID, offer: offer)
         #expect(adapter.startCount(owner: provider.manifest.id) == 1)
         #expect(await governor.usage(.providers, owner: provider.manifest.id) == 1)
+
         let providerConnection = try await runtime.attach(
             launchID: providerStart.launchID,
             offer   : offer
@@ -1193,23 +1149,20 @@ struct AddonRuntimeCompositionTests {
             stalePolicy: .remove
         )
         _ = try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-            ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
-                publications: [leafPublication],
-                operations  : [],
-                completion  : nil,
-                checkpoint  : nil
+                publications : [leafPublication],
+                operations   : [],
+                completion   : nil,
+                checkpoint   : nil
             ),
             connection: leafConnection,
             sequence  : 1
         )
-        let blockedSourceJob = try await governor.admit(
-            .job,
-            owner: provider.manifest.id
-        )
+
+        let blockedSourceJob = try await governor.admit(.job, owner: provider.manifest.id)
         await #expect(throws: AddonFailure.self) {
             try await runtime.acquireService(
                 connection  : consumerConnection,
@@ -1217,10 +1170,9 @@ struct AddonRuntimeCompositionTests {
                 lifetime    : .seconds(30)
             )
         }
-        try await governor.release(
-            blockedSourceJob.id,
-            owner: provider.manifest.id
-        )
+
+        try await governor.release(blockedSourceJob.id, owner: provider.manifest.id)
+
         let decisionAccess = try #require(decisionBox.access)
         await decisionAccess.armSource()
         async let expiringSource = runtime.acquireService(
@@ -1229,12 +1181,13 @@ struct AddonRuntimeCompositionTests {
             lifetime    : .seconds(1)
         )
         await decisionAccess.waitForArrival()
+
         let busyOutput = try ProviderOutput(
             schemaVersion: 1,
-            publications: [],
-            operations  : [],
-            completion  : nil,
-            checkpoint  : nil
+            publications : [],
+            operations   : [],
+            completion   : nil,
+            checkpoint   : nil
         )
         let busyIngress = try #require(adapter.stageIngress(
             busyOutput,
@@ -1247,25 +1200,26 @@ struct AddonRuntimeCompositionTests {
                 sequence  : 1
             )
         }
+
         let restagedIngress = try #require(adapter.stageIngress(
             busyOutput,
             incarnation: providerConnection.incarnation
         ))
-        adapter.rejectIngress(
-            restagedIngress,
-            incarnation: providerConnection.incarnation
-        )
+        adapter.rejectIngress(restagedIngress, incarnation: providerConnection.incarnation)
         clock.set(RuntimeInstant(
             wall     : now.wall.addingTimeInterval(2),
             monotonic: now.monotonic + .seconds(2)
         ))
         await decisionAccess.releaseGate()
+
         do {
             _ = try await expiringSource
             Issue.record("An expired source acquisition completed after its suspended consume.")
         } catch is AddonFailure {}
+
         #expect(adapter.sourceDeliveryCount == 0)
         #expect(await governor.usage(.jobs, owner: provider.manifest.id) == 0)
+
         clock.set(now)
         let acquisition = try await runtime.acquireService(
             connection  : consumerConnection,
@@ -1273,6 +1227,7 @@ struct AddonRuntimeCompositionTests {
             lifetime    : .seconds(30)
         )
         #expect(await governor.usage(.jobs, owner: provider.manifest.id) == 1)
+
         let sourceRowReserved = try #require(await runtime.diagnostics(
             owner: provider.manifest.id
         )).reservedStateBytes
@@ -1300,6 +1255,7 @@ struct AddonRuntimeCompositionTests {
         }
         #expect(await governor.usage(.commands, owner: consumer.manifest.id) == 0)
         #expect(await governor.usage(.jobs, owner: provider.manifest.id) == 0)
+
         let work = try await runtime.beginServiceInvocation(
             connection: consumerConnection,
             grantID   : acquisition.grant.id,
@@ -1315,13 +1271,11 @@ struct AddonRuntimeCompositionTests {
         #expect(await governor.usage(.commands, owner: consumer.manifest.id) == 1)
         #expect(await governor.usage(.jobs, owner: provider.manifest.id) == 1)
         #expect(try await runtime.pumpServiceInvocation(work.id))
+
         let nestedPermissionID = try await runtime.authorizeService(
             connection           : providerConnection,
             requirementID        : "com.example.runtime.leaf",
-            scope                : try ServiceScope(
-                featureID: "controls",
-                operation: "read"
-            ),
+            scope                : try ServiceScope(featureID: "controls", operation: "read"),
             partition            : "account-a",
             crossPublisherConsent: true
         )
@@ -1330,12 +1284,14 @@ struct AddonRuntimeCompositionTests {
             permissionID: nestedPermissionID,
             lifetime    : .seconds(30)
         )
+
         if await governor.usage(.jobs, owner: leaf.manifest.id) == 1 {
             #expect(try await runtime.receiveSourceStartupCompletion(
                 nestedAcquisition.sourceID,
                 connection: leafConnection
             ))
         }
+
         await #expect(throws: AddonFailure.self) {
             try await runtime.beginServiceInvocation(
                 connection: providerConnection,
@@ -1353,6 +1309,7 @@ struct AddonRuntimeCompositionTests {
         #expect(await governor.usage(.commands, owner: provider.manifest.id) == 0)
         #expect(await governor.usage(.jobs, owner: leaf.manifest.id) == 0)
         #expect(adapter.serviceDeliveryCount == 1)
+
         let firstAction = try ActionRequest(
             schemaVersion   : 1,
             requestID       : UUID(),
@@ -1380,6 +1337,7 @@ struct AddonRuntimeCompositionTests {
         #expect(await governor.usage(.jobs, owner: leaf.manifest.id) == 0)
         #expect(await governor.usage(.jobs, owner: consumer.manifest.id) == 1)
         #expect(await governor.usage(.jobs, owner: provider.manifest.id) == 1)
+
         let firstDelivery = try #require(adapter.lastAction)
         #expect(try await runtime.receiveActionCompletion(
             firstDelivery,
@@ -1387,12 +1345,14 @@ struct AddonRuntimeCompositionTests {
             outcome   : .completed(payload: Data())
         ))
         #expect(try await runtime.pumpReady())
+
         let secondDelivery = try #require(adapter.lastAction)
         #expect(try await runtime.receiveActionCompletion(
             secondDelivery,
             connection: leafConnection,
             outcome   : .completed(payload: Data())
         ))
+
         let response = try ServiceResponse(
             schemaVersion: 1,
             contractID   : "com.example.focus.sessions",
@@ -1412,15 +1372,13 @@ struct AddonRuntimeCompositionTests {
         await resourceAccess.armJobAdmission()
         async let pumpingWhileCompletionArrives = runtime.pumpReady()
         await resourceAccess.waitForArrival()
+
         let serviceOutput = try ProviderOutput(
             schemaVersion: 1,
-            publications: [],
-            operations  : [],
-            completion  : .service(
-                requestID: work.invocation.requestID,
-                response : response
-            ),
-            checkpoint: nil
+            publications : [],
+            operations   : [],
+            completion   : .service(requestID: work.invocation.requestID, response: response),
+            checkpoint   : nil
         )
         let serviceIngress = try #require(adapter.stageIngress(
             serviceOutput,
@@ -1452,6 +1410,7 @@ struct AddonRuntimeCompositionTests {
                 )
             )
         }
+
         clock.set(RuntimeInstant(
             wall     : now.wall.addingTimeInterval(6),
             monotonic: now.monotonic + .seconds(6)
@@ -1463,21 +1422,23 @@ struct AddonRuntimeCompositionTests {
             grantID   : acquisition.grant.id,
             requestID : work.invocation.requestID
         ) == .completed(response))
+
         _ = try await receivePublicationOutput(
-            runtime: runtime,
-            adapter: adapter,
-            output : ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
-                publications: [],
-                operations  : [],
-                completion  : nil,
-                checkpoint  : nil
+                publications : [],
+                operations   : [],
+                completion   : nil,
+                checkpoint   : nil
             ),
             connection: providerConnection,
             sequence  : 2
         )
         #expect(await governor.usage(.commands, owner: consumer.manifest.id) == 1)
         #expect(await governor.usage(.jobs, owner: provider.manifest.id) == 0)
+
         let actionDuringCompletionDelivery = try #require(adapter.lastAction)
         #expect(try await runtime.receiveActionCompletion(
             actionDuringCompletionDelivery,
@@ -1485,20 +1446,18 @@ struct AddonRuntimeCompositionTests {
             outcome   : .completed(payload: Data())
         ))
         #expect(await governor.usage(.commands, owner: consumer.manifest.id) == 0)
+
         clock.set(now)
 
-        let beforeShortGrant = try #require(await runtime.diagnostics(
-            owner: consumer.manifest.id
-        ))
-        let shortGrant = try await runtime.acquireService(
+        let beforeShortGrant = try #require(await runtime.diagnostics(owner: consumer.manifest.id))
+        let shortGrant       = try await runtime.acquireService(
             connection  : consumerConnection,
             permissionID: permissionID,
             lifetime    : .seconds(1)
         )
-        let duringShortGrant = try #require(await runtime.diagnostics(
-            owner: consumer.manifest.id
-        ))
+        let duringShortGrant = try #require(await runtime.diagnostics(owner: consumer.manifest.id))
         #expect(duringShortGrant.reservedStateBytes - beforeShortGrant.reservedStateBytes == 2_048)
+
         let shortWork = try await runtime.beginServiceInvocation(
             connection: consumerConnection,
             grantID   : shortGrant.grant.id,
@@ -1512,6 +1471,7 @@ struct AddonRuntimeCompositionTests {
             )
         )
         #expect(try await runtime.pumpServiceInvocation(shortWork.id))
+
         await resourceAccess.armReduction()
         async let acceptingShortCompletion = runtime.receiveServiceCompletion(
             shortWork.id,
@@ -1531,6 +1491,7 @@ struct AddonRuntimeCompositionTests {
                 )
             )
         }
+
         clock.set(RuntimeInstant(
             wall     : now.wall.addingTimeInterval(2),
             monotonic: now.monotonic + .seconds(2)
@@ -1542,6 +1503,7 @@ struct AddonRuntimeCompositionTests {
                 requestID : shortWork.invocation.requestID
             )
         }
+
         await resourceAccess.releaseGate()
         #expect(try await acceptingShortCompletion == .accepted(response))
         await #expect(throws: AddonFailure.self) {
@@ -1551,13 +1513,13 @@ struct AddonRuntimeCompositionTests {
                 requestID : shortWork.invocation.requestID
             )
         }
+
         let beforeShortGrantExpiry = try #require(await runtime.diagnostics(
             owner: consumer.manifest.id
         ))
         _ = try await runtime.serviceDeadlines()
-        let afterShortGrant = try #require(await runtime.diagnostics(
-            owner: consumer.manifest.id
-        ))
+
+        let afterShortGrant = try #require(await runtime.diagnostics(owner: consumer.manifest.id))
         #expect(afterShortGrant.reservedStateBytes == beforeShortGrantExpiry.reservedStateBytes - 2_048)
         await #expect(throws: AddonFailure.self) {
             try await runtime.serviceOutcome(
@@ -1566,6 +1528,7 @@ struct AddonRuntimeCompositionTests {
                 requestID : UUID()
             )
         }
+
         clock.set(now)
 
         let expiredBeforeConsume = try await runtime.beginServiceInvocation(
@@ -1594,6 +1557,7 @@ struct AddonRuntimeCompositionTests {
         ) == .unsent)
         #expect(await governor.usage(.commands, owner: consumer.manifest.id) == 0)
         #expect(await governor.usage(.jobs, owner: provider.manifest.id) == 0)
+
         clock.set(now)
 
         let timedWork = try await runtime.beginServiceInvocation(
@@ -1616,10 +1580,12 @@ struct AddonRuntimeCompositionTests {
             monotonic: now.monotonic + .seconds(6)
         ))
         await decisionAccess.releaseGate()
+
         do {
             _ = try await timedPump
             Issue.record("An expired service decision was handed off after its suspended consume.")
         } catch is AddonFailure {}
+
         #expect(adapter.serviceDeliveryCount == 2)
         #expect(try await runtime.serviceOutcome(
             connection: consumerConnection,
@@ -1646,12 +1612,14 @@ struct AddonRuntimeCompositionTests {
         await decisionAccess.waitForArrival()
         await runtime.disable(owner: consumer.manifest.id)
         await decisionAccess.releaseGate()
+
         do {
             _ = try await pumping
             Issue.record("A consumed service decision survived canonical disable.")
         } catch let failure as AddonFailure {
             #expect(failure.code == .sessionRevoked)
         }
+
         #expect(adapter.serviceDeliveryCount == 2)
         #expect(await governor.usage(.commands, owner: consumer.manifest.id) == 0)
         #expect(await governor.usage(.jobs, owner: provider.manifest.id) == 0)
@@ -1665,7 +1633,8 @@ struct AddonRuntimeCompositionTests {
 
         await runtime.observeExit(consumerConnection.incarnation)
         try await runtime.enable(owner: consumer.manifest.id)
-        let replacementConsumerLaunch = try await runtime.requestLaunch(owner: consumer.manifest.id)
+
+        let replacementConsumerLaunch     = try await runtime.requestLaunch(owner: consumer.manifest.id)
         let replacementConsumerConnection = try await runtime.attach(
             launchID: replacementConsumerLaunch,
             offer   : offer
@@ -1682,12 +1651,14 @@ struct AddonRuntimeCompositionTests {
             permissionID: replacementPermissionID,
             lifetime    : .seconds(30)
         )
+
         if await governor.usage(.jobs, owner: provider.manifest.id) == 1 {
             _ = try await runtime.receiveSourceStartupCompletion(
                 replacementAcquisition.sourceID,
                 connection: providerConnection
             )
         }
+
         let handedOffWork = try await runtime.beginServiceInvocation(
             connection: replacementConsumerConnection,
             grantID   : replacementAcquisition.grant.id,
@@ -1701,6 +1672,7 @@ struct AddonRuntimeCompositionTests {
             )
         )
         #expect(try await runtime.pumpServiceInvocation(handedOffWork.id))
+
         let unrelatedParkedRequest = try ActionRequest(
             schemaVersion   : 1,
             requestID       : UUID(),
@@ -1721,6 +1693,7 @@ struct AddonRuntimeCompositionTests {
             _ = try await runtime.serviceDeadlines()
         }
         #expect(adapter.stopCount(incarnation: providerConnection.incarnation) == 1)
+
         clock.set(now)
         await runtime.disable(owner: consumer.manifest.id)
         await #expect(throws: AddonFailure.self) {
@@ -1733,11 +1706,14 @@ struct AddonRuntimeCompositionTests {
         #expect(adapter.stopCount(incarnation: providerConnection.incarnation) == 1)
         #expect(await governor.usage(.commands, owner: consumer.manifest.id) == 1)
         #expect(await governor.usage(.jobs, owner: provider.manifest.id) == 1)
+
         await resourceAccess.releaseGate()
+
         do {
             _ = try await unrelatedParkedAdmission
             Issue.record("Unrelated parked admission survived the disable authority transition.")
         } catch is AddonFailure {}
+
         await runtime.observeExit(providerConnection.incarnation)
         #expect(await governor.usage(.commands, owner: consumer.manifest.id) == 0)
         #expect(await governor.usage(.jobs, owner: provider.manifest.id) == 0)
@@ -1745,11 +1721,11 @@ struct AddonRuntimeCompositionTests {
 
     @Test
     func coldActionStartsItsProviderAndAttachRepumpsTheQueuedCommand() async throws {
-        let fixture = try ActionFixture()
+        let fixture  = try ActionFixture()
         let governor = ResourceGovernor()
-        let adapter = RecordingRuntimeAdapter()
-        let runtime = try await AddonRuntime.make(
-            catalog: [fixture.context().installed],
+        let adapter  = RecordingRuntimeAdapter()
+        let runtime  = try await AddonRuntime.make(
+            catalog    : [fixture.context().installed],
             environment: HostEnvironment(
                 osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
@@ -1757,9 +1733,9 @@ struct AddonRuntimeCompositionTests {
                 grants          : [fixture.owner: []],
                 explicitBindings: []
             ),
-            governor: governor,
-            adapter : adapter,
-            clock   : FixedRuntimeClock(instant: RuntimeInstant(
+            governor   : governor,
+            adapter    : adapter,
+            clock      : FixedRuntimeClock(instant: RuntimeInstant(
                 wall     : fixture.wall,
                 monotonic: .zero
             ))
@@ -1769,7 +1745,7 @@ struct AddonRuntimeCompositionTests {
             featureID : "controls",
             instanceID: UUID()
         )
-        let launchID = try await runtime.requestLaunch(owner: fixture.owner)
+        let launchID   = try await runtime.requestLaunch(owner: fixture.owner)
         let connection = try await runtime.attach(
             launchID: launchID,
             offer   : ProtocolOffer(
@@ -1789,19 +1765,20 @@ struct AddonRuntimeCompositionTests {
             stalePolicy: .retainMarked
         )
         _ = try await receivePublicationOutput(
-            runtime: runtime,
-            adapter: adapter,
-            output : ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
-                publications: [publication],
-                operations  : [],
-                completion  : nil,
-                checkpoint  : nil
+                publications : [publication],
+                operations   : [],
+                completion   : nil,
+                checkpoint   : nil
             ),
             connection: connection,
             sequence  : 1
         )
         await runtime.observeExit(connection.incarnation)
+
         let request = try ActionRequest(
             schemaVersion   : 1,
             requestID       : UUID(),
@@ -1815,8 +1792,10 @@ struct AddonRuntimeCompositionTests {
         #expect(try await runtime.pumpReady() == false)
         #expect(await governor.usage(.commands, owner: fixture.owner) == 1)
         #expect(await governor.usage(.jobs, owner: fixture.owner) == 0)
+
         let replacementStart = try #require(adapter.lastStart(owner: fixture.owner))
         #expect(adapter.startCount(owner: fixture.owner) == 2)
+
         let replacementConnection = try await runtime.attach(
             launchID: replacementStart.launchID,
             offer   : ProtocolOffer(
@@ -1827,6 +1806,7 @@ struct AddonRuntimeCompositionTests {
             )
         )
         #expect(await governor.usage(.jobs, owner: fixture.owner) == 1)
+
         let delivery = try #require(adapter.lastAction)
         #expect(try await runtime.receiveActionCompletion(
             delivery,
@@ -1839,35 +1819,35 @@ struct AddonRuntimeCompositionTests {
 
     @Test
     func pendingServiceReceiptCannotSurviveConsumerDisable() async throws {
-        let consumer = try installedFixture("consumer", publisher: "shared.publisher")
-        let provider = try installedFixture("focus", publisher: "shared.publisher")
-        let actionFixture = try ActionFixture()
-        let leaf = try actionFixture.context().installed
-        let governor = ResourceGovernor()
+        let consumer       = try installedFixture("consumer", publisher: "shared.publisher")
+        let provider       = try installedFixture("focus", publisher: "shared.publisher")
+        let actionFixture  = try ActionFixture()
+        let leaf           = try actionFixture.context().installed
+        let governor       = ResourceGovernor()
         let resourceAccess = GatedRuntimeResourceAccess(target: governor)
-        let adapter = RecordingRuntimeAdapter()
-        let now = RuntimeInstant(
+        let adapter        = RecordingRuntimeAdapter()
+        let now            = RuntimeInstant(
             wall     : Date(timeIntervalSince1970: 2_000_000_000),
             monotonic: .seconds(10)
         )
         let runtime = try await AddonRuntime.make(
-            catalog: [consumer, provider, leaf],
-            environment: HostEnvironment(
+            catalog               : [consumer, provider, leaf],
+            environment           : HostEnvironment(
                 osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
                 applications    : [:],
-                grants: [
+                grants          : [
                     consumer.manifest.id: [],
                     provider.manifest.id: [],
                     leaf.manifest.id    : []
                 ],
                 explicitBindings: []
             ),
-            governor      : governor,
-            resourceAccess: resourceAccess,
+            governor              : governor,
+            resourceAccess        : resourceAccess,
             serviceDecisionFactory: { $0 },
-            adapter: adapter,
-            clock  : FixedRuntimeClock(instant: now)
+            adapter               : adapter,
+            clock                 : FixedRuntimeClock(instant: now)
         )
         let offer = try ProtocolOffer(
             major         : 1,
@@ -1875,18 +1855,12 @@ struct AddonRuntimeCompositionTests {
             maximumMinor  : 0,
             contentSchemas: [1]
         )
-        let consumerLaunch = try await runtime.requestLaunch(owner: consumer.manifest.id)
-        let consumerConnection = try await runtime.attach(
-            launchID: consumerLaunch,
-            offer   : offer
-        )
-        let permissionID = try await runtime.authorizeService(
+        let consumerLaunch     = try await runtime.requestLaunch(owner: consumer.manifest.id)
+        let consumerConnection = try await runtime.attach(launchID: consumerLaunch, offer: offer)
+        let permissionID       = try await runtime.authorizeService(
             connection           : consumerConnection,
             requirementID        : "com.example.focus.sessions",
-            scope                : ServiceScope(
-                featureID: "summary",
-                operation: "read"
-            ),
+            scope                : ServiceScope(featureID: "summary", operation: "read"),
             partition            : "account-a",
             crossPublisherConsent: true
         )
@@ -1897,7 +1871,8 @@ struct AddonRuntimeCompositionTests {
                 lifetime    : .seconds(30)
             )
         }
-        let providerStart = try #require(adapter.lastStart(owner: provider.manifest.id))
+
+        let providerStart      = try #require(adapter.lastStart(owner: provider.manifest.id))
         let providerConnection = try await runtime.attach(
             launchID: providerStart.launchID,
             offer   : offer
@@ -1907,12 +1882,14 @@ struct AddonRuntimeCompositionTests {
             permissionID: permissionID,
             lifetime    : .seconds(30)
         )
+
         if await governor.usage(.jobs, owner: provider.manifest.id) == 1 {
             #expect(try await runtime.receiveSourceStartupCompletion(
                 acquisition.sourceID,
                 connection: providerConnection
             ))
         }
+
         let work = try await runtime.beginServiceInvocation(
             connection: consumerConnection,
             grantID   : acquisition.grant.id,
@@ -1934,6 +1911,7 @@ struct AddonRuntimeCompositionTests {
             instanceID: UUID()
         )
         await resourceAccess.waitForArrival()
+
         let response = try ServiceResponse(
             schemaVersion: 1,
             contractID   : "com.example.focus.sessions",
@@ -1943,13 +1921,10 @@ struct AddonRuntimeCompositionTests {
         let ingress = try #require(adapter.stageIngress(
             ProviderOutput(
                 schemaVersion: 1,
-                publications: [],
-                operations  : [],
-                completion  : .service(
-                    requestID: work.invocation.requestID,
-                    response : response
-                ),
-                checkpoint: nil
+                publications : [],
+                operations   : [],
+                completion   : .service(requestID: work.invocation.requestID, response: response),
+                checkpoint   : nil
             ),
             incarnation: providerConnection.incarnation
         ))
@@ -1958,14 +1933,18 @@ struct AddonRuntimeCompositionTests {
             connection: providerConnection,
             sequence  : 1
         ) == .pendingServiceCompletion)
+
         await runtime.disable(owner: consumer.manifest.id)
         #expect(adapter.stopCount(incarnation: providerConnection.incarnation) == 1)
+
         await resourceAccess.releaseGate()
+
         do {
             _ = try await unrelatedAssignment
             Issue.record("The unrelated assignment survived the consumer authority transition.")
         } catch is AddonFailure {
         }
+
         #expect(await governor.usage(.commands, owner: consumer.manifest.id) == 1)
         #expect(await governor.usage(.jobs, owner: provider.manifest.id) == 1)
         await #expect(throws: AddonFailure.self) {
@@ -1975,6 +1954,7 @@ struct AddonRuntimeCompositionTests {
                 requestID : work.invocation.requestID
             )
         }
+
         await runtime.observeExit(providerConnection.incarnation)
         #expect(await governor.usage(.commands, owner: consumer.manifest.id) == 0)
         #expect(await governor.usage(.jobs, owner: provider.manifest.id) == 0)
@@ -1982,17 +1962,17 @@ struct AddonRuntimeCompositionTests {
 
     @Test
     func independentPendingServiceCompletionsKeepExactSequenceAuthority() async throws {
-        let baseConsumer = try installedFixture("consumer", publisher: "shared.publisher")
+        let baseConsumer    = try installedFixture("consumer", publisher: "shared.publisher")
         let secondServiceID = "com.example.focus-b.sessions"
-        let consumerA = try replacing(
+        let consumerA       = try replacing(
             baseConsumer,
             requires: baseConsumer.manifest.requires + [
                 requirement(secondServiceID, ">=1.0.0 <2.0.0")
             ]
         )
         let baseProvider = try installedFixture("focus", publisher: "shared.publisher")
-        let providerA = baseProvider
-        let providerB = try replacing(
+        let providerA    = baseProvider
+        let providerB    = try replacing(
             baseProvider,
             id      : "com.example.runtime.focus-provider-b",
             provides: [ProvidedService(
@@ -2001,62 +1981,62 @@ struct AddonRuntimeCompositionTests {
                 version: "1.0.0"
             )]
         )
-        let actionFixture = try ActionFixture()
-        let actionAddon = try actionFixture.context().installed
-        let governor = ResourceGovernor()
+        let actionFixture  = try ActionFixture()
+        let actionAddon    = try actionFixture.context().installed
+        let governor       = ResourceGovernor()
         let resourceAccess = GatedRuntimeResourceAccess(target: governor)
-        let adapter = RecordingRuntimeAdapter()
-        let decisionBox = RuntimeServiceDecisionAccessBox()
-        let now = RuntimeInstant(
+        let adapter        = RecordingRuntimeAdapter()
+        let decisionBox    = RuntimeServiceDecisionAccessBox()
+        let now            = RuntimeInstant(
             wall     : Date(timeIntervalSince1970: 2_000_000_000),
             monotonic: .seconds(10)
         )
         let bindings = [
             ServiceBinding(
-                requirementID  : "com.example.focus.sessions",
-                consumer       : consumerA.manifest.id,
-                provider       : providerA.manifest.id,
+                requirementID   : "com.example.focus.sessions",
+                consumer        : consumerA.manifest.id,
+                provider        : providerA.manifest.id,
                 providerIdentity: providerA.verifiedIdentity,
-                contractVersion: SemanticVersion(1, 0, 0),
+                contractVersion : SemanticVersion(1, 0, 0),
                 digest          : providerA.digest,
                 featureID       : "summary"
             ),
             ServiceBinding(
-                requirementID  : secondServiceID,
-                consumer       : consumerA.manifest.id,
-                provider       : providerB.manifest.id,
+                requirementID   : secondServiceID,
+                consumer        : consumerA.manifest.id,
+                provider        : providerB.manifest.id,
                 providerIdentity: providerB.verifiedIdentity,
-                contractVersion: SemanticVersion(1, 0, 0),
+                contractVersion : SemanticVersion(1, 0, 0),
                 digest          : providerB.digest,
                 featureID       : "summary"
             )
         ]
         let runtime = try await AddonRuntime.make(
-            catalog: [consumerA, providerA, providerB, actionAddon],
-            environment: HostEnvironment(
+            catalog               : [consumerA, providerA, providerB, actionAddon],
+            environment           : HostEnvironment(
                 osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
                 applications    : [:],
-                grants: [
-                    consumerA.manifest.id: [],
-                    providerA.manifest.id: [],
-                    providerB.manifest.id: [],
+                grants          : [
+                    consumerA.manifest.id  : [],
+                    providerA.manifest.id  : [],
+                    providerB.manifest.id  : [],
                     actionAddon.manifest.id: []
                 ],
                 explicitBindings: bindings
             ),
-            governor      : governor,
-            resourceAccess: resourceAccess,
+            governor              : governor,
+            resourceAccess        : resourceAccess,
             serviceDecisionFactory: { broker in
-                let access = GatedRuntimeServiceDecisionAccess(target: broker)
+                let access         = GatedRuntimeServiceDecisionAccess(target: broker)
                 decisionBox.access = access
                 return access
             },
-            adapter: adapter,
-            clock  : FixedRuntimeClock(instant: now)
+            adapter               : adapter,
+            clock                 : FixedRuntimeClock(instant: now)
         )
         let decisionAccess = try #require(decisionBox.access)
-        let offer = try ProtocolOffer(
+        let offer          = try ProtocolOffer(
             major         : 1,
             minimumMinor  : 0,
             maximumMinor  : 0,
@@ -2067,16 +2047,10 @@ struct AddonRuntimeCompositionTests {
             featureID : "localTimer",
             instanceID: UUID()
         )
-        let consumerALaunch = try await runtime.requestLaunch(owner: consumerA.manifest.id)
-        let consumerAConnection = try await runtime.attach(
-            launchID: consumerALaunch,
-            offer   : offer
-        )
-        let scope = try ServiceScope(
-            featureID: "summary",
-            operation: "read"
-        )
-        let permissionA = try await runtime.authorizeService(
+        let consumerALaunch     = try await runtime.requestLaunch(owner: consumerA.manifest.id)
+        let consumerAConnection = try await runtime.attach(launchID: consumerALaunch, offer: offer)
+        let scope               = try ServiceScope(featureID: "summary", operation: "read")
+        let permissionA         = try await runtime.authorizeService(
             connection           : consumerAConnection,
             requirementID        : "com.example.focus.sessions",
             scope                : scope,
@@ -2104,8 +2078,9 @@ struct AddonRuntimeCompositionTests {
                 lifetime    : .seconds(30)
             )
         }
-        let providerAStart = try #require(adapter.lastStart(owner: providerA.manifest.id))
-        let providerBStart = try #require(adapter.lastStart(owner: providerB.manifest.id))
+
+        let providerAStart      = try #require(adapter.lastStart(owner: providerA.manifest.id))
+        let providerBStart      = try #require(adapter.lastStart(owner: providerB.manifest.id))
         let providerAConnection = try await runtime.attach(
             launchID: providerAStart.launchID,
             offer   : offer
@@ -2124,6 +2099,7 @@ struct AddonRuntimeCompositionTests {
             permissionID: permissionB,
             lifetime    : .seconds(30)
         )
+
         for (acquisition, connection, owner) in [
             (acquisitionA, providerAConnection, providerA.manifest.id),
             (acquisitionB, providerBConnection, providerB.manifest.id)
@@ -2162,6 +2138,7 @@ struct AddonRuntimeCompositionTests {
         )
         #expect(try await runtime.pumpServiceInvocation(workA.id))
         #expect(try await runtime.pumpServiceInvocation(workB.id))
+
         let responseA = try ServiceResponse(
             schemaVersion: 1,
             contractID   : invocationA.contractID,
@@ -2176,23 +2153,17 @@ struct AddonRuntimeCompositionTests {
         )
         let outputA = try ProviderOutput(
             schemaVersion: 1,
-            publications: [],
-            operations  : [],
-            completion  : .service(
-                requestID: invocationA.requestID,
-                response : responseA
-            ),
-            checkpoint: nil
+            publications : [],
+            operations   : [],
+            completion   : .service(requestID: invocationA.requestID, response: responseA),
+            checkpoint   : nil
         )
         let outputB = try ProviderOutput(
             schemaVersion: 1,
-            publications: [],
-            operations  : [],
-            completion  : .service(
-                requestID: invocationB.requestID,
-                response : responseB
-            ),
-            checkpoint: nil
+            publications : [],
+            operations   : [],
+            completion   : .service(requestID: invocationB.requestID, response: responseB),
+            checkpoint   : nil
         )
         let assignmentOwner = actionAddon.manifest.id
         await resourceAccess.armResize()
@@ -2202,6 +2173,7 @@ struct AddonRuntimeCompositionTests {
             instanceID: UUID()
         )
         await resourceAccess.waitForArrival()
+
         let ingressA = try #require(adapter.stageIngress(
             outputA,
             incarnation: providerAConnection.incarnation
@@ -2218,10 +2190,8 @@ struct AddonRuntimeCompositionTests {
                 sequence  : 1
             )
         }
-        #expect(adapter.stageIngress(
-            outputA,
-            incarnation: providerAConnection.incarnation
-        ) == nil)
+        #expect(adapter.stageIngress(outputA, incarnation: providerAConnection.incarnation) == nil)
+
         let ingressB = try #require(adapter.stageIngress(
             outputB,
             incarnation: providerBConnection.incarnation
@@ -2231,6 +2201,7 @@ struct AddonRuntimeCompositionTests {
             connection: providerBConnection,
             sequence  : 1
         ) == .pendingServiceCompletion)
+
         await resourceAccess.releaseGate()
         _ = try await unrelatedAssignment
         #expect(try await runtime.serviceOutcome(
@@ -2245,16 +2216,17 @@ struct AddonRuntimeCompositionTests {
         ) == .completed(responseB))
         #expect(adapter.stopCount(incarnation: providerAConnection.incarnation) == 0)
         #expect(adapter.stopCount(incarnation: providerBConnection.incarnation) == 0)
+
         for connection in [providerAConnection, providerBConnection] {
             _ = try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : ProviderOutput(
+                runtime   : runtime,
+                adapter   : adapter,
+                output    : ProviderOutput(
                     schemaVersion: 1,
-                    publications: [],
-                    operations  : [],
-                    completion  : nil,
-                    checkpoint  : nil
+                    publications : [],
+                    operations   : [],
+                    completion   : nil,
+                    checkpoint   : nil
                 ),
                 connection: connection,
                 sequence  : 2
@@ -2275,6 +2247,7 @@ struct AddonRuntimeCompositionTests {
             invocation: correlatedInvocationB
         )
         #expect(try await runtime.pumpServiceInvocation(correlatedWorkB.id))
+
         let publication = try Publication(
             id         : providerPublicationID,
             revision   : 1,
@@ -2286,10 +2259,10 @@ struct AddonRuntimeCompositionTests {
         )
         let publicationOutput = try ProviderOutput(
             schemaVersion: 1,
-            publications: [publication],
-            operations  : [],
-            completion  : nil,
-            checkpoint  : nil
+            publications : [publication],
+            operations   : [],
+            completion   : nil,
+            checkpoint   : nil
         )
         let publicationIngress = try #require(adapter.stageIngress(
             publicationOutput,
@@ -2302,6 +2275,7 @@ struct AddonRuntimeCompositionTests {
             sequence  : 3
         )
         await resourceAccess.waitForArrival()
+
         let correlatedResponseB = try ServiceResponse(
             schemaVersion: 1,
             contractID   : correlatedInvocationB.contractID,
@@ -2310,13 +2284,13 @@ struct AddonRuntimeCompositionTests {
         )
         let correlatedOutputB = try ProviderOutput(
             schemaVersion: 1,
-            publications: [],
-            operations  : [],
-            completion  : .service(
+            publications : [],
+            operations   : [],
+            completion   : .service(
                 requestID: correlatedInvocationB.requestID,
                 response : correlatedResponseB
             ),
-            checkpoint: nil
+            checkpoint   : nil
         )
         let correlatedIngressB = try #require(adapter.stageIngress(
             correlatedOutputB,
@@ -2327,6 +2301,7 @@ struct AddonRuntimeCompositionTests {
             connection: providerBConnection,
             sequence  : 3
         ) == .pendingServiceCompletion)
+
         await resourceAccess.releaseGate()
         _ = try await publicationMutation
         #expect(try await runtime.serviceOutcome(
@@ -2350,6 +2325,7 @@ struct AddonRuntimeCompositionTests {
             invocation: secondInvocationB
         )
         #expect(try await runtime.pumpServiceInvocation(secondWorkB.id))
+
         await decisionAccess.armCompletionPreparation()
         async let directCompletion = runtime.receiveServiceCompletion(
             secondWorkB.id,
@@ -2359,44 +2335,46 @@ struct AddonRuntimeCompositionTests {
         await decisionAccess.waitForArrival()
         await runtime.observeExit(providerBConnection.incarnation)
         await decisionAccess.releaseGate()
+
         do {
             _ = try await directCompletion
             Issue.record("Exact exit before broker acceptance was reported as an accepted direct result.")
         } catch let failure as AddonFailure {
             #expect(failure.code == .sessionRevoked)
         }
+
         #expect(await governor.usage(.commands, owner: consumerA.manifest.id) == 0)
         #expect(await governor.usage(.jobs, owner: providerB.manifest.id) == 0)
     }
 
     @Test
     func correlatedServiceCompletionCannotCommitAfterExactExitDuringBrokerReduction() async throws {
-        let consumer = try installedFixture("consumer", publisher: "shared.publisher")
-        let provider = try installedFixture("focus", publisher: "shared.publisher")
-        let governor = ResourceGovernor()
+        let consumer       = try installedFixture("consumer", publisher: "shared.publisher")
+        let provider       = try installedFixture("focus", publisher: "shared.publisher")
+        let governor       = ResourceGovernor()
         let resourceAccess = GatedRuntimeResourceAccess(target: governor)
-        let adapter = RecordingRuntimeAdapter()
-        let now = RuntimeInstant(
+        let adapter        = RecordingRuntimeAdapter()
+        let now            = RuntimeInstant(
             wall     : Date(timeIntervalSince1970: 2_000_000_000),
             monotonic: .seconds(10)
         )
         let runtime = try await AddonRuntime.make(
-            catalog: [consumer, provider],
-            environment: HostEnvironment(
+            catalog               : [consumer, provider],
+            environment           : HostEnvironment(
                 osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
                 applications    : [:],
-                grants: [
+                grants          : [
                     consumer.manifest.id: [],
                     provider.manifest.id: []
                 ],
                 explicitBindings: []
             ),
-            governor      : governor,
-            resourceAccess: resourceAccess,
+            governor              : governor,
+            resourceAccess        : resourceAccess,
             serviceDecisionFactory: { $0 },
-            adapter: adapter,
-            clock  : FixedRuntimeClock(instant: now)
+            adapter               : adapter,
+            clock                 : FixedRuntimeClock(instant: now)
         )
         let offer = try ProtocolOffer(
             major         : 1,
@@ -2404,18 +2382,12 @@ struct AddonRuntimeCompositionTests {
             maximumMinor  : 0,
             contentSchemas: [1]
         )
-        let consumerLaunch = try await runtime.requestLaunch(owner: consumer.manifest.id)
-        let consumerConnection = try await runtime.attach(
-            launchID: consumerLaunch,
-            offer   : offer
-        )
-        let permissionID = try await runtime.authorizeService(
+        let consumerLaunch     = try await runtime.requestLaunch(owner: consumer.manifest.id)
+        let consumerConnection = try await runtime.attach(launchID: consumerLaunch, offer: offer)
+        let permissionID       = try await runtime.authorizeService(
             connection           : consumerConnection,
             requirementID        : "com.example.focus.sessions",
-            scope                : ServiceScope(
-                featureID: "summary",
-                operation: "read"
-            ),
+            scope                : ServiceScope(featureID: "summary", operation: "read"),
             partition            : "account-a",
             crossPublisherConsent: true
         )
@@ -2426,7 +2398,8 @@ struct AddonRuntimeCompositionTests {
                 lifetime    : .seconds(30)
             )
         }
-        let providerStart = try #require(adapter.lastStart(owner: provider.manifest.id))
+
+        let providerStart      = try #require(adapter.lastStart(owner: provider.manifest.id))
         let providerConnection = try await runtime.attach(
             launchID: providerStart.launchID,
             offer   : offer
@@ -2436,12 +2409,14 @@ struct AddonRuntimeCompositionTests {
             permissionID: permissionID,
             lifetime    : .seconds(30)
         )
+
         if await governor.usage(.jobs, owner: provider.manifest.id) == 1 {
             #expect(try await runtime.receiveSourceStartupCompletion(
                 acquisition.sourceID,
                 connection: providerConnection
             ))
         }
+
         let work = try await runtime.beginServiceInvocation(
             connection: consumerConnection,
             grantID   : acquisition.grant.id,
@@ -2455,6 +2430,7 @@ struct AddonRuntimeCompositionTests {
             )
         )
         #expect(try await runtime.pumpServiceInvocation(work.id))
+
         let response = try ServiceResponse(
             schemaVersion: 1,
             contractID   : "com.example.focus.sessions",
@@ -2464,13 +2440,10 @@ struct AddonRuntimeCompositionTests {
         let ingress = try #require(adapter.stageIngress(
             ProviderOutput(
                 schemaVersion: 1,
-                publications: [],
-                operations  : [],
-                completion  : .service(
-                    requestID: work.invocation.requestID,
-                    response : response
-                ),
-                checkpoint: nil
+                publications : [],
+                operations   : [],
+                completion   : .service(requestID: work.invocation.requestID, response: response),
+                checkpoint   : nil
             ),
             incarnation: providerConnection.incarnation
         ))
@@ -2484,21 +2457,23 @@ struct AddonRuntimeCompositionTests {
         await resourceAccess.waitForArrival()
         await runtime.observeExit(providerConnection.incarnation)
         await resourceAccess.releaseGate()
+
         do {
             _ = try await completion
             Issue.record("Exact provider exit during broker reduction advanced the correlated sequence.")
         } catch let failure as AddonFailure {
             #expect(failure.code == .sessionRevoked)
         }
+
         #expect(await governor.usage(.commands, owner: consumer.manifest.id) == 0)
         #expect(await governor.usage(.jobs, owner: provider.manifest.id) == 0)
     }
 
     @Test
     func missingProviderPathRetainsStartedPrefixAndRefundsRejectedSuffix() async throws {
-        let consumer = try installedFixture("consumer", publisher: "shared.publisher")
+        let consumer     = try installedFixture("consumer", publisher: "shared.publisher")
         let baseProvider = try installedFixture("focus", publisher: "shared.publisher")
-        let leaf = try replacing(
+        let leaf         = try replacing(
             baseProvider,
             id      : "com.example.runtime.rejected-leaf",
             requires: [],
@@ -2511,35 +2486,30 @@ struct AddonRuntimeCompositionTests {
         let provider = try replacing(
             baseProvider,
             id      : "com.example.runtime.rejected-provider",
-            requires: [requirement(
-                "com.example.runtime.rejected-dependency",
-                ">=1.0.0 <2.0.0"
-            )]
+            requires: [requirement("com.example.runtime.rejected-dependency", ">=1.0.0 <2.0.0")]
         )
         let governor = ResourceGovernor()
-        let adapter = RecordingRuntimeAdapter(
-            rejectedStartOwners: [provider.manifest.id]
-        )
-        let now = RuntimeInstant(
+        let adapter  = RecordingRuntimeAdapter(rejectedStartOwners: [provider.manifest.id])
+        let now      = RuntimeInstant(
             wall     : Date(timeIntervalSince1970: 2_000_000_000),
             monotonic: .seconds(10)
         )
         let runtime = try await AddonRuntime.make(
-            catalog: [consumer, provider, leaf],
+            catalog    : [consumer, provider, leaf],
             environment: HostEnvironment(
                 osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
                 applications    : [:],
-                grants: [
+                grants          : [
                     consumer.manifest.id: [],
                     provider.manifest.id: [],
                     leaf.manifest.id    : []
                 ],
                 explicitBindings: []
             ),
-            governor: governor,
-            adapter : adapter,
-            clock   : FixedRuntimeClock(instant: now)
+            governor   : governor,
+            adapter    : adapter,
+            clock      : FixedRuntimeClock(instant: now)
         )
         let offer = try ProtocolOffer(
             major         : 1,
@@ -2547,16 +2517,10 @@ struct AddonRuntimeCompositionTests {
             maximumMinor  : 0,
             contentSchemas: [1]
         )
-        let consumerLaunch = try await runtime.requestLaunch(owner: consumer.manifest.id)
-        let consumerConnection = try await runtime.attach(
-            launchID: consumerLaunch,
-            offer   : offer
-        )
-        let scope = try ServiceScope(
-            featureID: "summary",
-            operation: "read"
-        )
-        let permissionID = try await runtime.authorizeService(
+        let consumerLaunch     = try await runtime.requestLaunch(owner: consumer.manifest.id)
+        let consumerConnection = try await runtime.attach(launchID: consumerLaunch, offer: offer)
+        let scope              = try ServiceScope(featureID: "summary", operation: "read")
+        let permissionID       = try await runtime.authorizeService(
             connection           : consumerConnection,
             requirementID        : "com.example.focus.sessions",
             scope                : scope,
@@ -2570,6 +2534,7 @@ struct AddonRuntimeCompositionTests {
                 lifetime    : .seconds(30)
             )
         }
+
         let leafStart = try #require(adapter.lastStart(owner: leaf.manifest.id))
         #expect(adapter.startOwners.suffix(2) == [
             leaf.manifest.id,
@@ -2579,36 +2544,34 @@ struct AddonRuntimeCompositionTests {
         #expect(await governor.usage(.providers, owner: provider.manifest.id) == 0)
         #expect(await runtime.diagnostics(owner: leaf.manifest.id)?.hasProcess == true)
         #expect(await runtime.diagnostics(owner: provider.manifest.id)?.hasProcess == false)
+
         await runtime.observeExit(leafStart.incarnation)
         #expect(await governor.usage(.providers, owner: leaf.manifest.id) == 0)
     }
 
     @Test
     func directConsumersReuseOneCanonicalProviderIncarnation() async throws {
-        let first = try installedFixture("consumer", publisher: "shared.publisher")
-        let second = try replacing(
-            first,
-            id: "com.example.runtime.second-consumer"
-        )
+        let first    = try installedFixture("consumer", publisher: "shared.publisher")
+        let second   = try replacing(first, id: "com.example.runtime.second-consumer")
         let provider = try installedFixture("focus", publisher: "provider.publisher")
         let governor = ResourceGovernor()
-        let adapter = RecordingRuntimeAdapter()
-        let now = RuntimeInstant(
+        let adapter  = RecordingRuntimeAdapter()
+        let now      = RuntimeInstant(
             wall     : Date(timeIntervalSince1970: 2_000_000_000),
             monotonic: .seconds(10)
         )
         let runtime = try await AddonRuntime.make(
-            catalog: [first, second, provider],
+            catalog    : [first, second, provider],
             environment: HostEnvironment(
-                osVersion       : SemanticVersion(14, 0, 0),
-                hostCapabilities: [:],
-                applications    : [:],
-                grants: [
+                osVersion          : SemanticVersion(14, 0, 0),
+                hostCapabilities   : [:],
+                applications       : [:],
+                grants             : [
                     first.manifest.id   : [],
                     second.manifest.id  : [],
                     provider.manifest.id: []
                 ],
-                explicitBindings: [],
+                explicitBindings   : [],
                 serviceAccessGrants: [
                     ServiceAccessGrant(
                         consumer        : first.manifest.id,
@@ -2622,9 +2585,9 @@ struct AddonRuntimeCompositionTests {
                     )
                 ]
             ),
-            governor: governor,
-            adapter : adapter,
-            clock   : FixedRuntimeClock(instant: now)
+            governor   : governor,
+            adapter    : adapter,
+            clock      : FixedRuntimeClock(instant: now)
         )
         let offer = try ProtocolOffer(
             major         : 1,
@@ -2632,20 +2595,11 @@ struct AddonRuntimeCompositionTests {
             maximumMinor  : 0,
             contentSchemas: [1]
         )
-        let firstLaunch = try await runtime.requestLaunch(owner: first.manifest.id)
-        let firstConnection = try await runtime.attach(
-            launchID: firstLaunch,
-            offer   : offer
-        )
-        let secondLaunch = try await runtime.requestLaunch(owner: second.manifest.id)
-        let secondConnection = try await runtime.attach(
-            launchID: secondLaunch,
-            offer   : offer
-        )
-        let scope = try ServiceScope(
-            featureID: "summary",
-            operation: "read"
-        )
+        let firstLaunch      = try await runtime.requestLaunch(owner: first.manifest.id)
+        let firstConnection  = try await runtime.attach(launchID: firstLaunch, offer: offer)
+        let secondLaunch     = try await runtime.requestLaunch(owner: second.manifest.id)
+        let secondConnection = try await runtime.attach(launchID: secondLaunch, offer: offer)
+        let scope            = try ServiceScope(featureID: "summary", operation: "read")
         await #expect(throws: AddonFailure.self) {
             try await runtime.authorizeService(
                 connection           : firstConnection,
@@ -2655,6 +2609,7 @@ struct AddonRuntimeCompositionTests {
                 crossPublisherConsent: false
             )
         }
+
         let firstPermission = try await runtime.authorizeService(
             connection           : firstConnection,
             requirementID        : "com.example.focus.sessions",
@@ -2676,7 +2631,8 @@ struct AddonRuntimeCompositionTests {
                 lifetime    : .seconds(30)
             )
         }
-        let providerStart = try #require(adapter.lastStart(owner: provider.manifest.id))
+
+        let providerStart      = try #require(adapter.lastStart(owner: provider.manifest.id))
         let providerConnection = try await runtime.attach(
             launchID: providerStart.launchID,
             offer   : offer
@@ -2690,6 +2646,7 @@ struct AddonRuntimeCompositionTests {
             firstAcquisition.sourceID,
             connection: providerConnection
         ))
+
         let secondAcquisition = try await runtime.acquireService(
             connection  : secondConnection,
             permissionID: secondPermission,
@@ -2698,6 +2655,7 @@ struct AddonRuntimeCompositionTests {
         #expect(secondAcquisition.sourceID == firstAcquisition.sourceID)
         #expect(adapter.startCount(owner: provider.manifest.id) == 1)
         #expect(await governor.usage(.providers, owner: provider.manifest.id) == 1)
+
         await runtime.observeExit(providerConnection.incarnation)
         #expect(try await !runtime.receiveSourceStartupCompletion(
             firstAcquisition.sourceID,
@@ -2724,8 +2682,10 @@ struct AddonRuntimeCompositionTests {
                 lifetime    : .seconds(30)
             )
         }
+
         let replacementStart = try #require(adapter.lastStart(owner: provider.manifest.id))
         #expect(adapter.startCount(owner: provider.manifest.id) == 2)
+
         let replacementConnection = try await runtime.attach(
             launchID: replacementStart.launchID,
             offer   : offer
@@ -2742,6 +2702,7 @@ struct AddonRuntimeCompositionTests {
             replacementAcquisition.sourceID,
             connection: replacementConnection
         ))
+
         await runtime.observeExit(providerConnection.incarnation)
         #expect(await governor.usage(.providers, owner: provider.manifest.id) == 1)
     }
@@ -2752,20 +2713,20 @@ struct AddonRuntimeCompositionTests {
         let installed = try fixture.context().installed
         let governor  = ResourceGovernor()
         let access    = GatedRuntimeResourceAccess(target: governor)
-        let runtime = try await AddonRuntime.make(
-            catalog: [installed],
-            environment: HostEnvironment(
+        let runtime   = try await AddonRuntime.make(
+            catalog               : [installed],
+            environment           : HostEnvironment(
                 osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
                 applications    : [:],
                 grants          : [fixture.owner: []],
                 explicitBindings: []
             ),
-            governor             : governor,
-            resourceAccess       : access,
+            governor              : governor,
+            resourceAccess        : access,
             serviceDecisionFactory: { $0 },
-            adapter              : RecordingRuntimeAdapter(),
-            clock                : FixedRuntimeClock(instant: RuntimeInstant(
+            adapter               : RecordingRuntimeAdapter(),
+            clock                 : FixedRuntimeClock(instant: RuntimeInstant(
                 wall     : fixture.wall,
                 monotonic: .zero
             ))
@@ -2779,12 +2740,14 @@ struct AddonRuntimeCompositionTests {
         await access.waitForArrival()
         await runtime.disable(owner: fixture.owner)
         await access.releaseGate()
+
         do {
             _ = try await assignment
             Issue.record("Disabled authority committed a suspended assignment.")
         } catch let failure as AddonFailure {
             #expect(failure.code == .sessionRevoked)
         }
+
         // Each installed owner now prepays 4 KiB for bounded CPU attribution.
         // The suspended assignment still leaves only the established 1 KiB
         // governor accounting difference, with no publication growth retained.
@@ -2792,21 +2755,21 @@ struct AddonRuntimeCompositionTests {
         #expect(await governor.usage(.retainedStateBytes, owner: fixture.owner) == 218_624)
 
         let stopGovernor = ResourceGovernor()
-        let stopAccess = GatedRuntimeResourceAccess(target: stopGovernor)
-        let stopRuntime = try await AddonRuntime.make(
-            catalog: [installed],
-            environment: HostEnvironment(
+        let stopAccess   = GatedRuntimeResourceAccess(target: stopGovernor)
+        let stopRuntime  = try await AddonRuntime.make(
+            catalog               : [installed],
+            environment           : HostEnvironment(
                 osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
                 applications    : [:],
                 grants          : [fixture.owner: []],
                 explicitBindings: []
             ),
-            governor             : stopGovernor,
-            resourceAccess       : stopAccess,
+            governor              : stopGovernor,
+            resourceAccess        : stopAccess,
             serviceDecisionFactory: { $0 },
-            adapter              : RecordingRuntimeAdapter(),
-            clock                : FixedRuntimeClock(instant: RuntimeInstant(
+            adapter               : RecordingRuntimeAdapter(),
+            clock                 : FixedRuntimeClock(instant: RuntimeInstant(
                 wall     : fixture.wall,
                 monotonic: .zero
             ))
@@ -2820,10 +2783,12 @@ struct AddonRuntimeCompositionTests {
         await stopAccess.waitForArrival()
         await stopRuntime.stop()
         await stopAccess.releaseGate()
+
         do {
             _ = try await stoppedAssignment
             Issue.record("Stopped authority committed a suspended assignment.")
         } catch is AddonFailure {}
+
         #expect(await stopRuntime.diagnostics(owner: fixture.owner)?.reservedStateBytes == 217_600)
         await #expect(throws: AddonFailure.self) {
             try await stopRuntime.requestLaunch(owner: fixture.owner)
@@ -2832,39 +2797,39 @@ struct AddonRuntimeCompositionTests {
 
     @Test
     func expiredPreparedPublicationCannotCommitOrAdvanceSequence() async throws {
-        let fixture = try ActionFixture()
+        let fixture   = try ActionFixture()
         let installed = try fixture.context().installed
-        let governor = ResourceGovernor()
-        let access = GatedRuntimeResourceAccess(target: governor)
-        let adapter = RecordingRuntimeAdapter()
-        let clock = MutableRuntimeClock(instant: RuntimeInstant(
+        let governor  = ResourceGovernor()
+        let access    = GatedRuntimeResourceAccess(target: governor)
+        let adapter   = RecordingRuntimeAdapter()
+        let clock     = MutableRuntimeClock(instant: RuntimeInstant(
             wall     : fixture.wall,
             monotonic: .zero
         ))
         let runtime = try await AddonRuntime.make(
-            catalog: [installed],
-            environment: HostEnvironment(
+            catalog               : [installed],
+            environment           : HostEnvironment(
                 osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
                 applications    : [:],
                 grants          : [fixture.owner: []],
                 explicitBindings: []
             ),
-            governor             : governor,
-            resourceAccess       : access,
+            governor              : governor,
+            resourceAccess        : access,
             serviceDecisionFactory: { $0 },
-            adapter              : adapter,
-            clock                : clock
+            adapter               : adapter,
+            clock                 : clock
         )
         let id = try await runtime.assignPublication(
             owner     : fixture.owner,
             featureID : "controls",
             instanceID: UUID()
         )
-        let launch = try await runtime.requestLaunch(owner: fixture.owner)
+        let launch     = try await runtime.requestLaunch(owner: fixture.owner)
         let connection = try await runtime.attach(
             launchID: launch,
-            offer: ProtocolOffer(
+            offer   : ProtocolOffer(
                 major         : 1,
                 minimumMinor  : 0,
                 maximumMinor  : 0,
@@ -2882,33 +2847,30 @@ struct AddonRuntimeCompositionTests {
         )
         await access.armResize()
         async let admission = receivePublicationOutput(
-            runtime: runtime,
-            adapter: adapter,
-            output : ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
-                publications: [expiring],
-                operations  : [],
-                completion  : nil,
-                checkpoint  : nil
+                publications : [expiring],
+                operations   : [],
+                completion   : nil,
+                checkpoint   : nil
             ),
             connection: connection,
             sequence  : 1
         )
         await access.waitForArrival()
-        clock.set(RuntimeInstant(
-            wall     : fixture.wall.addingTimeInterval(2),
-            monotonic: .seconds(2)
-        ))
+        clock.set(RuntimeInstant(wall: fixture.wall.addingTimeInterval(2), monotonic: .seconds(2)))
         await access.releaseGate()
+
         do {
             _ = try await admission
             Issue.record("An expired prepared publication committed after suspended growth.")
         } catch is AddonFailure {}
+
         #expect(await runtime.snapshot(at: fixture.wall).publications.isEmpty)
-        clock.set(RuntimeInstant(
-            wall     : fixture.wall,
-            monotonic: .zero
-        ))
+
+        clock.set(RuntimeInstant(wall: fixture.wall, monotonic: .zero))
         let replacement = try Publication(
             id         : id,
             revision   : 1,
@@ -2919,22 +2881,22 @@ struct AddonRuntimeCompositionTests {
             stalePolicy: .remove
         )
         _ = try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-            ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
-                publications: [replacement],
-                operations  : [],
-                completion  : nil,
-                checkpoint  : nil
+                publications : [replacement],
+                operations   : [],
+                completion   : nil,
+                checkpoint   : nil
             ),
             connection: connection,
             sequence  : 1
         )
         #expect(await runtime.snapshot(at: fixture.wall).publications == [replacement])
+
         let largerContent = try PresentationSet(
-            widget: try ContentDocument(
+            widget         : try ContentDocument(
                 root              : try .text(String(repeating: "x", count: 4_096)),
                 privacy           : .publicContent,
                 accessibilityLabel: "Large"
@@ -2955,14 +2917,14 @@ struct AddonRuntimeCompositionTests {
         )
         await access.armResize()
         async let replacingExpiredPrevious = receivePublicationOutput(
-            runtime: runtime,
-            adapter: adapter,
-            output : ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
-                publications: [laterReplacement],
-                operations  : [],
-                completion  : nil,
-                checkpoint  : nil
+                publications : [laterReplacement],
+                operations   : [],
+                completion   : nil,
+                checkpoint   : nil
             ),
             connection: connection,
             sequence  : 2
@@ -2973,34 +2935,36 @@ struct AddonRuntimeCompositionTests {
             monotonic: .seconds(101)
         ))
         await access.releaseGate()
+
         do {
             _ = try await replacingExpiredPrevious
             Issue.record("A replacement revived prior publication content that expired during growth.")
         } catch is AddonFailure {}
+
         #expect(await runtime.snapshot(at: fixture.wall).publications == [replacement])
     }
 
     @Test
     func sameSizeReplacementCommitsAfterScratchWasAdmittedAtFullStateQuota() async throws {
-        let fixture = try ActionFixture()
+        let fixture   = try ActionFixture()
         let installed = try fixture.context().installed
-        let governor = ResourceGovernor()
-        let access = GatedRuntimeResourceAccess(target: governor)
-        let adapter = RecordingRuntimeAdapter()
-        let runtime = try await AddonRuntime.make(
-            catalog: [installed],
-            environment: HostEnvironment(
+        let governor  = ResourceGovernor()
+        let access    = GatedRuntimeResourceAccess(target: governor)
+        let adapter   = RecordingRuntimeAdapter()
+        let runtime   = try await AddonRuntime.make(
+            catalog               : [installed],
+            environment           : HostEnvironment(
                 osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
                 applications    : [:],
                 grants          : [fixture.owner: []],
                 explicitBindings: []
             ),
-            governor             : governor,
-            resourceAccess       : access,
+            governor              : governor,
+            resourceAccess        : access,
             serviceDecisionFactory: { $0 },
-            adapter              : adapter,
-            clock                : FixedRuntimeClock(instant: RuntimeInstant(
+            adapter               : adapter,
+            clock                 : FixedRuntimeClock(instant: RuntimeInstant(
                 wall     : fixture.wall,
                 monotonic: .zero
             ))
@@ -3015,16 +2979,17 @@ struct AddonRuntimeCompositionTests {
             featureID : "controls",
             instanceID: UUID()
         )
-        let launch = try await runtime.requestLaunch(owner: fixture.owner)
+        let launch     = try await runtime.requestLaunch(owner: fixture.owner)
         let connection = try await runtime.attach(
             launchID: launch,
-            offer: ProtocolOffer(
+            offer   : ProtocolOffer(
                 major         : 1,
                 minimumMinor  : 0,
                 maximumMinor  : 0,
                 contentSchemas: [1]
             )
         )
+
         func publication(revision: UInt64) throws -> Publication {
             try Publication(
                 id         : id,
@@ -3036,49 +3001,53 @@ struct AddonRuntimeCompositionTests {
                 stalePolicy: .remove
             )
         }
+
         let first = try publication(revision: 1)
         _ = try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-            ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
-                publications: [first],
-                operations  : [],
-                completion  : nil,
-                checkpoint  : nil
+                publications : [first],
+                operations   : [],
+                completion   : nil,
+                checkpoint   : nil
             ),
             connection: connection,
             sequence  : 1
         )
         await access.armTemporaryMemory()
+
         let replacement = try publication(revision: 2)
         async let replacing = receivePublicationOutput(
-            runtime: runtime,
-            adapter: adapter,
-            output : ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
-                publications: [replacement],
-                operations  : [],
-                completion  : nil,
-                checkpoint  : nil
+                publications : [replacement],
+                operations   : [],
+                completion   : nil,
+                checkpoint   : nil
             ),
             connection: connection,
             sequence  : 2
         )
         await access.waitForArrival()
-        let used = await governor.usage(.retainedStateBytes)
+
+        let used        = await governor.usage(.retainedStateBytes)
         let fillerOwner = AddonID(rawValue: "com.example.replacement-filler")!
-        let filler = try await governor.admit(
+        let filler      = try await governor.admit(
             .state(bytes: 8 * 1_024 * 1_024 - used - 1_024),
             owner: fillerOwner
         )
         #expect(await governor.usage(.retainedStateBytes) == 8 * 1_024 * 1_024)
+
         await access.releaseGate()
         _ = try await replacing
         #expect(await runtime.snapshot(at: fixture.wall).publications == [replacement])
+
         let largerContent = try PresentationSet(
-            widget: try ContentDocument(
+            widget         : try ContentDocument(
                 root              : try .text(String(repeating: "x", count: 4_096)),
                 privacy           : .publicContent,
                 accessibilityLabel: "Large"
@@ -3099,20 +3068,20 @@ struct AddonRuntimeCompositionTests {
         )
         await #expect(throws: AddonFailure.self) {
             try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-                ProviderOutput(
+                runtime   : runtime,
+                adapter   : adapter,
+                output    : ProviderOutput(
                     schemaVersion: 1,
-                    publications: [larger],
-                    operations  : [],
-                    completion  : nil,
-                    checkpoint  : nil
+                    publications : [larger],
+                    operations   : [],
+                    completion   : nil,
+                    checkpoint   : nil
                 ),
                 connection: connection,
                 sequence  : 3
             )
         }
+
         let secondPublication = try Publication(
             id         : secondID,
             revision   : 1,
@@ -3124,56 +3093,50 @@ struct AddonRuntimeCompositionTests {
         )
         await #expect(throws: AddonFailure.self) {
             try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-                ProviderOutput(
+                runtime   : runtime,
+                adapter   : adapter,
+                output    : ProviderOutput(
                     schemaVersion: 1,
-                    publications: [secondPublication],
-                    operations  : [],
-                    completion  : nil,
-                    checkpoint  : nil
+                    publications : [secondPublication],
+                    operations   : [],
+                    completion   : nil,
+                    checkpoint   : nil
                 ),
                 connection: connection,
                 sequence  : 3
             )
         }
         #expect(await runtime.snapshot(at: fixture.wall).publications == [replacement])
-        try await governor.release(
-            filler.id,
-            owner: fillerOwner
-        )
+
+        try await governor.release(filler.id, owner: fillerOwner)
     }
 
     @Test
     func submittingForOneOwnerRefundsOnlyExpiredHistoryForAnotherOwner() async throws {
-        let fixture = try ActionFixture()
-        let first = try fixture.context().installed
-        let second = try replacing(
-            first,
-            id: "com.example.runtime.second-action-owner"
-        )
+        let fixture  = try ActionFixture()
+        let first    = try fixture.context().installed
+        let second   = try replacing(first, id: "com.example.runtime.second-action-owner")
         let governor = ResourceGovernor()
-        let adapter = RecordingRuntimeAdapter()
-        let clock = MutableRuntimeClock(instant: RuntimeInstant(
+        let adapter  = RecordingRuntimeAdapter()
+        let clock    = MutableRuntimeClock(instant: RuntimeInstant(
             wall     : fixture.wall,
             monotonic: .zero
         ))
         let runtime = try await AddonRuntime.make(
-            catalog: [first, second],
+            catalog    : [first, second],
             environment: HostEnvironment(
                 osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
                 applications    : [:],
-                grants: [
+                grants          : [
                     first.manifest.id : [],
                     second.manifest.id: []
                 ],
                 explicitBindings: []
             ),
-            governor: governor,
-            adapter : adapter,
-            clock   : clock
+            governor   : governor,
+            adapter    : adapter,
+            clock      : clock
         )
         let offer = try ProtocolOffer(
             major         : 1,
@@ -3191,24 +3154,18 @@ struct AddonRuntimeCompositionTests {
             featureID : "controls",
             instanceID: UUID()
         )
-        let firstLaunch = try await runtime.requestLaunch(owner: first.manifest.id)
-        let firstConnection = try await runtime.attach(
-            launchID: firstLaunch,
-            offer   : offer
-        )
-        let secondLaunch = try await runtime.requestLaunch(owner: second.manifest.id)
-        let secondConnection = try await runtime.attach(
-            launchID: secondLaunch,
-            offer   : offer
-        )
+        let firstLaunch      = try await runtime.requestLaunch(owner: first.manifest.id)
+        let firstConnection  = try await runtime.attach(launchID: firstLaunch, offer: offer)
+        let secondLaunch     = try await runtime.requestLaunch(owner: second.manifest.id)
+        let secondConnection = try await runtime.attach(launchID: secondLaunch, offer: offer)
+
         for (id, connection) in [(firstID, firstConnection), (secondID, secondConnection)] {
             _ = try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-                ProviderOutput(
+                runtime   : runtime,
+                adapter   : adapter,
+                output    : ProviderOutput(
                     schemaVersion: 1,
-                    publications: [Publication(
+                    publications : [Publication(
                         id         : id,
                         revision   : 1,
                         kind       : .widget,
@@ -3217,14 +3174,15 @@ struct AddonRuntimeCompositionTests {
                         expiresAt  : fixture.wall.addingTimeInterval(1_000),
                         stalePolicy: .remove
                     )],
-                    operations  : [],
-                    completion  : nil,
-                    checkpoint  : nil
+                    operations   : [],
+                    completion   : nil,
+                    checkpoint   : nil
                 ),
                 connection: connection,
                 sequence  : 1
             )
         }
+
         let firstRequest = try ActionRequest(
             schemaVersion   : 1,
             requestID       : UUID(),
@@ -3236,13 +3194,15 @@ struct AddonRuntimeCompositionTests {
         )
         _ = try await runtime.submitAction(firstRequest)
         #expect(try await runtime.pumpReady())
+
         let delivery = try #require(adapter.lastAction)
         #expect(try await runtime.receiveActionCompletion(
             delivery,
             connection: firstConnection,
             outcome   : .completed(payload: Data([9]))
         ))
-        let firstBefore = try #require(await runtime.diagnostics(owner: first.manifest.id))
+
+        let firstBefore  = try #require(await runtime.diagnostics(owner: first.manifest.id))
         let secondBefore = try #require(await runtime.diagnostics(owner: second.manifest.id))
         clock.set(RuntimeInstant(
             wall     : fixture.wall.addingTimeInterval(601),
@@ -3258,39 +3218,37 @@ struct AddonRuntimeCompositionTests {
             observedRevision: 1
         )
         _ = try await runtime.submitAction(secondRequest)
-        let firstAfter = try #require(await runtime.diagnostics(owner: first.manifest.id))
+
+        let firstAfter  = try #require(await runtime.diagnostics(owner: first.manifest.id))
         let secondAfter = try #require(await runtime.diagnostics(owner: second.manifest.id))
         #expect(firstBefore.reservedStateBytes - firstAfter.reservedStateBytes == 24_578)
         #expect(secondAfter.reservedStateBytes > secondBefore.reservedStateBytes)
-        #expect(await runtime.actionState(
-            firstRequest.requestID,
-            owner: first.manifest.id
-        ) == nil)
+        #expect(await runtime.actionState(firstRequest.requestID, owner: first.manifest.id) == nil)
         #expect(await governor.usage(.providers, owner: first.manifest.id) == 1)
         #expect(await governor.usage(.providers, owner: second.manifest.id) == 1)
     }
 
     @Test
     func completionDuringPoolGrowthDefersResizeAndReconcilesCurrentCharges() async throws {
-        let fixture = try ActionFixture()
+        let fixture   = try ActionFixture()
         let installed = try fixture.context().installed
-        let governor = ResourceGovernor()
-        let access = GatedRuntimeResourceAccess(target: governor)
-        let adapter = RecordingRuntimeAdapter()
-        let runtime = try await AddonRuntime.make(
-            catalog: [installed],
-            environment: HostEnvironment(
+        let governor  = ResourceGovernor()
+        let access    = GatedRuntimeResourceAccess(target: governor)
+        let adapter   = RecordingRuntimeAdapter()
+        let runtime   = try await AddonRuntime.make(
+            catalog               : [installed],
+            environment           : HostEnvironment(
                 osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
                 applications    : [:],
                 grants          : [fixture.owner: []],
                 explicitBindings: []
             ),
-            governor             : governor,
-            resourceAccess       : access,
+            governor              : governor,
+            resourceAccess        : access,
             serviceDecisionFactory: { $0 },
-            adapter              : adapter,
-            clock                : FixedRuntimeClock(instant: RuntimeInstant(
+            adapter               : adapter,
+            clock                 : FixedRuntimeClock(instant: RuntimeInstant(
                 wall     : fixture.wall,
                 monotonic: .zero
             ))
@@ -3300,10 +3258,10 @@ struct AddonRuntimeCompositionTests {
             featureID : "controls",
             instanceID: UUID()
         )
-        let launch = try await runtime.requestLaunch(owner: fixture.owner)
+        let launch     = try await runtime.requestLaunch(owner: fixture.owner)
         let connection = try await runtime.attach(
             launchID: launch,
-            offer: ProtocolOffer(
+            offer   : ProtocolOffer(
                 major         : 1,
                 minimumMinor  : 0,
                 maximumMinor  : 0,
@@ -3320,19 +3278,19 @@ struct AddonRuntimeCompositionTests {
             stalePolicy: .remove
         )
         _ = try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-            ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
-                publications: [first],
-                operations  : [],
-                completion  : nil,
-                checkpoint  : nil
+                publications : [first],
+                operations   : [],
+                completion   : nil,
+                checkpoint   : nil
             ),
             connection: connection,
             sequence  : 1
         )
+
         let request = try ActionRequest(
             schemaVersion   : 1,
             requestID       : UUID(),
@@ -3344,9 +3302,10 @@ struct AddonRuntimeCompositionTests {
         )
         _ = try await runtime.submitAction(request)
         #expect(try await runtime.pumpReady())
-        let delivery = try #require(adapter.lastAction)
+
+        let delivery      = try #require(adapter.lastAction)
         let largerContent = try PresentationSet(
-            widget: try ContentDocument(
+            widget         : try ContentDocument(
                 root              : try .text(String(repeating: "x", count: 4_096)),
                 privacy           : .publicContent,
                 accessibilityLabel: "Large"
@@ -3367,14 +3326,14 @@ struct AddonRuntimeCompositionTests {
         )
         await access.armResize()
         async let publishing = receivePublicationOutput(
-            runtime: runtime,
-            adapter: adapter,
-            output : ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
-                publications: [second],
-                operations  : [],
-                completion  : nil,
-                checkpoint  : nil
+                publications : [second],
+                operations   : [],
+                completion   : nil,
+                checkpoint   : nil
             ),
             connection: connection,
             sequence  : 2
@@ -3387,13 +3346,16 @@ struct AddonRuntimeCompositionTests {
         ))
         #expect(await governor.usage(.commands, owner: fixture.owner) == 1)
         #expect(await governor.usage(.jobs, owner: fixture.owner) == 1)
+
         await access.releaseGate()
         _ = try await publishing
         #expect(await governor.usage(.commands, owner: fixture.owner) == 0)
         #expect(await governor.usage(.jobs, owner: fixture.owner) == 0)
         #expect(await runtime.snapshot(at: fixture.wall).publications == [second])
+
         let diagnostics = try #require(await runtime.diagnostics(owner: fixture.owner))
         #expect(diagnostics.reservedStateBytes < 1_000_000)
+
         let actionable = try Publication(
             id         : id,
             revision   : 3,
@@ -3404,19 +3366,19 @@ struct AddonRuntimeCompositionTests {
             stalePolicy: .remove
         )
         _ = try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-            ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
-                publications: [actionable],
-                operations  : [],
-                completion  : nil,
-                checkpoint  : nil
+                publications : [actionable],
+                operations   : [],
+                completion   : nil,
+                checkpoint   : nil
             ),
             connection: connection,
             sequence  : 3
         )
+
         let idleCompletionRequest = try ActionRequest(
             schemaVersion   : 1,
             requestID       : UUID(),
@@ -3428,6 +3390,7 @@ struct AddonRuntimeCompositionTests {
         )
         _ = try await runtime.submitAction(idleCompletionRequest)
         #expect(try await runtime.pumpReady())
+
         let idleCompletionDelivery = try #require(adapter.lastAction)
         await access.armReduction()
         async let idleCompletion = runtime.receiveActionCompletion(
@@ -3436,6 +3399,7 @@ struct AddonRuntimeCompositionTests {
             outcome   : .completed(payload: Data())
         )
         await access.waitForArrival()
+
         let overtakingRequest = try ActionRequest(
             schemaVersion   : 1,
             requestID       : UUID(),
@@ -3448,14 +3412,13 @@ struct AddonRuntimeCompositionTests {
         await #expect(throws: AddonFailure.self) {
             try await runtime.submitAction(overtakingRequest)
         }
-        #expect(await runtime.actionState(
-            overtakingRequest.requestID,
-            owner: fixture.owner
-        ) == nil)
+        #expect(await runtime.actionState(overtakingRequest.requestID, owner: fixture.owner) == nil)
+
         await access.releaseGate()
         #expect(try await idleCompletion)
         #expect(await governor.usage(.commands, owner: fixture.owner) == 0)
         #expect(await governor.usage(.jobs, owner: fixture.owner) == 0)
+
         let queuedAcrossExit = try ActionRequest(
             schemaVersion   : 1,
             requestID       : UUID(),
@@ -3471,10 +3434,12 @@ struct AddonRuntimeCompositionTests {
         await access.waitForArrival()
         await runtime.observeExit(connection.incarnation)
         await access.releaseGate()
+
         do {
             _ = try await pumpingAcrossExit
             Issue.record("An action was handed to an incarnation that exited during job admission.")
         } catch is AddonFailure {}
+
         #expect(await runtime.actionState(
             queuedAcrossExit.requestID,
             owner: fixture.owner
@@ -3485,11 +3450,11 @@ struct AddonRuntimeCompositionTests {
 
     @Test
     func acknowledgmentFreesAdapterPayloadWhileProviderJobRemains() async throws {
-        let fixture = try ActionFixture()
+        let fixture  = try ActionFixture()
         let governor = ResourceGovernor()
-        let adapter = RecordingRuntimeAdapter()
-        let runtime = try await AddonRuntime.make(
-            catalog: [fixture.context().installed],
+        let adapter  = RecordingRuntimeAdapter()
+        let runtime  = try await AddonRuntime.make(
+            catalog    : [fixture.context().installed],
             environment: HostEnvironment(
                 osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
@@ -3497,9 +3462,9 @@ struct AddonRuntimeCompositionTests {
                 grants          : [fixture.owner: []],
                 explicitBindings: []
             ),
-            governor: governor,
-            adapter : adapter,
-            clock   : FixedRuntimeClock(instant: RuntimeInstant(
+            governor   : governor,
+            adapter    : adapter,
+            clock      : FixedRuntimeClock(instant: RuntimeInstant(
                 wall     : fixture.wall,
                 monotonic: .zero
             ))
@@ -3509,7 +3474,7 @@ struct AddonRuntimeCompositionTests {
             featureID : "controls",
             instanceID: UUID()
         )
-        let launch = try await runtime.requestLaunch(owner: fixture.owner)
+        let launch     = try await runtime.requestLaunch(owner: fixture.owner)
         let connection = try await runtime.attach(
             launchID: launch,
             offer   : ProtocolOffer(
@@ -3529,19 +3494,19 @@ struct AddonRuntimeCompositionTests {
             stalePolicy: .remove
         )
         _ = try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-            ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
-                publications: [publication],
-                operations  : [],
-                completion  : nil,
-                checkpoint  : nil
+                publications : [publication],
+                operations   : [],
+                completion   : nil,
+                checkpoint   : nil
             ),
             connection: connection,
             sequence  : 1
         )
+
         let first = try ActionRequest(
             schemaVersion   : 1,
             requestID       : UUID(),
@@ -3553,12 +3518,11 @@ struct AddonRuntimeCompositionTests {
         )
         _ = try await runtime.submitAction(first)
         #expect(try await runtime.pumpReady())
+
         let delivery = try #require(adapter.lastAction)
-        #expect(try await runtime.receiveAcknowledgment(
-            delivery,
-            connection: connection
-        ))
+        #expect(try await runtime.receiveAcknowledgment(delivery, connection: connection))
         #expect(adapter.lastAction == nil)
+
         let second = try ActionRequest(
             schemaVersion   : 1,
             requestID       : UUID(),
@@ -3570,8 +3534,9 @@ struct AddonRuntimeCompositionTests {
         )
         _ = try await runtime.submitAction(second)
         #expect(try await runtime.pumpReady() == false)
+
         let commandsAfterRejection = await governor.usage(.commands, owner: fixture.owner)
-        let jobsAfterRejection = await governor.usage(.jobs, owner: fixture.owner)
+        let jobsAfterRejection     = await governor.usage(.jobs, owner: fixture.owner)
         #expect(commandsAfterRejection == 2)
         #expect(jobsAfterRejection == 1)
         #expect(try await runtime.receiveActionCompletion(
@@ -3579,11 +3544,13 @@ struct AddonRuntimeCompositionTests {
             connection: connection,
             outcome   : .completed(payload: Data([9]))
         ))
+
         let commandsAfterCompletion = await governor.usage(.commands, owner: fixture.owner)
-        let jobsAfterCompletion = await governor.usage(.jobs, owner: fixture.owner)
+        let jobsAfterCompletion     = await governor.usage(.jobs, owner: fixture.owner)
         #expect(commandsAfterCompletion == 1)
         #expect(jobsAfterCompletion == 0)
         #expect(try await runtime.pumpReady())
+
         let secondDelivery = try #require(adapter.lastAction)
         #expect(try await runtime.receiveActionCompletion(
             secondDelivery,
@@ -3596,35 +3563,35 @@ struct AddonRuntimeCompositionTests {
 
     @Test
     func ingressCapacityIsPaidAndTransferOccupiesSlotUntilFinish() async throws {
-        let fixture = try ActionFixture()
-        let adapter = RecordingRuntimeAdapter()
-        let governor = ResourceGovernor()
+        let fixture        = try ActionFixture()
+        let adapter        = RecordingRuntimeAdapter()
+        let governor       = ResourceGovernor()
         let resourceAccess = GatedRuntimeResourceAccess(target: governor)
-        let runtime = try await AddonRuntime.make(
-            catalog: [fixture.context().installed],
-            environment: HostEnvironment(
+        let runtime        = try await AddonRuntime.make(
+            catalog               : [fixture.context().installed],
+            environment           : HostEnvironment(
                 osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
                 applications    : [:],
                 grants          : [fixture.owner: []],
                 explicitBindings: []
             ),
-            governor      : governor,
-            resourceAccess: resourceAccess,
+            governor              : governor,
+            resourceAccess        : resourceAccess,
             serviceDecisionFactory: { $0 },
-            adapter       : adapter,
-            clock         : FixedRuntimeClock(instant: RuntimeInstant(
+            adapter               : adapter,
+            clock                 : FixedRuntimeClock(instant: RuntimeInstant(
                 wall     : fixture.wall,
                 monotonic: .zero
             )),
-            maximumEnvelopeBytes: 8 * 1_024
+            maximumEnvelopeBytes  : 8 * 1_024
         )
         let publicationID = try await runtime.assignPublication(
             owner     : fixture.owner,
             featureID : "controls",
             instanceID: UUID()
         )
-        let launch = try await runtime.requestLaunch(owner: fixture.owner)
+        let launch     = try await runtime.requestLaunch(owner: fixture.owner)
         let connection = try await runtime.attach(
             launchID: launch,
             offer   : ProtocolOffer(
@@ -3636,15 +3603,13 @@ struct AddonRuntimeCompositionTests {
         )
         let oversized = try ProviderOutput(
             schemaVersion: 1,
-            publications: [],
-            operations  : [],
-            completion  : nil,
-            checkpoint  : Data(repeating: 7, count: 16 * 1_024)
+            publications : [],
+            operations   : [],
+            completion   : nil,
+            checkpoint   : Data(repeating: 7, count: 16 * 1_024)
         )
-        #expect(adapter.stageIngress(
-            oversized,
-            incarnation: connection.incarnation
-        ) == nil)
+        #expect(adapter.stageIngress(oversized, incarnation: connection.incarnation) == nil)
+
         let publication = try Publication(
             id         : publicationID,
             revision   : 1,
@@ -3656,15 +3621,12 @@ struct AddonRuntimeCompositionTests {
         )
         let output = try ProviderOutput(
             schemaVersion: 1,
-            publications: [publication],
-            operations  : [],
-            completion  : nil,
-            checkpoint  : nil
+            publications : [publication],
+            operations   : [],
+            completion   : nil,
+            checkpoint   : nil
         )
-        let first = try #require(adapter.stageIngress(
-            output,
-            incarnation: connection.incarnation
-        ))
+        let first = try #require(adapter.stageIngress(output, incarnation: connection.incarnation))
         await resourceAccess.armResize()
         async let receiving = runtime.receivePublicationOutput(
             first,
@@ -3679,32 +3641,24 @@ struct AddonRuntimeCompositionTests {
                 sequence  : 1
             )
         }
-        #expect(adapter.stageIngress(
-            output,
-            incarnation: connection.incarnation
-        ) == nil)
+        #expect(adapter.stageIngress(output, incarnation: connection.incarnation) == nil)
+
         await resourceAccess.releaseGate()
+
         let result = try await receiving
         guard case .committed(let admission) = result else {
             Issue.record("Expected the empty publication output to commit after the ingress gate.")
             return
         }
+
         #expect(admission.operations.isEmpty)
         #expect(admission.completion == nil)
         #expect(admission.checkpoint == nil)
-        let retry = try #require(adapter.stageIngress(
-            output,
-            incarnation: connection.incarnation
-        ))
-        adapter.rejectIngress(
-            retry,
-            incarnation: connection.incarnation
-        )
+
+        let retry = try #require(adapter.stageIngress(output, incarnation: connection.incarnation))
+        adapter.rejectIngress(retry, incarnation: connection.incarnation)
         await runtime.observeExit(connection.incarnation)
-        #expect(adapter.stageIngress(
-            output,
-            incarnation: connection.incarnation
-        ) == nil)
+        #expect(adapter.stageIngress(output, incarnation: connection.incarnation) == nil)
     }
 
     @Test
@@ -3717,24 +3671,24 @@ struct AddonRuntimeCompositionTests {
             monotonic: .zero
         ))
         let runtime = try await AddonRuntime.make(
-            catalog: [fixture.context().installed],
+            catalog    : [fixture.context().installed],
             environment: HostEnvironment(
-                osVersion         : SemanticVersion(14, 0, 0),
-                hostCapabilities  : [:],
-                applications      : [:],
-                grants            : [fixture.owner: []],
-                explicitBindings  : []
+                osVersion       : SemanticVersion(14, 0, 0),
+                hostCapabilities: [:],
+                applications    : [:],
+                grants          : [fixture.owner: []],
+                explicitBindings: []
             ),
-            governor: governor,
-            adapter : adapter,
-            clock   : clock
+            governor   : governor,
+            adapter    : adapter,
+            clock      : clock
         )
         let publicationID = try await runtime.assignPublication(
             owner     : fixture.owner,
             featureID : "controls",
             instanceID: UUID()
         )
-        let launch = try await runtime.requestLaunch(owner: fixture.owner)
+        let launch     = try await runtime.requestLaunch(owner: fixture.owner)
         let connection = try await runtime.attach(
             launchID: launch,
             offer   : ProtocolOffer(
@@ -3754,19 +3708,19 @@ struct AddonRuntimeCompositionTests {
             stalePolicy: .remove
         )
         _ = try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-            ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
-                publications: [publication],
-                operations  : [],
-                completion  : nil,
-                checkpoint  : nil
+                publications : [publication],
+                operations   : [],
+                completion   : nil,
+                checkpoint   : nil
             ),
             connection: connection,
             sequence  : 1
         )
+
         let request = try ActionRequest(
             schemaVersion   : 1,
             requestID       : UUID(),
@@ -3778,6 +3732,7 @@ struct AddonRuntimeCompositionTests {
         )
         _ = try await runtime.submitAction(request)
         #expect(try await runtime.pumpReady())
+
         let delivery = try #require(adapter.lastAction)
 
         clock.set(RuntimeInstant(
@@ -3806,9 +3761,11 @@ struct AddonRuntimeCompositionTests {
         ) == .finished(.outcomeUnknown))
         #expect(adapter.stopCount(incarnation: connection.incarnation) == 1)
         #expect(await governor.usage(.jobs, owner: fixture.owner) == 1)
+
         let repeatedDelay = try await runtime.serviceDeadlines()
         #expect(try #require(repeatedDelay) > .zero)
         #expect(adapter.stopCount(incarnation: connection.incarnation) == 1)
+
         await runtime.observeExit(connection.incarnation)
         #expect(await governor.usage(.commands, owner: fixture.owner) == 0)
         #expect(await governor.usage(.jobs, owner: fixture.owner) == 0)
@@ -3817,32 +3774,29 @@ struct AddonRuntimeCompositionTests {
 
     @Test
     func deadlineProjectionRejectsAStoppedRuntimeAfterBrokerSuspension() async throws {
-        let fixture = try ActionFixture()
-        let governor = ResourceGovernor()
-        let adapter = RecordingRuntimeAdapter()
+        let fixture     = try ActionFixture()
+        let governor    = ResourceGovernor()
+        let adapter     = RecordingRuntimeAdapter()
         let decisionBox = RuntimeServiceDecisionAccessBox()
-        let instant = RuntimeInstant(
-            wall     : fixture.wall,
-            monotonic: .seconds(4)
-        )
-        let runtime = try await AddonRuntime.make(
-            catalog: [fixture.context().installed],
-            environment: HostEnvironment(
+        let instant     = RuntimeInstant(wall: fixture.wall, monotonic: .seconds(4))
+        let runtime     = try await AddonRuntime.make(
+            catalog               : [fixture.context().installed],
+            environment           : HostEnvironment(
                 osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
                 applications    : [:],
                 grants          : [fixture.owner: []],
                 explicitBindings: []
             ),
-            governor      : governor,
-            resourceAccess: governor,
+            governor              : governor,
+            resourceAccess        : governor,
             serviceDecisionFactory: { broker in
-                let access = GatedRuntimeServiceDecisionAccess(target: broker)
+                let access         = GatedRuntimeServiceDecisionAccess(target: broker)
                 decisionBox.access = access
                 return access
             },
-            adapter: adapter,
-            clock  : FixedRuntimeClock(instant: instant)
+            adapter               : adapter,
+            clock                 : FixedRuntimeClock(instant: instant)
         )
         let access = try #require(decisionBox.access)
         await access.armDeadline()
@@ -3850,6 +3804,7 @@ struct AddonRuntimeCompositionTests {
         await access.waitForArrival()
         await runtime.stop()
         await access.releaseGate()
+
         do {
             _ = try await projected
             Issue.record("Expected the stopped runtime to reject the parked projection.")
@@ -3857,6 +3812,7 @@ struct AddonRuntimeCompositionTests {
         } catch {
             Issue.record("Expected AddonFailure, received \(error).")
         }
+
         #expect(try await runtime.nextDelay(at: instant) == nil)
     }
 
@@ -3865,18 +3821,18 @@ struct AddonRuntimeCompositionTests {
         let fixture  = try ActionFixture()
         let governor = ResourceGovernor()
         let adapter  = RecordingRuntimeAdapter()
-        let runtime = try await AddonRuntime.make(
-            catalog: [fixture.context().installed],
+        let runtime  = try await AddonRuntime.make(
+            catalog    : [fixture.context().installed],
             environment: HostEnvironment(
-                osVersion         : SemanticVersion(14, 0, 0),
-                hostCapabilities  : [:],
-                applications      : [:],
-                grants            : [fixture.owner: []],
-                explicitBindings  : []
+                osVersion       : SemanticVersion(14, 0, 0),
+                hostCapabilities: [:],
+                applications    : [:],
+                grants          : [fixture.owner: []],
+                explicitBindings: []
             ),
-            governor: governor,
-            adapter : adapter,
-            clock   : FixedRuntimeClock(instant: RuntimeInstant(
+            governor   : governor,
+            adapter    : adapter,
+            clock      : FixedRuntimeClock(instant: RuntimeInstant(
                 wall     : fixture.wall,
                 monotonic: .zero
             ))
@@ -3886,7 +3842,7 @@ struct AddonRuntimeCompositionTests {
             featureID : "controls",
             instanceID: UUID()
         )
-        let launch = try await runtime.requestLaunch(owner: fixture.owner)
+        let launch     = try await runtime.requestLaunch(owner: fixture.owner)
         let connection = try await runtime.attach(
             launchID: launch,
             offer   : ProtocolOffer(
@@ -3906,19 +3862,19 @@ struct AddonRuntimeCompositionTests {
             stalePolicy: .remove
         )
         _ = try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-            ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
-                publications: [publication],
-                operations  : [],
-                completion  : nil,
-                checkpoint  : nil
+                publications : [publication],
+                operations   : [],
+                completion   : nil,
+                checkpoint   : nil
             ),
             connection: connection,
             sequence  : 1
         )
+
         let request = try ActionRequest(
             schemaVersion   : 1,
             requestID       : UUID(),
@@ -3930,32 +3886,33 @@ struct AddonRuntimeCompositionTests {
         )
         _ = try await runtime.submitAction(request)
         #expect(try await runtime.pumpReady())
+
         let delivery = try #require(adapter.lastAction)
-        let outcome = ActionOutcome.completed(payload: Data([42]))
+        let outcome  = ActionOutcome.completed(payload: Data([42]))
         #expect(try await runtime.receiveActionCompletion(
             delivery,
             connection: connection,
             outcome   : outcome
         ))
+
         _ = try await receivePublicationOutput(
-                runtime: runtime,
-                adapter: adapter,
-                output : 
-            ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
-                publications: [],
-                operations  : [.endPublication(publicationID)],
-                completion  : nil,
-                checkpoint  : nil
+                publications : [],
+                operations   : [.endPublication(publicationID)],
+                completion   : nil,
+                checkpoint   : nil
             ),
             connection: connection,
             sequence  : 2
         )
         #expect(await runtime.snapshot(at: fixture.wall).publications.isEmpty)
 
-        let used = await governor.usage(.retainedStateBytes)
+        let used        = await governor.usage(.retainedStateBytes)
         let fillerOwner = AddonID(rawValue: "com.example.runtime-end-filler")!
-        let filler = try await governor.admit(
+        let filler      = try await governor.admit(
             .state(bytes: 8 * 1_024 * 1_024 - used - 1_024),
             owner: fillerOwner
         )
@@ -3963,10 +3920,8 @@ struct AddonRuntimeCompositionTests {
         #expect(try await runtime.submitAction(request) == .duplicate(.finished(outcome)))
         #expect(await governor.usage(.commands, owner: fixture.owner) == 0)
         #expect(await governor.usage(.jobs, owner: fixture.owner) == 0)
-        try await governor.release(
-            filler.id,
-            owner: fillerOwner
-        )
+
+        try await governor.release(filler.id, owner: fillerOwner)
     }
 }
 
@@ -3977,15 +3932,13 @@ func receivePublicationOutput(
     connection: RuntimeConnection,
     sequence  : UInt64
 ) async throws -> PublicationAdmission {
-    guard let ingress = adapter.stageIngress(
-        output,
-        incarnation: connection.incarnation
-    ) else {
+    guard let ingress = adapter.stageIngress(output, incarnation: connection.incarnation) else {
         throw AddonFailure(
             code  : .resourceDenied,
             reason: "The bounded test ingress slot rejected the provider output."
         )
     }
+
     let result = try await runtime.receivePublicationOutput(
         ingress,
         connection: connection,
@@ -3997,5 +3950,6 @@ func receivePublicationOutput(
             reason: "The service completion is pending canonical broker acceptance."
         )
     }
+
     return admission
 }

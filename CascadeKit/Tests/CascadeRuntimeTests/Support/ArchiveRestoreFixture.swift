@@ -10,6 +10,7 @@ import Testing
 
 /// ArchiveRestoreFixture uses real shared-governor archives and fresh runtimes with fake transport only.
 struct ArchiveRestoreFixture: Sendable {
+
     let installed: InstalledAddon
     let governor : ResourceGovernor
     let adapter  : RecordingRuntimeAdapter
@@ -17,32 +18,33 @@ struct ArchiveRestoreFixture: Sendable {
     let archive  : SwiftDataArchive
     let root     : URL
     let wall     : Date
+
     var owner: AddonID { installed.manifest.id }
 
     static func make() async throws -> Self {
-        let base = try ActionFixture()
+        let base      = try ActionFixture()
         let installed = try base.context().installed
-        let governor = ResourceGovernor()
-        let root = URL(fileURLWithPath: "/private/tmp/cascade-runtime-restore-\(UUID())")
+        let governor  = ResourceGovernor()
+        let root      = URL(fileURLWithPath: "/private/tmp/cascade-runtime-restore-\(UUID())")
+
         try FileManager.default.createDirectory(
             at                         : root,
             withIntermediateDirectories: false,
             attributes                 : [.posixPermissions: 0o700]
         )
+
         let archive = try await SwiftDataArchive.make(
             identity: installed.verifiedIdentity,
             root    : root,
             governor: governor
         )
         _ = try await archive.start()
+
         return Self(
             installed: installed,
             governor : governor,
             adapter  : RecordingRuntimeAdapter(),
-            clock    : MutableRuntimeClock(instant: RuntimeInstant(
-                wall     : base.wall,
-                monotonic: .zero
-            )),
+            clock    : MutableRuntimeClock(instant: RuntimeInstant(wall: base.wall, monotonic: .zero)),
             archive  : archive,
             root     : root,
             wall     : base.wall
@@ -55,13 +57,9 @@ struct ArchiveRestoreFixture: Sendable {
         installed: InstalledAddon? = nil
     ) async throws -> AddonRuntime {
         try await AddonRuntime.make(
-            catalog    : [installed ?? self.installed],
-            environment: HostEnvironment(
-                osVersion       : SemanticVersion(
-                    14,
-                    0,
-                    0
-                ),
+            catalog               : [installed ?? self.installed],
+            environment           : HostEnvironment(
+                osVersion       : SemanticVersion(14, 0, 0),
                 hostCapabilities: [:],
                 applications    : [:],
                 grants          : [owner: []],
@@ -77,6 +75,7 @@ struct ArchiveRestoreFixture: Sendable {
 
     func connect(_ runtime: AddonRuntime) async throws -> RuntimeConnection {
         let launch = try await runtime.requestLaunch(owner: owner)
+
         return try await runtime.attach(
             launchID: launch,
             offer   : ProtocolOffer(
@@ -106,20 +105,15 @@ struct ArchiveRestoreFixture: Sendable {
                 expanded       : nil
             )
         }
+
         return try Publication(
             id         : id,
             revision   : 0,
             kind       : .widget,
             content    : future ? nil : presentation("Current"),
             timeline   : future ? [
-                ScheduledEntry(
-                    date   : wall,
-                    content: presentation("First")
-                ),
-                ScheduledEntry(
-                    date   : wall.addingTimeInterval(20),
-                    content: presentation("Future")
-                ),
+                ScheduledEntry(date: wall, content: presentation("First")),
+                ScheduledEntry(date: wall.addingTimeInterval(20), content: presentation("Future")),
             ] : nil,
             expiresAt  : wall.addingTimeInterval(100),
             stalePolicy: .retainMarked
@@ -134,9 +128,9 @@ struct ArchiveRestoreFixture: Sendable {
         ends        : [PublicationID] = []
     ) async throws {
         _ = try await receivePublicationOutput(
-            runtime: runtime,
-            adapter: adapter,
-            output : ProviderOutput(
+            runtime   : runtime,
+            adapter   : adapter,
+            output    : ProviderOutput(
                 schemaVersion: 1,
                 publications : publications,
                 operations   : ends.map { .endPublication($0) },
@@ -200,10 +194,9 @@ struct ArchiveRestoreFixture: Sendable {
             kind           : publication.kind,
             sessionDeadline: deadline ?? wall.addingTimeInterval(8 * 3_600),
             publication    : RuntimeArchivePublicationCodec.encode(publication),
-            aliases        : blob.map { [RuntimeArchiveEnvelope.Alias(
-                name: Data("old".utf8),
-                blob: RuntimeArchiveEnvelope.uuidBytes($0)
-            )] } ?? []
+            aliases        : blob.map {
+                [RuntimeArchiveEnvelope.Alias(name: Data("old".utf8), blob: RuntimeArchiveEnvelope.uuidBytes($0))]
+            } ?? []
         )
     }
 
@@ -277,20 +270,15 @@ struct ArchiveRestoreFixture: Sendable {
             minimal        : document,
             expanded       : document
         )
+
         return try Publication(
             id         : id,
             revision   : 0,
             kind       : rich ? .activity : .widget,
             content    : rich ? nil : presentation,
             timeline   : rich ? [
-                ScheduledEntry(
-                    date   : wall,
-                    content: presentation
-                ),
-                ScheduledEntry(
-                    date   : wall.addingTimeInterval(30),
-                    content: presentation
-                ),
+                ScheduledEntry(date: wall, content: presentation),
+                ScheduledEntry(date: wall.addingTimeInterval(30), content: presentation),
             ] : nil,
             expiresAt  : wall.addingTimeInterval(100),
             stalePolicy: .retainMarked
@@ -301,11 +289,13 @@ struct ArchiveRestoreFixture: Sendable {
     func matches(_ check: @Sendable (RuntimeArchiveEnvelope) throws -> Bool) async throws -> Bool {
         try await archive.withGeneration { generation in
             guard let generation else { return false }
+
             return try await governor.withAssetDecodeReservation(
                 bytes: RuntimeArchiveEnvelope.retentionReservationBytes() + generation.payload.count,
                 owner: owner
             ) {
                 let envelope = try RuntimeArchiveEnvelope.decode(generation.payload)
+
                 return try await governor.withAssetDecodeReservation(
                     bytes: RuntimeArchivePublicationCodec.inspectionReservationBytes(),
                     owner: owner

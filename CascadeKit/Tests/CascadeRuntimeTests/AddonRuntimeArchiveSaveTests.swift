@@ -13,7 +13,9 @@ import Testing
 
 @Suite(.timeLimit(.minutes(1)))
 struct AddonRuntimeArchiveSaveTests {
-    @Test func savesRevisionZeroAndCompleteTimelineThenIncrementsArchiveRevision() async throws {
+
+    @Test
+    func savesRevisionZeroAndCompleteTimelineThenIncrementsArchiveRevision() async throws {
         let fixture = try await ArchiveSaveFixture.make()
         defer { fixture.removeFiles() }
         let first       = try fixture.content(text: "First")
@@ -24,47 +26,35 @@ struct AddonRuntimeArchiveSaveTests {
             kind    : .widget,
             content : nil,
             timeline: [
-                ScheduledEntry(
-                    date   : fixture.wall,
-                    content: first
-                ),
-                ScheduledEntry(
-                    date   : fixture.wall.addingTimeInterval(20),
-                    content: future
-                ),
+                ScheduledEntry(date: fixture.wall, content: first),
+                ScheduledEntry(date: fixture.wall.addingTimeInterval(20), content: future),
             ],
             expiresAt  : fixture.wall.addingTimeInterval(100),
             stalePolicy: .remove
         )
-        try await fixture.publish(
-            [publication],
-            sequence: 1
-        )
+        try await fixture.publish([publication], sequence: 1)
         await fixture.runtime.observeExit(fixture.connection.incarnation)
-        let saved = try await fixture.runtime.saveArchive(
-            owner: fixture.owner,
-            to   : fixture.archive
-        )
+        let saved = try await fixture.runtime.saveArchive(owner: fixture.owner, to: fixture.archive)
         #expect(saved.revision == 1)
         #expect(
             try await fixture.matches { envelope in
-                guard envelope.records.count == 1, let record = envelope.records.first,
-                    let json = record.publication
+                guard envelope.records.count == 1,
+                      let record = envelope.records.first,
+                      let json = record.publication
                 else { return false }
+
                 let decoded = try RuntimeArchivePublicationCodec.decode(json)
                 return decoded == publication && record.revision == 0
                     && record.sessionDeadline >= publication.expiresAt && envelope.blobs.isEmpty
             }
         )
-        let second = try await fixture.runtime.saveArchive(
-            owner: fixture.owner,
-            to   : fixture.archive
-        )
+        let second = try await fixture.runtime.saveArchive(owner: fixture.owner, to: fixture.archive)
         #expect(second.revision == 2)
         await fixture.runtime.stop()
     }
 
-    @Test func savesSharedRasterOnceAcrossFeaturesAfterImportAuthorityEnds() async throws {
+    @Test
+    func savesSharedRasterOnceAcrossFeaturesAfterImportAuthorityEnds() async throws {
         let fixture = try await ArchiveSaveFixture.make(partitions: [.addonOwned, .addonOwned])
         defer { fixture.removeFiles() }
         let first = try await fixture.runtime.importAsset(
@@ -80,23 +70,14 @@ struct AddonRuntimeArchiveSaveTests {
         )
         try await fixture.publish(
             [
-                fixture.publication(
-                    index: 0,
-                    asset: first.assetID
-                ),
-                fixture.publication(
-                    index: 1,
-                    asset: second.assetID
-                ),
+                fixture.publication(index: 0, asset: first.assetID),
+                fixture.publication(index: 1, asset: second.assetID),
             ],
             sequence: 1
         )
         await fixture.runtime.observeExit(fixture.connection.incarnation)
         #expect(await fixture.governor.usage(.assetBytes) == 4)
-        _ = try await fixture.runtime.saveArchive(
-            owner: fixture.owner,
-            to   : fixture.archive
-        )
+        _ = try await fixture.runtime.saveArchive(owner: fixture.owner, to: fixture.archive)
         #expect(
             try await fixture.matches { envelope in
                 envelope.records.count == 2 && envelope.blobs.count == 1
@@ -108,13 +89,10 @@ struct AddonRuntimeArchiveSaveTests {
         )
         await fixture.runtime.stop()
     }
-    @Test func preservesOriginalActivityAnchorTerminalHistoryAndOmitsNotices() async throws {
-        let fixture = try await ArchiveSaveFixture.make(
-            partitions: Array(
-                repeating: .addonOwned,
-                count    : 4
-            )
-        )
+
+    @Test
+    func preservesOriginalActivityAnchorTerminalHistoryAndOmitsNotices() async throws {
+        let fixture = try await ArchiveSaveFixture.make(partitions: Array(repeating: .addonOwned, count: 4))
         defer { fixture.removeFiles() }
         let document = try ContentDocument(
             root              : .text("Activity"),
@@ -162,31 +140,21 @@ struct AddonRuntimeArchiveSaveTests {
             expiresAt  : fixture.wall.addingTimeInterval(10),
             stalePolicy: .remove
         )
-        try await fixture.publish(
-            [activity, fixture.publication(index: 1), elapsed, notice],
-            sequence: 1
-        )
+        try await fixture.publish([activity, fixture.publication(index: 1), elapsed, notice], sequence: 1)
         try await fixture.publish(
             [],
             sequence: 2,
             ends    : [fixture.ids[1]]
         )
-        fixture.clock.set(
-            RuntimeInstant(
-                wall     : fixture.wall.addingTimeInterval(20),
-                monotonic: .seconds(20)
-            )
-        )
+        fixture.clock.set(RuntimeInstant(wall: fixture.wall.addingTimeInterval(20), monotonic: .seconds(20)))
         await fixture.runtime.observeExit(fixture.connection.incarnation)
-        _ = try await fixture.runtime.saveArchive(
-            owner: fixture.owner,
-            to   : fixture.archive
-        )
+        _ = try await fixture.runtime.saveArchive(owner: fixture.owner, to: fixture.archive)
         #expect(
             try await fixture.matches { envelope in
                 guard envelope.records.count == 3,
-                    let active = envelope.records.first(where: { $0.kind == .activity })
+                      let active = envelope.records.first(where: { $0.kind == .activity })
                 else { return false }
+
                 return active.sessionDeadline == fixture.wall.addingTimeInterval(8 * 3600)
                     && active.revision == 3 && active.publication != nil
                     && envelope.records.filter { $0.publication == nil }.count == 2
@@ -197,7 +165,8 @@ struct AddonRuntimeArchiveSaveTests {
         await fixture.runtime.stop()
     }
 
-    @Test func equalPixelsInDifferentHostPartitionsRemainSeparateBlobs() async throws {
+    @Test
+    func equalPixelsInDifferentHostPartitionsRemainSeparateBlobs() async throws {
         let isolated = UUID()
         let fixture  = try await ArchiveSaveFixture.make(partitions: [.addonOwned, .isolated(isolated)])
         defer { fixture.removeFiles() }
@@ -208,22 +177,12 @@ struct AddonRuntimeArchiveSaveTests {
                 publicationID: fixture.ids[index],
                 connection   : fixture.connection
             )
-            publications.append(
-                try fixture.publication(
-                    index: index,
-                    asset: handle.assetID
-                )
-            )
+            publications.append(try fixture.publication(index: index, asset: handle.assetID))
         }
-        try await fixture.publish(
-            publications,
-            sequence: 1
-        )
+
+        try await fixture.publish(publications, sequence: 1)
         await fixture.runtime.observeExit(fixture.connection.incarnation)
-        _ = try await fixture.runtime.saveArchive(
-            owner: fixture.owner,
-            to   : fixture.archive
-        )
+        _ = try await fixture.runtime.saveArchive(owner: fixture.owner, to: fixture.archive)
         #expect(
             try await fixture.matches { envelope in
                 envelope.blobs.count == 2 && envelope.blobs[0].pixels == envelope.blobs[1].pixels
@@ -257,17 +216,16 @@ struct AddonRuntimeArchiveSaveTests {
         )
         let before = await fixture.governor.usage(.admittedMemoryBytes)
         await #expect(throws: AddonFailure.self) {
-            try await fixture.runtime.saveArchive(
-                owner: fixture.owner,
-                to   : foreign
-            )
+            try await fixture.runtime.saveArchive(owner: fixture.owner, to: foreign)
         }
+
         #expect(await fixture.governor.usage(.admittedMemoryBytes) == before)
         #expect(await foreign.status().state == .unavailable)
         await fixture.stop()
     }
 
-    @Test func exhaustedGenerationRevisionPreservesExistingArchive() async throws {
+    @Test
+    func exhaustedGenerationRevisionPreservesExistingArchive() async throws {
         let fixture = try await ArchiveSaveFixture.make()
         defer { fixture.removeFiles() }
         _ = try await fixture.archive.save(
@@ -280,11 +238,9 @@ struct AddonRuntimeArchiveSaveTests {
             replacing: nil
         )
         await #expect(throws: AddonFailure.self) {
-            try await fixture.runtime.saveArchive(
-                owner: fixture.owner,
-                to   : fixture.archive
-            )
+            try await fixture.runtime.saveArchive(owner: fixture.owner, to: fixture.archive)
         }
+
         #expect(try await fixture.archive.withGeneration { $0?.revision == UInt64.max })
         await fixture.stop()
     }
@@ -293,15 +249,9 @@ struct AddonRuntimeArchiveSaveTests {
     func deniedAdmissionPreservesPriorArchiveAndRefundsTemporaryScopes(_ dimension: String) async throws {
         let fixture = try await ArchiveSaveFixture.make()
         defer { fixture.removeFiles() }
-        try await fixture.publish(
-            [fixture.publication()],
-            sequence: 1
-        )
+        try await fixture.publish([fixture.publication()], sequence: 1)
         await fixture.runtime.observeExit(fixture.connection.incarnation)
-        _ = try await fixture.runtime.saveArchive(
-            owner: fixture.owner,
-            to   : fixture.archive
-        )
+        _ = try await fixture.runtime.saveArchive(owner: fixture.owner, to: fixture.archive)
         let beforeMemory = await fixture.governor.usage(.admittedMemoryBytes)
         let beforeState  = await fixture.governor.usage(.retainedStateBytes)
         let filler: ResourceReservation
@@ -316,16 +266,12 @@ struct AddonRuntimeArchiveSaveTests {
                 owner: fixture.owner
             )
         }
+
         await #expect(throws: AddonFailure.self) {
-            try await fixture.runtime.saveArchive(
-                owner: fixture.owner,
-                to   : fixture.archive
-            )
+            try await fixture.runtime.saveArchive(owner: fixture.owner, to: fixture.archive)
         }
-        try await fixture.governor.release(
-            filler.id,
-            owner: fixture.owner
-        )
+
+        try await fixture.governor.release(filler.id, owner: fixture.owner)
         #expect(await fixture.governor.usage(.admittedMemoryBytes) == beforeMemory)
         #expect(await fixture.governor.usage(.retainedStateBytes) == beforeState)
         #expect(try await fixture.archive.withGeneration { $0?.revision == 1 })
@@ -337,23 +283,15 @@ struct AddonRuntimeArchiveSaveTests {
         let observer = SaveArchiveObserver()
         let fixture  = try await ArchiveSaveFixture.make(observer: observer)
         defer { fixture.removeFiles() }
-        try await fixture.publish(
-            [fixture.publication()],
-            sequence: 1
-        )
+        try await fixture.publish([fixture.publication()], sequence: 1)
         await fixture.runtime.observeExit(fixture.connection.incarnation)
-        _ = try await fixture.runtime.saveArchive(
-            owner: fixture.owner,
-            to   : fixture.archive
-        )
+        _ = try await fixture.runtime.saveArchive(owner: fixture.owner, to: fixture.archive)
         let before = await fixture.governor.usage(.admittedMemoryBytes)
         await observer.arm(after: 1)
         let saving = Task {
-            try await fixture.runtime.saveArchive(
-                owner: fixture.owner,
-                to   : fixture.archive
-            )
+            try await fixture.runtime.saveArchive(owner: fixture.owner, to: fixture.archive)
         }
+
         await observer.waitForArrival()
         if change == "cancel" { saving.cancel() } else { await fixture.runtime.disable(owner: fixture.owner) }
         await observer.release()
@@ -363,7 +301,8 @@ struct AddonRuntimeArchiveSaveTests {
         await fixture.runtime.stop()
     }
 
-    @Test func cancellationAfterCaptureReleasesStagingBeforeBackendSaveAndRefundsOutput() async throws {
+    @Test
+    func cancellationAfterCaptureReleasesStagingBeforeBackendSaveAndRefundsOutput() async throws {
         let observer = SaveArchiveObserver()
         let fixture  = try await ArchiveSaveFixture.make(observer: observer)
         defer { fixture.removeFiles() }
@@ -372,23 +311,15 @@ struct AddonRuntimeArchiveSaveTests {
             publicationID: fixture.ids[0],
             connection   : fixture.connection
         )
-        try await fixture.publish(
-            [fixture.publication(asset: image.assetID)],
-            sequence: 1
-        )
+        try await fixture.publish([fixture.publication(asset: image.assetID)], sequence: 1)
         // Keep the real 64 MiB provider reservation active during the complete save pipeline.
-        _ = try await fixture.runtime.saveArchive(
-            owner: fixture.owner,
-            to   : fixture.archive
-        )
+        _ = try await fixture.runtime.saveArchive(owner: fixture.owner, to: fixture.archive)
         let before = await fixture.governor.usage(.admittedMemoryBytes)
         await observer.arm(after: 2)
         let saving = Task {
-            try await fixture.runtime.saveArchive(
-                owner: fixture.owner,
-                to   : fixture.archive
-            )
+            try await fixture.runtime.saveArchive(owner: fixture.owner, to: fixture.archive)
         }
+
         await observer.waitForArrival()
         let parked = await fixture.governor.usage(.admittedMemoryBytes)
         // Only bounded output and backend save workspace should remain. Retaining the 18 MiB
@@ -408,28 +339,21 @@ struct AddonRuntimeArchiveSaveTests {
         let observer = SaveArchiveObserver()
         let fixture  = try await ArchiveSaveFixture.make(observer: observer)
         defer { fixture.removeFiles() }
-        try await fixture.publish(
-            [fixture.publication()],
-            sequence: 1
-        )
+        try await fixture.publish([fixture.publication()], sequence: 1)
         await fixture.runtime.observeExit(fixture.connection.incarnation)
-        _ = try await fixture.runtime.saveArchive(
-            owner: fixture.owner,
-            to   : fixture.archive
-        )
+        _ = try await fixture.runtime.saveArchive(owner: fixture.owner, to: fixture.archive)
         await observer.arm(after: 3)
         let saving = Task {
-            try await fixture.runtime.saveArchive(
-                owner: fixture.owner,
-                to   : fixture.archive
-            )
+            try await fixture.runtime.saveArchive(owner: fixture.owner, to: fixture.archive)
         }
+
         await observer.waitForArrival()
         switch change {
-        case "cancel": saving.cancel()
-        case "disable": await fixture.runtime.disable(owner: fixture.owner)
-        default: await fixture.runtime.stop()
+            case "cancel": saving.cancel()
+            case "disable": await fixture.runtime.disable(owner: fixture.owner)
+            default: await fixture.runtime.stop()
         }
+
         await observer.release()
         #expect(try await saving.value.revision == 2)
         #expect(try await fixture.archive.withGeneration { $0?.revision == 2 })
@@ -441,62 +365,39 @@ struct AddonRuntimeArchiveSaveTests {
         let observer = SaveArchiveObserver()
         let fixture  = try await ArchiveSaveFixture.make(observer: observer)
         defer { fixture.removeFiles() }
-        try await fixture.publish(
-            [fixture.publication()],
-            sequence: 1
-        )
+        try await fixture.publish([fixture.publication()], sequence: 1)
         await observer.arm(after: 0)
         let explicitSave = Task {
-            try await fixture.runtime.saveArchive(
-                owner: fixture.owner,
-                to   : fixture.archive
-            )
+            try await fixture.runtime.saveArchive(owner: fixture.owner, to: fixture.archive)
         }
+
         await observer.waitForArrival()
         await #expect(throws: AddonFailure.self) {
-            try await fixture.runtime.savePendingArchive(
-                owner: fixture.owner,
-                to   : fixture.archive
-            )
+            try await fixture.runtime.savePendingArchive(owner: fixture.owner, to: fixture.archive)
         }
+
         explicitSave.cancel()
         await observer.release()
         await #expect(throws: (any Error).self) { try await explicitSave.value }
-        #expect(
-            await fixture.runtime.archiveFlushState(identity: fixture.installed.verifiedIdentity) == .pending
-        )
-        #expect(
-            try await fixture.runtime.savePendingArchive(
-                owner: fixture.owner,
-                to   : fixture.archive
-            )?.revision == 1
-        )
+        #expect(await fixture.runtime.archiveFlushState(identity: fixture.installed.verifiedIdentity) == .pending)
+        #expect(try await fixture.runtime.savePendingArchive(owner: fixture.owner, to: fixture.archive)?.revision == 1)
         await fixture.stop()
     }
 
     @Test(arguments: [3, 4])
-    func pendingSaveAcknowledgesTheCanonicalCaptureRatherThanSelectionOrReturn(_ gateIndex: Int) async throws
-    {
+    func pendingSaveAcknowledgesTheCanonicalCaptureRatherThanSelectionOrReturn(_ gateIndex: Int) async throws {
         let observer = SaveArchiveObserver()
         let fixture  = try await ArchiveSaveFixture.make(observer: observer)
         defer { fixture.removeFiles() }
-        try await fixture.publish(
-            [fixture.publication()],
-            sequence: 1
-        )
+        try await fixture.publish([fixture.publication()], sequence: 1)
         await observer.arm(after: gateIndex)
         let saving = Task {
-            try await fixture.runtime.savePendingArchive(
-                owner: fixture.owner,
-                to   : fixture.archive
-            )
+            try await fixture.runtime.savePendingArchive(owner: fixture.owner, to: fixture.archive)
         }
+
         await observer.waitForArrival()
         fixture.clock.set(
-            RuntimeInstant(
-                wall     : fixture.wall.addingTimeInterval(100),
-                monotonic: .seconds(100)
-            )
+            RuntimeInstant(wall: fixture.wall.addingTimeInterval(100), monotonic: .seconds(100))
         )
         // Expiry is synchronous before serviceDeadlines attempts its next admission. That later
         // admission may reject while this save is parked, without undoing canonical expiry.
@@ -516,16 +417,12 @@ struct AddonRuntimeArchiveSaveTests {
         )
         if gateIndex == 4 {
             #expect(
-                try await fixture.runtime.savePendingArchive(
-                    owner: fixture.owner,
-                    to   : fixture.archive
-                )?.revision == 2
+                try await fixture.runtime.savePendingArchive(owner: fixture.owner, to: fixture.archive)?.revision == 2
             )
             #expect(try await fixture.matches { $0.records.count == 1 && $0.records[0].publication == nil })
         }
-        #expect(
-            await fixture.runtime.archiveFlushState(identity: fixture.installed.verifiedIdentity) == .clean
-        )
+
+        #expect(await fixture.runtime.archiveFlushState(identity: fixture.installed.verifiedIdentity) == .clean)
         await fixture.stop()
     }
 
@@ -533,20 +430,9 @@ struct AddonRuntimeArchiveSaveTests {
     func failedReplacementIsSuppressedAndPreservesThePreviouslySavedGeneration() async throws {
         let fixture = try await ArchiveSaveFixture.make()
         defer { fixture.removeFiles() }
-        try await fixture.publish(
-            [fixture.publication()],
-            sequence: 1
-        )
-        #expect(
-            try await fixture.runtime.savePendingArchive(
-                owner: fixture.owner,
-                to   : fixture.archive
-            )?.revision == 1
-        )
-        try await fixture.publish(
-            [fixture.publication(revision: 2)],
-            sequence: 2
-        )
+        try await fixture.publish([fixture.publication()], sequence: 1)
+        #expect(try await fixture.runtime.savePendingArchive(owner: fixture.owner, to: fixture.archive)?.revision == 1)
+        try await fixture.publish([fixture.publication(revision: 2)], sequence: 2)
         await fixture.runtime.observeExit(fixture.connection.incarnation)
         let before = await fixture.governor.usage(.retainedStateBytes)
         let filler = try await fixture.governor.admit(
@@ -554,38 +440,19 @@ struct AddonRuntimeArchiveSaveTests {
             owner: fixture.owner
         )
         await #expect(throws: (any Error).self) {
-            try await fixture.runtime.savePendingArchive(
-                owner: fixture.owner,
-                to   : fixture.archive
-            )
+            try await fixture.runtime.savePendingArchive(owner: fixture.owner, to: fixture.archive)
         }
-        #expect(
-            await fixture.runtime.archiveFlushState(identity: fixture.installed.verifiedIdentity)
-                == .retryRequired
-        )
+
+        #expect(await fixture.runtime.archiveFlushState(identity: fixture.installed.verifiedIdentity) == .retryRequired)
         for _ in 0..<4 {
-            #expect(
-                try await fixture.runtime.savePendingArchive(
-                    owner: fixture.owner,
-                    to   : fixture.archive
-                ) == nil
-            )
+            #expect(try await fixture.runtime.savePendingArchive(owner: fixture.owner, to: fixture.archive) == nil)
         }
-        try await fixture.governor.release(
-            filler.id,
-            owner: fixture.owner
-        )
+
+        try await fixture.governor.release(filler.id, owner: fixture.owner)
         #expect(await fixture.governor.usage(.retainedStateBytes) == before)
         #expect(try await fixture.matches { $0.records.first?.revision == 1 })
-        #expect(
-            try await fixture.runtime.saveArchive(
-                owner: fixture.owner,
-                to   : fixture.archive
-            ).revision == 2
-        )
-        #expect(
-            await fixture.runtime.archiveFlushState(identity: fixture.installed.verifiedIdentity) == .clean
-        )
+        #expect(try await fixture.runtime.saveArchive(owner: fixture.owner, to: fixture.archive).revision == 2)
+        #expect(await fixture.runtime.archiveFlushState(identity: fixture.installed.verifiedIdentity) == .clean)
         #expect(try await fixture.matches { $0.records.first?.revision == 2 })
         await fixture.stop()
     }
@@ -595,17 +462,12 @@ struct AddonRuntimeArchiveSaveTests {
         let observer = SaveArchiveObserver()
         let fixture  = try await ArchiveSaveFixture.make(observer: observer)
         defer { fixture.removeFiles() }
-        try await fixture.publish(
-            [fixture.publication()],
-            sequence: 1
-        )
+        try await fixture.publish([fixture.publication()], sequence: 1)
         await observer.arm(after: committed ? 5 : 3)
         let saving = Task {
-            try await fixture.runtime.savePendingArchive(
-                owner: fixture.owner,
-                to   : fixture.archive
-            )
+            try await fixture.runtime.savePendingArchive(owner: fixture.owner, to: fixture.archive)
         }
+
         await observer.waitForArrival()
         await fixture.runtime.disable(owner: fixture.owner)
         await observer.release()
@@ -614,10 +476,8 @@ struct AddonRuntimeArchiveSaveTests {
         } else {
             await #expect(throws: (any Error).self) { try await saving.value }
         }
-        #expect(
-            await fixture.runtime.archiveFlushState(identity: fixture.installed.verifiedIdentity)
-                == .unavailable
-        )
+
+        #expect(await fixture.runtime.archiveFlushState(identity: fixture.installed.verifiedIdentity) == .unavailable)
         #expect(try await fixture.archive.withGeneration { ($0 != nil) == committed })
         await fixture.stop()
     }
@@ -631,17 +491,13 @@ struct AddonRuntimeArchiveSaveTests {
             publicationID: fixture.ids[0],
             connection   : fixture.connection
         )
-        #expect(
-            await fixture.runtime.archiveFlushState(identity: fixture.installed.verifiedIdentity) == .clean
-        )
+        #expect(await fixture.runtime.archiveFlushState(identity: fixture.installed.verifiedIdentity) == .clean)
         try await fixture.runtime.releaseAsset(
             assetID      : image.assetID,
             publicationID: fixture.ids[0],
             connection   : fixture.connection
         )
-        #expect(
-            await fixture.runtime.archiveFlushState(identity: fixture.installed.verifiedIdentity) == .clean
-        )
+        #expect(await fixture.runtime.archiveFlushState(identity: fixture.installed.verifiedIdentity) == .clean)
         let publication = try Publication(
             id         : fixture.ids[0],
             revision   : 1,
@@ -651,14 +507,8 @@ struct AddonRuntimeArchiveSaveTests {
             expiresAt  : fixture.wall.addingTimeInterval(100),
             stalePolicy: .remove
         )
-        try await fixture.publish(
-            [publication],
-            sequence: 1
-        )
-        _ = try await fixture.runtime.savePendingArchive(
-            owner: fixture.owner,
-            to   : fixture.archive
-        )
+        try await fixture.publish([publication], sequence: 1)
+        _ = try await fixture.runtime.savePendingArchive(owner: fixture.owner, to: fixture.archive)
         let action = try ActionRequest(
             schemaVersion   : 1,
             requestID       : UUID(),
@@ -678,19 +528,10 @@ struct AddonRuntimeArchiveSaveTests {
                 outcome   : .completed(payload: Data())
             )
         )
-        #expect(
-            await fixture.runtime.archiveFlushState(identity: fixture.installed.verifiedIdentity) == .clean
-        )
-        #expect(
-            try await fixture.runtime.savePendingArchive(
-                owner: fixture.owner,
-                to   : fixture.archive
-            ) == nil
-        )
+        #expect(await fixture.runtime.archiveFlushState(identity: fixture.installed.verifiedIdentity) == .clean)
+        #expect(try await fixture.runtime.savePendingArchive(owner: fixture.owner, to: fixture.archive) == nil)
         await fixture.stop()
     }
-
-
 }
 
 func archiveSavePNG() throws -> Data {
@@ -712,19 +553,9 @@ func archiveSavePNG() throws -> Data {
             intent           : .defaultIntent
         )
     )
-    let destination = try #require(
-        CGImageDestinationCreateWithData(
-            bytes,
-            "public.png" as CFString,
-            1,
-            nil
-        )
-    )
-    CGImageDestinationAddImage(
-        destination,
-        image,
-        nil
-    )
+    let destination = try #require(CGImageDestinationCreateWithData(bytes, "public.png" as CFString, 1, nil))
+    CGImageDestinationAddImage(destination, image, nil)
     #expect(CGImageDestinationFinalize(destination))
+
     return bytes as Data
 }

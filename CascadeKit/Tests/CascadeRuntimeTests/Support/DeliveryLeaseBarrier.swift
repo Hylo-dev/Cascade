@@ -10,9 +10,10 @@ import Testing
 @testable import CascadeRuntime
 
 actor DeliveryLeaseBarrier {
-    private var suspended = false
+
+    private var suspended      = false
     private var enteredWaiters: [CheckedContinuation<Void, Never>] = []
-    private var releaseWaiter: CheckedContinuation<Void, Never>?
+    private var releaseWaiter : CheckedContinuation<Void, Never>?
 
     func suspend() async {
         suspended = true

@@ -9,8 +9,9 @@ import Testing
 @testable import CascadeRuntime
 
 actor WorkspaceHandlerGate {
-    private var arrived = false
-    private var released = false
+
+    private var arrived        = false
+    private var released       = false
     private var arrivalWaiters: [CheckedContinuation<Void, Never>] = []
     private var releaseWaiters: [CheckedContinuation<Void, Never>] = []
 
@@ -19,11 +20,13 @@ actor WorkspaceHandlerGate {
         arrivalWaiters.forEach { $0.resume() }
         arrivalWaiters.removeAll()
         guard !released else { return }
+
         await withCheckedContinuation { releaseWaiters.append($0) }
     }
 
     func waitForArrival() async {
         guard !arrived else { return }
+
         await withCheckedContinuation { arrivalWaiters.append($0) }
     }
 

@@ -11,8 +11,10 @@ import Testing
 
 @Suite
 struct AddonRuntimeSlotOwnershipTests {
+
     /// Fixture uses real action dispatch, governor admission and bounded adapter storage.
     private struct Fixture {
+
         let action             : ActionFixture
         let governor           : ResourceGovernor
         let access             : GatedRuntimeResourceAccess
@@ -23,18 +25,14 @@ struct AddonRuntimeSlotOwnershipTests {
         let directProcessGrowth: Int
 
         init() async throws {
-            action = try ActionFixture()
+            action   = try ActionFixture()
             governor = ResourceGovernor()
-            access = GatedRuntimeResourceAccess(target: governor)
-            adapter = RecordingRuntimeAdapter()
-            runtime = try await AddonRuntime.make(
+            access   = GatedRuntimeResourceAccess(target: governor)
+            adapter  = RecordingRuntimeAdapter()
+            runtime  = try await AddonRuntime.make(
                 catalog    : [action.context().installed],
                 environment: HostEnvironment(
-                    osVersion: SemanticVersion(
-                        14,
-                        0,
-                        0
-                    ),
+                    osVersion       : SemanticVersion(14, 0, 0),
                     hostCapabilities: [:],
                     applications    : [:],
                     grants          : [action.owner: []],
@@ -45,10 +43,7 @@ struct AddonRuntimeSlotOwnershipTests {
                 serviceDecisionFactory: { $0 },
                 adapter               : adapter,
                 clock                 : FixedRuntimeClock(
-                    instant: RuntimeInstant(
-                        wall     : action.wall,
-                        monotonic: .zero
-                    )
+                    instant: RuntimeInstant(wall: action.wall, monotonic: .zero)
                 ),
                 maximumEnvelopeBytes: 8_192
             )
@@ -115,31 +110,14 @@ struct AddonRuntimeSlotOwnershipTests {
         _ = try await fixture.runtime.submitAction(first)
         #expect(try await fixture.runtime.pumpReady())
         let deliveryA = try #require(fixture.adapter.lastAction)
-        #expect(
-            try await fixture.runtime.receiveAcknowledgment(
-                deliveryA,
-                connection: fixture.connection
-            )
-        )
+        #expect(try await fixture.runtime.receiveAcknowledgment(deliveryA, connection: fixture.connection))
         #expect(fixture.adapter.lastAction == nil)
-        #expect(
-            await fixture.governor.usage(
-                .jobs,
-                owner: fixture.action.owner
-            ) == 1
-        )
-        #expect(
-            await fixture.runtime.diagnostics(owner: fixture.action.owner)?.hasOutstandingDelivery == false
-        )
+        #expect(await fixture.governor.usage(.jobs, owner: fixture.action.owner) == 1)
+        #expect(await fixture.runtime.diagnostics(owner: fixture.action.owner)?.hasOutstandingDelivery == false)
         let second = try fixture.request()
         _ = try await fixture.runtime.submitAction(second)
         #expect(try await fixture.runtime.pumpReady() == false)
-        #expect(
-            await fixture.governor.usage(
-                .jobs,
-                owner: fixture.action.owner
-            ) == 1
-        )
+        #expect(await fixture.governor.usage(.jobs, owner: fixture.action.owner) == 1)
         #expect(
             try await fixture.runtime.receiveActionCompletion(
                 deliveryA,
@@ -147,21 +125,11 @@ struct AddonRuntimeSlotOwnershipTests {
                 outcome   : .completed(payload: Data([1]))
             )
         )
-        #expect(
-            await fixture.governor.usage(
-                .jobs,
-                owner: fixture.action.owner
-            ) == 0
-        )
+        #expect(await fixture.governor.usage(.jobs, owner: fixture.action.owner) == 0)
         #expect(try await fixture.runtime.pumpReady())
         let deliveryB = try #require(fixture.adapter.lastAction)
         #expect(deliveryA.ticket.id != deliveryB.ticket.id)
-        #expect(
-            try await fixture.runtime.receiveAcknowledgment(
-                deliveryA,
-                connection: fixture.connection
-            ) == false
-        )
+        #expect(try await fixture.runtime.receiveAcknowledgment(deliveryA, connection: fixture.connection) == false)
         #expect(
             try await fixture.runtime.receiveActionCompletion(
                 deliveryA,
@@ -178,15 +146,11 @@ struct AddonRuntimeSlotOwnershipTests {
             )
         )
         #expect(fixture.adapter.lastAction == nil)
-        #expect(
-            await fixture.governor.usage(
-                .jobs,
-                owner: fixture.action.owner
-            ) == 0
-        )
+        #expect(await fixture.governor.usage(.jobs, owner: fixture.action.owner) == 0)
         await fixture.runtime.stop()
         await fixture.runtime.observeExit(fixture.connection.incarnation)
     }
+
     @Test(arguments: [false, true])
     func publicationCompletionRoutesReleaseOnlyTheirActionCredit(completionOnly: Bool) async throws {
         let fixture = try await Fixture()
@@ -225,12 +189,7 @@ struct AddonRuntimeSlotOwnershipTests {
             sequence  : 2
         )
         #expect(fixture.adapter.lastAction == nil)
-        #expect(
-            await fixture.governor.usage(
-                .jobs,
-                owner: fixture.action.owner
-            ) == 0
-        )
+        #expect(await fixture.governor.usage(.jobs, owner: fixture.action.owner) == 0)
         #expect(!fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation))
         _ = try await fixture.runtime.submitAction(fixture.request(revision: completionOnly ? 1 : 2))
         #expect(try await fixture.runtime.pumpReady())
@@ -244,6 +203,7 @@ struct AddonRuntimeSlotOwnershipTests {
                 sequence  : 3
             )
         }
+
         #expect(fixture.adapter.lastAction == newer)
         #expect(!fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation))
         _ = try await fixture.runtime.receiveActionCompletion(
@@ -265,12 +225,7 @@ struct AddonRuntimeSlotOwnershipTests {
             completion   : nil,
             checkpoint   : nil
         )
-        let ingress = try #require(
-            fixture.adapter.stageIngress(
-                output,
-                incarnation: fixture.connection.incarnation
-            )
-        )
+        let ingress = try #require(fixture.adapter.stageIngress(output, incarnation: fixture.connection.incarnation))
         if refund { await fixture.access.armRelease() } else { await fixture.access.armTemporaryMemory() }
         let receiving = Task {
             try await fixture.runtime.receivePublicationOutput(
@@ -279,6 +234,7 @@ struct AddonRuntimeSlotOwnershipTests {
                 sequence  : 2
             )
         }
+
         await fixture.access.waitForArrival()
         do {
             try #require(fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation))
@@ -291,31 +247,24 @@ struct AddonRuntimeSlotOwnershipTests {
                     sequence  : 2
                 )
             }
+
             #expect(fixture.adapter.ingressTakeAttempts == attempts)
             #expect(fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation))
-            #expect(
-                fixture.adapter.stageIngress(
-                    output,
-                    incarnation: fixture.connection.incarnation
-                ) == nil
-            )
+            #expect(fixture.adapter.stageIngress(output, incarnation: fixture.connection.incarnation) == nil)
         } catch {
             await fixture.access.releaseGate()
             _ = await receiving.result
             throw error
         }
+
         await fixture.access.releaseGate()
         guard case .committed = try await receiving.value else {
             Issue.record("Expected accepted output")
             return
         }
+
         #expect(!fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation))
-        let next = try #require(
-            fixture.adapter.stageIngress(
-                output,
-                incarnation: fixture.connection.incarnation
-            )
-        )
+        let next = try #require(fixture.adapter.stageIngress(output, incarnation: fixture.connection.incarnation))
         _ = try await fixture.runtime.receivePublicationOutput(
             next,
             connection: fixture.connection,
@@ -341,10 +290,7 @@ struct AddonRuntimeSlotOwnershipTests {
         await fixture.access.waitForArrival()
         do {
             let ingress = try #require(
-                fixture.adapter.stageIngress(
-                    output,
-                    incarnation: fixture.connection.incarnation
-                )
+                fixture.adapter.stageIngress(output, incarnation: fixture.connection.incarnation)
             )
             let attempts = fixture.adapter.ingressTakeAttempts
             await #expect(throws: AddonFailure.self) {
@@ -354,6 +300,7 @@ struct AddonRuntimeSlotOwnershipTests {
                     sequence  : 2
                 )
             }
+
             #expect(!fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation))
             #expect(fixture.adapter.ingressTakeAttempts == attempts)
         } catch {
@@ -361,6 +308,7 @@ struct AddonRuntimeSlotOwnershipTests {
             _ = await submitting.result
             throw error
         }
+
         await fixture.access.releaseGate()
         _ = try await submitting.value
         let forged = RuntimeIngressHandle(
@@ -376,6 +324,7 @@ struct AddonRuntimeSlotOwnershipTests {
                 sequence  : 2
             )
         }
+
         #expect(!fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation))
         await fixture.runtime.stop()
         await fixture.runtime.observeExit(fixture.connection.incarnation)
@@ -391,12 +340,7 @@ struct AddonRuntimeSlotOwnershipTests {
             completion   : nil,
             checkpoint   : nil
         )
-        let ingress = try #require(
-            fixture.adapter.stageIngress(
-                output,
-                incarnation: fixture.connection.incarnation
-            )
-        )
+        let ingress = try #require(fixture.adapter.stageIngress(output, incarnation: fixture.connection.incarnation))
         await fixture.access.armRelease()
         let receiving = Task {
             try await fixture.runtime.receivePublicationOutput(
@@ -405,6 +349,7 @@ struct AddonRuntimeSlotOwnershipTests {
                 sequence  : 2
             )
         }
+
         await fixture.access.waitForArrival()
         #expect(fixture.adapter.ingressIsTransferred(ingress))
         if exit {
@@ -412,42 +357,25 @@ struct AddonRuntimeSlotOwnershipTests {
         } else {
             _ = await fixture.runtime.requestStop()
         }
+
         #expect(!fixture.adapter.hasIngress(incarnation: fixture.connection.incarnation))
-        #expect(
-            fixture.adapter.stageIngress(
-                output,
-                incarnation: fixture.connection.incarnation
-            ) == nil
-        )
+        #expect(fixture.adapter.stageIngress(output, incarnation: fixture.connection.incarnation) == nil)
         // Physical capacity survives even observed exit until the accepted cleanup drains.
-        #expect(
-            await fixture.governor.usage(
-                .providers,
-                owner: fixture.action.owner
-            ) == 1
-        )
+        #expect(await fixture.governor.usage(.providers, owner: fixture.action.owner) == 1)
         await fixture.access.releaseGate()
         _ = try await receiving.value
         if !exit {
-            #expect(
-                await fixture.governor.usage(
-                    .providers,
-                    owner: fixture.action.owner
-                ) == 1
-            )
+            #expect(await fixture.governor.usage(.providers, owner: fixture.action.owner) == 1)
             await fixture.runtime.observeExit(fixture.connection.incarnation)
         }
+
         await fixture.runtime.stop()
-        #expect(
-            await fixture.governor.usage(
-                .providers,
-                owner: fixture.action.owner
-            ) == 0
-        )
+        #expect(await fixture.governor.usage(.providers, owner: fixture.action.owner) == 0)
     }
 
     /// ServiceFixture preserves the real one-job ceiling while exercising source/service credits.
     struct ServiceFixture {
+
         let consumer             : InstalledAddon
         let provider             : InstalledAddon
         let action               : ActionFixture
@@ -465,35 +393,23 @@ struct AddonRuntimeSlotOwnershipTests {
         let storageCoordinator: AddonStorageCoordinator?
 
         init(storageRoot: URL? = nil) async throws {
-            let baseConsumer = try installedFixture(
-                "consumer",
-                publisher: "shared.publisher"
-            )
+            let baseConsumer = try installedFixture("consumer", publisher: "shared.publisher")
             consumer = try replacing(
                 baseConsumer,
                 permissions: storageRoot == nil
                     ? baseConsumer.manifest.permissions
                     : [
-                        AddonPermission(
-                            id   : .storageOwn,
-                            scope: .addon
-                        )
+                        AddonPermission(id: .storageOwn, scope: .addon)
                     ]
             )
-            let baseProvider = try installedFixture(
-                "focus",
-                publisher: "shared.publisher"
-            )
-            action = try ActionFixture(ownerName: baseProvider.manifest.id.rawValue)
+            let baseProvider = try installedFixture("focus", publisher: "shared.publisher")
+            action   = try ActionFixture(ownerName: baseProvider.manifest.id.rawValue)
             provider = try replacing(
                 baseProvider,
                 permissions: storageRoot == nil
                     ? baseProvider.manifest.permissions
                     : [
-                        AddonPermission(
-                            id   : .storageOwn,
-                            scope: .addon
-                        )
+                        AddonPermission(id: .storageOwn, scope: .addon)
                     ],
                 features: baseProvider.manifest.features + action.context().installed.manifest.features
             )
@@ -511,19 +427,14 @@ struct AddonRuntimeSlotOwnershipTests {
                         attributes                 : [.posixPermissions: 0o700]
                     )
                 }
+
                 let coordinator = try await AddonStorageCoordinator.make(
                     checkpointRoot: roots[1],
                     keyedRoot     : roots[2],
                     archiveRoot   : roots[3],
                     registrations : [
-                        StateRegistration(
-                            identity            : consumer.verifiedIdentity,
-                            maximumSchemaVersion: 1
-                        ),
-                        StateRegistration(
-                            identity            : provider.verifiedIdentity,
-                            maximumSchemaVersion: 1
-                        ),
+                        StateRegistration(identity: consumer.verifiedIdentity, maximumSchemaVersion: 1),
+                        StateRegistration(identity: provider.verifiedIdentity, maximumSchemaVersion: 1),
                     ],
                     governor: governor
                 )
@@ -532,17 +443,14 @@ struct AddonRuntimeSlotOwnershipTests {
             } else {
                 storageCoordinator = nil
             }
-            access = GatedRuntimeResourceAccess(target: governor)
+
+            access  = GatedRuntimeResourceAccess(target: governor)
             adapter = RecordingRuntimeAdapter()
             let box = RuntimeServiceDecisionAccessBox()
             runtime = try await AddonRuntime.make(
                 catalog    : [consumer, provider],
                 environment: HostEnvironment(
-                    osVersion: SemanticVersion(
-                        14,
-                        0,
-                        0
-                    ),
+                    osVersion       : SemanticVersion(14, 0, 0),
                     hostCapabilities: [:],
                     applications    : [:],
                     grants          : [
@@ -557,19 +465,17 @@ struct AddonRuntimeSlotOwnershipTests {
                 serviceDecisionFactory: { broker in
                     let gate = GatedRuntimeServiceDecisionAccess(target: broker)
                     box.access = gate
+
                     return gate
                 },
                 adapter: adapter,
                 clock  : FixedRuntimeClock(
-                    instant: RuntimeInstant(
-                        wall     : action.wall,
-                        monotonic: .zero
-                    )
+                    instant: RuntimeInstant(wall: action.wall, monotonic: .zero)
                 ),
                 maximumEnvelopeBytes: 8_192,
                 storageCoordinator  : storageCoordinator
             )
-            decisions = try #require(box.access)
+            decisions     = try #require(box.access)
             publicationID = try await runtime.assignPublication(
                 owner     : provider.manifest.id,
                 featureID : "controls",
@@ -582,17 +488,11 @@ struct AddonRuntimeSlotOwnershipTests {
                 contentSchemas: [1]
             )
             let launch = try await runtime.requestLaunch(owner: consumer.manifest.id)
-            consumerConnection = try await runtime.attach(
-                launchID: launch,
-                offer   : offer
-            )
-            permissionID = try await runtime.authorizeService(
-                connection   : consumerConnection,
-                requirementID: "com.example.focus.sessions",
-                scope        : ServiceScope(
-                    featureID: "summary",
-                    operation: "read"
-                ),
+            consumerConnection = try await runtime.attach(launchID: launch, offer: offer)
+            permissionID       = try await runtime.authorizeService(
+                connection           : consumerConnection,
+                requirementID        : "com.example.focus.sessions",
+                scope                : ServiceScope(featureID: "summary", operation: "read"),
                 partition            : "account-a",
                 crossPublisherConsent: true
             )
@@ -610,10 +510,7 @@ struct AddonRuntimeSlotOwnershipTests {
                 try #require(await runtime.diagnostics(owner: provider.manifest.id)).reservedStateBytes
                 - before
             let start = try #require(adapter.lastStart(owner: provider.manifest.id))
-            providerConnection = try await runtime.attach(
-                launchID: start.launchID,
-                offer   : offer
-            )
+            providerConnection = try await runtime.attach(launchID: start.launchID, offer: offer)
             _ = try await receivePublicationOutput(
                 runtime: runtime,
                 adapter: adapter,
@@ -689,6 +586,7 @@ struct AddonRuntimeSlotOwnershipTests {
                 )
             )
         }
+
         let action = try ActionRequest(
             schemaVersion   : 1,
             requestID       : UUID(),
@@ -701,19 +599,9 @@ struct AddonRuntimeSlotOwnershipTests {
         _ = try await fixture.runtime.submitAction(action)
         #expect(try await fixture.runtime.pumpReady())
         let delivery = try #require(fixture.adapter.lastAction)
-        #expect(
-            try await fixture.runtime.receiveAcknowledgment(
-                delivery,
-                connection: fixture.providerConnection
-            )
-        )
+        #expect(try await fixture.runtime.receiveAcknowledgment(delivery, connection: fixture.providerConnection))
         #expect(fixture.adapter.currentDelivery(incarnation: fixture.providerConnection.incarnation) == nil)
-        #expect(
-            await fixture.governor.usage(
-                .jobs,
-                owner: fixture.provider.manifest.id
-            ) == 1
-        )
+        #expect(await fixture.governor.usage(.jobs, owner: fixture.provider.manifest.id) == 1)
         if let acquisition {
             await #expect(throws: AddonFailure.self) {
                 try await fixture.runtime.beginServiceInvocation(
@@ -725,12 +613,8 @@ struct AddonRuntimeSlotOwnershipTests {
         } else {
             await #expect(throws: AddonFailure.self) { try await fixture.acquire() }
         }
-        #expect(
-            await fixture.governor.usage(
-                .jobs,
-                owner: fixture.provider.manifest.id
-            ) == 1
-        )
+
+        #expect(await fixture.governor.usage(.jobs, owner: fixture.provider.manifest.id) == 1)
         #expect(
             try await fixture.runtime.receiveActionCompletion(
                 delivery,
@@ -748,11 +632,10 @@ struct AddonRuntimeSlotOwnershipTests {
             #expect(try await fixture.runtime.pumpServiceInvocation(#require(work).id))
         } else {
             acquisition = try await fixture.acquire()
-            work = nil
+            work        = nil
         }
-        let current = try #require(
-            fixture.adapter.currentDelivery(incarnation: fixture.providerConnection.incarnation)
-        )
+
+        let current = try #require(fixture.adapter.currentDelivery(incarnation: fixture.providerConnection.incarnation))
         if service {
             guard case .service = current else {
                 Issue.record("Expected real service handoff")
@@ -764,11 +647,9 @@ struct AddonRuntimeSlotOwnershipTests {
                 return
             }
         }
+
         #expect(
-            try await fixture.runtime.receiveAcknowledgment(
-                delivery,
-                connection: fixture.providerConnection
-            ) == false
+            try await fixture.runtime.receiveAcknowledgment(delivery, connection: fixture.providerConnection) == false
         )
         #expect(
             try await fixture.runtime.receiveActionCompletion(
@@ -777,9 +658,7 @@ struct AddonRuntimeSlotOwnershipTests {
                 outcome   : .completed(payload: Data())
             ) == false
         )
-        #expect(
-            fixture.adapter.currentDelivery(incarnation: fixture.providerConnection.incarnation) == current
-        )
+        #expect(fixture.adapter.currentDelivery(incarnation: fixture.providerConnection.incarnation) == current)
         if let work {
             _ = try await fixture.runtime.receiveServiceCompletion(
                 work.id,
@@ -794,6 +673,7 @@ struct AddonRuntimeSlotOwnershipTests {
                 )
             )
         }
+
         #expect(fixture.adapter.currentDelivery(incarnation: fixture.providerConnection.incarnation) == nil)
         await fixture.stop()
     }
@@ -818,17 +698,11 @@ struct AddonRuntimeSlotOwnershipTests {
             schemaVersion: 1,
             publications : [],
             operations   : [],
-            completion   : .service(
-                requestID: work.invocation.requestID,
-                response : fixture.response()
-            ),
-            checkpoint: nil
+            completion   : .service(requestID: work.invocation.requestID, response: fixture.response()),
+            checkpoint   : nil
         )
         let ingress = try #require(
-            fixture.adapter.stageIngress(
-                output,
-                incarnation: fixture.providerConnection.incarnation
-            )
+            fixture.adapter.stageIngress(output, incarnation: fixture.providerConnection.incarnation)
         )
         await fixture.decisions.armCompletionPreparation()
         let receiving = Task {
@@ -838,6 +712,7 @@ struct AddonRuntimeSlotOwnershipTests {
                 sequence  : 2
             )
         }
+
         await fixture.decisions.waitForArrival()
         do {
             try #require(fixture.adapter.ingressIsTransferred(ingress))
@@ -849,14 +724,10 @@ struct AddonRuntimeSlotOwnershipTests {
                     sequence  : 2
                 )
             }
+
             #expect(fixture.adapter.ingressTakeAttempts == attempts)
             #expect(fixture.adapter.ingressIsTransferred(ingress))
-            #expect(
-                fixture.adapter.stageIngress(
-                    output,
-                    incarnation: fixture.providerConnection.incarnation
-                ) == nil
-            )
+            #expect(fixture.adapter.stageIngress(output, incarnation: fixture.providerConnection.incarnation) == nil)
             if ending == "stop" { _ = await fixture.runtime.requestStop() }
             if ending == "exit" { await fixture.runtime.observeExit(fixture.providerConnection.incarnation) }
         } catch {
@@ -864,12 +735,14 @@ struct AddonRuntimeSlotOwnershipTests {
             _ = await receiving.result
             throw error
         }
+
         await fixture.decisions.releaseGate()
         if ending == "normal" {
             guard case .committed = try await receiving.value else {
                 Issue.record("Expected deferred commit")
                 return
             }
+
             #expect(!fixture.adapter.hasIngress(incarnation: fixture.providerConnection.incarnation))
             let next = try #require(
                 fixture.adapter.stageIngress(
@@ -892,6 +765,7 @@ struct AddonRuntimeSlotOwnershipTests {
             await #expect(throws: AddonFailure.self) { try await receiving.value }
             #expect(!fixture.adapter.hasIngress(incarnation: fixture.providerConnection.incarnation))
         }
+
         await fixture.stop()
     }
 
@@ -905,6 +779,7 @@ struct AddonRuntimeSlotOwnershipTests {
         if acknowledged {
             #expect(try await fixture.runtime.receiveAcknowledgment(delivery, connection: fixture.connection))
         }
+
         await fixture.runtime.closeConnection(fixture.connection)
         await fixture.runtime.closeConnection(fixture.connection)
         #expect(fixture.adapter.stopCount(incarnation: fixture.connection.incarnation) == 1)
@@ -917,6 +792,7 @@ struct AddonRuntimeSlotOwnershipTests {
         await #expect(throws: AddonFailure.self) {
             _ = try await fixture.runtime.requestLaunch(owner: fixture.action.owner)
         }
+
         await #expect(throws: AddonFailure.self) {
             _ = try await fixture.runtime.receiveActionCompletion(
                 delivery,
@@ -924,6 +800,7 @@ struct AddonRuntimeSlotOwnershipTests {
                 outcome   : .completed(payload: Data())
             )
         }
+
         #expect(await fixture.governor.usage(.jobs, owner: fixture.action.owner) == 1)
         await fixture.runtime.observeExit(RuntimeIncarnation())
         #expect(await fixture.governor.usage(.providers, owner: fixture.action.owner) == 1)
@@ -937,7 +814,7 @@ struct AddonRuntimeSlotOwnershipTests {
 
     @Test
     func consumerConnectionCloseRevokesGrantsButRetainsUncertainServiceCharges() async throws {
-        let fixture = try await ServiceFixture()
+        let fixture     = try await ServiceFixture()
         let acquisition = try await fixture.acquire()
         #expect(try await fixture.runtime.receiveSourceStartupCompletion(
             acquisition.sourceID,
@@ -963,6 +840,7 @@ struct AddonRuntimeSlotOwnershipTests {
                 invocation: fixture.invocation()
             )
         }
+
         await fixture.runtime.observeExit(fixture.consumerConnection.incarnation)
         #expect(await fixture.governor.usage(.providers) == 1)
         #expect(await fixture.governor.usage(.jobs, owner: fixture.provider.manifest.id) == 1)
@@ -976,10 +854,10 @@ struct AddonRuntimeSlotOwnershipTests {
 
     @Test
     func providerConnectionCloseRetainsUncertainSourceAndUnrelatedConsumerAuthority() async throws {
-        let fixture = try await ServiceFixture()
+        let fixture     = try await ServiceFixture()
         let acquisition = try await fixture.acquire()
         // Even forged component handles cannot redirect an authenticated close to the consumer.
-        let current = fixture.providerConnection
+        let current  = fixture.providerConnection
         let supplied = RuntimeConnection(
             token                : current.token,
             incarnation          : current.incarnation,
@@ -1001,6 +879,7 @@ struct AddonRuntimeSlotOwnershipTests {
                 connection: current
             )
         }
+
         _ = try await receivePublicationOutput(
             runtime: fixture.runtime,
             adapter: fixture.adapter,
@@ -1036,33 +915,13 @@ struct AddonRuntimeSlotOwnershipTests {
         let expected = 16 * 1_024 + 8_192 + 32 * 1_024 + 80 * 1_024 + 640
         #expect(direct.directProcessGrowth == expected)
         #expect(indirect.indirectProcessGrowth == expected)
-        #expect(
-            await direct.governor.usage(
-                .providers,
-                owner: direct.action.owner
-            ) == 1
-        )
+        #expect(await direct.governor.usage(.providers, owner: direct.action.owner) == 1)
         _ = await direct.runtime.requestStop()
-        #expect(
-            await direct.governor.usage(
-                .providers,
-                owner: direct.action.owner
-            ) == 1
-        )
+        #expect(await direct.governor.usage(.providers, owner: direct.action.owner) == 1)
         await direct.runtime.stop()
-        #expect(
-            await direct.governor.usage(
-                .providers,
-                owner: direct.action.owner
-            ) == 1
-        )
+        #expect(await direct.governor.usage(.providers, owner: direct.action.owner) == 1)
         await direct.runtime.observeExit(direct.connection.incarnation)
-        #expect(
-            await direct.governor.usage(
-                .providers,
-                owner: direct.action.owner
-            ) == 0
-        )
+        #expect(await direct.governor.usage(.providers, owner: direct.action.owner) == 0)
         await indirect.stop()
     }
 }

@@ -9,5 +9,6 @@ import Foundation
 
 /// RuntimeServiceDecisionAccessBox exposes the wrapper assembled around the runtime's private broker.
 final class RuntimeServiceDecisionAccessBox: @unchecked Sendable {
+
     var access: GatedRuntimeServiceDecisionAccess?
 }

@@ -9,7 +9,9 @@ import Testing
 @testable import CascadeRuntime
 
 actor CountingRuntimeResourceAccess: RuntimeResourceAccess {
+
     nonisolated let resourceGovernorTarget: ResourceGovernor
+
     private(set) var admissionCount = 0
 
     init(target: ResourceGovernor) {
@@ -21,26 +23,20 @@ actor CountingRuntimeResourceAccess: RuntimeResourceAccess {
         owner    : AddonID
     ) async throws -> ResourceReservation {
         admissionCount += 1
-        return try await resourceGovernorTarget.admit(
-            request,
-            owner: owner
-        )
+        return try await resourceGovernorTarget.admit(request, owner: owner)
     }
 
     func release(
         _ reservationID: UUID,
-        owner           : AddonID
+        owner          : AddonID
     ) async throws {
-        try await resourceGovernorTarget.release(
-            reservationID,
-            owner: owner
-        )
+        try await resourceGovernorTarget.release(reservationID, owner: owner)
     }
 
     func reduceStateReservation(
         _ reservationID: UUID,
-        owner           : AddonID,
-        toBytes bytes   : Int
+        owner          : AddonID,
+        toBytes bytes  : Int
     ) async -> Bool {
         await resourceGovernorTarget.reduceStateReservation(
             reservationID,
@@ -51,9 +47,9 @@ actor CountingRuntimeResourceAccess: RuntimeResourceAccess {
 
     func resizeStateReservation(
         _ reservationID: UUID,
-        owner           : AddonID,
-        fromBytes       : Int,
-        toBytes         : Int
+        owner          : AddonID,
+        fromBytes      : Int,
+        toBytes        : Int
     ) async throws -> Bool {
         try await resourceGovernorTarget.resizeStateReservation(
             reservationID,
@@ -62,11 +58,12 @@ actor CountingRuntimeResourceAccess: RuntimeResourceAccess {
             toBytes  : toBytes
         )
     }
+
     func resizeDiskReservation(
         _ reservationID: UUID,
-        owner           : AddonID,
-        fromBytes       : Int,
-        toBytes         : Int
+        owner          : AddonID,
+        fromBytes      : Int,
+        toBytes        : Int
     ) async throws -> Bool {
         try await resourceGovernorTarget.resizeDiskReservation(
             reservationID,
@@ -75,5 +72,4 @@ actor CountingRuntimeResourceAccess: RuntimeResourceAccess {
             toBytes  : toBytes
         )
     }
-
 }

@@ -7,7 +7,9 @@ import Foundation
 import Testing
 @testable import CascadeRuntime
 
-@Suite struct ProcessMetricsCoordinatorTests {
+@Suite
+struct ProcessMetricsCoordinatorTests {
+
     private let executableUUID = UUID(uuid: (
         0x11, 0x11, 0x11, 0x11, 0x22, 0x22, 0x33, 0x33,
         0x44, 0x44, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55
@@ -18,29 +20,29 @@ import Testing
     ))
 
     private func binding(
-        pid   : Int32 = 42,
-        birth : UInt64 = 100,
-        token : UUID = UUID(uuid: (
+        pid  : Int32 = 42,
+        birth: UInt64 = 100,
+        token: UUID = UUID(uuid: (
             0xAA, 0xAA, 0xAA, 0xAA, 0xBB, 0xBB, 0xCC, 0xCC,
             0xDD, 0xDD, 0xEE, 0xEE, 0xEE, 0xEE, 0xEE, 0xEE
         ))
     ) -> ProcessMetricBinding {
         ProcessMetricBinding(
-            pid                : pid,
-            birthAbsoluteTicks : birth,
-            executableUUID     : executableUUID,
-            token              : token,
-            clockDomain        : clockDomain
+            pid               : pid,
+            birthAbsoluteTicks: birth,
+            executableUUID    : executableUUID,
+            token             : token,
+            clockDomain       : clockDomain
         )
     }
 
     private func observation(
-        for binding : ProcessMetricBinding,
-        user        : UInt64,
-        system      : UInt64 = 0,
-        footprint   : UInt64 = 4_096,
-        start       : UInt64,
-        end         : UInt64
+        for binding: ProcessMetricBinding,
+        user       : UInt64,
+        system     : UInt64 = 0,
+        footprint  : UInt64 = 4_096,
+        start      : UInt64,
+        end        : UInt64
     ) -> ProcessMetricObservation {
         ProcessMetricObservation(
             binding       : binding,
@@ -52,12 +54,10 @@ import Testing
         )
     }
 
-    @Test func periodicSamplingGatesReadsAndAdvancesFromNowWithoutCatchUp() async throws {
+    @Test
+    func periodicSamplingGatesReadsAndAdvancesFromNowWithoutCatchUp() async throws {
         let first  = binding()
-        let second = binding(
-            pid   : 43,
-            token : alternateToken
-        )
+        let second = binding(pid: 43, token: alternateToken)
         let source = MetricReadSource([
             first.token : [.sample(observation(for: first, user: 10, start: 200, end: 201))],
             second.token: [.sample(observation(for: second, user: 20, start: 200, end: 201))]
@@ -79,9 +79,10 @@ import Testing
         #expect(await coordinator.nextDeadline == .seconds(4))
     }
 
-    @Test func reducersProduceBaselineThenInterval() async throws {
+    @Test
+    func reducersProduceBaselineThenInterval() async throws {
         let expected = binding()
-        let source = MetricReadSource([
+        let source   = MetricReadSource([
             expected.token: [
                 .sample(observation(for: expected, user: 10, start: 200, end: 201)),
                 .sample(observation(for: expected, user: 16, system: 4, start: 300, end: 301))
@@ -92,18 +93,17 @@ import Testing
 
         let baseline = try #require(try await coordinator.sampleIfDue(at: .seconds(1)))
         #expect(baseline.samples.first?.reduction.status == .baseline)
+
         let interval = try #require(try await coordinator.sampleIfDue(at: .seconds(2)))
         #expect(interval.samples.first?.reduction.status == .interval)
         #expect(interval.samples.first?.reduction.interval?.cpuNanoseconds == 10)
         #expect(interval.samples.first?.reduction.interval?.elapsedNanoseconds == 100)
     }
 
-    @Test func unavailableBindingDoesNotBlockAnotherReduction() async throws {
+    @Test
+    func unavailableBindingDoesNotBlockAnotherReduction() async throws {
         let failed = binding()
-        let valid  = binding(
-            pid   : 43,
-            token : alternateToken
-        )
+        let valid  = binding(pid: 43, token: alternateToken)
         let source = MetricReadSource([
             failed.token: [.unavailable(.readFailed(5))],
             valid.token : [.sample(observation(for: valid, user: 10, start: 200, end: 201))]
@@ -113,7 +113,9 @@ import Testing
         try await coordinator.register(valid, at: .zero)
 
         let batch = try #require(try await coordinator.sampleIfDue(at: .seconds(1)))
-        #expect(batch.samples.first(where: { $0.binding == failed })?.reduction.status == .unavailable(.readFailed(5)))
+        #expect(
+            batch.samples.first(where: { $0.binding == failed })?.reduction.status == .unavailable(.readFailed(5))
+        )
         #expect(batch.samples.first(where: { $0.binding == valid })?.reduction.status == .baseline)
     }
 
@@ -122,11 +124,8 @@ import Testing
         failure: ProcessMetricFailure
     ) async throws {
         let retired = binding()
-        let active  = binding(
-            pid   : 43,
-            token : alternateToken
-        )
-        let source = MetricReadSource([
+        let active  = binding(pid: 43, token: alternateToken)
+        let source  = MetricReadSource([
             retired.token: [.unavailable(failure)],
             active.token : [
                 .sample(observation(for: active, user: 10, start: 200, end: 201)),
@@ -138,26 +137,39 @@ import Testing
         try await coordinator.register(active, at: .zero)
 
         let first = try #require(try await coordinator.sampleIfDue(at: .seconds(1)))
-        #expect(first.samples.first(where: { $0.binding == retired })?.reduction.status == .unavailable(failure))
+        #expect(
+            first.samples.first(where: { $0.binding == retired })?.reduction.status == .unavailable(failure)
+        )
+
         _ = try await coordinator.sampleIfDue(at: .seconds(2))
         #expect(source.bindings.filter { $0 == retired }.count == 1)
         #expect(source.bindings.filter { $0 == active }.count == 2)
         #expect(await coordinator.registeredCount == 1)
 
-        let replacement = binding(pid: retired.pid, birth: 101, token: retired.token)
+        let replacement = binding(
+            pid  : retired.pid,
+            birth: 101,
+            token: retired.token
+        )
         try await coordinator.register(replacement, at: .milliseconds(2_500))
         #expect(await coordinator.unregister(retired) == false)
         #expect(await coordinator.registeredCount == 2)
     }
 
-    @Test func exactOwnershipRejectsConflictsAndStaleUnregister() async throws {
-        let original = binding()
-        let tokenConflict = binding(pid: 43, birth: 101, token: original.token)
-        let pidConflict = binding(
-            pid   : original.pid,
-            birth : 101,
-            token : alternateToken
+    @Test
+    func exactOwnershipRejectsConflictsAndStaleUnregister() async throws {
+        let original      = binding()
+        let tokenConflict = binding(
+            pid  : 43,
+            birth: 101,
+            token: original.token
         )
+        let pidConflict   = binding(
+            pid  : original.pid,
+            birth: 101,
+            token: alternateToken
+        )
+
         let coordinator = ProcessMetricsCoordinator(read: { _ in .unavailable(.readFailed(5)) })
         try await coordinator.register(original, at: .zero)
 
@@ -172,9 +184,10 @@ import Testing
         #expect(await coordinator.registeredCount == 0)
     }
 
-    @Test func duplicateRegistrationPreservesReducerBaseline() async throws {
+    @Test
+    func duplicateRegistrationPreservesReducerBaseline() async throws {
         let expected = binding()
-        let source = MetricReadSource([
+        let source   = MetricReadSource([
             expected.token: [
                 .sample(observation(for: expected, user: 10, start: 200, end: 201)),
                 .sample(observation(for: expected, user: 20, start: 300, end: 301))
@@ -182,6 +195,7 @@ import Testing
         ])
         let coordinator = ProcessMetricsCoordinator(read: source.read)
         try await coordinator.register(expected, at: .zero)
+
         _ = try await coordinator.sampleIfDue(at: .seconds(1))
         #expect(try await coordinator.register(expected, at: .milliseconds(1_500)) == .duplicate)
 
@@ -190,8 +204,9 @@ import Testing
         #expect(source.bindings.count == 2)
     }
 
-    @Test func duplicateRegistrationAdvancesAcceptedClockWithoutMovingDeadline() async throws {
-        let expected = binding()
+    @Test
+    func duplicateRegistrationAdvancesAcceptedClockWithoutMovingDeadline() async throws {
+        let expected    = binding()
         let coordinator = ProcessMetricsCoordinator(read: { _ in .unavailable(.readFailed(5)) })
         try await coordinator.register(expected, at: .zero)
         #expect(try await coordinator.register(expected, at: .milliseconds(500)) == .duplicate)
@@ -202,9 +217,10 @@ import Testing
         #expect(await coordinator.nextDeadline == .seconds(1))
     }
 
-    @Test func zeroAndFullCapacityRejectWithoutEviction() async throws {
+    @Test
+    func zeroAndFullCapacityRejectWithoutEviction() async throws {
         let expected = binding()
-        let zero = ProcessMetricsCoordinator(capacity: 0, read: { _ in .unavailable(.readFailed(5)) })
+        let zero     = ProcessMetricsCoordinator(capacity: 0, read: { _ in .unavailable(.readFailed(5)) })
         await #expect(throws: ProcessMetricsCoordinator.Failure.capacityReached) {
             try await zero.register(expected, at: .zero)
         }
@@ -212,10 +228,8 @@ import Testing
 
         let one = ProcessMetricsCoordinator(capacity: 1, read: { _ in .unavailable(.readFailed(5)) })
         try await one.register(expected, at: .zero)
-        let excess = binding(
-            pid   : 43,
-            token : alternateToken
-        )
+
+        let excess = binding(pid: 43, token: alternateToken)
         await #expect(throws: ProcessMetricsCoordinator.Failure.capacityReached) {
             try await one.register(excess, at: .zero)
         }
@@ -223,7 +237,8 @@ import Testing
         #expect(await one.unregister(expected))
     }
 
-    @Test func capacityIsClampedAndMalformedBindingsAreNeverRetained() async throws {
+    @Test
+    func capacityIsClampedAndMalformedBindingsAreNeverRetained() async throws {
         let coordinator = ProcessMetricsCoordinator(capacity: Int.max, read: { _ in
             .unavailable(.readFailed(5))
         })
@@ -231,39 +246,40 @@ import Testing
             let current = binding(pid: Int32(index + 1), token: uniqueToken(index))
             try await coordinator.register(current, at: .zero)
         }
+
         await #expect(throws: ProcessMetricsCoordinator.Failure.capacityReached) {
-            try await coordinator.register(
-                binding(pid: 1_025, token: uniqueToken(1_024)),
-                at: .zero
-            )
+            try await coordinator.register(binding(pid: 1_025, token: uniqueToken(1_024)), at: .zero)
         }
         #expect(await coordinator.registeredCount == 1_024)
 
         let malformed = ProcessMetricsCoordinator(read: { _ in .unavailable(.readFailed(5)) })
-        let zero = ProcessMetricBinding.zeroUUID
-        let invalid = [
+        let zero      = ProcessMetricBinding.zeroUUID
+        let invalid   = [
             binding(pid: 0),
             binding(token: zero),
             ProcessMetricBinding(
-                pid                : 42,
-                birthAbsoluteTicks : 100,
-                executableUUID     : executableUUID,
-                token              : uniqueToken(2_000),
-                clockDomain        : zero
+                pid               : 42,
+                birthAbsoluteTicks: 100,
+                executableUUID    : executableUUID,
+                token             : uniqueToken(2_000),
+                clockDomain       : zero
             )
         ]
+
         for candidate in invalid {
             await #expect(throws: ProcessMetricsCoordinator.Failure.invalidBinding) {
                 try await malformed.register(candidate, at: .zero)
             }
         }
+
         #expect(await malformed.registeredCount == 0)
         #expect(await malformed.nextDeadline == nil)
     }
 
-    @Test func explicitReregistrationStartsANewBaseline() async throws {
+    @Test
+    func explicitReregistrationStartsANewBaseline() async throws {
         let expected = binding()
-        let source = MetricReadSource([
+        let source   = MetricReadSource([
             expected.token: [
                 .sample(observation(for: expected, user: 10, start: 200, end: 201)),
                 .sample(observation(for: expected, user: 20, start: 300, end: 301))
@@ -272,16 +288,19 @@ import Testing
         let coordinator = ProcessMetricsCoordinator(read: source.read)
         try await coordinator.register(expected, at: .zero)
         _ = try await coordinator.sampleIfDue(at: .seconds(1))
+
         #expect(await coordinator.unregister(expected))
+
         try await coordinator.register(expected, at: .milliseconds(1_500))
 
         let batch = try #require(try await coordinator.sampleIfDue(at: .milliseconds(2_500)))
         #expect(batch.samples.first?.reduction.status == .baseline)
     }
 
-    @Test func boundarySamplesDoNotPostponePeriodicDeadline() async throws {
+    @Test
+    func boundarySamplesDoNotPostponePeriodicDeadline() async throws {
         let expected = binding()
-        let source = MetricReadSource([
+        let source   = MetricReadSource([
             expected.token: [
                 .sample(observation(for: expected, user: 10, start: 200, end: 201)),
                 .sample(observation(for: expected, user: 20, start: 300, end: 301)),
@@ -293,17 +312,20 @@ import Testing
 
         let job = try await coordinator.sampleAll(reason: .jobBoundary, at: .milliseconds(500))
         #expect(job.samples.first?.reduction.status == .baseline)
+
         let pressure = try await coordinator.sampleAll(reason: .memoryPressure, at: .milliseconds(750))
         #expect(pressure.samples.first?.reduction.status == .interval)
         #expect(await coordinator.nextDeadline == .seconds(1))
+
         let periodic = try #require(try await coordinator.sampleIfDue(at: .seconds(1)))
         #expect(periodic.samples.first?.reduction.status == .interval)
         #expect(await coordinator.nextDeadline == .seconds(2))
     }
 
-    @Test func wakeResetClearsContinuityWithoutReadingAndIdleDisarms() async throws {
+    @Test
+    func wakeResetClearsContinuityWithoutReadingAndIdleDisarms() async throws {
         let expected = binding()
-        let source = MetricReadSource([
+        let source   = MetricReadSource([
             expected.token: [
                 .sample(observation(for: expected, user: 10, start: 200, end: 201)),
                 .sample(observation(for: expected, user: 20, start: 300, end: 301))
@@ -312,6 +334,7 @@ import Testing
         let coordinator = ProcessMetricsCoordinator(read: source.read)
         try await coordinator.register(expected, at: .zero)
         _ = try await coordinator.sampleIfDue(at: .seconds(1))
+
         try await coordinator.resetAfterWake(at: .milliseconds(1_500))
         #expect(source.bindings.count == 1)
         #expect(await coordinator.nextDeadline == .milliseconds(2_500))
@@ -323,9 +346,10 @@ import Testing
         #expect(try await coordinator.sampleIfDue(at: .seconds(3)) == nil)
     }
 
-    @Test func invalidOrBackwardTimeDoesNotReadOrAdvanceDeadline() async throws {
+    @Test
+    func invalidOrBackwardTimeDoesNotReadOrAdvanceDeadline() async throws {
         let expected = binding()
-        let source = MetricReadSource([
+        let source   = MetricReadSource([
             expected.token: [.sample(observation(for: expected, user: 10, start: 200, end: 201))]
         ])
         let coordinator = ProcessMetricsCoordinator(read: source.read)
@@ -338,30 +362,32 @@ import Testing
         await #expect(throws: ProcessMetricsCoordinator.Failure.invalidMonotonicTime) {
             try await coordinator.sampleIfDue(at: .seconds(Int64.max))
         }
+
         let huge = Duration.seconds(Int64.max) + .seconds(1)
         await #expect(throws: ProcessMetricsCoordinator.Failure.invalidMonotonicTime) {
             try await coordinator.sampleIfDue(at: huge)
         }
+
         #expect(source.bindings.isEmpty)
         #expect(await coordinator.nextDeadline == .seconds(11))
     }
 
-    @Test func fractionalDurationRejectsBackwardTimeAndNeverFiresEarly() async throws {
+    @Test
+    func fractionalDurationRejectsBackwardTimeAndNeverFiresEarly() async throws {
         let expected = binding()
-        let source = MetricReadSource([
+        let source   = MetricReadSource([
             expected.token: [.sample(observation(for: expected, user: 10, start: 200, end: 201))]
         ])
-        let cadence = Duration(secondsComponent: 1, attosecondsComponent: 800_000_000)
-        let start   = Duration(secondsComponent: 0, attosecondsComponent: 1_900_000_000)
-        let deadline = start + cadence
+        let cadence     = Duration(secondsComponent: 1, attosecondsComponent: 800_000_000)
+        let start       = Duration(secondsComponent: 0, attosecondsComponent: 1_900_000_000)
+        let deadline    = start + cadence
         let coordinator = ProcessMetricsCoordinator(cadence: cadence, read: source.read)
         try await coordinator.register(expected, at: start)
 
         await #expect(throws: ProcessMetricsCoordinator.Failure.invalidMonotonicTime) {
-            try await coordinator.sampleIfDue(
-                at: Duration(secondsComponent: 0, attosecondsComponent: 1_100_000_000)
-            )
+            try await coordinator.sampleIfDue(at: Duration(secondsComponent: 0, attosecondsComponent: 1_100_000_000))
         }
+
         let early = deadline - Duration(secondsComponent: 0, attosecondsComponent: 100_000_000)
         #expect(try await coordinator.sampleIfDue(at: early) == nil)
         #expect(source.bindings.isEmpty)

@@ -11,6 +11,7 @@ import Testing
 
 @Suite(.timeLimit(.minutes(1)))
 struct AddonRuntimeArchiveFlushTests {
+
     @Test
     func acceptedRevisionsCoalesceIntoOneGenerationAndRestoreInAFreshRuntime() async throws {
         let fixture = try await ArchiveFlushFixture.make()
@@ -21,18 +22,15 @@ struct AddonRuntimeArchiveFlushTests {
                 sequence    : UInt64(revision + 1)
             )
         }
+
         #expect(await fixture.state() == .pending)
         let result = try await fixture.coordinator.flushNextArchive(runtime: fixture.runtime)
-        guard
-            case .committed(
-                let owner,
-                let outcome
-            ) = result
-        else {
+        guard case .committed(let owner, let outcome) = result else {
             Issue.record("An accepted canonical change was not flushed.")
             await fixture.stop()
             return
         }
+
         #expect(owner == fixture.owners[0] && outcome.revision == 1)
         #expect(await fixture.state() == .clean)
         #expect(try await fixture.coordinator.flushNextArchive(runtime: fixture.runtime) == .noCommit)
@@ -41,10 +39,7 @@ struct AddonRuntimeArchiveFlushTests {
         let restored   = try await fixture.freshRuntime()
         let capability = try await fixture.coordinator.owner(for: fixture.installed[0].verifiedIdentity)
         #expect(
-            try await fixture.coordinator.restoreArchive(
-                owner  : capability,
-                runtime: restored
-            )
+            try await fixture.coordinator.restoreArchive(owner: capability, runtime: restored)
                 == .restored(
                     revision: 1,
                     active  : 1,
@@ -56,6 +51,7 @@ struct AddonRuntimeArchiveFlushTests {
         await restored.stop()
         #expect(try await fixture.coordinator.close() == .closed)
     }
+
     @Test(arguments: [Publication.Kind.widget, .activity, .notice])
     func sameBatchTerminalHistoryMarksOnlyDurableKinds(_ kind: Publication.Kind) async throws {
         let fixture = try await ArchiveFlushFixture.make()
@@ -79,6 +75,7 @@ struct AddonRuntimeArchiveFlushTests {
             )
             #expect(await fixture.state() == .clean)
         }
+
         await fixture.stop()
     }
 
@@ -86,34 +83,23 @@ struct AddonRuntimeArchiveFlushTests {
     func noticeEmptyRejectedOutputAndTimelineProjectionDoNotCreatePendingWork() async throws {
         let fixture = try await ArchiveFlushFixture.make()
         defer { fixture.removeFiles() }
-        try await fixture.send(
-            publications: [fixture.publication(kind: .notice)],
-            sequence    : 1
-        )
+        try await fixture.send(publications: [fixture.publication(kind: .notice)], sequence: 1)
         try await fixture.send(sequence: 2)
         _ = await fixture.runtime.snapshot(at: fixture.wall)
         #expect(await fixture.state() == .clean)
         await #expect(throws: (any Error).self) {
-            try await fixture.send(
-                publications: [fixture.publication(kind: .notice)],
-                sequence    : 3
-            )
+            try await fixture.send(publications: [fixture.publication(kind: .notice)], sequence: 3)
         }
+
         #expect(await fixture.state() == .clean)
         await fixture.stop()
 
         let timeline = try await ArchiveFlushFixture.make()
         defer { timeline.removeFiles() }
-        try await timeline.send(
-            publications: [timeline.publication(timeline: true)],
-            sequence    : 1
-        )
+        try await timeline.send(publications: [timeline.publication(timeline: true)], sequence: 1)
         _ = try await timeline.coordinator.flushNextArchive(runtime: timeline.runtime)
         timeline.clock.set(
-            RuntimeInstant(
-                wall     : timeline.wall.addingTimeInterval(20),
-                monotonic: .seconds(20)
-            )
+            RuntimeInstant(wall: timeline.wall.addingTimeInterval(20), monotonic: .seconds(20))
         )
         _ = try await timeline.runtime.serviceDeadlines()
         _ = await timeline.runtime.snapshot(at: timeline.wall.addingTimeInterval(20))
@@ -126,25 +112,17 @@ struct AddonRuntimeArchiveFlushTests {
     func expiryOrEndThenPruningReplaceTheOldLiveGeneration(_ expire: Bool) async throws {
         let fixture = try await ArchiveFlushFixture.make()
         defer { fixture.removeFiles() }
-        try await fixture.send(
-            publications: [fixture.publication()],
-            sequence    : 1
-        )
+        try await fixture.send(publications: [fixture.publication()], sequence: 1)
         _ = try await fixture.coordinator.flushNextArchive(runtime: fixture.runtime)
         if expire {
             fixture.clock.set(
-                RuntimeInstant(
-                    wall     : fixture.wall.addingTimeInterval(100),
-                    monotonic: .seconds(100)
-                )
+                RuntimeInstant(wall: fixture.wall.addingTimeInterval(100), monotonic: .seconds(100))
             )
             _ = try await fixture.runtime.serviceDeadlines()
         } else {
-            try await fixture.send(
-                operations: [.endPublication(fixture.ids[0])],
-                sequence  : 2
-            )
+            try await fixture.send(operations: [.endPublication(fixture.ids[0])], sequence: 2)
         }
+
         #expect(await fixture.state() == .pending)
         #expect(
             fixture.isCommit(
@@ -168,10 +146,7 @@ struct AddonRuntimeArchiveFlushTests {
         let restored   = try await fixture.freshRuntime()
         let capability = try await fixture.coordinator.owner(for: fixture.installed[0].verifiedIdentity)
         #expect(
-            try await fixture.coordinator.restoreArchive(
-                owner  : capability,
-                runtime: restored
-            )
+            try await fixture.coordinator.restoreArchive(owner: capability, runtime: restored)
                 == .restored(
                     revision: 3,
                     active  : 0,
@@ -187,14 +162,8 @@ struct AddonRuntimeArchiveFlushTests {
     func lazyStartDebtSuppressesOneGenerationAndExplicitSaveRetriesIt() async throws {
         let fixture = try await ArchiveFlushFixture.make()
         defer { fixture.removeFiles() }
-        try await fixture.send(
-            publications: [fixture.publication()],
-            sequence    : 1
-        )
-        let token = try await fixture.governor.admitObservedDisk(
-            bytes: 0,
-            owner: fixture.owners[0]
-        )
+        try await fixture.send(publications: [fixture.publication()], sequence: 1)
+        let token = try await fixture.governor.admitObservedDisk(bytes: 0, owner: fixture.owners[0])
         _ = try await fixture.governor.reconcileObservedDisk(
             token,
             owner        : fixture.owners[0],
@@ -207,11 +176,13 @@ struct AddonRuntimeArchiveFlushTests {
         } catch let error as AddonStorageCoordinator.ArchiveFlushFailure {
             #expect(error == .runtime(.resourceDenied))
         }
+
         #expect(await fixture.state() == .retryRequired)
         let retained = await fixture.governor.usage(.retainedStateBytes)
         for _ in 0..<4 {
             #expect(try await fixture.coordinator.flushNextArchive(runtime: fixture.runtime) == .noCommit)
         }
+
         #expect(await fixture.governor.usage(.retainedStateBytes) == retained)
         _ = try await fixture.governor.reconcileObservedDisk(
             token,
@@ -219,22 +190,11 @@ struct AddonRuntimeArchiveFlushTests {
             fromBytes    : 100 * 1_024 * 1_024,
             measuredBytes: 0
         )
-        try await fixture.governor.completeObservedDisk(
-            token,
-            owner: fixture.owners[0]
-        )
+        try await fixture.governor.completeObservedDisk(token, owner: fixture.owners[0])
         let capability = try await fixture.coordinator.owner(for: fixture.installed[0].verifiedIdentity)
-        #expect(
-            try await fixture.coordinator.saveArchive(
-                owner  : capability,
-                runtime: fixture.runtime
-            ).revision == 1
-        )
+        #expect(try await fixture.coordinator.saveArchive(owner: capability, runtime: fixture.runtime).revision == 1)
         #expect(await fixture.state() == .clean)
-        try await fixture.send(
-            publications: [fixture.publication(revision: 1)],
-            sequence    : 2
-        )
+        try await fixture.send(publications: [fixture.publication(revision: 1)], sequence: 2)
         #expect(await fixture.state() == .pending)
         await fixture.stop()
     }
@@ -250,10 +210,8 @@ struct AddonRuntimeArchiveFlushTests {
                 sequence    : 1
             )
         }
-        let token = try await fixture.governor.admitObservedDisk(
-            bytes: 0,
-            owner: fixture.owners[0]
-        )
+
+        let token = try await fixture.governor.admitObservedDisk(bytes: 0, owner: fixture.owners[0])
         _ = try await fixture.governor.reconcileObservedDisk(
             token,
             owner        : fixture.owners[0],
@@ -263,11 +221,9 @@ struct AddonRuntimeArchiveFlushTests {
         await #expect(throws: AddonStorageCoordinator.ArchiveFlushFailure.self) {
             try await fixture.coordinator.flushNextArchive(runtime: fixture.runtime)
         }
+
         #expect(await fixture.state() == .retryRequired)
-        try await fixture.send(
-            publications: [fixture.publication(revision: 1)],
-            sequence    : 2
-        )
+        try await fixture.send(publications: [fixture.publication(revision: 1)], sequence: 2)
         #expect(await fixture.state() == .pending)
         #expect(
             fixture.isCommit(
@@ -284,10 +240,7 @@ struct AddonRuntimeArchiveFlushTests {
             fromBytes    : 20 * 1_024 * 1_024,
             measuredBytes: 0
         )
-        try await fixture.governor.completeObservedDisk(
-            token,
-            owner: fixture.owners[0]
-        )
+        try await fixture.governor.completeObservedDisk(token, owner: fixture.owners[0])
         #expect(
             fixture.isCommit(
                 try await fixture.coordinator.flushNextArchive(runtime: fixture.runtime),
@@ -302,15 +255,9 @@ struct AddonRuntimeArchiveFlushTests {
     func busyRuntimeLeavesThePendingGenerationEligible() async throws {
         let governor = ResourceGovernor()
         let gate     = GatedRuntimeResourceAccess(target: governor)
-        let fixture  = try await ArchiveFlushFixture.make(
-            governor: governor,
-            access  : gate
-        )
+        let fixture  = try await ArchiveFlushFixture.make(governor: governor, access: gate)
         defer { fixture.removeFiles() }
-        try await fixture.send(
-            publications: [fixture.publication()],
-            sequence    : 1
-        )
+        try await fixture.send(publications: [fixture.publication()], sequence: 1)
         await fixture.runtime.observeExit(fixture.connections[0].incarnation)
         #expect(await fixture.state() == .pending)
         await gate.armResize()
@@ -326,6 +273,7 @@ struct AddonRuntimeArchiveFlushTests {
                 throw error
             }
         }
+
         await gate.waitForArrival()
         #expect(await fixture.state() == .busy)
         #expect(try await fixture.coordinator.flushNextArchive(runtime: fixture.runtime) == .noCommit)
@@ -345,16 +293,15 @@ struct AddonRuntimeArchiveFlushTests {
             storage.removeFiles()
             provider.removeFiles()
         }
-        try await provider.send(
-            publications: [provider.publication()],
-            sequence    : 1
-        )
+
+        try await provider.send(publications: [provider.publication()], sequence: 1)
         do {
             _ = try await storage.coordinator.flushNextArchive(runtime: provider.runtime)
             Issue.record("A foreign governor reached the private archive.")
         } catch let error as AddonStorageCoordinator.ArchiveFlushFailure {
             #expect(error == .runtime(.permissionDenied))
         }
+
         #expect(await provider.state() == .pending)
         #expect(try FileManager.default.contentsOfDirectory(atPath: storage.archiveRoot.path).isEmpty)
         _ = try await provider.coordinator.flushNextArchive(runtime: provider.runtime)
@@ -377,25 +324,19 @@ struct AddonRuntimeArchiveFlushTests {
                     keyedRoot     : root.appendingPathComponent("keyed"),
                     archiveRoot   : root.appendingPathComponent("archive"),
                     registrations : [
-                        StateRegistration(
-                            identity            : installed.verifiedIdentity,
-                            maximumSchemaVersion: 1
-                        )
+                        StateRegistration(identity: installed.verifiedIdentity, maximumSchemaVersion: 1)
                     ],
                     governor: governor
                 )
             }
+
             #expect(!FileManager.default.fileExists(atPath: root.path))
         } else {
             await #expect(throws: AddonFailure.self) {
                 try await AddonRuntime.make(
                     catalog    : [installed],
                     environment: HostEnvironment(
-                        osVersion: SemanticVersion(
-                            14,
-                            0,
-                            0
-                        ),
+                        osVersion       : SemanticVersion(14, 0, 0),
                         hostCapabilities: [:],
                         applications    : [:],
                         grants          : [base.owner: []],
@@ -403,15 +344,11 @@ struct AddonRuntimeArchiveFlushTests {
                     ),
                     governor: governor,
                     adapter : RecordingRuntimeAdapter(),
-                    clock   : MutableRuntimeClock(
-                        instant: RuntimeInstant(
-                            wall     : base.wall,
-                            monotonic: .zero
-                        )
-                    )
+                    clock   : MutableRuntimeClock(instant: RuntimeInstant(wall: base.wall, monotonic: .zero))
                 )
             }
         }
+
         #expect(await governor.usage(.retainedStateBytes) == 0)
         #expect(await governor.usage(.admittedMemoryBytes) == 0)
     }
@@ -421,15 +358,9 @@ struct AddonRuntimeArchiveFlushTests {
         let observer = FlushArchiveObserver()
         let fixture  = try await ArchiveFlushFixture.make(observer: observer)
         defer { fixture.removeFiles() }
-        try await fixture.send(
-            publications: [fixture.publication()],
-            sequence    : 1
-        )
+        try await fixture.send(publications: [fixture.publication()], sequence: 1)
         _ = try await fixture.coordinator.flushNextArchive(runtime: fixture.runtime)
-        try await fixture.send(
-            publications: [fixture.publication(revision: 1)],
-            sequence    : 2
-        )
+        try await fixture.send(publications: [fixture.publication(revision: 1)], sequence: 2)
         await observer.arm(after: 5)
         let flushing = Task { try await fixture.coordinator.flushNextArchive(runtime: fixture.runtime) }
         await observer.waitForArrival()
@@ -438,6 +369,7 @@ struct AddonRuntimeArchiveFlushTests {
         } else {
             flushing.cancel()
         }
+
         await observer.release()
         #expect(
             fixture.isCommit(
@@ -449,5 +381,4 @@ struct AddonRuntimeArchiveFlushTests {
         #expect(await fixture.state() == .clean)
         await fixture.stop()
     }
-
 }

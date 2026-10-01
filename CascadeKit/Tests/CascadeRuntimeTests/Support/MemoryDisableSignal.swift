@@ -9,6 +9,7 @@ import Testing
 @testable import CascadeRuntime
 
 final class MemoryDisableSignal: @unchecked Sendable {
+
     private let arrived = DispatchSemaphore(value: 0)
 
     func signal() {

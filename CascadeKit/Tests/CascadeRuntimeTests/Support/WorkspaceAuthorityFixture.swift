@@ -9,7 +9,9 @@ import Testing
 @testable import CascadeRuntime
 
 struct WorkspaceAuthorityFixture {
+
     struct Admission {
+
         let permissionID: UUID
         let session     : ServiceSession
         let acquisition : ServiceAcquisition
@@ -18,24 +20,23 @@ struct WorkspaceAuthorityFixture {
     let builtin : VerifiedAddonIdentity
     let external: VerifiedAddonIdentity
     let provider: VerifiedAddonIdentity
-    let now = RuntimeInstant(
-        wall     : Date(timeIntervalSince1970: 1_000),
-        monotonic: .seconds(10)
-    )
+
+    let now = RuntimeInstant(wall: Date(timeIntervalSince1970: 1_000), monotonic: .seconds(10))
+
     let snapshot: FileWorkspaceSnapshot
 
     init() throws {
         builtin = VerifiedAddonIdentity(
             publisher: "cascade",
-            addonID   : try #require(AddonID(rawValue: "com.example.builtin"))
+            addonID  : try #require(AddonID(rawValue: "com.example.builtin"))
         )
         external = VerifiedAddonIdentity(
             publisher: "outside",
-            addonID   : try #require(AddonID(rawValue: "com.example.external"))
+            addonID  : try #require(AddonID(rawValue: "com.example.external"))
         )
         provider = VerifiedAddonIdentity(
             publisher: "cascade",
-            addonID   : try #require(AddonID(rawValue: "com.example.files"))
+            addonID  : try #require(AddonID(rawValue: "com.example.files"))
         )
         snapshot = try FileWorkspaceSnapshot(
             revision  : 4,
@@ -51,33 +52,32 @@ struct WorkspaceAuthorityFixture {
         broker  : ServiceBroker
     ) async throws -> Admission {
         let permission = HostServicePermission(
-            consumer: consumer,
-            binding : ServiceBinding(
-                requirementID  : "files",
-                consumer       : consumer.addonID,
-                provider       : provider.addonID,
+            consumer             : consumer,
+            binding              : ServiceBinding(
+                requirementID   : "files",
+                consumer        : consumer.addonID,
+                provider        : provider.addonID,
                 providerIdentity: provider,
-                contractVersion: SemanticVersion(1, 0, 0),
-                digest         : "sha256-workspace",
-                featureID      : "workspace"
+                contractVersion : SemanticVersion(1, 0, 0),
+                digest          : "sha256-workspace",
+                featureID       : "workspace"
             ),
-            serviceID           : "files.workspace",
-            partition           : "account",
-            operation           : "command",
+            serviceID            : "files.workspace",
+            partition            : "account",
+            operation            : "command",
             crossPublisherConsent: true
         )
+
         let permissionID = try await broker.authorize(permission)
-        let session = try await broker.registerSession(identity: consumer)
-        let acquisition = try await broker.acquire(
+        let session      = try await broker.registerSession(identity: consumer)
+        let acquisition  = try await broker.acquire(
             session      : session,
             requirementID: "files",
-            scope        : ServiceScope(
-                featureID: "workspace",
-                operation: "command"
-            ),
-            now     : now,
-            lifetime: .seconds(30)
+            scope        : ServiceScope(featureID: "workspace", operation: "command"),
+            now          : now,
+            lifetime     : .seconds(30)
         )
+
         return Admission(
             permissionID: permissionID,
             session     : session,
@@ -116,7 +116,7 @@ struct WorkspaceAuthorityFixture {
                 payload      : payload,
                 deadline     : now.wall.addingTimeInterval(20)
             ),
-            now: now
+            now       : now
         )
     }
 
@@ -131,6 +131,7 @@ struct WorkspaceAuthorityFixture {
                 thumbnailAssetID: nil
             )
         }
+
         return try FileWorkspaceSnapshot(
             revision  : 5,
             entries   : entries,
