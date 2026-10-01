@@ -91,4 +91,40 @@ struct PluginNodeViewTests {
 
         #expect(host.fittingSize == .zero)
     }
+
+    @Test
+    func aToggleShowsItsOptimisticStateAtOnce() async throws {
+        var publisher = PluginRenderFixtures.Publisher()
+        let store     = PluginNodeStore(key: PluginRenderFixtures.key, submit: { _ in })
+        let document  = try PluginDocument(
+            root: PluginNode(
+                .toggle(isOn: true, action: "togglePlayback"),
+                id      : "play",
+                children: [PluginNode(.symbol(name: "play.fill")), PluginNode(.symbol(name: "pause.fill"))]
+            )
+        )
+        store.apply(publisher.publish(document))
+        let host   = NSHostingView(rootView: PluginDocumentView(store: store))
+        let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 40, height: 40), styleMask: .borderless, backing: .buffered, defer: false)
+        window.contentView = host
+        try await Task.sleep(for: .milliseconds(100))
+        let playing = snapshot(of: host)
+        try await Task.sleep(for: .milliseconds(100))
+
+        #expect(snapshot(of: host) == playing)
+
+        store.set(.bool(false), on: try #require(store.model(PluginNodeID(rawValue: "#play:toggle"))))
+        try await Task.sleep(for: .milliseconds(400))
+
+        #expect(snapshot(of: host) != playing)
+    }
+
+    /// snapshot draws the view offscreen and returns its pixels.
+    private func snapshot(of view: NSView) -> Data? {
+        view.layoutSubtreeIfNeeded()
+        guard let image = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return nil }
+
+        view.cacheDisplay(in: view.bounds, to: image)
+        return image.tiffRepresentation
+    }
 }

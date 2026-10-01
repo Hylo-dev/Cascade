@@ -9,7 +9,8 @@ import SwiftUI
 /// PluginNodeContent draws a node without its modifiers: a `switch` over the tier-1 vocabulary,
 /// with children drawn as `PluginNodeView`s. Time is drawn by SwiftUI itself, so a timer or a
 /// relative date costs the plugin nothing. Controls read their optimistic value first and hand
-/// every change to the store. A tier-2 component and an asset reserve their frame and draw
+/// every change to the store; a toggle with two children shows the first while off and the
+/// second while on. A tier-2 component and an asset reserve their frame and draw
 /// nothing until the component and the asset pipeline exist.
 struct PluginNodeContent: View {
 
@@ -77,8 +78,10 @@ struct PluginNodeContent: View {
                 .buttonStyle(.plain)
 
             case .toggle(let isOn, _):
-                Toggle(isOn: Binding(get: { model.optimistic?.bool ?? isOn }, set: { store.set(.bool($0), on: model) })) {
-                    children
+                let shown = model.optimistic?.bool ?? isOn
+
+                Toggle(isOn: Binding(get: { shown }, set: { store.set(.bool($0), on: model) })) {
+                    toggleLabel(isOn: shown)
                 }
                 .toggleStyle(PluginToggleStyle())
 
@@ -100,6 +103,19 @@ struct PluginNodeContent: View {
             if let child = store.model(id) {
                 PluginNodeView(model: child, store: store)
             }
+        }
+    }
+
+    /// toggleLabel is what a toggle shows for its state, the optimistic one first, as a SwiftUI
+    /// toggle's label reads its own state: with two children, the first while off and the second
+    /// while on; with any other children, all of them, dimmed while off.
+    @ViewBuilder
+    private func toggleLabel(isOn: Bool) -> some View {
+        if model.children.count == 2, let child = store.model(model.children[isOn ? 1 : 0]) {
+            PluginNodeView(model: child, store: store)
+        } else {
+            children
+                .opacity(isOn ? 1 : 0.5)
         }
     }
 
