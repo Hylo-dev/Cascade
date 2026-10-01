@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CA5CADE50000000000000014 /* CascadePlugins in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE50000000000000004 /* CascadePlugins */; };
+		CA5CADE50000000000000011 /* CascadePlugins in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE50000000000000001 /* CascadePlugins */; };
 		CA5CADE4000000000000000B /* CascadePluginHost in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE4000000000000000A /* CascadePluginHost */; };
 		CA5CADE4000000000000000F /* PluginHost.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = CA5CADE40000000000000001 /* PluginHost.xpc */; };
 		CA5CADE10CA10CA10CA1A003 /* CascadeKit in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE10CA10CA10CA1A002 /* CascadeKit */; };
@@ -122,6 +124,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA5CADE50000000000000014 /* CascadePlugins in Frameworks */,
 				CA5CADE4000000000000000B /* CascadePluginHost in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -130,6 +133,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA5CADE50000000000000011 /* CascadePlugins in Frameworks */,
 				CA5CADE10CA10CA10CA1A003 /* CascadeKit in Frameworks */,
 				CA5CADE10CA10CA10CA1A004 /* CascadeRuntime in Frameworks */,
 			);
@@ -209,6 +213,7 @@
 			name = PluginHost;
 			packageProductDependencies = (
 				CA5CADE4000000000000000A /* CascadePluginHost */,
+				CA5CADE50000000000000004 /* CascadePlugins */,
 			);
 			productName = PluginHost;
 			productReference = CA5CADE40000000000000001 /* PluginHost.xpc */;
@@ -238,6 +243,7 @@
 			packageProductDependencies = (
 				CA5CADE10CA10CA10CA1A002 /* CascadeKit */,
 				CA5CADE10CA10CA10CA1A005 /* CascadeRuntime */,
+				CA5CADE50000000000000001 /* CascadePlugins */,
 			);
 			productName = Cascade;
 			productReference = 040312672FE4355A00BA9823 /* Cascade.app */;
@@ -829,6 +835,14 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		CA5CADE50000000000000004 /* CascadePlugins */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CascadePlugins;
+		};
+		CA5CADE50000000000000001 /* CascadePlugins */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CascadePlugins;
+		};
 		CA5CADE4000000000000000A /* CascadePluginHost */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = CascadePluginHost;

@@ -4,7 +4,7 @@
 set -euo pipefail
 
 directory=${1:-${0:A:h:h}/PluginHost}
-allowed=(CascadePluginHost CascadePluginSDK CascadeContracts Foundation Darwin Dispatch Synchronization Security)
+allowed=(CascadePlugins CascadePluginHost CascadePluginSDK CascadeContracts Foundation Darwin Dispatch Synchronization Security)
 failed=0
 for file in "$directory"/**/*.swift(N); do
     # One import per statement, whatever its attributes (with arguments, as in @_spi(Name)), its

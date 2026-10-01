@@ -5,13 +5,14 @@
 
 import CascadePluginHost
 import CascadePluginSDK
+import CascadePlugins
 import Foundation
 
 // PluginHost runs Cascade's first-party plugins, each on its own thread, in a process of its
 // own: a plugin that crashes or hangs costs a PluginHost restart, never Cascade. It accepts only
 // the app it is bundled in, signed by its own team when it has one.
 
-var providers: [String: any PluginProvider] = [:]
+var providers = FirstPartyPlugins.providers
 #if DEBUG
 providers.merge(PluginHostProbes.providers) { current, _ in current }
 #endif

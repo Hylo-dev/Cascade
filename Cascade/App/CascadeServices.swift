@@ -143,6 +143,8 @@ final class CascadeServices {
     @ObservationIgnored
     private let notch              : NotchEngine
     @ObservationIgnored
+    private let plugins            : PluginSystem
+    @ObservationIgnored
     private let fileShelfGovernor  : ResourceGovernor
     @ObservationIgnored
     private let fileShelfController: FileShelfController
@@ -219,6 +221,7 @@ final class CascadeServices {
             displayPreferences: displayPreferencesStore.preferences
         )
         self.notch                   = notch
+        plugins                      = PluginSystem(widgets: notch)
         self.displayPreferencesStore = displayPreferencesStore
 
         let fileShelfGovernor = ResourceGovernor()
@@ -365,7 +368,7 @@ final class CascadeServices {
         guard !isRunning else { return }
 
         isRunning = true
-        notch.register(ClockWidget())
+        plugins.start()
         notch.setHapticsEnabled(hapticsEnabled)
         notch.setSensitiveContentVisible(sensitiveContentVisible)
         fileShelfStartTask = Task { [weak fileShelfController] in
