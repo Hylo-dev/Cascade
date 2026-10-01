@@ -14,11 +14,13 @@ import Foundation
 /// One event is in flight per plugin. Events that arrive meanwhile wait in the plugin's mailbox,
 /// where sources coalesce to their latest state. A dispatch arms the watchdog at
 /// `handleDeadline`. A plugin over its CPU or publication budget is held, not refused, until the
-/// budget allows its next event; while nothing is pending, due or in flight, `nextDelay` is nil
-/// and the engine sleeps.
+/// budget allows its next event, but an action waits at most `actionTimeout`, after which the
+/// renderer has reverted it and it is refused instead of run late. While nothing is pending, due
+/// or in flight, `nextDelay` is nil and the engine sleeps.
 struct PluginKernel: Sendable {
 
     static let handleDeadline = Duration.milliseconds(250)
+    static let actionTimeout  = Duration.milliseconds(1_500)
     static let minimumWake    = 1.0
     static let maximumSleep   = 86_400.0
 
@@ -77,7 +79,7 @@ struct PluginKernel: Sendable {
         at now : PluginInstant
     ) -> [PluginEngineEffect] {
         for plugin in leases.record(event) {
-            _ = records[plugin]?.mailbox.post(.source(event))
+            records[plugin]?.mailbox.post(.source(event))
         }
 
         var effects: [PluginEngineEffect] = []
@@ -102,7 +104,7 @@ struct PluginKernel: Sendable {
               records[key.plugin]?.isRunnable == true
         else { return [] }
 
-        _ = records[key.plugin]?.mailbox.post(.refresh)
+        records[key.plugin]?.mailbox.post(.refresh)
 
         var effects: [PluginEngineEffect] = []
         schedule(at: now, into: &effects)
@@ -120,7 +122,7 @@ struct PluginKernel: Sendable {
               record.isRunnable,
               let feature = availableFeature(request.key.feature, of: record),
               let event = PluginActionAuthorizer.event(for: request, entry: store[request.key], feature: feature),
-              record.mailbox.post(.action(event))
+              record.mailbox.queue(PluginMailbox.Action(event: event, request: request, postedAt: now.monotonic))
         else { return [.reject(request)] }
 
         records[request.key.plugin] = record
@@ -191,7 +193,7 @@ struct PluginKernel: Sendable {
 
             if let wake = record.wake, wake <= now.wall, record.isRunnable {
                 record.wake = nil
-                _ = record.mailbox.post(.wake)
+                record.mailbox.post(.wake)
             }
 
             records[plugin] = record
@@ -296,15 +298,48 @@ struct PluginKernel: Sendable {
         for plugin in records.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
             guard var record = records[plugin],
                   record.status == .idle,
-                  now.monotonic >= record.throttledUntil,
-                  let event = record.mailbox.take()
+                  now.monotonic >= record.throttledUntil
             else { continue }
 
-            lastToken      += 1
-            record.status   = .handling(token: lastToken, deadline: now.monotonic + Self.handleDeadline)
+            if let event = next(from: &record, at: now, &effects) {
+                lastToken    += 1
+                record.status = .handling(token: lastToken, deadline: now.monotonic + Self.handleDeadline)
+                effects.append(.dispatch(plugin, event, token: lastToken))
+            }
             records[plugin] = record
-            effects.append(.dispatch(plugin, event, token: lastToken))
         }
+    }
+
+    /// next takes the plugin's next deliverable event. Grants are checked again here, so a source
+    /// state or an action that waited while a permission was revoked is not delivered; an action
+    /// that waited past `actionTimeout`, which the renderer has already reverted, is refused
+    /// rather than run late.
+    private func next(
+        from record: inout PluginRecord,
+        at now     : PluginInstant,
+        _ effects  : inout [PluginEngineEffect]
+    ) -> PluginEvent? {
+        while let item = record.mailbox.take() {
+            switch item {
+                case .event(.source(let state)) where !record.leased.contains(state.source):
+                    continue
+
+                case .event(let event):
+                    return event
+
+                case .action(let action):
+                    guard now.monotonic - action.postedAt <= Self.actionTimeout,
+                          availableFeature(action.event.feature, of: record) != nil
+                    else {
+                        effects.append(.reject(action.request))
+                        continue
+                    }
+
+                    return .action(action.event)
+            }
+        }
+
+        return nil
     }
 
     /// accept stores each publication of an output on its own, so one bad publication leaves
@@ -421,9 +456,9 @@ struct PluginKernel: Sendable {
     /// all a plugin that lost its memory needs to rebuild its content.
     private func prime(_ record: inout PluginRecord) {
         for event in leases.latest(of: record.leased) {
-            _ = record.mailbox.post(.source(event))
+            record.mailbox.post(.source(event))
         }
-        _ = record.mailbox.post(.refresh)
+        record.mailbox.post(.refresh)
     }
 
     /// syncLeases makes the plugin hold exactly the sources its available features declare

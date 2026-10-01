@@ -318,4 +318,41 @@ struct PluginKernelTests {
 
         #expect(kernel.nextDelay(at: start) == nil)
     }
+
+    @Test
+    func aRevocationRefusesTheActionsAlreadyQueued() throws {
+        var kernel = Fixtures.kernel()
+        try playing(Fixtures.controls(), in: &kernel)
+        _ = kernel.receive(try Fixtures.nowPlaying("Two"), at: start)
+
+        let request = PluginActionRequest(key: activity, node: PluginNodeID(rawValue: "#next:button"), revision: 1)
+        _ = kernel.submit(request, at: start)
+        _ = kernel.revoke("automation.music", from: music, at: start)
+
+        #expect(kernel.complete(music, token: 2, result: Fixtures.result(try PluginOutput()), at: start) == [.reject(request)])
+    }
+
+    @Test
+    func aSourceEventQueuedBeforeRevocationIsDropped() throws {
+        var kernel = Fixtures.kernel()
+        try playing(Fixtures.text("Song"), in: &kernel)
+        _ = kernel.receive(try Fixtures.nowPlaying("Two"), at: start)
+        _ = kernel.receive(try Fixtures.nowPlaying("Three"), at: start)
+        _ = kernel.revoke("automation.music", from: music, at: start)
+
+        #expect(kernel.complete(music, token: 2, result: Fixtures.result(try PluginOutput()), at: start).isEmpty)
+    }
+
+    @Test
+    func anActionThatWaitedPastTheTimeoutIsRefusedNotRun() throws {
+        var kernel = Fixtures.kernel()
+        try playing(Fixtures.controls(), in: &kernel)
+        _ = kernel.receive(try Fixtures.nowPlaying("Two"), at: start)
+
+        let request = PluginActionRequest(key: activity, node: PluginNodeID(rawValue: "#play:toggle"), revision: 1, value: .bool(false))
+        _ = kernel.submit(request, at: start)
+        _ = kernel.complete(music, token: 2, result: Fixtures.result(try PluginOutput(), cpuTime: .milliseconds(150)), at: start)
+
+        #expect(kernel.tick(at: start.advanced(by: 11)) == [.reject(request)])
+    }
 }
