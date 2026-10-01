@@ -45,6 +45,7 @@ struct PluginNodeViewTests {
                     ),
                     PluginNode(.date(now, style: .time), modifiers: [.font(PluginFont(size: 18, design: .rounded, monospacedDigit: true))]),
                     PluginNode(.clock, modifiers: [.font(PluginFont(size: 18, weight: .semibold, design: .rounded, monospacedDigit: true))]),
+                    PluginNode(.today, modifiers: [.foregroundStyle(.hierarchical(.secondary))]),
                     PluginNode(.timer(start: now, end: now.addingTimeInterval(60), countsDown: true), modifiers: [.contentTransition(.numericText(countsDown: true))]),
                     PluginNode(.timerProgress(start: now, end: now.addingTimeInterval(60))),
                     PluginNode(.progress(value: 0.4, total: 1, style: .linear), modifiers: [.opacity(0.8)]),
@@ -127,5 +128,16 @@ struct PluginNodeViewTests {
 
         view.cacheDisplay(in: view.bounds, to: image)
         return image.tiffRepresentation
+    }
+
+    @Test
+    func theTodayNodeShowsTodaysWeekdayDayAndMonth() throws {
+        var publisher = PluginRenderFixtures.Publisher()
+        let store     = PluginNodeStore(key: PluginRenderFixtures.key, submit: { _ in })
+        store.apply(publisher.publish(try PluginDocument(root: PluginNode(.today))))
+        let drawn    = NSHostingView(rootView: PluginDocumentView(store: store))
+        let expected = NSHostingView(rootView: Text(Date.now, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated)))
+
+        #expect(drawn.fittingSize == expected.fittingSize)
     }
 }

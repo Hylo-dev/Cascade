@@ -226,4 +226,16 @@ struct PluginDocumentTests {
         #expect(decoded.root.kind.name == "clock")
         #expect(!decoded.root.kind.takesChildren)
     }
+
+    @Test
+    func aTodayNodeRoundTripsAndTakesNoChildren() throws {
+        let document = try PluginDocument(root: PluginNode(.today))
+        let decoded  = try PluginDocument.decode(JSONEncoder().encode(document))
+
+        #expect(decoded == document)
+        #expect(decoded.root.kind.name == "today")
+        #expect(throws: AddonFailure.self) {
+            try PluginDocument(root: PluginNode(.today, children: [PluginNode(.text("x"))]))
+        }
+    }
 }

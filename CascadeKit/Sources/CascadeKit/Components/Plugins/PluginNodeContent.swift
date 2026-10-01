@@ -64,6 +64,12 @@ struct PluginNodeContent: View {
             case .clock:
                 TimelineView(.everyMinute) { context in
                     Text(context.date, format: .dateTime.hour().minute())
+                        .animation(.smooth, value: context.date)
+                }
+
+            case .today:
+                TimelineView(.everyMinute) { context in
+                    Text(context.date, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated))
                 }
 
             case .timer(let start, let end, let countsDown):

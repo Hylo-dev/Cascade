@@ -43,6 +43,6 @@ struct PluginSystemTests {
         }
 
         let widget = try #require(grid.widgets[WidgetIdentifier("plugin:com.cascade.clock/time")])
-        #expect(widget.size == GridSpan(columns: 4, rows: 1))
+        #expect(widget.size == GridSpan(columns: 4, rows: 2))
     }
 }

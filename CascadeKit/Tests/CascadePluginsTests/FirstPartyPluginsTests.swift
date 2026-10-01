@@ -49,12 +49,14 @@ struct FirstPartyPluginsTests {
     }
 
     @Test
-    func theClockFaceIsTheKernelDrawnTime() throws {
+    func theClockFaceIsTheKernelDrawnDateAboveTheTime() throws {
         let manifest = try #require(FirstPartyPlugins.manifests().first)
         let face     = try ClockPlugin.face()
+        let time     = try #require(face.root.children.last)
 
-        #expect(face.root.kind == .clock)
-        #expect(manifest.features.first?.surfaces.declares(.widget) == true)
+        #expect(face.root.children.map(\.kind) == [.today, .clock])
+        #expect(time.modifiers.contains(.contentTransition(.numericText(countsDown: false))))
+        #expect(manifest.features.first?.surfaces.widget?.sizes == [try PluginWidgetSize(columns: 2, rows: 2)])
         #expect(face.componentReferences.isEmpty)
     }
 }

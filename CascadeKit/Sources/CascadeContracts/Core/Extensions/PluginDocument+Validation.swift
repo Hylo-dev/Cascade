@@ -90,7 +90,7 @@ extension PluginDocument {
             case .vStack(_, let spacing), .hStack(_, let spacing):
                 try length(spacing)
 
-            case .zStack, .clock, .regions:
+            case .zStack, .clock, .today, .regions:
                 break
 
             case .spacer(let minimumLength):
