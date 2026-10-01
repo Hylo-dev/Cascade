@@ -93,6 +93,16 @@ let package = Package(
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .target(
+            name: "CascadePluginEngine",
+            dependencies: ["CascadeContracts"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .testTarget(
+            name: "CascadePluginEngineTests",
+            dependencies: ["CascadePluginEngine", "CascadeContracts"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .target(
             name: "CascadeKit",
             dependencies: ["CascadeContracts", "CascadePresentation"],
             resources: [.process("Resources")],
