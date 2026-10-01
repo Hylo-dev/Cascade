@@ -97,7 +97,7 @@ struct AddonRuntimeAssetLifecycleTests {
                     ),
                     sequence: 1
                 )
-                transferID = try #require(begun.transferID)
+                transferID = try #require(begun.transferID) as UUID
                 sequence   = try await fixture.receiveAllChunks(
                     png,
                     transferID: #require(transferID),
@@ -906,7 +906,7 @@ struct AddonRuntimeAssetLifecycleTests {
             )
             if actionFirst {
                 #expect(try await fixture.runtime.pumpReady())
-                delivery = try #require(fixture.adapter.lastAction)
+                delivery = try #require(fixture.adapter.lastAction) as ActionDispatcher.Delivery
                 let takes = fixture.adapter.ingressTakeAttempts
                 #expect(try await fixture.rawResult(begin, sequence: 1) == .refused(.resourceDenied))
                 #expect(fixture.adapter.ingressTakeAttempts == takes)
@@ -977,7 +977,7 @@ struct AddonRuntimeAssetLifecycleTests {
                 AssetTransferRequest(
                     requestID : UUID(),
                     operation : .abort,
-                    transferID: #require(response.transferID)
+                    transferID: #require(response.transferID) as UUID
                 ),
                 sequence: 2
             )

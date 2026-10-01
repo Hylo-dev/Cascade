@@ -348,7 +348,7 @@ actor ScriptedAssetChannel: AddonAssetMessageChannel {
                     requestID : request.requestID,
                     operation : .abort,
                     result    : .acknowledged,
-                    transferID: try #require(transferID)
+                    transferID: try #require(transferID) as UUID
                 )
 
             case .share:

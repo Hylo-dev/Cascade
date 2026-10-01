@@ -121,8 +121,8 @@ struct FileWorkspaceHostTests {
         _ = try await host.addOriginals(sources)
 
         let first  = try await host.snapshot()
-        let second = try await host.snapshot(cursor: try #require(first.nextCursor))
-        let third  = try await host.snapshot(cursor: try #require(second.nextCursor))
+        let second = try await host.snapshot(cursor: try #require(first.nextCursor) as String)
+        let third  = try await host.snapshot(cursor: try #require(second.nextCursor) as String)
 
         #expect(first.entries.count == 12)
         #expect(second.entries.count == 12)

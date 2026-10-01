@@ -2258,7 +2258,7 @@ struct MessageAddonAssetIntegrationTests {
         let chunk = try AssetTransferRequest(
             requestID : UUID(),
             operation : .chunk,
-            transferID: #require(response.transferID),
+            transferID: #require(response.transferID) as UUID,
             offset    : 0,
             bytes     : Data([1, 2, 3, 4])
         )

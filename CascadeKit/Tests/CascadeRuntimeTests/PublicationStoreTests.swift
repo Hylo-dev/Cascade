@@ -53,7 +53,7 @@ struct PublicationStoreTests {
 
         let store = PublicationStore(now: { Date(timeIntervalSince1970: 2_000_000_000) })
         var producer: Producer? = Producer(try publication())
-        weak var weakProducer = producer
+        weak let weakProducer = producer
         let expected = producer!.value
         try await store.accept(expected, owner: owner)
 

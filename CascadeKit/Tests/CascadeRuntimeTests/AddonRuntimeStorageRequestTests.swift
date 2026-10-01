@@ -547,7 +547,7 @@ struct AddonRuntimeStorageRequestTests {
         }
 
         await fixture.gate.wait()
-        weak var weakCoordinator = fixture.coordinator
+        weak let weakCoordinator = fixture.coordinator
         fixture.coordinator = nil
         #expect(weakCoordinator != nil)
         #expect(await fixture.governor.usage(.admittedMemoryBytes) >= 8 * 1_024 * 1_024 + 267_776)
