@@ -16,19 +16,23 @@ final class PluginWidget: NotchWidget {
     static let kind = WidgetKind("com.cascade.plugin")
 
     let id   : WidgetIdentifier
-    let size : GridSpan
+    let sizes: [GridSpan]
     let store: PluginNodeStore
+
+    var size: GridSpan { sizes[0] }
 
     private let visibility: (Bool) -> Void
 
+    /// init(id:sizes:store:visibility:) takes the sizes the manifest declares, in its order;
+    /// an empty list, which a valid manifest cannot produce, falls back to the clock's 4×1.
     init(
         id        : WidgetIdentifier,
-        size      : GridSpan,
+        sizes     : [GridSpan],
         store     : PluginNodeStore,
         visibility: @escaping (Bool) -> Void
     ) {
         self.id         = id
-        self.size       = size
+        self.sizes      = sizes.isEmpty ? [GridSpan(columns: 4, rows: 1)] : sizes
         self.store      = store
         self.visibility = visibility
     }

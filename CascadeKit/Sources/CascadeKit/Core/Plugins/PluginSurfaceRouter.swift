@@ -20,7 +20,7 @@ public final class PluginSurfaceRouter {
     public static let components: Set<String> = PluginComponentView.identifiers
 
     private let host      : any PluginSurfaceHosting
-    private let sizes     : [PluginPublicationKey: GridSpan]
+    private let sizes     : [PluginPublicationKey: [GridSpan]]
     private let submit    : (PluginActionRequest) -> Void
     private let visibility: (Bool, PluginPublicationKey) -> Void
     private var stores    : [PluginPublicationKey: PluginNodeStore] = [:]
@@ -36,11 +36,11 @@ public final class PluginSurfaceRouter {
         self.submit     = submit
         self.visibility = visibility
 
-        var sizes: [PluginPublicationKey: GridSpan] = [:]
+        var sizes: [PluginPublicationKey: [GridSpan]] = [:]
         for manifest in manifests {
             for feature in manifest.features {
-                if let size = feature.surfaces.widget?.sizes.first {
-                    sizes[PluginPublicationKey(plugin: manifest.id, feature: feature.id, surface: .widget)] = GridSpan(size)
+                if let declared = feature.surfaces.widget?.sizes {
+                    sizes[PluginPublicationKey(plugin: manifest.id, feature: feature.id, surface: .widget)] = declared.map(GridSpan.init)
                 }
             }
         }
@@ -128,7 +128,7 @@ public final class PluginSurfaceRouter {
         host.register(
             PluginWidget(
                 id        : Self.identifier(of: key),
-                size      : sizes[key] ?? GridSpan(columns: 4, rows: 1),
+                sizes     : sizes[key] ?? [],
                 store     : store,
                 visibility: { [visibility] isVisible in visibility(isVisible, key) }
             )

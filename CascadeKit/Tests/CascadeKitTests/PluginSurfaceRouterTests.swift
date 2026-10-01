@@ -48,7 +48,7 @@ struct PluginSurfaceRouterTests {
             requires       : [],
             features       : [
                 PluginFeature(id: "time", surfaces: PluginSurfaces(widget: PluginWidgetSurface(sizes: [PluginWidgetSize(columns: 3, rows: 1)]))),
-                PluginFeature(id: "alarm", surfaces: PluginSurfaces(widget: PluginWidgetSurface(sizes: [PluginWidgetSize(columns: 1, rows: 1)]))),
+                PluginFeature(id: "alarm", surfaces: PluginSurfaces(widget: PluginWidgetSurface(sizes: [PluginWidgetSize(columns: 1, rows: 1), PluginWidgetSize(columns: 2, rows: 2)]))),
             ],
             resources      : PluginResources(profile: .eventDriven)
         )
@@ -91,6 +91,18 @@ struct PluginSurfaceRouterTests {
         rig.surfaces.apply([publish(try PluginDocument(root: PluginNode(.clock)), in: &publisher)], rejected: [])
 
         #expect(rig.host.widgets[widgetID]?.size == GridSpan(columns: 6, rows: 1))
+    }
+
+    @Test
+    func theWidgetOffersEveryDeclaredSizeInTheManifestsOrder() throws {
+        let rig       = try rig()
+        var publisher = PluginPublicationStore()
+
+        rig.surfaces.apply([publish(try PluginDocument(root: PluginNode(.clock)), in: &publisher, for: alarmKey)], rejected: [])
+
+        let alarm = try #require(rig.host.widgets[WidgetIdentifier("plugin:com.cascade.clock/alarm")])
+        #expect(alarm.sizes == [GridSpan(columns: 2, rows: 1), GridSpan(columns: 4, rows: 2)])
+        #expect(alarm.size == GridSpan(columns: 2, rows: 1))
     }
 
     @Test
