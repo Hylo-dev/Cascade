@@ -42,6 +42,14 @@ let package = Package(
             name: "CascadeKit",
             targets: ["CascadeKit"]
         ),
+        .library(
+            name   : "CascadePluginHost",
+            targets: ["CascadePluginHost"]
+        ),
+        .library(
+            name   : "CascadePluginEngine",
+            targets: ["CascadePluginEngine"]
+        ),
     ],
     targets: [
         .executableTarget(
