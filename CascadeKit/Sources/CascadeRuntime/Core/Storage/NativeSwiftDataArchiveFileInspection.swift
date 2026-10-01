@@ -8,6 +8,7 @@ import Foundation
 
 /// NativeSwiftDataArchiveFileInspection measures regular files without a quota-truncated inventory.
 struct NativeSwiftDataArchiveFileInspection: SwiftDataArchiveFileInspecting {
+
     func openFile(
         _ descriptor: Int32,
         name        : String

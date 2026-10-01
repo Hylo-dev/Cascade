@@ -3,10 +3,9 @@
 //  CascadeKit
 //
 
-import Foundation
-
 /// SwiftDataArchiveFailure distinguishes rejected operations from committed save outcomes.
 enum SwiftDataArchiveFailure: Error, Equatable, Sendable {
+
     case invalidConfiguration
     case invalidGeneration
     case unavailable

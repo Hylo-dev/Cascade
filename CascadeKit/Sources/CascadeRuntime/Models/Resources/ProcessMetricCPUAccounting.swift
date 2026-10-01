@@ -3,12 +3,11 @@
 //  CascadeKit
 //
 
-import Foundation
-
 /// ProcessMetricCPUAccounting pairs one verified owner with its final batch result.
 struct ProcessMetricCPUAccounting: Equatable, Sendable {
-    let owner        : VerifiedAddonIdentity
-    let result       : ProcessMetricCPUAccountingResult
+
+    let owner         : VerifiedAddonIdentity
+    let result        : ProcessMetricCPUAccountingResult
     let classification: ProcessMetricCPUViolationResult
 
     init(

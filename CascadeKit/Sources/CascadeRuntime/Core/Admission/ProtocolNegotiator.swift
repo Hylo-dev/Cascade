@@ -9,6 +9,7 @@ import Foundation
 /// NegotiatedProtocol records the library-supported intersection. It is immutable,
 /// not decodable, and carries no connection authority on its own.
 public struct NegotiatedProtocol: Equatable, Sendable {
+
     public let major         : Int
     public let minor         : Int
     public let contentSchemas: [Int]
@@ -36,6 +37,7 @@ public struct NegotiatedProtocol: Equatable, Sendable {
 /// ProtocolNegotiator selects the host's implemented version from untrusted
 /// capabilities and a separately verified manifest requirement.
 public enum ProtocolNegotiator {
+
     /// negotiate defaults to protocol 1.0. Only a host implementing keyed-storage
     /// dispatch may opt into 1.1; 1.2 additionally requires an asset-capable runtime
     /// adapter. An untrusted offer cannot enable either host capability.
@@ -72,11 +74,12 @@ public enum ProtocolNegotiator {
     ) throws -> NegotiatedProtocol {
         try offer.validate()
         try manifestProtocol.validate()
+
         guard !contentSchemas.isEmpty,
-            contentSchemas.count <= 3,
-            Set(contentSchemas).count == contentSchemas.count,
-            Set(contentSchemas).isSubset(of: [1, 2, 3]),
-            supportsFileWorkspaceContent || !contentSchemas.contains(3)
+              contentSchemas.count <= 3,
+              Set(contentSchemas).count == contentSchemas.count,
+              Set(contentSchemas).isSubset(of: [1, 2, 3]),
+              supportsFileWorkspaceContent || !contentSchemas.contains(3)
         else {
             throw AddonFailure(
                 code  : .invalidPayload,
@@ -89,10 +92,8 @@ public enum ProtocolNegotiator {
                 reason: "Provider and manifest require an unsupported protocol major."
             )
         }
-        let lower = max(
-            offer.minimumMinor,
-            manifestProtocol.minimumMinor
-        )
+
+        let lower = max(offer.minimumMinor, manifestProtocol.minimumMinor)
         let upper = min(
             offer.maximumMinor,
             supportsKeyedStorageFrames ? (supportsAssetFrames ? (serviceHost ? (subscriptionHost ? 4 : 3) : 2) : 1) : 0
@@ -103,6 +104,7 @@ public enum ProtocolNegotiator {
                 reason: "No implemented protocol minor satisfies both requirements."
             )
         }
+
         let commonSchemas = Set(contentSchemas).intersection(offer.contentSchemas).sorted()
         guard !commonSchemas.isEmpty else {
             throw AddonFailure(
@@ -110,9 +112,7 @@ public enum ProtocolNegotiator {
                 reason: "No supported content schema is common to this connection."
             )
         }
-        return NegotiatedProtocol(
-            minor         : upper,
-            contentSchemas: commonSchemas
-        )
+
+        return NegotiatedProtocol(minor: upper, contentSchemas: commonSchemas)
     }
 }

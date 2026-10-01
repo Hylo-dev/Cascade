@@ -12,7 +12,9 @@ import Foundation
 /// The host keeps this object and its governor alive across close/retry: the keyed ledger and
 /// archive ledgers stay charged while logically closed. No backend or capability escapes.
 actor AddonStorageCoordinator {
+
     enum Failure: Error, Equatable, Sendable {
+
         case invalidConfiguration
         case unavailable
         case busy
@@ -23,6 +25,7 @@ actor AddonStorageCoordinator {
     /// Closed retains archive workers, parent/child locks and ledgers; it is not physical closure.
     /// A draining result requires the host to retry close after the active operation returns.
     enum CloseStatus: Equatable, Sendable {
+
         case closed
         case draining
     }
@@ -30,17 +33,20 @@ actor AddonStorageCoordinator {
     /// Owner is an opaque capability for a fixed registry row in one readiness epoch.
     /// Acquisition does not grow a session table; another coordinator or epoch cannot use it.
     struct Owner: Hashable, Sendable {
+
         fileprivate let coordinatorID: UUID
         fileprivate let epoch        : UUID
         fileprivate let index        : Int
     }
 
     private struct BackendOwners: Sendable {
+
         let checkpoint: StateOwner
         let keyed     : KeyedStorageOwner
     }
 
     private struct BackendAccess: Sendable {
+
         let checkpoint: AddonStateStore
         let keyed     : AddonKeyedStorage
         let owners    : BackendOwners
@@ -48,13 +54,16 @@ actor AddonStorageCoordinator {
 
     /// ArchiveAccess retains only the fixed private backend and this accepted operation's binding.
     private struct ArchiveAccess: Sendable {
+
         let operation: Operation
         let archive  : SwiftDataArchive
         let addonID  : AddonID
     }
 
     private struct Operation: Equatable, Sendable {
+
         enum Kind: Equatable, Sendable {
+
             case starting
             case normal
             case closing
@@ -71,17 +80,19 @@ actor AddonStorageCoordinator {
         1_024,
         4 * MemoryLayout<ArchiveShutdownContext>.stride
     )
-    private static let fixedMetadataBytes = 24_576 + 256 + shutdownMetadataBytes
-    private static let registrationBytes  = 3_072
+    private static let fixedMetadataBytes    = 24_576 + 256 + shutdownMetadataBytes
+    private static let registrationBytes     = 3_072
 
     private let coordinatorID = UUID()
-    private let checkpointRoot      : URL
-    private let keyedRoot           : URL
-    private let archiveRoot         : URL
-    private let archiveNames        : [String]
-    private let archiveObserver     : any SwiftDataArchiveObserving
-    private let archiveRootToken    : ObservedDiskToken
-    private let registrations       : [StateRegistration]
+
+    private let checkpointRoot  : URL
+    private let keyedRoot       : URL
+    private let archiveRoot     : URL
+    private let archiveNames    : [String]
+    private let archiveObserver : any SwiftDataArchiveObserving
+    private let archiveRootToken: ObservedDiskToken
+    private let registrations   : [StateRegistration]
+
     /// resourceGovernorTarget exposes immutable assembly identity, never a storage capability.
     nonisolated var resourceGovernorTarget: ResourceGovernor { governor }
 
@@ -92,29 +103,30 @@ actor AddonStorageCoordinator {
     private let keyedDiskBudget     : Int
     private let metadata            : ResourceReservation
 
-    private var archives              : [SwiftDataArchive?]
+    private var archives             : [SwiftDataArchive?]
     private var archiveRootDescriptor = Int32(-1)
     private var archiveRootBytes      = 0
     private var archiveFlushCursor    = 0
 
-    private var checkpointStore: AddonStateStore?
-    private var keyedStore     : AddonKeyedStorage?
-    private var backendOwners  : [BackendOwners] = []
-    private var readinessEpoch : UUID?
-    private var active         : Operation?
-    private var isClosing      = true
+    private var checkpointStore    : AddonStateStore?
+    private var keyedStore         : AddonKeyedStorage?
+    private var backendOwners      : [BackendOwners] = []
+    private var readinessEpoch     : UUID?
+    private var active             : Operation?
+    private var isClosing           = true
     private var closeCleanupPending = false
-    private var archiveShutdown: ArchiveShutdownContext?
+    private var archiveShutdown    : ArchiveShutdownContext?
 
     /// ArchiveShutdownContext survives terminal revocation and never replaces an accepted operation.
     private struct ArchiveShutdownContext: Sendable {
-        let id             : UUID
-        let runtime        : AddonRuntime
-        let deadline       : Duration
-        var phase          : ShutdownPhase
-        var ticket         : AddonRuntime.ArchiveQuiescence?
-        var cursor         : Int
-        var unvisitedOwners: Int
+
+        let id                   : UUID
+        let runtime              : AddonRuntime
+        let deadline             : Duration
+        var phase                : ShutdownPhase
+        var ticket               : AddonRuntime.ArchiveQuiescence?
+        var cursor               : Int
+        var unvisitedOwners      : Int
         var runtimeCleanupPending = false
     }
 
@@ -138,10 +150,7 @@ actor AddonStorageCoordinator {
         self.archiveObserver      = archiveObserver
         self.archiveRootToken     = archiveRootToken
         archiveNames              = registrations.map { Self.archiveName($0.identity) }
-        archives                  = Array(
-            repeating: nil,
-            count    : registrations.count
-        )
+        archives                  = Array(repeating: nil, count: registrations.count)
         // Metadata is prepaid; copy only bounded rows without retaining caller excess capacity.
         self.registrations        = registrations.map { $0 }
         self.governor             = governor
@@ -175,6 +184,7 @@ actor AddonStorageCoordinator {
         guard (1...256).contains(registrations.count) else {
             throw Failure.invalidConfiguration
         }
+
         try validateRootURL(checkpointRoot)
         try validateRootURL(keyedRoot)
         try validateRootURL(archiveRoot)
@@ -183,15 +193,19 @@ actor AddonStorageCoordinator {
             let registration = registrations[index]
             guard registration.maximumSchemaVersion > 0,
                   (1...512).contains(registration.identity.publisher.utf8.count),
-                  !registrations[..<index].contains(where: { $0.identity == registration.identity }) else {
+                  !registrations[..<index].contains(where: { $0.identity == registration.identity })
+            else {
                 throw Failure.invalidConfiguration
             }
+
             try validateRootURL(archiveRoot.appendingPathComponent(archiveName(registration.identity)))
         }
+
         let access = resourceAccess ?? governor
         guard access.resourceGovernorTarget === governor else {
             throw Failure.invalidConfiguration
         }
+
         let metadata = try await governor.admit(
             .state(bytes: Self.fixedMetadataBytes + registrations.count * Self.registrationBytes),
             owner: registrations[0].identity.addonID
@@ -205,6 +219,7 @@ actor AddonStorageCoordinator {
             )
             rootToken = token
             try Task.checkCancellation()
+
             return AddonStorageCoordinator(
                 checkpointRoot      : checkpointRoot,
                 keyedRoot           : keyedRoot,
@@ -227,10 +242,7 @@ actor AddonStorageCoordinator {
                     owner: registrations[0].identity.addonID
                 )
             }
-            try await governor.release(
-                metadata.id,
-                owner: metadata.owner
-            )
+            try await governor.release(metadata.id, owner: metadata.owner)
             throw error
         }
     }
@@ -249,7 +261,8 @@ actor AddonStorageCoordinator {
               root.absoluteString.utf8.count <= 4_096,
               root.query == nil,
               root.fragment == nil,
-              root.path.hasPrefix("/") else {
+              root.path.hasPrefix("/")
+        else {
             throw Failure.invalidConfiguration
         }
     }
@@ -262,17 +275,17 @@ actor AddonStorageCoordinator {
         guard archiveShutdown == nil else { throw Failure.unavailable }
         guard active == nil else { throw Failure.busy }
         guard readinessEpoch == nil else { return }
-        let operation = Operation(
-            id  : UUID(),
-            kind: .starting
-        )
-        active = operation
+
+        let operation = Operation(id: UUID(), kind: .starting)
+        active    = operation
         isClosing = false
         defer { finish(operation) }
+
         do {
             guard try await closeBackends(validatingStartup: operation) == .closed else {
                 throw Failure.busy
             }
+
             try validateStartup(operation)
             closeCleanupPending = true
             try await establishArchiveInventory(operation)
@@ -298,6 +311,7 @@ actor AddonStorageCoordinator {
             }
             try validateInventoriedStartup(operation)
             guard let checkpointStore, let keyedStore else { throw Failure.unavailable }
+
             backendOwners.reserveCapacity(registrations.count)
             for registration in registrations {
                 let checkpointOwner = try await checkpointStore.owner(for: registration.identity)
@@ -334,10 +348,13 @@ actor AddonStorageCoordinator {
             owner        : registrations[0].identity.addonID,
             fromBytes    : archiveRootBytes,
             measuredBytes: SwiftDataArchiveDirectory.entryBytes
-        ) else { throw SwiftDataArchiveFailure.accounting }
+        )
+        else { throw SwiftDataArchiveFailure.accounting }
+
         archiveRootBytes = SwiftDataArchiveDirectory.entryBytes
         try validateStartup(operation)
         try validateArchiveRoot()
+
         var complete = archiveOuterInventoryIsComplete()
         for index in registrations.indices {
             try validateStartup(operation)
@@ -360,6 +377,7 @@ actor AddonStorageCoordinator {
                 // A local failure cannot hide later known owners while parent/epoch remain valid.
                 complete = false
             }
+
             try validateStartup(operation)
             try validateArchiveRoot()
             complete = archiveOuterInventoryIsComplete() && complete
@@ -390,6 +408,7 @@ actor AddonStorageCoordinator {
     /// validateArchiveRoot refuses replacement without closing the held root or refunding its ledger.
     private func validateArchiveRoot() throws {
         guard archiveRootDescriptor >= 0 else { throw Failure.unavailable }
+
         try SwiftDataArchiveDirectory.validateHeldRoot(
             root      : archiveRoot,
             descriptor: archiveRootDescriptor
@@ -412,30 +431,35 @@ actor AddonStorageCoordinator {
                     complete = false
                     return
                 }
+
                 // A registered name may have become a link, file or nonprivate directory while
                 // a backend admission was suspended. The existing helper checks no-follow type,
                 // current-user ownership and mode; this is not another recursive inventory.
-                guard let child = try KeyedStorageDirectory.child(
-                    archiveRootDescriptor,
-                    name: name
-                ) else {
+                guard let child = try KeyedStorageDirectory.child(archiveRootDescriptor, name: name)
+                else {
                     complete = false
                     return
                 }
+
                 Darwin.close(child)
             }
             try validateArchiveRoot()
         } catch {
             complete = false
         }
+
         return complete
     }
 
     /// ShutdownPhase cannot leave terminal once ordinary owner epochs have been revoked.
-    enum ShutdownPhase: Equatable, Sendable { case acquiring, ready, terminal }
+    enum ShutdownPhase: Equatable, Sendable {
+
+        case acquiring, ready, terminal
+    }
 
     /// ShutdownProgress reports finite pass position and conservative known cleanup obligations.
     struct ShutdownProgress: Equatable, Sendable {
+
         let phase          : ShutdownPhase
         let unvisitedOwners: Int
         let cleanupPending : Bool
@@ -443,6 +467,7 @@ actor AddonStorageCoordinator {
 
     /// ShutdownStepResult returns at most one accepted attempt without claiming the pass was durable.
     enum ShutdownStepResult: Equatable, Sendable {
+
         case busy
         case exhausted
         case windowClosed
@@ -469,11 +494,15 @@ actor AddonStorageCoordinator {
             guard context.runtime === runtime, context.deadline == deadline else {
                 throw ArchiveFlushFailure.coordinator(.invalidConfiguration)
             }
+
             return shutdownProgress
         }
         guard deadline >= .zero else { throw ArchiveFlushFailure.coordinator(.invalidConfiguration) }
-        guard readinessEpoch != nil, !isClosing else { throw ArchiveFlushFailure.coordinator(.unavailable) }
-        let contextID = UUID()
+        guard readinessEpoch != nil, !isClosing else {
+            throw ArchiveFlushFailure.coordinator(.unavailable)
+        }
+
+        let contextID   = UUID()
         archiveShutdown = ArchiveShutdownContext(
             id             : contextID,
             runtime        : runtime,
@@ -494,10 +523,12 @@ actor AddonStorageCoordinator {
                 let stopped = await runtime.requestStop()
                 archiveShutdown?.runtimeCleanupPending = stopped.cleanupPending
             }
+
             return shutdownProgress
         } catch {
-            let bounded = Self.boundedArchiveFlushFailure(error)
+            let bounded            = Self.boundedArchiveFlushFailure(error)
             archiveShutdown?.phase = .terminal
+
             let stopped = await runtime.requestStop()
             archiveShutdown?.runtimeCleanupPending = stopped.cleanupPending
             _ = requestClose()
@@ -522,82 +553,92 @@ actor AddonStorageCoordinator {
         guard context.phase == .ready, active == nil else { return .busy }
         guard let ticket = context.ticket else { return .windowClosed }
         guard context.unvisitedOwners > 0 else { return .exhausted }
-        let operation = Operation(
-            id  : UUID(),
-            kind: .normal
-        )
+
+        let operation = Operation(id: UUID(), kind: .normal)
         active = operation
         defer { finish(operation) }
-        while let current = archiveShutdown, current.id == context.id,
-            current.phase == .ready, current.unvisitedOwners > 0
-        {
+
+        while let current = archiveShutdown,
+              current.id == context.id,
+              current.phase == .ready,
+              current.unvisitedOwners > 0 {
             let index = current.cursor
             let owner = registrations[index].identity.addonID
             guard let archive = archives[index] else {
                 consumeShutdownRow(contextID: context.id)
                 continue
             }
+
             let attempt = await context.runtime.saveQuiescingArchive(
                 owner     : owner,
                 to        : archive,
                 quiescence: ticket
             )
             switch attempt {
-            case .busy:
-                return archiveShutdown?.phase == .ready ? .busy : .windowClosed
-            case .windowClosed:
-                archiveShutdown?.phase = .terminal
-                return .windowClosed
-            case .skipped:
-                consumeShutdownRow(contextID: context.id)
-                guard archiveShutdown?.id == context.id, archiveShutdown?.phase == .ready else {
+                case .busy:
+                    return archiveShutdown?.phase == .ready ? .busy : .windowClosed
+
+                case .windowClosed:
+                    archiveShutdown?.phase = .terminal
                     return .windowClosed
-                }
-            case .refused(let failure):
-                consumeShutdownRow(contextID: context.id)
-                return .failed(
-                    owner          : owner,
-                    failure        : Self.shutdownFailure(failure),
-                    accepted       : false,
-                    unvisitedOwners: archiveShutdown?.unvisitedOwners ?? 0
-                )
-            case .failed(let failure):
-                consumeShutdownRow(contextID: context.id)
-                return .failed(
-                    owner          : owner,
-                    failure        : Self.shutdownFailure(failure),
-                    accepted       : true,
-                    unvisitedOwners: archiveShutdown?.unvisitedOwners ?? 0
-                )
-            case .committed(let outcome):
-                consumeShutdownRow(contextID: context.id)
-                return .committed(
-                    owner          : owner,
-                    outcome        : outcome,
-                    unvisitedOwners: archiveShutdown?.unvisitedOwners ?? 0
-                )
+
+                case .skipped:
+                    consumeShutdownRow(contextID: context.id)
+                    guard archiveShutdown?.id == context.id, archiveShutdown?.phase == .ready else {
+                        return .windowClosed
+                    }
+
+                case .refused(let failure):
+                    consumeShutdownRow(contextID: context.id)
+                    return .failed(
+                        owner          : owner,
+                        failure        : Self.shutdownFailure(failure),
+                        accepted       : false,
+                        unvisitedOwners: archiveShutdown?.unvisitedOwners ?? 0
+                    )
+
+                case .failed(let failure):
+                    consumeShutdownRow(contextID: context.id)
+                    return .failed(
+                        owner          : owner,
+                        failure        : Self.shutdownFailure(failure),
+                        accepted       : true,
+                        unvisitedOwners: archiveShutdown?.unvisitedOwners ?? 0
+                    )
+
+                case .committed(let outcome):
+                    consumeShutdownRow(contextID: context.id)
+                    return .committed(
+                        owner          : owner,
+                        outcome        : outcome,
+                        unvisitedOwners: archiveShutdown?.unvisitedOwners ?? 0
+                    )
             }
         }
+
         return archiveShutdown?.phase == .ready ? .exhausted : .windowClosed
     }
 
     /// consumeShutdownRow updates only scalar progress, preserving a concurrent terminal phase.
     private func consumeShutdownRow(contextID: UUID) {
-        guard let current = archiveShutdown, current.id == contextID, current.unvisitedOwners > 0 else {
+        guard let current = archiveShutdown,
+              current.id == contextID,
+              current.unvisitedOwners > 0
+        else {
             return
         }
-        archiveShutdown?.cursor = (current.cursor + 1) % registrations.count
+
+        archiveShutdown?.cursor          = (current.cursor + 1) % registrations.count
         archiveShutdown?.unvisitedOwners = current.unvisitedOwners - 1
     }
 
     /// shutdownFailure maps the runtime scalar result into the existing bounded coordinator vocabulary.
-    private static func shutdownFailure(_ failure: AddonRuntime.ShutdownArchiveFailure) -> ArchiveFlushFailure
-    {
+    private static func shutdownFailure(_ failure: AddonRuntime.ShutdownArchiveFailure) -> ArchiveFlushFailure {
         switch failure {
-        case .runtime(let failure): return .runtime(failure)
-        case .archive(let failure): return .archive(failure)
-        case .cancelled: return .cancelled
-        case .unavailable: return .unavailable
+            case .runtime(let failure): return .runtime(failure)
+            case .archive(let failure): return .archive(failure)
+            case .cancelled: return .cancelled
+            case .unavailable: return .unavailable
         }
     }
 
@@ -610,6 +651,7 @@ actor AddonStorageCoordinator {
             archiveShutdown?.runtimeCleanupPending = stopped.cleanupPending
         }
         _ = requestClose()
+
         return shutdownProgress
     }
 
@@ -619,6 +661,7 @@ actor AddonStorageCoordinator {
         archiveShutdown?.phase = .terminal
         invalidateReadiness()
         if active != nil { closeCleanupPending = true }
+
         return closeCleanupPending || archiveShutdown?.runtimeCleanupPending == true ? .draining : .closed
     }
 
@@ -635,19 +678,20 @@ actor AddonStorageCoordinator {
             archiveShutdown?.runtimeCleanupPending = stopped.cleanupPending
         }
         guard active == nil else { return .draining }
-        let operation = Operation(
-            id  : UUID(),
-            kind: .closing
-        )
+
+        let operation = Operation(id: UUID(), kind: .closing)
         active = operation
         defer { finish(operation) }
+
         if let runtime {
             await runtime.stop()
             let stopped = await runtime.requestStop()
             archiveShutdown?.runtimeCleanupPending = stopped.cleanupPending
         }
+
         let status = try await closeBackends()
         if archiveShutdown?.runtimeCleanupPending == true { return .draining }
+
         return status
     }
 
@@ -655,9 +699,11 @@ actor AddonStorageCoordinator {
     func owner(for identity: VerifiedAddonIdentity) throws -> Owner {
         try available()
         guard let index = registrations.firstIndex(where: { $0.identity == identity }),
-              let readinessEpoch else {
+              let readinessEpoch
+        else {
             throw Failure.invalidOwner
         }
+
         return Owner(
             coordinatorID: coordinatorID,
             epoch        : readinessEpoch,
@@ -667,6 +713,7 @@ actor AddonStorageCoordinator {
 
     /// ArchiveFlushResult returns at most one known commit without exposing a private backend.
     enum ArchiveFlushResult: Equatable, Sendable {
+
         case noCommit
         case committed(
             owner  : AddonID,
@@ -676,6 +723,7 @@ actor AddonStorageCoordinator {
 
     /// ArchiveFlushFailure bounds uncommitted errors without retaining platform payloads.
     enum ArchiveFlushFailure: Error, Equatable, Sendable {
+
         case coordinator(Failure)
         case runtime(AddonFailure.Code)
         case archive(SwiftDataArchiveFailure)
@@ -689,19 +737,20 @@ actor AddonStorageCoordinator {
         do {
             try Task.checkCancellation()
             try available()
-            let operation = Operation(
-                id  : UUID(),
-                kind: .normal
-            )
+
+            let operation = Operation(id: UUID(), kind: .normal)
             active = operation
             defer { finish(operation) }
+
             for offset in registrations.indices {
                 let index = (archiveFlushCursor + offset) % registrations.count
                 let state = await runtime.archiveFlushState(identity: registrations[index].identity)
                 try validateStartup(operation)
                 guard state == .pending else { continue }
+
                 archiveFlushCursor = (index + 1) % registrations.count
                 guard let archive = archives[index], let readinessEpoch else { throw Failure.unavailable }
+
                 let owner = Owner(
                     coordinatorID: coordinatorID,
                     epoch        : readinessEpoch,
@@ -718,22 +767,19 @@ actor AddonStorageCoordinator {
                     runtime     : runtime,
                     startArchive: false
                 )
-                try validateArchiveOperation(
-                    operation,
-                    owner: owner
-                )
+                try validateArchiveOperation(operation, owner: owner)
+
                 let outcome = try await runtime.savePendingArchive(
                     owner: access.addonID,
                     to   : archive
                 )
                 if let outcome {
-                    return .committed(
-                        owner  : access.addonID,
-                        outcome: outcome
-                    )
+                    return .committed(owner: access.addonID, outcome: outcome)
                 }
+
                 return .noCommit
             }
+
             return .noCommit
         } catch {
             throw Self.boundedArchiveFlushFailure(error)
@@ -746,6 +792,7 @@ actor AddonStorageCoordinator {
         if let failure = error as? AddonFailure { return .runtime(failure.code) }
         if let failure = error as? SwiftDataArchiveFailure { return .archive(failure) }
         if error is CancellationError { return .cancelled }
+
         return .unavailable
     }
 
@@ -757,19 +804,15 @@ actor AddonStorageCoordinator {
     ) async throws -> SwiftDataArchiveSaveOutcome {
         let access = try claimArchiveOperation(owner: owner)
         defer { finish(access.operation) }
+
         try await prepareArchiveOperation(
             access,
             owner  : owner,
             runtime: runtime
         )
-        try validateArchiveOperation(
-            access.operation,
-            owner: owner
-        )
-        return try await runtime.saveArchive(
-            owner: access.addonID,
-            to   : access.archive
-        )
+        try validateArchiveOperation(access.operation, owner: owner)
+
+        return try await runtime.saveArchive(owner: access.addonID, to: access.archive)
     }
 
     /// restoreArchive returns only a scalar runtime result from the privately retained archive.
@@ -780,19 +823,15 @@ actor AddonStorageCoordinator {
     ) async throws -> AddonRuntime.ArchiveRestorationResult {
         let access = try claimArchiveOperation(owner: owner)
         defer { finish(access.operation) }
+
         try await prepareArchiveOperation(
             access,
             owner  : owner,
             runtime: runtime
         )
-        try validateArchiveOperation(
-            access.operation,
-            owner: owner
-        )
-        return try await runtime.restoreArchive(
-            owner: access.addonID,
-            from : access.archive
-        )
+        try validateArchiveOperation(access.operation, owner: owner)
+
+        return try await runtime.restoreArchive(owner: access.addonID, from: access.archive)
     }
 
     /// claimArchiveOperation authenticates the current fixed owner before borrowing its retained slot.
@@ -801,11 +840,10 @@ actor AddonStorageCoordinator {
         try available()
         try validateOwner(owner)
         guard let archive = archives[owner.index] else { throw Failure.unavailable }
-        let operation = Operation(
-            id  : UUID(),
-            kind: .normal
-        )
+
+        let operation = Operation(id: UUID(), kind: .normal)
         active = operation
+
         return ArchiveAccess(
             operation: operation,
             archive  : archive,
@@ -821,19 +859,10 @@ actor AddonStorageCoordinator {
         runtime     : AddonRuntime,
         startArchive: Bool = true
     ) async throws {
-        try await runtime.validateArchiveBinding(
-            owner  : access.addonID,
-            archive: access.archive
-        )
-        try validateArchiveOperation(
-            access.operation,
-            owner: owner
-        )
+        try await runtime.validateArchiveBinding(owner: access.addonID, archive: access.archive)
+        try validateArchiveOperation(access.operation, owner: owner)
         if startArchive { _ = try await access.archive.start() }
-        try validateArchiveOperation(
-            access.operation,
-            owner: owner
-        )
+        try validateArchiveOperation(access.operation, owner: owner)
     }
 
     /// validateArchiveOperation rejects late preparation without undoing an already returned runtime result.
@@ -843,6 +872,7 @@ actor AddonStorageCoordinator {
     ) throws {
         try Task.checkCancellation()
         guard active == operation, !isClosing else { throw Failure.unavailable }
+
         try validateOwner(owner)
     }
 
@@ -897,6 +927,7 @@ actor AddonStorageCoordinator {
 
     /// KeyedRequestRefusal carries only bounded pre-call or read failures, never backend error text.
     enum KeyedRequestRefusal: Equatable, Sendable {
+
         case invalidRequest, invalidOwner, unavailable, busy, cancelled
         case readFailed(AddonFailure.Code)
     }
@@ -904,6 +935,7 @@ actor AddonStorageCoordinator {
     /// KeyedRequestResult preserves known mutation success independently of reply authority.
     /// outcomeUnknown neither proves mutation nor permits automatic replay.
     enum KeyedRequestResult: Equatable, Sendable {
+
         case read(Data?)
         case acknowledged
         case refused(KeyedRequestRefusal)
@@ -930,65 +962,68 @@ actor AddonStorageCoordinator {
             return .refused(.invalidRequest)
         }
         guard let checkpointStore, let keyedStore else { return .refused(.unavailable) }
+
         let access = BackendAccess(
             checkpoint: checkpointStore,
             keyed     : keyedStore,
             owners    : backendOwners[owner.index]
         )
-        let operation = Operation(
-            id  : UUID(),
-            kind: .normal
-        )
+        let operation = Operation(id: UUID(), kind: .normal)
         active = operation
         defer { finish(operation) }
 
         switch request.operation {
-        case .read:
-            do {
-                let value = try await access.keyed.read(
-                    key         : request.key,
-                    owner       : access.owners.keyed,
-                    storageClass: .data
-                )
+            case .read:
                 do {
-                    try Task.checkCancellation()
-                    guard active == operation, !isClosing else { throw Failure.unavailable }
-                    try validateOwner(owner)
+                    let value = try await access.keyed.read(
+                        key         : request.key,
+                        owner       : access.owners.keyed,
+                        storageClass: .data
+                    )
+                    do {
+                        try Task.checkCancellation()
+                        guard active == operation, !isClosing else { throw Failure.unavailable }
+
+                        try validateOwner(owner)
+                    } catch {
+                        return .refused(Self.keyedRequestPreflightFailure(error))
+                    }
+                    guard (value?.count ?? 0) <= StorageFrameCodec.maximumValueBytes else {
+                        return .refused(.readFailed(.invalidPayload))
+                    }
+
+                    return .read(value)
                 } catch {
-                    return .refused(Self.keyedRequestPreflightFailure(error))
+                    return .refused(Self.keyedRequestReadFailure(error))
                 }
-                guard (value?.count ?? 0) <= StorageFrameCodec.maximumValueBytes else {
-                    return .refused(.readFailed(.invalidPayload))
+
+            case .write:
+                guard let value = request.value else { return .refused(.invalidRequest) }
+
+                do {
+                    try await access.keyed.write(
+                        value,
+                        key         : request.key,
+                        owner       : access.owners.keyed,
+                        storageClass: .data
+                    )
+                    return .acknowledged
+                } catch {
+                    // Handoff occurred. No backend acceptance/commit receipt proves retry safety.
+                    return .outcomeUnknown
                 }
-                return .read(value)
-            } catch {
-                return .refused(Self.keyedRequestReadFailure(error))
-            }
-        case .write:
-            guard let value = request.value else { return .refused(.invalidRequest) }
-            do {
-                try await access.keyed.write(
-                    value,
-                    key         : request.key,
-                    owner       : access.owners.keyed,
-                    storageClass: .data
-                )
-                return .acknowledged
-            } catch {
-                // Handoff occurred. No backend acceptance/commit receipt proves retry safety.
-                return .outcomeUnknown
-            }
-        case .remove:
-            do {
-                try await access.keyed.remove(
-                    key         : request.key,
-                    owner       : access.owners.keyed,
-                    storageClass: .data
-                )
-                return .acknowledged
-            } catch {
-                return .outcomeUnknown
-            }
+
+            case .remove:
+                do {
+                    try await access.keyed.remove(
+                        key         : request.key,
+                        owner       : access.owners.keyed,
+                        storageClass: .data
+                    )
+                    return .acknowledged
+                } catch {
+                    return .outcomeUnknown
+                }
         }
     }
 
@@ -996,10 +1031,11 @@ actor AddonStorageCoordinator {
     private static func keyedRequestPreflightFailure(_ error: any Error) -> KeyedRequestRefusal {
         if error is CancellationError { return .cancelled }
         guard let failure = error as? Failure else { return .invalidRequest }
+
         switch failure {
-        case .busy: return .busy
-        case .invalidOwner: return .invalidOwner
-        case .unavailable, .invalidConfiguration: return .unavailable
+            case .busy: return .busy
+            case .invalidOwner: return .invalidOwner
+            case .unavailable, .invalidConfiguration: return .unavailable
         }
     }
 
@@ -1008,19 +1044,26 @@ actor AddonStorageCoordinator {
     private static func keyedRequestReadFailure(_ error: any Error) -> KeyedRequestRefusal {
         if error is CancellationError { return .cancelled }
         if let failure = error as? AddonFailure { return .readFailed(failure.code) }
-        guard let failure = error as? KeyedStorageFailure else { return .readFailed(.dependencyUnavailable) }
-        switch failure {
-        case .invalidOwner, .invalidTicket, .closed:
-            return .readFailed(.sessionRevoked)
-        case .busy, .quotaExceeded:
-            return .readFailed(.resourceDenied)
-        case .invalidKey, .oversized:
-            return .readFailed(.invalidPayload)
-        case .futureFormat:
-            return .readFailed(.versionConflict)
-        case .invalidConfiguration, .unsafePath, .unrecognizedEntry, .corrupt, .staleRevision,
-            .cleanupRequired, .committedDurabilityUncertain, .io:
+        guard let failure = error as? KeyedStorageFailure else {
             return .readFailed(.dependencyUnavailable)
+        }
+
+        switch failure {
+            case .invalidOwner, .invalidTicket, .closed:
+                return .readFailed(.sessionRevoked)
+
+            case .busy, .quotaExceeded:
+                return .readFailed(.resourceDenied)
+
+            case .invalidKey, .oversized:
+                return .readFailed(.invalidPayload)
+
+            case .futureFormat:
+                return .readFailed(.versionConflict)
+
+            case .invalidConfiguration, .unsafePath, .unrecognizedEntry, .corrupt, .staleRevision,
+                 .cleanupRequired, .committedDurabilityUncertain, .io:
+                return .readFailed(.dependencyUnavailable)
         }
     }
 
@@ -1056,21 +1099,22 @@ actor AddonStorageCoordinator {
         try available()
         try validateOwner(owner)
         guard let checkpointStore, let keyedStore else { throw Failure.unavailable }
+
         let access = BackendAccess(
             checkpoint: checkpointStore,
             keyed     : keyedStore,
             owners    : backendOwners[owner.index]
         )
-        let operation = Operation(
-            id  : UUID(),
-            kind: .normal
-        )
+        let operation = Operation(id: UUID(), kind: .normal)
         active = operation
         defer { finish(operation) }
+
         let result = try await body(access)
         try Task.checkCancellation()
         guard active == operation, !isClosing else { throw Failure.unavailable }
+
         try validateOwner(owner)
+
         return result
     }
 
@@ -1095,6 +1139,7 @@ actor AddonStorageCoordinator {
             guard status == .closed else { return .draining }
         }
         closeCleanupPending = false
+
         return .closed
     }
 
@@ -1108,7 +1153,8 @@ actor AddonStorageCoordinator {
     private func validateOwner(_ owner: Owner) throws {
         guard owner.coordinatorID == coordinatorID,
               owner.epoch == readinessEpoch,
-              backendOwners.indices.contains(owner.index) else {
+              backendOwners.indices.contains(owner.index)
+        else {
             throw Failure.invalidOwner
         }
     }
@@ -1122,8 +1168,8 @@ actor AddonStorageCoordinator {
     /// invalidateReadiness revokes all capabilities without retaining historical tombstones.
     private func invalidateReadiness() {
         readinessEpoch = nil
-        backendOwners = []
-        isClosing = true
+        backendOwners  = []
+        isClosing      = true
     }
 
     /// finish relinquishes only the exact operation that claimed the bounded admission row.

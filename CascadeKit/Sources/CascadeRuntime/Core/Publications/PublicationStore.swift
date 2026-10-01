@@ -10,6 +10,7 @@ import Foundation
 /// Its only mutable authority is one synchronous PublicationState value, so a runtime
 /// can own the same state machine directly without introducing a second registry.
 public actor PublicationStore {
+
     public static let maximumStateBytes = PublicationState.maximumStateBytes
 
     private var state: PublicationState
@@ -80,13 +81,19 @@ public actor PublicationStore {
 
     /// accept is a trusted host composition primitive, not transport ingress.
     /// Admission is transactional: failure leaves the last valid publication untouched.
-    public func accept(_ publication: Publication, owner: AddonID) throws {
+    public func accept(
+        _ publication: Publication,
+        owner        : AddonID
+    ) throws {
         try state.accept(publication, owner: owner)
     }
 
     /// accept commits a trusted host batch as one actor operation. Transport callers
     /// must enter through acceptPublicationState instead.
-    public func accept(_ publications: [Publication], owner: AddonID) throws {
+    public func accept(
+        _ publications: [Publication],
+        owner         : AddonID
+    ) throws {
         try state.accept(publications, owner: owner)
     }
 
@@ -102,7 +109,10 @@ public actor PublicationStore {
     }
 
     /// remove ends this session without permitting its revision to be replayed.
-    public func remove(id: PublicationID, owner: AddonID) throws {
+    public func remove(
+        id   : PublicationID,
+        owner: AddonID
+    ) throws {
         try state.remove(id: id, owner: owner)
     }
 

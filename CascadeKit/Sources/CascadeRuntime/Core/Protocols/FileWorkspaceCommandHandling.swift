@@ -4,10 +4,10 @@
 //
 
 import CascadeContracts
-import Foundation
 
 /// FileWorkspaceCommandHandling is the host-owned persistence and conversion boundary.
 protocol FileWorkspaceCommandHandling: Sendable {
+
     func handle(
         _ command: FileWorkspaceCommand,
         owner    : VerifiedAddonIdentity,

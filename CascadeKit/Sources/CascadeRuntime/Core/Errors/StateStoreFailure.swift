@@ -3,11 +3,20 @@
 //  CascadeKit
 //
 
-import Foundation
-
 public enum StateStoreFailure: Error, Equatable, Sendable {
-    case unsafePath, unrecognizedEntry, oversized, corrupt, invalidOwner, invalidTicket
-    case staleRevision, quotaExceeded, busy, closed, invalidConfiguration, missingState
+
+    case unsafePath
+    case unrecognizedEntry
+    case oversized
+    case corrupt
+    case invalidOwner
+    case invalidTicket
+    case staleRevision
+    case quotaExceeded
+    case busy
+    case closed
+    case invalidConfiguration
+    case missingState
     case futureSchema(UInt32)
-    case io(Int32)
+    case io          (Int32)
 }

@@ -4,12 +4,12 @@
 //
 
 import CascadeContracts
-import Foundation
 
 /// RuntimeArchiveRemapping replaces inert archive aliases inside already validated contract graphs.
 /// The caller admits Q before retaining original and remapped values. These pure transformations
 /// preserve every other contract field and grant no provider, connection or native raster authority.
 enum RuntimeArchiveRemapping {
+
     /// publication preserves complete timelines and rewrites every declared and drawn asset reference.
     static func publication(
         _ publication: Publication,
@@ -20,19 +20,13 @@ enum RuntimeArchiveRemapping {
             revision   : publication.revision,
             kind       : publication.kind,
             content    : publication.content.map { value in
-                try presentations(
-                    value,
-                    aliases: aliases
-                )
+                try presentations(value, aliases: aliases)
             },
             timeline   : publication.timeline.map { entries in
                 try entries.map { entry in
                     try ScheduledEntry(
                         date   : entry.date,
-                        content: presentations(
-                            entry.content,
-                            aliases: aliases
-                        )
+                        content: presentations(entry.content, aliases: aliases)
                     )
                 }
             },
@@ -48,34 +42,19 @@ enum RuntimeArchiveRemapping {
     ) throws -> PresentationSet {
         try PresentationSet(
             widget         : presentation.widget.map { value in
-                try document(
-                    value,
-                    aliases: aliases
-                )
+                try document(value, aliases: aliases)
             },
             compactLeading : presentation.compactLeading.map { value in
-                try document(
-                    value,
-                    aliases: aliases
-                )
+                try document(value, aliases: aliases)
             },
             compactTrailing: presentation.compactTrailing.map { value in
-                try document(
-                    value,
-                    aliases: aliases
-                )
+                try document(value, aliases: aliases)
             },
             minimal        : presentation.minimal.map { value in
-                try document(
-                    value,
-                    aliases: aliases
-                )
+                try document(value, aliases: aliases)
             },
             expanded       : presentation.expanded.map { value in
-                try document(
-                    value,
-                    aliases: aliases
-                )
+                try document(value, aliases: aliases)
             }
         )
     }
@@ -87,17 +66,11 @@ enum RuntimeArchiveRemapping {
     ) throws -> ContentDocument {
         try ContentDocument(
             schemaVersion     : document.schemaVersion,
-            root              : node(
-                document.root,
-                aliases: aliases
-            ),
+            root              : node(document.root, aliases: aliases),
             accessibilityLabel: document.accessibilityLabel,
             privacy           : document.privacy,
             assets            : document.assets.map { previous in
-                try alias(
-                    previous,
-                    in: aliases
-                )
+                try alias(previous, in: aliases)
             },
             glassLights       : document.glassLights
         )
@@ -112,30 +85,21 @@ enum RuntimeArchiveRemapping {
             kind              : node.kind,
             text              : node.text,
             assetID           : node.assetID.map { previous in
-                try alias(
-                    previous,
-                    in: aliases
-                )
+                try alias(previous, in: aliases)
             },
             value             : node.value,
             deadline          : node.deadline,
             actionID          : node.actionID,
             children          : node.children.map { children in
                 try children.map { child in
-                    try self.node(
-                        child,
-                        aliases: aliases
-                    )
+                    try self.node(child, aliases: aliases)
                 }
             },
             accessibilityLabel: node.accessibilityLabel,
             actionPayload     : node.actionPayload,
             clockFormat       : node.clockFormat,
             fileWorkspace     : node.fileWorkspace.map { presentation in
-                try fileWorkspace(
-                    presentation,
-                    aliases: aliases
-                )
+                try fileWorkspace(presentation, aliases: aliases)
             }
         )
     }
@@ -153,15 +117,13 @@ enum RuntimeArchiveRemapping {
                 availability    : entry.availability,
                 ownership       : entry.ownership,
                 thumbnailAssetID: entry.thumbnailAssetID.map { previous in
-                    try alias(
-                        previous,
-                        in: aliases
-                    )
+                    try alias(previous, in: aliases)
                 }
             )
         }
+
         return try FileWorkspacePresentation(
-            snapshot: FileWorkspaceSnapshot(
+            snapshot        : FileWorkspaceSnapshot(
                 revision  : presentation.snapshot.revision,
                 entries   : entries,
                 totalCount: presentation.snapshot.totalCount,
@@ -187,6 +149,7 @@ enum RuntimeArchiveRemapping {
                 reason: "Archive image reference has no fresh host alias."
             )
         }
+
         return replacement
     }
 }

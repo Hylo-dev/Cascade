@@ -4,9 +4,12 @@
 //
 
 import CascadeContracts
-import Foundation
-import OSLog
 
 public enum ServiceRequestOutcome: Equatable, Sendable {
-    case pending, dispatched, completed(ServiceResponse), unknown, unsent
+
+    case pending
+    case dispatched
+    case completed(ServiceResponse)
+    case unknown
+    case unsent
 }

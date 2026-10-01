@@ -6,10 +6,9 @@
 import CascadeContracts
 
 extension PresentationSet {
+
     /// forEachAssetReference walks the fixed representation slots without building an array.
-    func forEachAssetReference(
-        _ visit: (String, ContentDocument.Privacy) throws -> Void
-    ) rethrows {
+    func forEachAssetReference(_ visit: (String, ContentDocument.Privacy) throws -> Void) rethrows {
         try widget?.forEachAssetReference(visit)
         try compactLeading?.forEachAssetReference(visit)
         try compactTrailing?.forEachAssetReference(visit)

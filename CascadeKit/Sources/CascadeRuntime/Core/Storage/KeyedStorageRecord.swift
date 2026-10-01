@@ -3,11 +3,13 @@
 //  CascadeKit
 //
 
+import CascadeContracts
 import CryptoKit
 import Foundation
 
 /// KeyedStorageRecord validates byte identity independently of Swift Unicode-equivalent String equality.
 struct KeyedStorageRecord {
+
     static let maximumBytes           = 65_920
     static let headerBytes            = 128
     static let metadataBytes          = 4_096
@@ -15,16 +17,17 @@ struct KeyedStorageRecord {
     private static let magic          = Data("CASKV001".utf8)
     private static let checksumDomain = Data("Cascade.keyed.record.v1\0".utf8)
 
-    let key      : Data
-    let value    : Data
-    let revision : UInt64
-    let checksum : Data
+    let key     : Data
+    let value   : Data
+    let revision: UInt64
+    let checksum: Data
 
     /// validatedKey bounds exact UTF-8 bytes without path interpretation or normalization.
     static func validatedKey(_ key: String) throws -> Data {
         guard (1...256).contains(key.utf8.count), !key.utf8.contains(0) else {
             throw KeyedStorageFailure.invalidKey
         }
+
         return Data(key.utf8)
     }
 
@@ -34,17 +37,19 @@ struct KeyedStorageRecord {
         let publisher = Data(identity.publisher.utf8)
         appendInteger(
             UInt64(publisher.count),
-            width : 8,
-            to    : &input
+            width: 8,
+            to   : &input
         )
         input.append(publisher)
+
         let addon = Data(identity.addonID.rawValue.utf8)
         appendInteger(
             UInt64(addon.count),
-            width : 8,
-            to    : &input
+            width: 8,
+            to   : &input
         )
         input.append(addon)
+
         return Data(SHA256.hash(data: input))
     }
 
@@ -53,63 +58,60 @@ struct KeyedStorageRecord {
         var hash = SHA256()
         hash.update(data: Data("Cascade.keyed.key.v1\0".utf8))
         hash.update(data: key)
+
         return Data(hash.finalize())
     }
 
     /// hex creates the fixed lowercase filename component from a host-generated digest.
     static func hex(_ bytes: Data) -> String {
-        bytes.map {
-            String(
-                format : "%02x",
-                $0
-            )
-        }
-        .joined()
+        bytes.map { String(format: "%02x", $0) }
+            .joined()
     }
 
     /// encode creates a single bounded record only after caller-owned retention and scratch admission.
     static func encode(
-        key          : Data,
-        value        : Data,
-        namespace    : Data,
-        storageClass : KeyedStorageClass,
-        revision     : UInt64
+        key         : Data,
+        value       : Data,
+        namespace   : Data,
+        storageClass: KeyedStorageClass,
+        revision    : UInt64
     ) -> Data {
         var header = magic
         appendInteger(
             1,
-            width : 2,
-            to    : &header
+            width: 2,
+            to   : &header
         )
         header.append(storageClass.rawValue)
         header.append(0)
         appendInteger(
             UInt64(key.count),
-            width : 2,
-            to    : &header
+            width: 2,
+            to   : &header
         )
         appendInteger(
             0,
-            width : 2,
-            to    : &header
+            width: 2,
+            to   : &header
         )
         appendInteger(
             UInt64(value.count),
-            width : 4,
-            to    : &header
+            width: 4,
+            to   : &header
         )
         appendInteger(
             0,
-            width : 4,
-            to    : &header
+            width: 4,
+            to   : &header
         )
         appendInteger(
             revision,
-            width : 8,
-            to    : &header
+            width: 8,
+            to   : &header
         )
         header.append(namespace)
         header.append(keyDigest(key))
+
         var hash = SHA256()
         hash.update(data: checksumDomain)
         hash.update(data: header)
@@ -118,64 +120,55 @@ struct KeyedStorageRecord {
         header.append(contentsOf: hash.finalize())
         header.append(key)
         header.append(value)
+
         return header
     }
 
     /// decode checks every binding before returning the opaque payload, including the raw key bytes.
     static func decode(
-        _ bytes      : Data,
-        key          : Data,
-        namespace    : Data,
-        storageClass : KeyedStorageClass
+        _ bytes     : Data,
+        key         : Data,
+        namespace   : Data,
+        storageClass: KeyedStorageClass
     ) throws -> KeyedStorageRecord {
         guard bytes.count <= maximumBytes else { throw KeyedStorageFailure.oversized }
         guard bytes.count >= headerBytes, bytes.prefix(8) == magic else {
             throw KeyedStorageFailure.corrupt
         }
-        guard
-            integer(
-                bytes,
-                offset : 8,
-                width  : 2
-            ) == 1
-        else { throw KeyedStorageFailure.futureFormat }
-        let keyCount = Int(
-            integer(
-                bytes,
-                offset : 12,
-                width  : 2
-            )
-        )
-        let valueCount = Int(
-            integer(
-                bytes,
-                offset : 16,
-                width  : 4
-            )
-        )
-        let revision = integer(
+        guard integer(bytes, offset: 8, width: 2) == 1 else { throw KeyedStorageFailure.futureFormat }
+
+        let keyCount   = Int(integer(bytes, offset: 12, width: 2))
+        let valueCount = Int(integer(bytes, offset: 16, width: 4))
+        let revision   = integer(
             bytes,
-            offset : 24,
-            width  : 8
+            offset: 24,
+            width : 8
         )
-        guard bytes[10] == storageClass.rawValue, bytes[11] == 0,
-            bytes[14..<16].allSatisfy({ $0 == 0 }), bytes[20..<24].allSatisfy({ $0 == 0 }),
-            (1...256).contains(keyCount), valueCount <= 65_536, revision > 0,
-            bytes.count == headerBytes + keyCount + valueCount,
-            bytes[32..<64] == namespace, bytes[64..<96] == keyDigest(key),
-            bytes[128..<(128 + keyCount)] == key
+        guard bytes[10] == storageClass.rawValue,
+              bytes[11] == 0,
+              bytes[14..<16].allSatisfy({ $0 == 0 }),
+              bytes[20..<24].allSatisfy({ $0 == 0 }),
+              (1...256).contains(keyCount),
+              valueCount <= 65_536,
+              revision > 0,
+              bytes.count == headerBytes + keyCount + valueCount,
+              bytes[32..<64] == namespace,
+              bytes[64..<96] == keyDigest(key),
+              bytes[128..<(128 + keyCount)] == key
         else { throw KeyedStorageFailure.corrupt }
+
         var hash = SHA256()
         hash.update(data: checksumDomain)
         hash.update(data: bytes.prefix(96))
         hash.update(data: bytes.suffix(keyCount + valueCount))
         let checksum = Data(hash.finalize())
         guard checksum == bytes[96..<128] else { throw KeyedStorageFailure.corrupt }
+
         return KeyedStorageRecord(
-            key      : key,
-            value    : Data(bytes.suffix(valueCount)),
-            revision : revision,
-            checksum : checksum
+            key     : key,
+            value   : Data(bytes.suffix(valueCount)),
+            revision: revision,
+            checksum: checksum
         )
     }
 
@@ -190,9 +183,9 @@ struct KeyedStorageRecord {
 
     /// integer reads a field only after the caller has checked the complete fixed header length.
     private static func integer(
-        _ bytes : Data,
-        offset  : Int,
-        width   : Int
+        _ bytes: Data,
+        offset : Int,
+        width  : Int
     ) -> UInt64 {
         bytes[offset..<(offset + width)].reduce(0) { ($0 << 8) | UInt64($1) }
     }

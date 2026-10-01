@@ -3,8 +3,6 @@
 //  CascadeKit
 //
 
-
-
 /// ProviderMemoryEpisode classifies one physical provider incarnation's current
 /// observed footprint without retaining samples, owners, or a clock.
 ///
@@ -13,7 +11,9 @@
 /// physical incarnation receives a new value, so no explicit lifecycle reset can
 /// accidentally make an old process look healthy.
 struct ProviderMemoryEpisode: Sendable {
+
     enum Observation: Equatable, Sendable {
+
         case unavailable
         case withinTarget
         case moderate(isNewEpisode: Bool)
@@ -33,16 +33,19 @@ struct ProviderMemoryEpisode: Sendable {
     /// sample from being reported as a second entry.
     mutating func observe(footprintBytes: UInt64?) -> Observation {
         guard let footprintBytes else { return .unavailable }
+
         guard footprintBytes > Self.targetBytes else {
             isEpisodeOpen = false
             return .withinTarget
         }
+
         guard footprintBytes <= Self.stopBytes else {
             isEpisodeOpen = true
             return .severe
         }
+
         let isNewEpisode = !isEpisodeOpen
-        isEpisodeOpen = true
+        isEpisodeOpen    = true
         return .moderate(isNewEpisode: isNewEpisode)
     }
 }

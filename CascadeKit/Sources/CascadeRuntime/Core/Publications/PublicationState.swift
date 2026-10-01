@@ -10,24 +10,28 @@ import Foundation
 /// machine. A serializing actor holds one value directly; copying it creates an
 /// independent authority rather than a shared or mirrored registry.
 struct PublicationState: Sendable {
+
     struct RecordAccounting: Equatable, Sendable {
-        let owner: AddonID
-        let revision: UInt64
-        let kind: Publication.Kind
-        let contentBytes: Int
+
+        let owner         : AddonID
+        let revision      : UInt64
+        let kind          : Publication.Kind
+        let contentBytes  : Int
         let tombstoneBytes: Int
     }
 
     struct PreparedOutput: Sendable {
-        fileprivate let records: [PublicationID: Record]
+
+        fileprivate let records              : [PublicationID: Record]
         fileprivate let previousLiveDeadlines: [PublicationID: Date]
-        fileprivate let session: PublicationSessionRegistry.Session
-        fileprivate let sequence: UInt64
-        fileprivate let stateRevision: UInt64
-        let owner: AddonID
+        fileprivate let session              : PublicationSessionRegistry.Session
+        fileprivate let sequence             : UInt64
+        fileprivate let stateRevision        : UInt64
+
+        let owner             : AddonID
         let retainedBytesAfter: Int
-        let newFamilies: [PublicationID: Publication.Kind]
-        let admission: PublicationAdmission
+        let newFamilies       : [PublicationID: Publication.Kind]
+        let admission         : PublicationAdmission
 
         /// forEachChangedPublication visits admitted, host-capped publications in this proposal.
         /// Preparation is not committed authority: consumers must complete the state's
@@ -46,11 +50,15 @@ struct PublicationState: Sendable {
     }
 
     struct PreparedCompletion: Sendable {
-        fileprivate let session: PublicationSessionRegistry.Session
+
+        fileprivate let session : PublicationSessionRegistry.Session
         fileprivate let sequence: UInt64
+
         let admission: PublicationAdmission
     }
+
     fileprivate struct Record: Sendable {
+
         let revision       : UInt64
         let kind           : Publication.Kind
         let sessionDeadline: Date
@@ -59,6 +67,7 @@ struct PublicationState: Sendable {
     }
 
     private struct ActiveCounts: Sendable {
+
         var owner           = 0
         var activities      = 0
         var ownerActivities = 0
@@ -71,12 +80,16 @@ struct PublicationState: Sendable {
     private static let recordCharge = 1_024
 
     private var restorationIssuer = UUID()
+
     private let maximumRetainedBytes: Int
     private let now                 : @Sendable () -> Date
-    private var records             : [PublicationID: Record] = [:]
-    private var sessions            : PublicationSessionRegistry
-    private(set) var retainedBytes  = 0
-    private var stateRevision: UInt64 = 0
+
+    private var records : [PublicationID: Record] = [:]
+    private var sessions: PublicationSessionRegistry
+
+    private(set) var retainedBytes = 0
+
+    private var stateRevision      : UInt64 = 0
     private var isRevisionExhausted = false
 
     init(
@@ -85,15 +98,9 @@ struct PublicationState: Sendable {
         maximumPublisherNamespaces: Int = 256,
         now                       : @escaping @Sendable () -> Date = Date.init
     ) {
-        self.maximumRetainedBytes = min(
-            Self.maximumStateBytes,
-            max(
-                0,
-                maximumRetainedBytes
-            )
-        )
+        self.maximumRetainedBytes = min(Self.maximumStateBytes, max(0, maximumRetainedBytes))
         self.now                  = now
-        sessions = PublicationSessionRegistry(
+        sessions                  = PublicationSessionRegistry(
             maximumConnections        : maximumConnections,
             maximumPublisherNamespaces: maximumPublisherNamespaces
         )
@@ -129,8 +136,10 @@ struct PublicationState: Sendable {
             serviceHost                 : serviceHost,
             subscriptionHost            : subscriptionHost
         )
+
         retainedBytes += admission.additionalBytes
         advanceStateRevision()
+
         return admission.connection
     }
 
@@ -166,6 +175,7 @@ struct PublicationState: Sendable {
             sequence  : sequence
         )
         try output.validate()
+
         for publication in output.publications {
             guard session.authorizedPublications.contains(publication.id) else {
                 throw AddonFailure(
@@ -174,6 +184,7 @@ struct PublicationState: Sendable {
                 )
             }
         }
+
         for operation in output.operations {
             if case .endPublication(let id) = operation,
                !session.authorizedPublications.contains(id) {
@@ -183,25 +194,22 @@ struct PublicationState: Sendable {
                 )
             }
         }
+
         var previousRevisions: [PublicationID: UInt64] = [:]
         for publication in output.publications {
             previousRevisions[publication.id] = records[publication.id]?.revision
         }
+
         try output.validateContext(
             authenticatedAddonID: session.identity.addonID,
             expectedCompletion  : expectedCompletion,
             previousRevisions   : previousRevisions,
             contentSchemas      : session.connection.negotiatedProtocol.contentSchemas
         )
-        try accept(
-            output.publications,
-            owner: session.identity.addonID
-        )
-        sessions.advance(
-            session,
-            sequence: sequence
-        )
+        try accept(output.publications, owner: session.identity.addonID)
+        sessions.advance(session, sequence: sequence)
         advanceStateRevision()
+
         return PublicationAdmission(
             operations: output.operations,
             completion: output.completion,
@@ -224,21 +232,25 @@ struct PublicationState: Sendable {
                 reason: "Publication authority revision is exhausted."
             )
         }
+
         let session = try sessions.validate(
             connection: connection,
             generation: generation,
             sequence  : sequence
         )
         try output.validate()
+
         guard output.operations.allSatisfy({
             if case .endPublication = $0 { return true }
             return false
-        }) else {
+        })
+        else {
             throw AddonFailure(
                 code  : .invalidPayload,
                 reason: "This runtime cut does not support the requested output operation."
             )
         }
+
         for publication in output.publications {
             guard session.authorizedPublications.contains(publication.id) else {
                 throw AddonFailure(
@@ -247,6 +259,7 @@ struct PublicationState: Sendable {
                 )
             }
         }
+
         for operation in output.operations {
             if case .endPublication(let id) = operation,
                !session.authorizedPublications.contains(id) {
@@ -256,22 +269,23 @@ struct PublicationState: Sendable {
                 )
             }
         }
+
         var previousRevisions: [PublicationID: UInt64] = [:]
         for publication in output.publications {
             previousRevisions[publication.id] = records[publication.id]?.revision
         }
+
         try output.validateContext(
             authenticatedAddonID: session.identity.addonID,
             expectedCompletion  : expectedCompletion,
             previousRevisions   : previousRevisions,
             contentSchemas      : session.connection.negotiatedProtocol.contentSchemas
         )
+
         let instant = now()
-        var counts = activeCounts(
-            owner: session.identity.addonID,
-            at   : instant
-        )
-        var proposed: [PublicationID: Record] = [:]
+        var counts  = activeCounts(owner: session.identity.addonID, at: instant)
+
+        var proposed      : [PublicationID: Record] = [:]
         var projectedBytes = retainedBytes
         for publication in output.publications {
             try publication.validateOwnerAndStructure(session.identity.addonID)
@@ -281,6 +295,7 @@ struct PublicationState: Sendable {
                     reason: "Publication has expired."
                 )
             }
+
             let previous = proposed[publication.id] ?? records[publication.id]
             try publication.validateRevision(after: previous?.revision)
             if let previous {
@@ -291,12 +306,14 @@ struct PublicationState: Sendable {
                     )
                 }
             }
+
             guard previous == nil || previous?.kind == publication.kind else {
                 throw AddonFailure(
                     code  : .invalidPayload,
                     reason: "A publication session cannot change its family."
                 )
             }
+
             let duration: TimeInterval = publication.kind == .activity
                 ? 8 * 3_600
                 : (publication.kind == .notice ? 10 : .infinity)
@@ -308,6 +325,7 @@ struct PublicationState: Sendable {
                     reason: "The publication session has ended."
                 )
             }
+
             let admitted = try publication.capped(at: sessionDeadline)
             if previous == nil {
                 guard counts.owner < 16 else {
@@ -316,6 +334,7 @@ struct PublicationState: Sendable {
                         reason: "An addon may retain at most 16 active publications."
                     )
                 }
+
                 if admitted.kind == .activity {
                     guard counts.activities < 16, counts.ownerActivities < 4 else {
                         throw AddonFailure(
@@ -323,6 +342,7 @@ struct PublicationState: Sendable {
                             reason: "The activity quota is full."
                         )
                     }
+
                     counts.activities += 1
                     counts.ownerActivities += 1
                 } else if admitted.kind == .notice {
@@ -332,12 +352,15 @@ struct PublicationState: Sendable {
                             reason: "The notice quota is full."
                         )
                     }
+
                     counts.notices += 1
                 }
+
                 counts.owner += 1
             }
+
             let contentBytes = try JSONEncoder().encode(admitted).count
-            let additional = contentBytes - (previous?.contentBytes ?? 0)
+            let additional   = contentBytes - (previous?.contentBytes ?? 0)
                 + (previous == nil ? Self.recordCharge : 0)
             guard additional <= maximumRetainedBytes - projectedBytes else {
                 throw AddonFailure(
@@ -345,6 +368,7 @@ struct PublicationState: Sendable {
                     reason: "The retained publication state budget is exhausted."
                 )
             }
+
             projectedBytes += additional
             proposed[admitted.id] = Record(
                 revision       : admitted.revision,
@@ -354,36 +378,43 @@ struct PublicationState: Sendable {
                 contentBytes   : contentBytes
             )
         }
+
         for operation in output.operations {
             guard case .endPublication(let id) = operation,
-                  var record = proposed[id] ?? records[id], record.publication != nil else { continue }
+                  var record = proposed[id] ?? records[id],
+                  record.publication != nil
+            else { continue }
+
             projectedBytes -= record.contentBytes
-            record.publication = nil
+            record.publication  = nil
             record.contentBytes = 0
-            proposed[id] = record
+            proposed[id]        = record
         }
+
         var newFamilies: [PublicationID: Publication.Kind] = [:]
         for (id, record) in proposed where records[id] == nil && record.publication != nil {
             newFamilies[id] = record.kind
         }
+
         var previousLiveDeadlines: [PublicationID: Date] = [:]
         for id in proposed.keys {
-            guard let previous = records[id], let publication = previous.publication else { continue }
-            previousLiveDeadlines[id] = min(
-                previous.sessionDeadline,
-                publication.expiresAt
-            )
+            guard let previous = records[id],
+                  let publication = previous.publication
+            else { continue }
+
+            previousLiveDeadlines[id] = min(previous.sessionDeadline, publication.expiresAt)
         }
+
         return PreparedOutput(
-            records           : proposed,
+            records              : proposed,
             previousLiveDeadlines: previousLiveDeadlines,
-            session           : session,
-            sequence          : sequence,
-            stateRevision     : stateRevision,
-            owner             : session.identity.addonID,
-            retainedBytesAfter: projectedBytes,
-            newFamilies       : newFamilies,
-            admission         : PublicationAdmission(
+            session              : session,
+            sequence             : sequence,
+            stateRevision        : stateRevision,
+            owner                : session.identity.addonID,
+            retainedBytesAfter   : projectedBytes,
+            newFamilies          : newFamilies,
+            admission            : PublicationAdmission(
                 operations: output.operations,
                 completion: output.completion,
                 checkpoint: output.checkpoint
@@ -393,16 +424,35 @@ struct PublicationState: Sendable {
 
     /// validateServiceSourceSequence keeps source outputs on the canonical publication sequence,
     /// never a new replay domain.
-    func validateServiceSourceSequence(connection: PublicationConnection, sequence: UInt64) throws {
+    func validateServiceSourceSequence(
+        connection: PublicationConnection,
+        sequence  : UInt64
+    ) throws {
         guard !isRevisionExhausted, connection.negotiatedProtocol.minor >= 4 else {
-            throw AddonFailure(code: .sessionRevoked, reason: "Source connection is unavailable")
+            throw AddonFailure(
+                code  : .sessionRevoked,
+                reason: "Source connection is unavailable"
+            )
         }
-        _ = try sessions.validate(connection: connection, generation: connection.generation, sequence: sequence)
+
+        _ = try sessions.validate(
+            connection: connection,
+            generation: connection.generation,
+            sequence  : sequence
+        )
     }
 
-    mutating func commitServiceSourceSequence(connection: PublicationConnection, sequence: UInt64) throws {
+    mutating func commitServiceSourceSequence(
+        connection: PublicationConnection,
+        sequence  : UInt64
+    ) throws {
         try validateServiceSourceSequence(connection: connection, sequence: sequence)
-        let session = try sessions.validate(connection: connection, generation: connection.generation, sequence: sequence)
+
+        let session = try sessions.validate(
+            connection: connection,
+            generation: connection.generation,
+            sequence  : sequence
+        )
         sessions.advance(session, sequence: sequence)
         advanceStateRevision()
     }
@@ -422,15 +472,18 @@ struct PublicationState: Sendable {
                 reason: "Publication authority revision is exhausted."
             )
         }
+
         guard output.publications.isEmpty,
               output.operations.isEmpty,
               output.completion != nil,
-              output.checkpoint == nil else {
+              output.checkpoint == nil
+        else {
             throw AddonFailure(
                 code  : .invalidPayload,
                 reason: "The output is not completion-only."
             )
         }
+
         let session = try sessions.validate(
             connection: connection,
             generation: generation,
@@ -443,6 +496,7 @@ struct PublicationState: Sendable {
             previousRevisions   : [:],
             contentSchemas      : session.connection.negotiatedProtocol.contentSchemas
         )
+
         return PreparedCompletion(
             session  : session,
             sequence : sequence,
@@ -463,6 +517,7 @@ struct PublicationState: Sendable {
                 reason: "Prepared publication authority changed before commit."
             )
         }
+
         let current = try sessions.validate(
             connection: prepared.session.connection,
             generation: prepared.session.connection.generation,
@@ -478,22 +533,18 @@ struct PublicationState: Sendable {
 
     /// commitPreparedCompletion advances only the exact provider sequence. Ordinary
     /// publication batches continue to use the global revision-guarded transition.
-    mutating func commitPreparedCompletion(
-        _ prepared: PreparedCompletion
-    ) throws -> PublicationAdmission {
+    mutating func commitPreparedCompletion(_ prepared: PreparedCompletion) throws -> PublicationAdmission {
         try validatePreparedCompletion(prepared)
-        sessions.advance(
-            prepared.session,
-            sequence: prepared.sequence
-        )
+        sessions.advance(prepared.session, sequence: prepared.sequence)
         advanceStateRevision()
+
         return prepared.admission
     }
 
     /// validatePreparedOutput rechecks authority and expiry at the caller's final clock sample.
     func validatePreparedOutput(
         _ prepared: PreparedOutput,
-        at instant : Date
+        at instant: Date
     ) throws {
         guard !isRevisionExhausted, prepared.stateRevision == stateRevision else {
             throw AddonFailure(
@@ -501,6 +552,7 @@ struct PublicationState: Sendable {
                 reason: "Prepared publication authority changed before commit."
             )
         }
+
         let current = try sessions.validate(
             connection: prepared.session.connection,
             generation: prepared.session.connection.generation,
@@ -512,12 +564,14 @@ struct PublicationState: Sendable {
                 reason: "Prepared publication session changed before commit."
             )
         }
+
         guard instant.timeIntervalSince1970.isFinite,
               prepared.previousLiveDeadlines.values.allSatisfy({ $0 > instant }),
               prepared.records.values.allSatisfy({ record in
-                record.sessionDeadline > instant
-                    && (record.publication?.expiresAt ?? .distantFuture) > instant
-              }) else {
+                  record.sessionDeadline > instant
+                      && (record.publication?.expiresAt ?? .distantFuture) > instant
+              })
+        else {
             throw AddonFailure(
                 code  : .deadlineExceeded,
                 reason: "Prepared publication output expired before commit."
@@ -528,19 +582,15 @@ struct PublicationState: Sendable {
     /// commitPreparedOutput applies publications, ends and sequence in one actor turn.
     mutating func commitPreparedOutput(
         _ prepared: PreparedOutput,
-        at instant : Date
+        at instant: Date
     ) throws -> PublicationAdmission {
-        try validatePreparedOutput(
-            prepared,
-            at: instant
-        )
+        try validatePreparedOutput(prepared, at: instant)
+
         for (id, record) in prepared.records { records[id] = record }
         retainedBytes = prepared.retainedBytesAfter
-        sessions.advance(
-            prepared.session,
-            sequence: prepared.sequence
-        )
+        sessions.advance(prepared.session, sequence: prepared.sequence)
         advanceStateRevision()
+
         return prepared.admission
     }
 
@@ -550,11 +600,9 @@ struct PublicationState: Sendable {
         _ publication: Publication,
         owner        : AddonID
     ) throws {
-        let instant = now()
-        var activeCounts = activeCounts(
-            owner: owner,
-            at   : instant
-        )
+        let instant      = now()
+        var activeCounts = activeCounts(owner: owner, at: instant)
+
         try accept(
             publication,
             owner       : owner,
@@ -577,23 +625,27 @@ struct PublicationState: Sendable {
                 reason: "Publication has expired."
             )
         }
+
         let previous = records[publication.id]
         try publication.validateRevision(after: previous?.revision)
         if let previous {
             guard let retainedPublication = previous.publication,
-                  retainedPublication.expiresAt > instant else {
+                  retainedPublication.expiresAt > instant
+            else {
                 throw AddonFailure(
                     code  : .sessionRevoked,
                     reason: "An ended publication requires a new host-negotiated session."
                 )
             }
         }
+
         guard previous == nil || previous?.kind == publication.kind else {
             throw AddonFailure(
                 code  : .invalidPayload,
                 reason: "A publication session cannot change its family."
             )
         }
+
         let duration: TimeInterval = publication.kind == .activity
             ? 8 * 3_600
             : (publication.kind == .notice ? 10 : .infinity)
@@ -605,6 +657,7 @@ struct PublicationState: Sendable {
                 reason: "The publication session has ended."
             )
         }
+
         let admitted = try publication.capped(at: sessionDeadline)
         if previous == nil {
             guard activeCounts.owner < 16 else {
@@ -613,6 +666,7 @@ struct PublicationState: Sendable {
                     reason: "An addon may retain at most 16 active publications."
                 )
             }
+
             if admitted.kind == .activity {
                 guard activeCounts.activities < 16, activeCounts.ownerActivities < 4 else {
                     throw AddonFailure(
@@ -621,6 +675,7 @@ struct PublicationState: Sendable {
                     )
                 }
             }
+
             if admitted.kind == .notice, activeCounts.notices >= 8 {
                 throw AddonFailure(
                     code  : .resourceDenied,
@@ -628,8 +683,9 @@ struct PublicationState: Sendable {
                 )
             }
         }
+
         let contentBytes = try JSONEncoder().encode(admitted).count
-        let additional = contentBytes
+        let additional   = contentBytes
             - (previous?.contentBytes ?? 0)
             + (previous == nil ? Self.recordCharge : 0)
         guard additional <= maximumRetainedBytes - retainedBytes else {
@@ -638,6 +694,7 @@ struct PublicationState: Sendable {
                 reason: "The retained publication state budget is exhausted."
             )
         }
+
         records[admitted.id] = Record(
             revision       : admitted.revision,
             kind           : admitted.kind,
@@ -646,6 +703,7 @@ struct PublicationState: Sendable {
             contentBytes   : contentBytes
         )
         retainedBytes += additional
+
         if previous == nil {
             activeCounts.owner += 1
             if admitted.kind == .activity {
@@ -665,18 +723,18 @@ struct PublicationState: Sendable {
         owner         : AddonID
     ) throws {
         guard publications.count <= 16,
-              Set(publications.map(\.id)).count == publications.count else {
+              Set(publications.map(\.id)).count == publications.count
+        else {
             throw AddonFailure(
                 code  : .invalidPayload,
                 reason: "A batch requires at most 16 distinct publications."
             )
         }
-        let instant = now()
-        var activeCounts = activeCounts(
-            owner: owner,
-            at   : instant
-        )
-        let previous = publications.map { ($0.id, records[$0.id]) }
+
+        let instant      = now()
+        var activeCounts = activeCounts(owner: owner, at: instant)
+
+        let previous      = publications.map { ($0.id, records[$0.id]) }
         let previousBytes = retainedBytes
         do {
             for publication in publications {
@@ -694,6 +752,7 @@ struct PublicationState: Sendable {
             retainedBytes = previousBytes
             throw error
         }
+
         advanceStateRevision()
     }
 
@@ -704,10 +763,13 @@ struct PublicationState: Sendable {
         var counts = ActiveCounts()
         for (id, record) in records {
             guard let publication = record.publication,
-                  publication.expiresAt > instant else { continue }
+                  publication.expiresAt > instant
+            else { continue }
+
             if id.addonID == owner {
                 counts.owner += 1
             }
+
             if record.kind == .activity {
                 counts.activities += 1
                 if id.addonID == owner {
@@ -717,6 +779,7 @@ struct PublicationState: Sendable {
                 counts.notices += 1
             }
         }
+
         return counts
     }
 
@@ -724,15 +787,19 @@ struct PublicationState: Sendable {
     /// provider tick. Missing identities mean revoked or expired, never merely waiting.
     func snapshot(at date: Date) -> [Publication] {
         guard date.timeIntervalSince1970.isFinite else { return [] }
+
         return records.values.compactMap { record in
             guard let publication = record.publication,
-                  date < publication.expiresAt else { return nil }
+                  date < publication.expiresAt
+            else { return nil }
+
             return publication.presentation(at: date)
         }.sorted { $0.id.stableKey < $1.id.stableKey }
     }
 
     func nextDeadline(after date: Date) -> Date? {
         guard date.timeIntervalSince1970.isFinite else { return nil }
+
         return records.values.compactMap(\.publication).flatMap { publication in
             [publication.expiresAt] + (publication.timeline ?? []).map(\.date)
         }.filter { $0 > date }.min()
@@ -745,13 +812,16 @@ struct PublicationState: Sendable {
     ) -> Publication? {
         guard date.timeIntervalSince1970.isFinite,
               let publication = records[id]?.publication,
-              publication.expiresAt > date else { return nil }
+              publication.expiresAt > date
+        else { return nil }
+
         return publication
     }
 
     /// recordAccounting reports the owning component's exact retained charge.
     func recordAccounting(id: PublicationID) -> RecordAccounting? {
         guard let record = records[id] else { return nil }
+
         return RecordAccounting(
             owner         : id.addonID,
             revision      : record.revision,
@@ -764,6 +834,7 @@ struct PublicationState: Sendable {
     /// removeHistory removes one inactive tombstone after runtime bindings no longer reference it.
     mutating func removeHistory(id: PublicationID) {
         guard let record = records[id], record.publication == nil else { return }
+
         records.removeValue(forKey: id)
         retainedBytes -= Self.recordCharge
         advanceStateRevision()
@@ -793,6 +864,7 @@ struct PublicationState: Sendable {
                 retainedBytes -= Self.recordCharge + record.contentBytes
             }
         }
+
         advanceStateRevision()
     }
 
@@ -800,21 +872,24 @@ struct PublicationState: Sendable {
     /// but unexpired snapshot after an unexpected provider failure.
     mutating func expire(at date: Date) {
         guard date.timeIntervalSince1970.isFinite else { return }
+
         let expired = records.keys.filter({
             records[$0]?.publication?.expiresAt ?? .distantFuture <= date
         })
         for id in expired {
             discardContent(id: id)
         }
+
         if !expired.isEmpty { advanceStateRevision() }
     }
 
     private mutating func discardContent(id: PublicationID) {
         guard var record = records[id], record.publication != nil else { return }
+
         retainedBytes -= record.contentBytes
         record.contentBytes = 0
         record.publication  = nil
-        records[id] = record
+        records[id]         = record
     }
 
     private mutating func advanceStateRevision() {
@@ -825,24 +900,28 @@ struct PublicationState: Sendable {
             isRevisionExhausted = true
             return
         }
+
         stateRevision += 1
     }
 }
 
 extension PublicationState {
+
     /// PreparedRestoration borrows validated canonical records without granting live authority.
     /// Its owner/revision guard and final clock check must succeed before synchronous commit.
     struct PreparedRestoration: Sendable {
-        fileprivate let issuer        : UUID
-        fileprivate let stateRevision : UInt64
-        fileprivate let preparedAt    : Date
-        fileprivate let records       : [PublicationID: Record]
-        fileprivate let namespace     : PublicationSessionRegistry.NamespaceBinding
-        let owner                     : AddonID
-        let additionalBytes           : Int
-        let namespaceBytes            : Int
-        let retainedBytesAfter        : Int
-        let newFamilies               : [PublicationID: Publication.Kind]
+
+        fileprivate let issuer       : UUID
+        fileprivate let stateRevision: UInt64
+        fileprivate let preparedAt   : Date
+        fileprivate let records      : [PublicationID: Record]
+        fileprivate let namespace    : PublicationSessionRegistry.NamespaceBinding
+
+        let owner             : AddonID
+        let additionalBytes   : Int
+        let namespaceBytes    : Int
+        let retainedBytesAfter: Int
+        let newFamilies       : [PublicationID: Publication.Kind]
 
         /// forEachRestoredPublication visits complete admitted content, including future entries.
         /// Expired members were converted to terminal records during preparation and are omitted.
@@ -864,7 +943,7 @@ extension PublicationState {
     /// Capture cannot reconstruct already-pruned history. Expiry emits terminal history; notices
     /// are never archived. The caller prepays any arrays, encoding or borrowed-content retention.
     func forEachArchivedRecord(
-        owner: AddonID,
+        owner  : AddonID,
         at date: Date,
         _ visit: (PublicationArchiveRecord) throws -> Void
     ) throws {
@@ -874,10 +953,12 @@ extension PublicationState {
                 reason: "Archive capture requires a finite clock."
             )
         }
+
         for (id, record) in records where id.addonID == owner && record.kind != .notice {
             let publication = record.publication.flatMap {
                 $0.expiresAt > date && record.sessionDeadline > date ? $0 : nil
             }
+
             try visit(PublicationArchiveRecord(
                 id             : id,
                 revision       : record.revision,
@@ -900,6 +981,7 @@ extension PublicationState {
                 reason: "Restoration metadata requires available state authority and a valid count."
             )
         }
+
         let namespace = try sessions.prepareNamespace(
             identity      : identity,
             availableBytes: maximumRetainedBytes - retainedBytes
@@ -911,6 +993,7 @@ extension PublicationState {
                 reason: "Restoration record metadata exceeds the retained-state budget."
             )
         }
+
         return namespace.additionalBytes + recordCount * Self.recordCharge
     }
 
@@ -928,7 +1011,8 @@ extension PublicationState {
                 reason: "Restoration requires a finite clock and available state authority."
             )
         }
-        let namespace = try sessions.prepareNamespace(
+
+        let namespace            = try sessions.prepareNamespace(
             identity      : identity,
             availableBytes: maximumRetainedBytes - retainedBytes
         )
@@ -939,37 +1023,40 @@ extension PublicationState {
                 reason: "The retained publication record capacity is exhausted."
             )
         }
-        var proposed: [PublicationID: Record] = [:]
-        var newFamilies: [PublicationID: Publication.Kind] = [:]
+
+        var proposed      : [PublicationID: Record] = [:]
+        var newFamilies   : [PublicationID: Publication.Kind] = [:]
         var projectedBytes = retainedBytes + namespace.additionalBytes
-        var counts = activeCounts(
-            owner: identity.addonID,
-            at   : date
-        )
+        var counts         = activeCounts(owner: identity.addonID, at: date)
+
         for archivedRecord in archived {
             try archivedRecord.id.validateOwner(identity.addonID)
             guard archivedRecord.kind != .notice,
                   archivedRecord.sessionDeadline.timeIntervalSince1970.isFinite,
                   records[archivedRecord.id] == nil,
-                  proposed[archivedRecord.id] == nil else {
+                  proposed[archivedRecord.id] == nil
+            else {
                 throw AddonFailure(
                     code  : .invalidPayload,
                     reason: "Restoration contains a prohibited, colliding or malformed record."
                 )
             }
-            var content: Publication?
+
+            var content     : Publication?
             var contentBytes = 0
             if let publication = archivedRecord.publication {
                 try publication.validateOwnerAndStructure(identity.addonID)
                 guard publication.id == archivedRecord.id,
                       publication.revision == archivedRecord.revision,
                       publication.kind == archivedRecord.kind,
-                      publication.expiresAt <= archivedRecord.sessionDeadline else {
+                      publication.expiresAt <= archivedRecord.sessionDeadline
+                else {
                     throw AddonFailure(
                         code  : .invalidPayload,
                         reason: "Archived publication content does not match its canonical record."
                     )
                 }
+
                 if publication.expiresAt > date && archivedRecord.sessionDeadline > date {
                     guard counts.owner < 16 else {
                         throw AddonFailure(
@@ -977,6 +1064,7 @@ extension PublicationState {
                             reason: "An addon may retain at most 16 active publications."
                         )
                     }
+
                     if publication.kind == .activity {
                         guard counts.activities < 16, counts.ownerActivities < 4 else {
                             throw AddonFailure(
@@ -984,21 +1072,26 @@ extension PublicationState {
                                 reason: "The activity quota is full."
                             )
                         }
+
                         counts.activities += 1
                         counts.ownerActivities += 1
                     }
+
                     counts.owner += 1
-                    content = publication
+                    content      = publication
                     contentBytes = try JSONEncoder().encode(publication).count
                 }
             }
+
             guard Self.recordCharge <= maximumRetainedBytes - projectedBytes,
-                  contentBytes <= maximumRetainedBytes - projectedBytes - Self.recordCharge else {
+                  contentBytes <= maximumRetainedBytes - projectedBytes - Self.recordCharge
+            else {
                 throw AddonFailure(
                     code  : .resourceDenied,
                     reason: "The retained publication state budget is exhausted."
                 )
             }
+
             projectedBytes += Self.recordCharge + contentBytes
             proposed[archivedRecord.id] = Record(
                 revision       : archivedRecord.revision,
@@ -1009,6 +1102,7 @@ extension PublicationState {
             )
             if content != nil { newFamilies[archivedRecord.id] = archivedRecord.kind }
         }
+
         return PreparedRestoration(
             issuer            : restorationIssuer,
             stateRevision     : stateRevision,
@@ -1032,17 +1126,21 @@ extension PublicationState {
     ) throws {
         guard !isRevisionExhausted,
               prepared.issuer == restorationIssuer,
-              prepared.stateRevision == stateRevision else {
+              prepared.stateRevision == stateRevision
+        else {
             throw AddonFailure(
                 code  : .sessionRevoked,
                 reason: "Prepared restoration authority changed before commit."
             )
         }
-        guard date.timeIntervalSince1970.isFinite, date >= prepared.preparedAt,
+
+        guard date.timeIntervalSince1970.isFinite,
+              date >= prepared.preparedAt,
               prepared.records.values.allSatisfy({ record in
-                guard let publication = record.publication else { return true }
-                return publication.expiresAt > date && record.sessionDeadline > date
-              }) else {
+                  guard let publication = record.publication else { return true }
+                  return publication.expiresAt > date && record.sessionDeadline > date
+              })
+        else {
             throw AddonFailure(
                 code  : .deadlineExceeded,
                 reason: "Prepared restoration expired or the final clock moved backwards."
@@ -1059,6 +1157,7 @@ extension PublicationState {
                 && prepared.issuer == restorationIssuer
                 && prepared.stateRevision == stateRevision
         )
+
         sessions.bindNamespace(prepared.namespace)
         for (id, record) in prepared.records { records[id] = record }
         retainedBytes = prepared.retainedBytesAfter

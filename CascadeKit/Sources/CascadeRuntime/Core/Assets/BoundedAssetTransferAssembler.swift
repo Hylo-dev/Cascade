@@ -9,10 +9,15 @@ import Foundation
 /// BoundedAssetTransferAssembler owns one prepaid fixed buffer for one runtime incarnation.
 /// It creates no worker, queue or timer. The host must explicitly close it and service deadlines.
 final class BoundedAssetTransferAssembler: @unchecked Sendable {
-    private enum Phase { case idle, admitting, receiving, decoding, disposing, closed }
+
+    private enum Phase {
+
+        case idle, admitting, receiving, decoding, disposing, closed
+    }
 
     /// Record deliberately has no Data: it can survive governor awaits without retaining input.
     private struct Record: Sendable {
+
         let nonce     : UUID
         let transferID: UUID
         let binding   : AssetTransferBinding
@@ -22,6 +27,7 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
     }
 
     private enum DecodeOutcome {
+
         case raster(AssetRasterBacking)
         case failure(AddonFailure.Code)
         case cancelled
@@ -30,11 +36,13 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
     /// ReceivingOutcome carries only scalar progress or exact disposal authority across awaits.
     /// Rejection is committed while the original receiving lock is still held.
     private enum ReceivingOutcome<Value> {
+
         case accepted(Value)
         case rejected(Record, RequestRejection)
     }
 
     private enum RequestRejection {
+
         case failure(AddonFailure.Code)
         case cancelled
 
@@ -48,8 +56,8 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
 
         var error: any Error {
             switch self {
-            case .failure(let code): BoundedAssetTransferAssembler.failure(code)
-            case .cancelled: CancellationError()
+                case .failure(let code): BoundedAssetTransferAssembler.failure(code)
+                case .cancelled: CancellationError()
             }
         }
     }
@@ -58,18 +66,22 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
     private let clock      : any RuntimeClock
     private let decoder    : any AssetImageDecoding
     private let governor   : ResourceGovernor
-    private let lock       = NSLock()
-    private var phase      = Phase.idle
-    private var closed     = false
-    private var nonce      : UUID?
+    private let lock        = NSLock()
+
+    private var phase  = Phase.idle
+    private var closed = false
+    private var nonce : UUID?
+
     /// admittingBinding ties a synchronous exact revocation to the one begin suspended in
     /// protected admission, before a Record exists to carry the immutable binding.
     private var admittingBinding: AssetTransferBinding?
-    private var record     : Record?
-    private var buffer     : Data?
+
+    private var record    : Record?
+    private var buffer    : Data?
     private var received   = 0
-    private var lastSample : Duration?
-    private var revoked    : AddonFailure.Code?
+    private var lastSample: Duration?
+    private var revoked   : AddonFailure.Code?
+
     /// disposalInFlight marks the one live refund attempt so a concurrent close/abort/expire
     /// cannot start a second actor hop for a record whose disposal is already owned.
     private var disposalInFlight = false
@@ -88,6 +100,7 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
     var nextDeadline: Duration? {
         lock.withLock {
             guard let record else { return nil }
+
             // A disposal-only record has already dropped its buffer and only owes a refund.
             // It is retried even after close so a failed begin rollback cannot lose its token.
             if phase == .disposing { return record.deadline }
@@ -97,12 +110,13 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
 
 #if DEBUG
     struct LifecycleSnapshot: Sendable {
-        let identity: ObjectIdentifier
-        let phase: String
-        let closed: Bool
-        let binding: AssetTransferBinding?
-        let reservationID: UUID?
-        let bufferBytes: Int
+
+        let identity      : ObjectIdentifier
+        let phase         : String
+        let closed        : Bool
+        let binding       : AssetTransferBinding?
+        let reservationID : UUID?
+        let bufferBytes   : Int
         let refundInFlight: Bool
     }
 
@@ -128,7 +142,7 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
     /// a synchronous stop and live raster bytes are not released early.
     func invalidate() {
         lock.withLock {
-            closed = true
+            closed  = true
             revoked = .sessionRevoked
         }
     }
@@ -142,26 +156,35 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
     func revokeTransfer(binding: AssetTransferBinding) {
         lock.withLock {
             guard !closed, binding.incarnation == incarnation else { return }
+
             switch phase {
-            case .admitting:
-                guard admittingBinding == binding else { return }
-                revoked = .sessionRevoked
-            case .receiving:
-                guard let active = record, active.binding == binding else { return }
-                revoked = .sessionRevoked
-                // Drop the buffer now, but leave disposalInFlight false so the bounded deferred
-                // cleanup owns the one refund attempt instead of waiting for the 30s deadline.
-                buffer = nil
-                phase = .disposing
-                disposalInFlight = false
-            case .disposing:
-                guard let active = record, active.binding == binding else { return }
-                revoked = .sessionRevoked
-            case .decoding:
-                guard let active = record, active.binding == binding else { return }
-                revoked = .sessionRevoked
-            case .idle, .closed:
-                return
+                case .admitting:
+                    guard admittingBinding == binding else { return }
+
+                    revoked = .sessionRevoked
+
+                case .receiving:
+                    guard let active = record, active.binding == binding else { return }
+
+                    revoked = .sessionRevoked
+                    // Drop the buffer now, but leave disposalInFlight false so the bounded deferred
+                    // cleanup owns the one refund attempt instead of waiting for the 30s deadline.
+                    buffer           = nil
+                    phase            = .disposing
+                    disposalInFlight = false
+
+                case .disposing:
+                    guard let active = record, active.binding == binding else { return }
+
+                    revoked = .sessionRevoked
+
+                case .decoding:
+                    guard let active = record, active.binding == binding else { return }
+
+                    revoked = .sessionRevoked
+
+                case .idle, .closed:
+                    return
             }
         }
     }
@@ -177,15 +200,17 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
             guard phase == .idle else { throw Self.failure(.resourceDenied) }
             guard (1...1_048_576).contains(totalBytes) else { throw Self.failure(.invalidPayload) }
             _ = try sample()
-            let operation = UUID()
-            nonce = operation
+
+            let operation    = UUID()
+            nonce            = operation
             admittingBinding = binding
             // Isolate the new admission from any revocation left over by a fully disposed
             // transfer: the flag is only meaningful while a transfer owns return authority.
             revoked = nil
-            phase = .admitting
+            phase   = .admitting
             return operation
         }
+
         let token: AssetTransferReservationToken
         do {
             token = try await governor.admitAssetTransfer(
@@ -201,13 +226,14 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
         } catch {
             lock.withLock {
                 if nonce == operation {
-                    nonce = nil
+                    nonce            = nil
                     admittingBinding = nil
-                    phase = closed ? .closed : .idle
+                    phase            = closed ? .closed : .idle
                 }
             }
             throw error
         }
+
         do {
             return try lock.withLock {
                 try Task.checkCancellation()
@@ -215,9 +241,10 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
                 // A synchronous exact revocation raced this protected admission: refuse to install
                 // the Record so the catch below refunds the retained token through the one path.
                 if let revoked { throw Self.failure(revoked) }
-                let accepted = try sample()
+
+                let accepted   = try sample()
                 let transferID = UUID()
-                record = Record(
+                record         = Record(
                     nonce     : operation,
                     transferID: transferID,
                     binding   : binding,
@@ -226,11 +253,11 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
                     deadline  : accepted + .seconds(30)
                 )
                 // A fixed count is allocated only after the governor and authority checks.
-                buffer   = Data(count: totalBytes)
-                received = 0
-                revoked  = nil
+                buffer           = Data(count: totalBytes)
+                received         = 0
+                revoked          = nil
                 admittingBinding = nil
-                phase    = .receiving
+                phase            = .receiving
                 return transferID
             }
         } catch {
@@ -247,11 +274,12 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
             )
             let installed = lock.withLock {
                 guard nonce == operation, record == nil else { return false }
-                record  = active
+
+                record           = active
                 admittingBinding = nil
-                buffer  = nil
-                revoked = nil
-                phase   = .disposing
+                buffer           = nil
+                revoked          = nil
+                phase            = .disposing
                 disposalInFlight = true
                 return true
             }
@@ -263,6 +291,7 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
                 )
                 throw error
             }
+
             do {
                 try await dispose(active)
             } catch {
@@ -281,43 +310,38 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
         bytes     : Data
     ) async throws -> Int {
         let outcome: ReceivingOutcome<Int> = try lock.withLock {
-            let active = try match(
-                transferID: transferID,
-                binding   : binding
-            )
+            let active = try match(transferID: transferID, binding: binding)
             // Foreign and busy calls never enter the terminal receiving-error path.
             guard phase == .receiving else { throw Self.failure(.resourceDenied) }
+
             do {
                 try check(active)
                 try Task.checkCancellation()
                 let remaining = active.totalBytes - received
-                guard remaining > 0, offset == received,
-                      bytes.count == min(
-                          65_536,
-                          remaining
-                      ) else { throw Self.failure(.invalidPayload) }
-                buffer?.replaceSubrange(
-                    received..<(received + bytes.count),
-                    with: bytes
-                )
+                guard remaining > 0,
+                      offset == received,
+                      bytes.count == min(65_536, remaining)
+                else {
+                    throw Self.failure(.invalidPayload)
+                }
+
+                buffer?.replaceSubrange(received..<(received + bytes.count), with: bytes)
                 received += bytes.count
                 return .accepted(received)
             } catch {
                 // A competing finish must observe disposing, never the rejected receipt state.
-                buffer = nil
-                phase = .disposing
+                buffer           = nil
+                phase            = .disposing
                 disposalInFlight = true
-                return .rejected(
-                    active,
-                    RequestRejection(error)
-                )
+                return .rejected(active, RequestRejection(error))
             }
         }
+
         switch outcome {
-        case .accepted(let nextOffset): return nextOffset
-        case .rejected(let active, let rejection):
-            try await dispose(active)
-            throw rejection.error
+            case .accepted(let nextOffset): return nextOffset
+            case .rejected(let active, let rejection):
+                try await dispose(active)
+                throw rejection.error
         }
     }
 
@@ -327,43 +351,42 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
         binding   : AssetTransferBinding
     ) async throws -> AssetRasterBacking {
         let admission: ReceivingOutcome<Record> = try lock.withLock {
-            let active = try match(
-                transferID: transferID,
-                binding   : binding
-            )
+            let active = try match(transferID: transferID, binding: binding)
             guard phase == .receiving else { throw Self.failure(.resourceDenied) }
+
             do {
                 try check(active)
                 try Task.checkCancellation()
                 guard received == active.totalBytes else { throw Self.failure(.invalidPayload) }
+
                 phase = .decoding
                 return .accepted(active)
             } catch {
                 // Commit terminal cleanup before unlocking, including incomplete/cancelled finish.
-                buffer = nil
-                phase = .disposing
+                buffer           = nil
+                phase            = .disposing
                 disposalInFlight = true
-                return .rejected(
-                    active,
-                    RequestRejection(error)
-                )
+                return .rejected(active, RequestRejection(error))
             }
         }
+
         let active: Record
         switch admission {
-        case .accepted(let admitted): active = admitted
-        case .rejected(let rejected, let rejection):
-            try await dispose(rejected)
-            throw rejection.error
+            case .accepted(let admitted): active = admitted
+            case .rejected(let rejected, let rejection):
+                try await dispose(rejected)
+                throw rejection.error
         }
+
         let outcome = await decodeBorrow(active)
         // decodeBorrow's lexical frame and Data/CFData references ended before this clear.
         // Mark the live refund so a concurrent close/abort cannot start a second hop.
         lock.withLock {
-            buffer = nil
-            phase = .disposing
+            buffer           = nil
+            phase            = .disposing
             disposalInFlight = true
         }
+
         do {
             try await governor.completeAssetTransfer(
                 active.token,
@@ -374,14 +397,16 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
             throw error
         }
         lock.withLock { disposalInFlight = false }
+
         return try lock.withLock {
             defer { reset(active) }
             try Task.checkCancellation()
             try check(active)
+
             switch outcome {
-            case .raster(let raster): return raster
-            case .failure(let code): throw Self.failure(code)
-            case .cancelled: throw CancellationError()
+                case .raster(let raster): return raster
+                case .failure(let code): throw Self.failure(code)
+                case .cancelled: throw CancellationError()
             }
         }
     }
@@ -393,6 +418,7 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
             let encoded = try lock.withLock {
                 try check(active)
                 guard let buffer else { throw Self.failure(.sessionRevoked) }
+
                 return buffer
             }
             let raster = try await decoder.decode(
@@ -415,10 +441,7 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
         binding   : AssetTransferBinding
     ) async throws {
         let action: (Record?, AddonFailure.Code?) = try lock.withLock {
-            let active = try match(
-                transferID: transferID,
-                binding   : binding
-            )
+            let active = try match(transferID: transferID, binding: binding)
             do {
                 try check(active)
                 revoked = .sessionRevoked
@@ -428,6 +451,7 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
                 return (prepareDisposal(active), failure.code)
             }
         }
+
         if let disposal = action.0 { try await dispose(disposal) }
         if let code = action.1 { throw Self.failure(code) }
     }
@@ -436,12 +460,14 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
     func expire() async throws {
         let action: (Record?, AddonFailure.Code?) = lock.withLock {
             guard let active = record else { return (nil, nil) }
+
             // A disposal-only record retries its refund even after close, unless a live
             // disposal already owns the hop.
             if phase == .disposing {
                 return disposalInFlight ? (nil, nil) : (active, nil)
             }
             guard !closed else { return (nil, nil) }
+
             do {
                 try check(active)
                 return (nil, nil)
@@ -453,6 +479,7 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
                 return (prepareDisposal(active), .invalidPayload)
             }
         }
+
         if let disposal = action.0 { try await dispose(disposal) }
         if let code = action.1 { throw Self.failure(code) }
     }
@@ -460,14 +487,16 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
     /// close prevents future admission and revokes return authority without premature refunds.
     func close() async throws {
         let disposal = lock.withLock {
-            closed = true
+            closed  = true
             revoked = .sessionRevoked
             guard let active = record else {
                 if phase == .idle { phase = .closed }
                 return Optional<Record>.none
             }
+
             return prepareDisposal(active)
         }
+
         if let disposal { try await dispose(disposal) }
     }
 
@@ -483,12 +512,15 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
                     if phase == .idle { phase = .closed }
                     return nil
                 }
+
                 return prepareDisposal(active)
             }
             guard phase == .disposing, !disposalInFlight, let active = record else { return nil }
+
             disposalInFlight = true
             return active
         }
+
         if let disposal { try await dispose(disposal) }
     }
 
@@ -499,17 +531,21 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
         guard let active = record, active.transferID == transferID, active.binding == binding else {
             throw Self.failure(.sessionRevoked)
         }
+
         return active
     }
 
     /// sample rejects invalid or backward host time without changing the last valid sample.
     private func sample() throws -> Duration {
         let instant = clock.now()
-        guard instant.wall.timeIntervalSince1970.isFinite, instant.monotonic >= .zero,
+        guard instant.wall.timeIntervalSince1970.isFinite,
+              instant.monotonic >= .zero,
               instant.monotonic <= .seconds(Int64.max - 31),
-              lastSample.map({ instant.monotonic >= $0 }) ?? true else {
+              lastSample.map({ instant.monotonic >= $0 }) ?? true
+        else {
             throw Self.failure(.invalidPayload)
         }
+
         lastSample = instant.monotonic
         return instant.monotonic
     }
@@ -524,18 +560,21 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
     /// failed refund, but never from decoding and never while a refund hop is already live.
     private func prepareDisposal(_ active: Record) -> Record? {
         switch phase {
-        case .receiving:
-            buffer = nil
-            phase = .disposing
-            disposalInFlight = true
-            return active
-        case .disposing:
-            guard !disposalInFlight else { return nil }
-            buffer = nil
-            disposalInFlight = true
-            return active
-        case .decoding, .admitting, .idle, .closed:
-            return nil
+            case .receiving:
+                buffer           = nil
+                phase            = .disposing
+                disposalInFlight = true
+                return active
+
+            case .disposing:
+                guard !disposalInFlight else { return nil }
+
+                buffer           = nil
+                disposalInFlight = true
+                return active
+
+            case .decoding, .admitting, .idle, .closed:
+                return nil
         }
     }
 
@@ -550,18 +589,20 @@ final class BoundedAssetTransferAssembler: @unchecked Sendable {
             lock.withLock { disposalInFlight = false }
             throw error
         }
+
         lock.withLock { disposalInFlight = false }
         lock.withLock { reset(active) }
     }
 
     private func reset(_ active: Record) {
         guard nonce == active.nonce else { return }
-        record   = nil
-        nonce    = nil
+
+        record           = nil
+        nonce            = nil
         admittingBinding = nil
-        received = 0
-        revoked  = nil
-        phase    = closed ? .closed : .idle
+        received         = 0
+        revoked          = nil
+        phase            = closed ? .closed : .idle
     }
 
     private static func failure(_ code: AddonFailure.Code) -> AddonFailure {

@@ -9,11 +9,12 @@ import Foundation
 /// binding and clock domain. Birth ticks and executable UUID do not authenticate a publisher,
 /// identify every exec generation, or grant any process-control authority.
 struct ProcessMetricBinding: Equatable, Sendable {
-    let pid: Int32
+
+    let pid               : Int32
     let birthAbsoluteTicks: UInt64
-    let executableUUID: UUID
-    let token: UUID
-    let clockDomain: UUID
+    let executableUUID    : UUID
+    let token             : UUID
+    let clockDomain       : UUID
 
     var isValid: Bool {
         pid > 0 && birthAbsoluteTicks > 0 && executableUUID != Self.zeroUUID

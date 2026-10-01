@@ -4,53 +4,55 @@
 //
 
 import CascadeContracts
-import Darwin
 import Foundation
-import UniformTypeIdentifiers
 
 /// FileWorkspaceNamespaceLifetime owns one governor ledger and writer slot for a namespace.
 /// Reopened store values must reuse this object while the process retains the same governor.
 actor FileWorkspaceNamespaceLifetime {
-    nonisolated let directory       : URL
-    nonisolated let owner           : AddonID
-    nonisolated let governorTarget  : ResourceGovernor
+
+    nonisolated let directory     : URL
+    nonisolated let owner         : AddonID
+    nonisolated let governorTarget: ResourceGovernor
 
     private let resources: any RuntimeResourceAccess
-    private var token       : ObservedDiskToken?
+
+    private var token            : ObservedDiskToken?
     private var stateReservation : ResourceReservation?
     private var memoryReservation: ResourceReservation?
-    private var chargedBytes = 0
-    private var retainedBytes = 0
-    private var active      : UUID?
-    private var writer      : UUID?
-    private var deliveryPins = 0
+    private var chargedBytes      = 0
+    private var retainedBytes     = 0
+    private var active           : UUID?
+    private var writer           : UUID?
+    private var deliveryPins      = 0
 
     init(
         directory: URL,
         owner    : AddonID,
         resources: any RuntimeResourceAccess
     ) {
-        self.directory      = directory.standardizedFileURL
-        self.owner          = owner
-        self.resources      = resources
-        governorTarget      = resources.resourceGovernorTarget
+        self.directory = directory.standardizedFileURL
+        self.owner     = owner
+        self.resources = resources
+        governorTarget = resources.resourceGovernorTarget
     }
 
     func begin(
         _ operation: UUID,
-        directory : URL,
-        owner     : AddonID,
-        governor  : ResourceGovernor,
-        writer    : UUID,
-        restoring : Bool
+        directory  : URL,
+        owner      : AddonID,
+        governor   : ResourceGovernor,
+        writer     : UUID,
+        restoring  : Bool
     ) throws {
         guard directory.standardizedFileURL == self.directory,
               owner == self.owner,
               governor === governorTarget,
               active == nil,
-              restoring ? self.writer == nil : self.writer == writer else {
+              restoring ? self.writer == nil : self.writer == writer
+        else {
             throw FileWorkspaceError.interrupted
         }
+
         active = operation
     }
 
@@ -62,16 +64,23 @@ actor FileWorkspaceNamespaceLifetime {
         guard active == operation, deliveryPins == 0 else {
             throw FileWorkspaceError.interrupted
         }
+
         self.writer = writer
     }
 
     func addDeliveryPins(
-        _ count    : Int,
-        writer     : UUID,
-        operation  : UUID
+        _ count  : Int,
+        writer   : UUID,
+        operation: UUID
     ) throws {
-        guard active == operation, self.writer == writer, count > 0,
-              deliveryPins <= Int.max - count else { throw FileWorkspaceError.interrupted }
+        guard active == operation,
+              self.writer == writer,
+              count > 0,
+              deliveryPins <= Int.max - count
+        else {
+            throw FileWorkspaceError.interrupted
+        }
+
         deliveryPins += count
     }
 
@@ -82,6 +91,7 @@ actor FileWorkspaceNamespaceLifetime {
         guard active == operation, self.writer == writer, deliveryPins > 0 else {
             throw FileWorkspaceError.interrupted
         }
+
         deliveryPins -= 1
     }
 
@@ -93,6 +103,7 @@ actor FileWorkspaceNamespaceLifetime {
         guard active == operation, self.writer == writer, deliveryPins == 0 else {
             throw FileWorkspaceError.interrupted
         }
+
         if let stateReservation {
             try await resources.release(stateReservation.id, owner: owner)
             self.stateReservation = nil
@@ -101,8 +112,9 @@ actor FileWorkspaceNamespaceLifetime {
             try await resources.release(memoryReservation.id, owner: owner)
             self.memoryReservation = nil
         }
+
         retainedBytes = 0
-        self.writer = nil
+        self.writer   = nil
     }
 
     func finish(_ operation: UUID) {
@@ -123,11 +135,12 @@ actor FileWorkspaceNamespaceLifetime {
             )
             token = admitted
         }
+
         try validate(operation)
         try await reconcile(
             measuredBytes: measuredBytes,
-            mayRefund     : true,
-            operation     : operation
+            mayRefund    : true,
+            operation    : operation
         )
     }
 
@@ -138,8 +151,10 @@ actor FileWorkspaceNamespaceLifetime {
     ) async throws {
         try validate(operation)
         guard additionalBytes >= 0, let token else { throw FileWorkspaceError.ioFailure }
+
         let target = chargedBytes.addingReportingOverflow(additionalBytes)
         guard !target.overflow else { throw FileWorkspaceError.quotaExceeded }
+
         do {
             guard try await resources.workspaceGrowObservedDisk(
                 token,
@@ -147,6 +162,7 @@ actor FileWorkspaceNamespaceLifetime {
                 fromBytes: chargedBytes,
                 toBytes  : target.partialValue
             ) else { throw FileWorkspaceError.ioFailure }
+
             chargedBytes = target.partialValue
         } catch let error as FileWorkspaceError {
             throw error
@@ -164,6 +180,7 @@ actor FileWorkspaceNamespaceLifetime {
         operation    : UUID
     ) async throws {
         guard let token, measuredBytes >= 0 else { throw FileWorkspaceError.ioFailure }
+
         let retained = mayRefund ? measuredBytes : max(chargedBytes, measuredBytes)
         guard try await resources.workspaceReconcileObservedDisk(
             token,
@@ -171,6 +188,7 @@ actor FileWorkspaceNamespaceLifetime {
             fromBytes    : chargedBytes,
             measuredBytes: retained
         ) else { throw FileWorkspaceError.ioFailure }
+
         chargedBytes = retained
         try validate(operation)
     }
@@ -182,10 +200,15 @@ actor FileWorkspaceNamespaceLifetime {
     ) async throws {
         try validate(operation)
         guard bytes >= 0 else { throw FileWorkspaceError.quotaExceeded }
+
         if stateReservation == nil || memoryReservation == nil {
             let state: ResourceReservation
-            do { state = try await resources.admit(.state(bytes: bytes), owner: owner) }
-            catch { throw Self.accountingFailure(error) }
+            do {
+                state = try await resources.admit(.state(bytes: bytes), owner: owner)
+            } catch {
+                throw Self.accountingFailure(error)
+            }
+
             do {
                 let memory = try await resources.admit(
                     .temporaryMemory(bytes: bytes),
@@ -200,8 +223,9 @@ actor FileWorkspaceNamespaceLifetime {
                 throw Self.accountingFailure(error)
             }
         }
-        guard let stateReservation, let memoryReservation,
-              bytes != retainedBytes else { return }
+
+        guard let stateReservation, let memoryReservation, bytes != retainedBytes else { return }
+
         do {
             guard try await resources.resizeStateReservation(
                 stateReservation.id,
@@ -209,6 +233,7 @@ actor FileWorkspaceNamespaceLifetime {
                 fromBytes: retainedBytes,
                 toBytes  : bytes
             ) else { throw FileWorkspaceError.ioFailure }
+
             do {
                 guard try await resources.workspaceResizeMemoryReservation(
                     memoryReservation.id,
@@ -225,6 +250,7 @@ actor FileWorkspaceNamespaceLifetime {
                 )
                 throw error
             }
+
             retainedBytes = bytes
         } catch {
             throw Self.accountingFailure(error)
@@ -241,6 +267,7 @@ actor FileWorkspaceNamespaceLifetime {
         if let failure = error as? AddonFailure, failure.code == .resourceDenied {
             return .quotaExceeded
         }
+
         return .ioFailure
     }
 }

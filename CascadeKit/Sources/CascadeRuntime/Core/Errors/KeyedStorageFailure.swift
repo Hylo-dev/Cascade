@@ -3,13 +3,23 @@
 //  CascadeKit
 //
 
-import CryptoKit
-import Foundation
-
 /// KeyedStorageFailure distinguishes precommit refusal from a visible but uncertain durable write.
 enum KeyedStorageFailure: Error, Equatable, Sendable {
-    case invalidConfiguration, invalidKey, oversized, invalidOwner, invalidTicket
-    case closed, busy, unsafePath, unrecognizedEntry, corrupt, futureFormat
-    case staleRevision, quotaExceeded, cleanupRequired, committedDurabilityUncertain
+
+    case invalidConfiguration
+    case invalidKey
+    case oversized
+    case invalidOwner
+    case invalidTicket
+    case closed
+    case busy
+    case unsafePath
+    case unrecognizedEntry
+    case corrupt
+    case futureFormat
+    case staleRevision
+    case quotaExceeded
+    case cleanupRequired
+    case committedDurabilityUncertain
     case io(Int32)
 }

@@ -9,6 +9,7 @@ import Foundation
 /// These labels are not wire grants or substitutes for service/account authorization.
 /// Document privacy remains redaction metadata and cannot select this partition.
 enum AssetPrivacyPartition: Hashable, Sendable {
+
     case addonOwned
     case isolated(UUID)
 }

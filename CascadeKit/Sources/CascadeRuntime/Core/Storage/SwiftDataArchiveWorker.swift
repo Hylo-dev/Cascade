@@ -12,11 +12,13 @@ import SwiftData
 /// The executor context remains empty. A fresh operation context owns each fetched row,
 /// preventing application payload retention between calls; framework caches remain observed.
 actor SwiftDataArchiveWorker: ModelActor {
+
     nonisolated let modelContainer: ModelContainer
     nonisolated let modelExecutor : any ModelExecutor
 
     init(root: URL) throws {
         guard !Thread.isMainThread else { throw SwiftDataArchiveFailure.unavailable }
+
         let schema        = Schema([SwiftDataArchiveRow.self])
         let configuration = ModelConfiguration(
             "CascadeOwnerArchive",
@@ -24,10 +26,8 @@ actor SwiftDataArchiveWorker: ModelActor {
             url             : root.appendingPathComponent("archive.store"),
             cloudKitDatabase: .none
         )
-        let container = try ModelContainer(
-            for           : schema,
-            configurations: [configuration]
-        )
+        let container = try ModelContainer(for: schema, configurations: [configuration])
+
         let executorContext             = ModelContext(container)
         executorContext.autosaveEnabled = false
         executorContext.undoManager     = nil
@@ -43,13 +43,12 @@ actor SwiftDataArchiveWorker: ModelActor {
     /// read returns bounded immutable data only into the host's protected callback scope.
     func read(identity: VerifiedAddonIdentity) throws -> SwiftDataArchiveGeneration? {
         guard !Thread.isMainThread else { throw SwiftDataArchiveFailure.unavailable }
+
         return try autoreleasepool {
             let context = operationContext()
             guard let row = try row(in: context) else { return nil }
-            return try validate(
-                row,
-                identity: identity
-            )
+
+            return try validate(row, identity: identity)
         }
     }
 
@@ -62,20 +61,18 @@ actor SwiftDataArchiveWorker: ModelActor {
         beforeCommit              : @Sendable () throws -> Void
     ) throws {
         guard !Thread.isMainThread else { throw SwiftDataArchiveFailure.unavailable }
+
         try autoreleasepool {
             let context = operationContext()
             do {
                 let existing = try row(in: context)
-                let previous = try existing.map {
-                    try validate(
-                        $0,
-                        identity: identity
-                    )
-                }
+                let previous = try existing.map { try validate($0, identity: identity) }
                 guard previous?.revision == expectedRevision,
-                      generation.revision > (previous?.revision ?? 0) else {
+                      generation.revision > (previous?.revision ?? 0)
+                else {
                     throw SwiftDataArchiveFailure.staleRevision
                 }
+
                 if let existing {
                     existing.schemaVersion  = generation.schemaVersion
                     existing.revision       = String(generation.revision)
@@ -105,6 +102,7 @@ actor SwiftDataArchiveWorker: ModelActor {
         let context             = ModelContext(modelContainer)
         context.autosaveEnabled = false
         context.undoManager     = nil
+
         return context
     }
 
@@ -114,6 +112,7 @@ actor SwiftDataArchiveWorker: ModelActor {
         descriptor.fetchLimit = 2
         let rows              = try context.fetch(descriptor)
         guard rows.count <= 1 else { throw SwiftDataArchiveFailure.corrupt }
+
         return rows.first
     }
 
@@ -131,9 +130,11 @@ actor SwiftDataArchiveWorker: ModelActor {
               row.addonID == identity.addonID.rawValue,
               row.revision.utf8.count <= 20,
               let revision = UInt64(row.revision),
-              String(revision) == row.revision else {
+              String(revision) == row.revision
+        else {
             throw SwiftDataArchiveFailure.corrupt
         }
+
         let generation = SwiftDataArchiveGeneration(
             schemaVersion : row.schemaVersion,
             revision      : revision,
@@ -141,10 +142,9 @@ actor SwiftDataArchiveWorker: ModelActor {
             payload       : row.payload
         )
         try generation.validate()
-        guard row.checksum == Self.checksum(
-            identity  : identity,
-            generation: generation
-        ) else { throw SwiftDataArchiveFailure.corrupt }
+        guard row.checksum == Self.checksum(identity: identity, generation: generation)
+        else { throw SwiftDataArchiveFailure.corrupt }
+
         return generation
     }
 
@@ -170,6 +170,7 @@ actor SwiftDataArchiveWorker: ModelActor {
             hash.update(data: Data(field.utf8))
         }
         hash.update(data: generation.payload)
+
         return Data(hash.finalize())
     }
 }

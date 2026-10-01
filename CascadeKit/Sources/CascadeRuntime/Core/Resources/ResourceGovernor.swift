@@ -10,28 +10,33 @@ import Foundation
 /// or proof of process termination. The runtime releases process charges after actual exit.
 /// Native CPU/footprint observation is a separate, launcher-qualified boundary.
 public actor ResourceGovernor {
+
     private struct Entry {
-        let reservation: ResourceReservation
-        var charges: [ResourceDimension: Int]
-        var statePayloadBytes: Int?
-        var memoryPayloadBytes: Int?
+
+        let reservation        : ResourceReservation
+        var charges            : [ResourceDimension: Int]
+        var statePayloadBytes  : Int?
+        var memoryPayloadBytes : Int?
         let retainedAssetSecret: UUID?
         let observedDiskSecret : UUID?
     }
+
     private let retainedAssetLifetime = UUID()
     private let observedDiskLifetime  = UUID()
+
     private let policy: ResourcePolicy
-    private var entries: [UUID: Entry] = [:]
-    private var totals: [ResourceDimension: Int] = [:]
-    private var owners: [AddonID: [ResourceDimension: Int]] = [:]
+
+    private var entries                   : [UUID: Entry] = [:]
+    private var totals                    : [ResourceDimension: Int] = [:]
+    private var owners                    : [AddonID: [ResourceDimension: Int]] = [:]
     private var localFileWorkspaceLifetime: FileWorkspaceNamespaceLifetime?
 #if DEBUG
     /// assetTransferRefundFailures lets a focused test inject a protected-refund failure through
     /// the real disposal seam. It carries no policy and production code never arms it.
-    private var assetTransferRefundFailures = 0
-    private var assetTransferRefundAttempts: UInt64 = 0
+    private var assetTransferRefundFailures  = 0
+    private var assetTransferRefundAttempts : UInt64 = 0
     private var assetTransferRefundSuccesses: UInt64 = 0
-    private var lastAssetTransferRefund: UUID?
+    private var lastAssetTransferRefund     : UUID?
 #endif
 
     public init(policy: ResourcePolicy = ResourcePolicy()) { self.policy = policy }
@@ -43,11 +48,13 @@ public actor ResourceGovernor {
     ) throws -> FileWorkspaceNamespaceLifetime {
         if let localFileWorkspaceLifetime {
             guard localFileWorkspaceLifetime.directory == directory.standardizedFileURL,
-                  localFileWorkspaceLifetime.owner == owner else {
+                  localFileWorkspaceLifetime.owner == owner
+            else {
                 throw FileWorkspaceError.interrupted
             }
             return localFileWorkspaceLifetime
         }
+
         let lifetime = FileWorkspaceNamespaceLifetime(
             directory: directory,
             owner    : owner,
@@ -57,15 +64,25 @@ public actor ResourceGovernor {
         return lifetime
     }
 
-    public func admit(_ request: ResourceRequest, owner: AddonID) throws -> ResourceReservation {
-        let charges = try policy.charges(for: request)
-        let reservation = ResourceReservation(id: UUID(), owner: owner)
+    public func admit(
+        _ request: ResourceRequest,
+        owner    : AddonID
+    ) throws -> ResourceReservation {
+        let charges            = try policy.charges(for: request)
+        let reservation        = ResourceReservation(id: UUID(), owner: owner)
         let statePayloadBytes : Int?
         let memoryPayloadBytes: Int?
-        if case .state(let bytes) = request { statePayloadBytes = bytes }
-        else { statePayloadBytes = nil }
-        if case .temporaryMemory(let bytes) = request { memoryPayloadBytes = bytes }
-        else { memoryPayloadBytes = nil }
+        if case .state(let bytes) = request {
+            statePayloadBytes = bytes
+        } else {
+            statePayloadBytes = nil
+        }
+        if case .temporaryMemory(let bytes) = request {
+            memoryPayloadBytes = bytes
+        } else {
+            memoryPayloadBytes = nil
+        }
+
         return try insert(
             reservation        : reservation,
             charges            : charges,
@@ -87,6 +104,7 @@ public actor ResourceGovernor {
         if charges[.diskBytes, default: 0] > 0 {
             try requireDiskGrowthEligibility(owner: owner)
         }
+
         for (dimension, amount) in charges {
             // A discovery token prepays metadata without requesting any disk growth.
             // It must remain available to record existing files even under prior debt.
@@ -95,10 +113,16 @@ public actor ResourceGovernor {
                 continue
             }
             guard amount <= policy.ceiling(dimension, perOwner: false) - totals[dimension, default: 0],
-                  amount <= policy.ceiling(dimension, perOwner: true) - owners[owner, default: [:]][dimension, default: 0] else {
-                throw AddonFailure(code: .resourceDenied, reason: "The resource budget is currently full.")
+                  amount <= policy.ceiling(dimension, perOwner: true)
+                    - owners[owner, default: [:]][dimension, default: 0]
+            else {
+                throw AddonFailure(
+                    code  : .resourceDenied,
+                    reason: "The resource budget is currently full."
+                )
             }
         }
+
         entries[reservation.id] = Entry(
             reservation        : reservation,
             charges            : charges,
@@ -119,15 +143,20 @@ public actor ResourceGovernor {
     /// A false result is an unchanged reservation, including when another operation already released it.
     public func reduceStateReservation(
         _ reservationID: UUID,
-        owner: AddonID,
-        toBytes bytes: Int
+        owner          : AddonID,
+        toBytes bytes  : Int
     ) -> Bool {
-        guard bytes >= 0, var entry = entries[reservationID], entry.reservation.owner == owner,
-              let currentBytes = entry.statePayloadBytes, bytes <= currentBytes else { return false }
-        let returnedBytes = currentBytes - bytes
-        entry.statePayloadBytes = bytes
+        guard bytes >= 0,
+              var entry = entries[reservationID],
+              entry.reservation.owner == owner,
+              let currentBytes = entry.statePayloadBytes,
+              bytes <= currentBytes
+        else { return false }
+
+        let returnedBytes                  = currentBytes - bytes
+        entry.statePayloadBytes            = bytes
         entry.charges[.retainedStateBytes] = bytes + ResourcePolicy.reservationCharge
-        entries[reservationID] = entry
+        entries[reservationID]             = entry
         totals[.retainedStateBytes, default: 0] -= returnedBytes
         owners[owner, default: [:]][.retainedStateBytes, default: 0] -= returnedBytes
         return true
@@ -140,9 +169,9 @@ public actor ResourceGovernor {
     /// A completed resize also grants no right to roll back after that operation loses ownership.
     func resizeStateReservation(
         _ reservationID: UUID,
-        owner    : AddonID,
-        fromBytes: Int,
-        toBytes  : Int
+        owner          : AddonID,
+        fromBytes      : Int,
+        toBytes        : Int
     ) throws -> Bool {
         guard var entry = entries[reservationID] else { return false }
         guard entry.reservation.owner == owner else {
@@ -151,8 +180,7 @@ public actor ResourceGovernor {
                 reason: "The reservation belongs to another addon."
             )
         }
-        guard let currentBytes = entry.statePayloadBytes,
-              currentBytes == fromBytes else { return false }
+        guard let currentBytes = entry.statePayloadBytes, currentBytes == fromBytes else { return false }
 
         let desiredCharges = try policy.charges(for: .state(bytes: toBytes))
         let dimension      = ResourceDimension.retainedStateBytes
@@ -161,16 +189,10 @@ public actor ResourceGovernor {
         let chargeDelta    = desiredCharge - currentCharge
 
         if chargeDelta > 0 {
-            let totalAvailable = policy.ceiling(
-                dimension,
-                perOwner: false
-            ) - totals[dimension, default: 0]
-            let ownerAvailable = policy.ceiling(
-                dimension,
-                perOwner: true
-            ) - owners[owner, default: [:]][dimension, default: 0]
-            guard chargeDelta <= totalAvailable,
-                  chargeDelta <= ownerAvailable else {
+            let totalAvailable = policy.ceiling(dimension, perOwner: false) - totals[dimension, default: 0]
+            let ownerAvailable = policy.ceiling(dimension, perOwner: true)
+                - owners[owner, default: [:]][dimension, default: 0]
+            guard chargeDelta <= totalAvailable, chargeDelta <= ownerAvailable else {
                 throw AddonFailure(
                     code  : .resourceDenied,
                     reason: "The resource budget is currently full."
@@ -178,9 +200,9 @@ public actor ResourceGovernor {
             }
         }
 
-        entry.statePayloadBytes = toBytes
+        entry.statePayloadBytes  = toBytes
         entry.charges[dimension] = desiredCharge
-        entries[reservationID] = entry
+        entries[reservationID]   = entry
         totals[dimension, default: 0] += chargeDelta
         owners[owner, default: [:]][dimension, default: 0] += chargeDelta
         return true
@@ -190,9 +212,9 @@ public actor ResourceGovernor {
     /// It exists for host-owned retained buffers whose lifetime outlives one callback.
     func resizeMemoryReservation(
         _ reservationID: UUID,
-        owner    : AddonID,
-        fromBytes: Int,
-        toBytes  : Int
+        owner          : AddonID,
+        fromBytes      : Int,
+        toBytes        : Int
     ) throws -> Bool {
         guard var entry = entries[reservationID] else { return false }
         guard entry.reservation.owner == owner else {
@@ -202,22 +224,25 @@ public actor ResourceGovernor {
             )
         }
         guard entry.memoryPayloadBytes == fromBytes else { return false }
+
         let desired   = try policy.charges(for: .temporaryMemory(bytes: toBytes))
         let dimension = ResourceDimension.admittedMemoryBytes
         let delta     = desired[dimension, default: 0] - entry.charges[dimension, default: 0]
         if delta > 0 {
             guard delta <= policy.ceiling(dimension, perOwner: false) - totals[dimension, default: 0],
                   delta <= policy.ceiling(dimension, perOwner: true)
-                    - owners[owner, default: [:]][dimension, default: 0] else {
+                    - owners[owner, default: [:]][dimension, default: 0]
+            else {
                 throw AddonFailure(
                     code  : .resourceDenied,
                     reason: "The resource budget is currently full."
                 )
             }
         }
+
         entry.memoryPayloadBytes = toBytes
         entry.charges[dimension] = desired[dimension]
-        entries[reservationID] = entry
+        entries[reservationID]   = entry
         totals[dimension, default: 0] += delta
         owners[owner, default: [:]][dimension, default: 0] += delta
         return true
@@ -227,9 +252,9 @@ public actor ResourceGovernor {
     /// Expected size detects stale accounting; callers still own operation authority and serialization.
     func resizeDiskReservation(
         _ reservationID: UUID,
-        owner: AddonID,
-        fromBytes: Int,
-        toBytes: Int
+        owner          : AddonID,
+        fromBytes      : Int,
+        toBytes        : Int
     ) throws -> Bool {
         guard var entry = entries[reservationID] else { return false }
         guard entry.reservation.owner == owner else {
@@ -239,28 +264,32 @@ public actor ResourceGovernor {
             )
         }
         guard entry.observedDiskSecret == nil else { return false }
-        let dimension: ResourceDimension
+
+        let dimension     : ResourceDimension
         let desiredRequest: ResourceRequest
         if entry.charges[.diskStateBytes] != nil {
-            dimension = .diskStateBytes
+            dimension      = .diskStateBytes
             desiredRequest = .diskState(bytes: toBytes)
         } else if entry.charges[.diskCacheBytes] != nil {
-            dimension = .diskCacheBytes
+            dimension      = .diskCacheBytes
             desiredRequest = .diskCache(bytes: toBytes)
         } else {
             return false
         }
         guard entry.charges[dimension] == fromBytes else { return false }
+
         let desiredCharges = try policy.charges(for: desiredRequest)
         if toBytes > fromBytes {
             try requireDiskGrowthEligibility(owner: owner)
         }
+
         for affected in [dimension, .diskBytes] {
             let delta = desiredCharges[affected, default: 0] - entry.charges[affected, default: 0]
             if delta > 0 {
                 guard delta <= policy.ceiling(affected, perOwner: false) - totals[affected, default: 0],
                       delta <= policy.ceiling(affected, perOwner: true)
-                        - owners[owner, default: [:]][affected, default: 0] else {
+                        - owners[owner, default: [:]][affected, default: 0]
+                else {
                     throw AddonFailure(
                         code  : .resourceDenied,
                         reason: "The resource budget is currently full."
@@ -268,8 +297,9 @@ public actor ResourceGovernor {
                 }
             }
         }
+
         for affected in [dimension, .diskBytes] {
-            let delta = desiredCharges[affected, default: 0] - entry.charges[affected, default: 0]
+            let delta               = desiredCharges[affected, default: 0] - entry.charges[affected, default: 0]
             entry.charges[affected] = desiredCharges[affected]
             totals[affected, default: 0] += delta
             owners[owner, default: [:]][affected, default: 0] += delta
@@ -278,14 +308,22 @@ public actor ResourceGovernor {
         return true
     }
 
-    public func release(_ reservationID: UUID, owner: AddonID) throws {
+    public func release(
+        _ reservationID: UUID,
+        owner          : AddonID
+    ) throws {
         guard let entry = entries[reservationID] else { return }
         guard entry.reservation.owner == owner else {
-            throw AddonFailure(code: .permissionDenied, reason: "The reservation belongs to another addon.")
+            throw AddonFailure(
+                code  : .permissionDenied,
+                reason: "The reservation belongs to another addon."
+            )
         }
         guard entry.retainedAssetSecret == nil else {
-            throw AddonFailure(code: .resourceDenied,
-                reason: "A live raster backing can only be released by its final disposal.")
+            throw AddonFailure(
+                code  : .resourceDenied,
+                reason: "A live raster backing can only be released by its final disposal."
+            )
         }
         guard entry.observedDiskSecret == nil else {
             throw AddonFailure(
@@ -293,11 +331,13 @@ public actor ResourceGovernor {
                 reason: "Observed disk accounting requires measured zero before final release."
             )
         }
+
         releaseCanonical(reservationID)
     }
 
     private func releaseCanonical(_ reservationID: UUID) {
         guard let entry = entries.removeValue(forKey: reservationID) else { return }
+
         let owner = entry.reservation.owner
         for (dimension, amount) in entry.charges {
             totals[dimension, default: 0] -= amount
@@ -317,7 +357,8 @@ public actor ResourceGovernor {
     }
 
     public func withReservation<Result: Sendable>(
-        _ request: ResourceRequest, owner: AddonID,
+        _ request: ResourceRequest,
+        owner    : AddonID,
         operation: @Sendable (ResourceReservation) async throws -> Result
     ) async throws -> Result {
         try Task.checkCancellation()
@@ -326,7 +367,10 @@ public actor ResourceGovernor {
         return try await operation(reservation)
     }
 
-    public func usage(_ dimension: ResourceDimension, owner: AddonID? = nil) -> Int {
+    public func usage(
+        _ dimension: ResourceDimension,
+        owner      : AddonID? = nil
+    ) -> Int {
         if let owner { return owners[owner]?[dimension] ?? 0 }
         return totals[dimension, default: 0]
     }
@@ -337,67 +381,9 @@ public actor ResourceGovernor {
 /// idempotent, but it cannot complete a different entry or a different governor. The governor
 /// identity is a lifetime nonce, not a recyclable object address.
 struct RetainedAssetToken: Sendable {
+
     let reservation: ResourceReservation
-    fileprivate let governor: UUID
-    fileprivate let secret: UUID
-    fileprivate init(reservation: ResourceReservation, governor: UUID, secret: UUID) {
-        self.reservation = reservation
-        self.governor = governor
-        self.secret = secret
-    }
-}
 
-extension ResourceGovernor {
-    static let retainedAssetSlotCharge = 4_096
-
-    /// withAssetDecodeReservation protects staging bytes from owner cleanup while native work runs.
-    /// The operation must return only after releasing temporary buffers. Its scoped secret uses
-    /// the same protected-entry exclusion as retained rasters; no release capability escapes.
-    func withAssetDecodeReservation<Result: Sendable>(
-        bytes    : Int,
-        owner    : AddonID,
-        operation: @Sendable () async throws -> Result
-    ) async throws -> Result {
-        try Task.checkCancellation()
-        let charges = try policy.charges(for: .temporaryMemory(bytes: bytes))
-        let reservation = try insert(
-            reservation        : ResourceReservation(id: UUID(), owner: owner),
-            charges            : charges,
-            statePayloadBytes  : nil,
-            retainedAssetSecret: UUID()
-        )
-        defer { releaseCanonical(reservation.id) }
-        return try await operation()
-    }
-
-    func admitRetainedAsset(bytes: Int, owner: AddonID) throws -> RetainedAssetToken {
-        var charges = try policy.charges(for: .asset(bytes: bytes))
-        // .asset has validated bytes before either bounded addition.
-        charges[.retainedStateBytes, default: 0] += Self.retainedAssetSlotCharge
-        charges[.admittedMemoryBytes, default: 0] += Self.retainedAssetSlotCharge
-        let secret = UUID()
-        let reservation = try insert(reservation: ResourceReservation(id: UUID(), owner: owner),
-            charges: charges, statePayloadBytes: nil, retainedAssetSecret: secret)
-        return RetainedAssetToken(reservation: reservation,
-                                  governor: retainedAssetLifetime, secret: secret)
-    }
-
-    func completeRetainedAsset(_ token: RetainedAssetToken, owner: AddonID) throws {
-        guard token.reservation.owner == owner, token.governor == retainedAssetLifetime else {
-            throw AddonFailure(code: .permissionDenied, reason: "The raster disposal authority does not match.")
-        }
-        guard let entry = entries[token.reservation.id] else { return }
-        guard entry.reservation.owner == owner, entry.retainedAssetSecret == token.secret else {
-            throw AddonFailure(code: .permissionDenied, reason: "The raster disposal lifetime does not match.")
-        }
-        releaseCanonical(token.reservation.id)
-    }
-}
-
-/// ObservedDiskToken grants one protected lifetime authority to reconcile measured disk bytes.
-/// Its reservation identifier is observable bookkeeping, not generic release authority.
-struct ObservedDiskToken: Sendable {
-    let reservation: ResourceReservation
     fileprivate let governor: UUID
     fileprivate let secret  : UUID
 
@@ -413,6 +399,96 @@ struct ObservedDiskToken: Sendable {
 }
 
 extension ResourceGovernor {
+
+    static let retainedAssetSlotCharge = 4_096
+
+    /// withAssetDecodeReservation protects staging bytes from owner cleanup while native work runs.
+    /// The operation must return only after releasing temporary buffers. Its scoped secret uses
+    /// the same protected-entry exclusion as retained rasters; no release capability escapes.
+    func withAssetDecodeReservation<Result: Sendable>(
+        bytes    : Int,
+        owner    : AddonID,
+        operation: @Sendable () async throws -> Result
+    ) async throws -> Result {
+        try Task.checkCancellation()
+        let charges     = try policy.charges(for: .temporaryMemory(bytes: bytes))
+        let reservation = try insert(
+            reservation        : ResourceReservation(id: UUID(), owner: owner),
+            charges            : charges,
+            statePayloadBytes  : nil,
+            retainedAssetSecret: UUID()
+        )
+        defer { releaseCanonical(reservation.id) }
+        return try await operation()
+    }
+
+    func admitRetainedAsset(
+        bytes: Int,
+        owner: AddonID
+    ) throws -> RetainedAssetToken {
+        var charges = try policy.charges(for: .asset(bytes: bytes))
+        // .asset has validated bytes before either bounded addition.
+        charges[.retainedStateBytes, default: 0] += Self.retainedAssetSlotCharge
+        charges[.admittedMemoryBytes, default: 0] += Self.retainedAssetSlotCharge
+
+        let secret      = UUID()
+        let reservation = try insert(
+            reservation        : ResourceReservation(id: UUID(), owner: owner),
+            charges            : charges,
+            statePayloadBytes  : nil,
+            retainedAssetSecret: secret
+        )
+        return RetainedAssetToken(
+            reservation: reservation,
+            governor   : retainedAssetLifetime,
+            secret     : secret
+        )
+    }
+
+    func completeRetainedAsset(
+        _ token: RetainedAssetToken,
+        owner  : AddonID
+    ) throws {
+        guard token.reservation.owner == owner, token.governor == retainedAssetLifetime else {
+            throw AddonFailure(
+                code  : .permissionDenied,
+                reason: "The raster disposal authority does not match."
+            )
+        }
+        guard let entry = entries[token.reservation.id] else { return }
+        guard entry.reservation.owner == owner, entry.retainedAssetSecret == token.secret else {
+            throw AddonFailure(
+                code  : .permissionDenied,
+                reason: "The raster disposal lifetime does not match."
+            )
+        }
+
+        releaseCanonical(token.reservation.id)
+    }
+}
+
+/// ObservedDiskToken grants one protected lifetime authority to reconcile measured disk bytes.
+/// Its reservation identifier is observable bookkeeping, not generic release authority.
+struct ObservedDiskToken: Sendable {
+
+    let reservation: ResourceReservation
+
+    fileprivate let governor: UUID
+    fileprivate let secret  : UUID
+
+    fileprivate init(
+        reservation: ResourceReservation,
+        governor   : UUID,
+        secret     : UUID
+    ) {
+        self.reservation = reservation
+        self.governor    = governor
+        self.secret      = secret
+    }
+}
+
+extension ResourceGovernor {
+
     /// admitObservedDisk prepays one protected data ledger with strict initial disk admission.
     /// Zero bytes requests only metadata, allowing existing files to be discovered while
     /// other ledgers are overbudget. It does not authorize a framework write or disk growth.
@@ -423,18 +499,16 @@ extension ResourceGovernor {
         owner                : AddonID,
         retainedMetadataBytes: Int = 0
     ) throws -> ObservedDiskToken {
-        var charges = try policy.charges(for: .diskState(bytes: bytes))
-        let metadataCharges = try policy.charges(for: .state(bytes: retainedMetadataBytes))
+        var charges                  = try policy.charges(for: .diskState(bytes: bytes))
+        let metadataCharges          = try policy.charges(for: .state(bytes: retainedMetadataBytes))
         charges[.retainedStateBytes] = metadataCharges[.retainedStateBytes]
         if retainedMetadataBytes > 0 {
             charges[.admittedMemoryBytes] = retainedMetadataBytes
         }
-        let secret = UUID()
+
+        let secret      = UUID()
         let reservation = try insert(
-            reservation        : ResourceReservation(
-                id   : UUID(),
-                owner: owner
-            ),
+            reservation        : ResourceReservation(id: UUID(), owner: owner),
             charges            : charges,
             statePayloadBytes  : nil,
             retainedAssetSecret: nil,
@@ -455,10 +529,7 @@ extension ResourceGovernor {
         fromBytes: Int,
         toBytes  : Int
     ) throws -> Bool {
-        let entry = try observedDiskEntry(
-            token,
-            owner: owner
-        )
+        let entry = try observedDiskEntry(token, owner: owner)
         guard fromBytes >= 0, toBytes >= fromBytes else {
             throw AddonFailure(
                 code  : .resourceDenied,
@@ -466,19 +537,16 @@ extension ResourceGovernor {
             )
         }
         guard entry.charges[.diskStateBytes] == fromBytes else { return false }
-        _ = try policy.charges(for: .diskState(bytes: toBytes))
+
+        _         = try policy.charges(for: .diskState(bytes: toBytes))
         let delta = toBytes - fromBytes
         if delta > 0 {
             try requireDiskGrowthEligibility(owner: owner)
             for dimension in [ResourceDimension.diskStateBytes, .diskBytes] {
-                guard delta <= policy.ceiling(
-                    dimension,
-                    perOwner: false
-                ) - totals[dimension, default: 0],
-                      delta <= policy.ceiling(
-                    dimension,
-                    perOwner: true
-                ) - owners[owner, default: [:]][dimension, default: 0] else {
+                guard delta <= policy.ceiling(dimension, perOwner: false) - totals[dimension, default: 0],
+                      delta <= policy.ceiling(dimension, perOwner: true)
+                        - owners[owner, default: [:]][dimension, default: 0]
+                else {
                     throw AddonFailure(
                         code  : .resourceDenied,
                         reason: "The resource budget is currently full."
@@ -486,6 +554,7 @@ extension ResourceGovernor {
                 }
             }
         }
+
         return try reconcileObservedDisk(
             token,
             owner        : owner,
@@ -503,10 +572,7 @@ extension ResourceGovernor {
         fromBytes    : Int,
         measuredBytes: Int
     ) throws -> Bool {
-        var entry = try observedDiskEntry(
-            token,
-            owner: owner
-        )
+        var entry = try observedDiskEntry(token, owner: owner)
         guard fromBytes >= 0, measuredBytes >= 0 else {
             throw AddonFailure(
                 code  : .resourceDenied,
@@ -514,18 +580,23 @@ extension ResourceGovernor {
             )
         }
         guard entry.charges[.diskStateBytes] == fromBytes else { return false }
+
         let delta = measuredBytes - fromBytes
         for dimension in [ResourceDimension.diskStateBytes, .diskBytes] {
-            let total = totals[dimension, default: 0].addingReportingOverflow(delta)
+            let total      = totals[dimension, default: 0].addingReportingOverflow(delta)
             let ownerTotal = owners[owner, default: [:]][dimension, default: 0].addingReportingOverflow(delta)
-            guard !total.overflow, !ownerTotal.overflow,
-                  total.partialValue >= 0, ownerTotal.partialValue >= 0 else {
+            guard !total.overflow,
+                  !ownerTotal.overflow,
+                  total.partialValue >= 0,
+                  ownerTotal.partialValue >= 0
+            else {
                 throw AddonFailure(
                     code  : .resourceDenied,
                     reason: "Observed disk accounting exceeds its integer representation."
                 )
             }
         }
+
         for dimension in [ResourceDimension.diskStateBytes, .diskBytes] {
             entry.charges[dimension] = measuredBytes
             totals[dimension, default: 0] += delta
@@ -540,16 +611,14 @@ extension ResourceGovernor {
         _ token: ObservedDiskToken,
         owner  : AddonID
     ) throws -> ObservedDiskStatus {
-        let entry = try observedDiskEntry(
-            token,
-            owner: owner
-        )
+        let entry         = try observedDiskEntry(token, owner: owner)
         let ownerOverage  = diskOverage(owner: owner)
         let globalOverage = diskOverage(owner: nil)
+
         return ObservedDiskStatus(
             bytes             : entry.charges[.diskStateBytes, default: 0],
-            ownerOverageBytes  : ownerOverage,
-            globalOverageBytes : globalOverage,
+            ownerOverageBytes : ownerOverage,
+            globalOverageBytes: globalOverage,
             permitsWrites     : ownerOverage == 0 && globalOverage == 0
         )
     }
@@ -560,16 +629,14 @@ extension ResourceGovernor {
         _ token: ObservedDiskToken,
         owner  : AddonID
     ) throws {
-        let entry = try observedDiskEntry(
-            token,
-            owner: owner
-        )
+        let entry = try observedDiskEntry(token, owner: owner)
         guard entry.charges[.diskStateBytes] == 0 else {
             throw AddonFailure(
                 code  : .resourceDenied,
                 reason: "Observed disk accounting requires measured zero before final release."
             )
         }
+
         releaseCanonical(token.reservation.id)
     }
 
@@ -582,12 +649,14 @@ extension ResourceGovernor {
               token.reservation.owner == owner,
               let entry = entries[token.reservation.id],
               entry.reservation.owner == owner,
-              entry.observedDiskSecret == token.secret else {
+              entry.observedDiskSecret == token.secret
+        else {
             throw AddonFailure(
                 code  : .permissionDenied,
                 reason: "The observed disk authority does not match a live ledger."
             )
         }
+
         return entry
     }
 
@@ -595,21 +664,13 @@ extension ResourceGovernor {
     private func diskOverage(owner: AddonID?) -> Int {
         var overage = 0
         for dimension in [ResourceDimension.diskStateBytes, .diskCacheBytes, .diskBytes] {
-            let charged = usage(
-                dimension,
-                owner: owner
-            )
-            let ceiling = policy.ceiling(
-                dimension,
-                perOwner: owner != nil
-            )
+            let charged = usage(dimension, owner: owner)
+            let ceiling = policy.ceiling(dimension, perOwner: owner != nil)
             if charged > ceiling {
-                overage = max(
-                    overage,
-                    charged - ceiling
-                )
+                overage = max(overage, charged - ceiling)
             }
         }
+
         return overage
     }
 
@@ -628,7 +689,9 @@ extension ResourceGovernor {
 /// AssetTransferReservationToken grants disposal of exactly one compressed-input lifetime.
 /// Its distinct type cannot complete raster/decode tokens, although entries reuse protection.
 struct AssetTransferReservationToken: Sendable {
+
     let reservation: ResourceReservation
+
     fileprivate let governor: UUID
     fileprivate let secret  : UUID
 
@@ -644,6 +707,7 @@ struct AssetTransferReservationToken: Sendable {
 }
 
 extension ResourceGovernor {
+
     /// admitAssetTransfer prepays a fixed buffer and its controlled COW/snapshot overlap.
     /// The 4,096-byte control allowance is separate from the policy's 1,024-byte entry.
     func admitAssetTransfer(
@@ -657,13 +721,11 @@ extension ResourceGovernor {
                 reason: "Invalid compressed asset length."
             )
         }
-        let charges = try policy.charges(for: .temporaryMemory(bytes: 2 * bytes + 4_096))
-        let secret = UUID()
+
+        let charges     = try policy.charges(for: .temporaryMemory(bytes: 2 * bytes + 4_096))
+        let secret      = UUID()
         let reservation = try insert(
-            reservation        : ResourceReservation(
-                id   : UUID(),
-                owner: owner
-            ),
+            reservation        : ResourceReservation(id: UUID(), owner: owner),
             charges            : charges,
             statePayloadBytes  : nil,
             retainedAssetSecret: secret
@@ -712,11 +774,12 @@ extension ResourceGovernor {
 
 #if DEBUG
     struct AssetTransferRefundSnapshot: Sendable {
-        let attempts: UInt64
-        let successes: UInt64
+
+        let attempts         : UInt64
+        let successes        : UInt64
         let lastReservationID: UUID?
-        let present: Bool
-        let memoryBytes: Int
+        let present          : Bool
+        let memoryBytes      : Int
     }
 
     /// assetTransferRefundSnapshotForTesting observes canonical entries without exposing

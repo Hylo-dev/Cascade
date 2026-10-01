@@ -10,18 +10,19 @@ import Foundation
 /// unguessable health token. Callers can retain the value, but only `bind` creates
 /// one that the store recognizes as current.
 public struct AddonHealthSession: Hashable, Sendable {
-    public let version: AddonVersionIdentity
+
+    public let version   : AddonVersionIdentity
     public let generation: ConnectionGeneration
-    public let token: UUID
+    public let token     : UUID
 
     fileprivate init(
-        version    : AddonVersionIdentity,
-        generation : ConnectionGeneration,
-        token      : UUID
+        version   : AddonVersionIdentity,
+        generation: ConnectionGeneration,
+        token     : UUID
     ) {
-        self.version = version
+        self.version    = version
         self.generation = generation
-        self.token = token
+        self.token      = token
     }
 }
 
@@ -29,21 +30,22 @@ public struct AddonHealthSession: Hashable, Sendable {
 /// monotonic deadline. The ticket remains tied to the failed session generation;
 /// binding a replacement session or cancelling the owner invalidates it.
 public struct AddonRetryTicket: Equatable, Sendable {
-    public let version: AddonVersionIdentity
+
+    public let version         : AddonVersionIdentity
     public let failedGeneration: ConnectionGeneration
-    public let deadline: Duration
-    public let token: UUID
+    public let deadline        : Duration
+    public let token           : UUID
 
     fileprivate init(
-        version          : AddonVersionIdentity,
-        failedGeneration : ConnectionGeneration,
-        deadline         : Duration,
-        token            : UUID
+        version         : AddonVersionIdentity,
+        failedGeneration: ConnectionGeneration,
+        deadline        : Duration,
+        token           : UUID
     ) {
-        self.version = version
+        self.version          = version
         self.failedGeneration = failedGeneration
-        self.deadline = deadline
-        self.token = token
+        self.deadline         = deadline
+        self.token            = token
     }
 }
 
@@ -52,14 +54,16 @@ public struct AddonRetryTicket: Equatable, Sendable {
 /// intervals use the monotonic half of `RuntimeInstant`; the wall date is checked
 /// only to reject malformed clock samples shared with the rest of the runtime.
 public struct AddonHealthStore: Sendable {
+
     private struct Record: Sendable {
-        let identity: AddonVersionIdentity
-        let charge: Int
-        var moderateIncidents: [Duration] = []
-        var crashRetryCount = 0
-        var pendingRetry: AddonRetryTicket?
+
+        let identity           : AddonVersionIdentity
+        let charge             : Int
+        var moderateIncidents  : [Duration] = []
+        var crashRetryCount     = 0
+        var pendingRetry       : AddonRetryTicket?
         var lastAcceptedInstant: Duration?
-        var isQuarantined = false
+        var isQuarantined       = false
     }
 
     // These charges conservatively cover dictionary buckets, version identity,
@@ -75,18 +79,20 @@ public struct AddonHealthStore: Sendable {
         Duration.seconds(30),
     ]
 
-    private let maximumRecords: Int
+    private let maximumRecords      : Int
     private let maximumRetainedBytes: Int
-    private var records: [AddonVersionIdentity: Record] = [:]
-    private var activeSessions: [AddonID: AddonHealthSession] = [:]
+    private var records             : [AddonVersionIdentity: Record] = [:]
+    private var activeSessions      : [AddonID: AddonHealthSession] = [:]
+
     public private(set) var retainedBytes = 0
+
     public var count: Int { records.count }
 
     public init(
-        maximumRecords       : Int = 1_024,
-        maximumRetainedBytes : Int = 8 * 1_024 * 1_024
+        maximumRecords      : Int = 1_024,
+        maximumRetainedBytes: Int = 8 * 1_024 * 1_024
     ) {
-        self.maximumRecords = min(Self.maximumHostRecords, max(0, maximumRecords))
+        self.maximumRecords       = min(Self.maximumHostRecords, max(0, maximumRecords))
         self.maximumRetainedBytes = min(
             Self.maximumHostBytes,
             max(0, maximumRetainedBytes)
@@ -95,20 +101,19 @@ public struct AddonHealthStore: Sendable {
 
     /// register admits one durable version record or returns the existing state.
     /// Existing records are never refreshed, evicted, or cleared by registration.
-    public mutating func register(
-        _ identity: AddonVersionIdentity
-    ) throws -> AddonHealthSnapshot {
+    public mutating func register(_ identity: AddonVersionIdentity) throws -> AddonHealthSnapshot {
         if let existing = records[identity] {
             return snapshot(existing)
         }
+
         let charge = recordCharge(identity)
-        guard records.count < maximumRecords,
-              charge <= maximumRetainedBytes - retainedBytes else {
+        guard records.count < maximumRecords, charge <= maximumRetainedBytes - retainedBytes else {
             throw AddonFailure(
-                code   : .resourceDenied,
-                reason : "The addon health history budget is exhausted."
+                code  : .resourceDenied,
+                reason: "The addon health history budget is exhausted."
             )
         }
+
         records[identity] = Record(identity: identity, charge: charge)
         retainedBytes += charge
         return snapshot(for: identity) ?? AddonHealthSnapshot(
@@ -122,37 +127,39 @@ public struct AddonHealthStore: Sendable {
     /// bind replaces the current host session for this addon ID. Replacement
     /// invalidates every pending retry for the addon before accepting new events.
     public mutating func bind(
-        _ identity : AddonVersionIdentity,
-        generation : ConnectionGeneration
+        _ identity: AddonVersionIdentity,
+        generation: ConnectionGeneration
     ) throws -> AddonHealthSession {
         guard let record = records[identity] else {
             throw AddonFailure(
-                code   : .dependencyUnavailable,
-                reason : "The addon version has no admitted health record."
+                code  : .dependencyUnavailable,
+                reason: "The addon version has no admitted health record."
             )
         }
         guard !record.isQuarantined else {
             throw AddonFailure(
-                code   : .resourceDenied,
-                reason : "The addon version is quarantined pending host administration."
+                code  : .resourceDenied,
+                reason: "The addon version is quarantined pending host administration."
             )
         }
+
         let owner = identity.verifiedIdentity.addonID
         if activeSessions[owner] == nil {
             let charge = accountCharge(owner)
             guard charge <= maximumRetainedBytes - retainedBytes else {
                 throw AddonFailure(
-                    code   : .resourceDenied,
-                    reason : "The addon health account index budget is exhausted."
+                    code  : .resourceDenied,
+                    reason: "The addon health account index budget is exhausted."
                 )
             }
             retainedBytes += charge
         }
+
         cancelPendingRetries(owner: owner)
         let session = AddonHealthSession(
-            version    : identity,
-            generation : generation,
-            token      : UUID()
+            version   : identity,
+            generation: generation,
+            token     : UUID()
         )
         activeSessions[owner] = session
         return session
@@ -171,22 +178,24 @@ public struct AddonHealthStore: Sendable {
         guard isCurrent(session), var record = records[session.version] else {
             return nil
         }
+
         try validateOrder(instant.monotonic, after: record.lastAcceptedInstant)
         record.lastAcceptedInstant = instant.monotonic
 
         switch violation {
-        case .moderate:
-            let decision = applyModerate(to: &record, at: instant.monotonic)
-            records[session.version] = record
-            if decision == .quarantine {
+            case .moderate:
+                let decision             = applyModerate(to: &record, at: instant.monotonic)
+                records[session.version] = record
+                if decision == .quarantine {
+                    removeActiveSession(owner: session.version.verifiedIdentity.addonID)
+                }
+                return decision
+
+            case .severe:
+                record.pendingRetry      = nil
+                records[session.version] = record
                 removeActiveSession(owner: session.version.verifiedIdentity.addonID)
-            }
-            return decision
-        case .severe:
-            record.pendingRetry = nil
-            records[session.version] = record
-            removeActiveSession(owner: session.version.verifiedIdentity.addonID)
-            return .stop
+                return .stop
         }
     }
 
@@ -198,31 +207,36 @@ public struct AddonHealthStore: Sendable {
         at instant: RuntimeInstant
     ) throws -> AddonHealthDecision? {
         try validate(instant)
+
         let owner = retry.version.verifiedIdentity.addonID
         guard activeSessions[owner] == nil,
               var record = records[retry.version],
               record.pendingRetry == retry,
-              !record.isQuarantined else { return nil }
+              !record.isQuarantined
+        else { return nil }
+
         try validateOrder(instant.monotonic, after: record.lastAcceptedInstant)
         record.lastAcceptedInstant = instant.monotonic
-        let decision = applyModerate(to: &record, at: instant.monotonic)
-        records[retry.version] = record
+        let decision               = applyModerate(to: &record, at: instant.monotonic)
+        records[retry.version]     = record
         return decision
     }
 
     private func applyModerate(
-        to record: inout Record,
+        to record : inout Record,
         at instant: Duration
     ) -> AddonHealthDecision {
         record.moderateIncidents.removeAll { incident in
             instant - incident > Self.moderateWindow
         }
+
         if record.moderateIncidents.count == 2 {
             record.moderateIncidents.removeAll(keepingCapacity: true)
             record.isQuarantined = true
-            record.pendingRetry = nil
+            record.pendingRetry  = nil
             return .quarantine
         }
+
         record.moderateIncidents.append(instant)
         return .keep
     }
@@ -230,17 +244,18 @@ public struct AddonHealthStore: Sendable {
     /// crashed closes the failed session and, while demand exists, issues the next
     /// 1/5/30-second retry. A fourth demanded crash quarantines the version.
     public mutating func crashed(
-        _ session     : AddonHealthSession,
-        demandExists : Bool,
-        at instant    : RuntimeInstant
+        _ session   : AddonHealthSession,
+        demandExists: Bool,
+        at instant  : RuntimeInstant
     ) throws -> AddonHealthDecision? {
         try validate(instant)
         guard isCurrent(session), var record = records[session.version] else {
             return nil
         }
+
         try validateOrder(instant.monotonic, after: record.lastAcceptedInstant)
         record.lastAcceptedInstant = instant.monotonic
-        record.pendingRetry = nil
+        record.pendingRetry        = nil
         removeActiveSession(owner: session.version.verifiedIdentity.addonID)
 
         guard demandExists else {
@@ -248,19 +263,20 @@ public struct AddonHealthStore: Sendable {
             return .stop
         }
         guard record.crashRetryCount < Self.retryDelays.count else {
-            record.isQuarantined = true
+            record.isQuarantined     = true
             records[session.version] = record
             return .quarantine
         }
+
         let delay = Self.retryDelays[record.crashRetryCount]
         record.crashRetryCount += 1
         let retry = AddonRetryTicket(
-            version          : session.version,
-            failedGeneration : session.generation,
-            deadline         : instant.monotonic + delay,
-            token            : UUID()
+            version         : session.version,
+            failedGeneration: session.generation,
+            deadline        : instant.monotonic + delay,
+            token           : UUID()
         )
-        record.pendingRetry = retry
+        record.pendingRetry      = retry
         records[session.version] = record
         return .retryAt(retry)
     }
@@ -269,7 +285,7 @@ public struct AddonHealthStore: Sendable {
     /// demanded. A due attempt is consumed before the checks, making late duplicate
     /// callbacks harmless. Early delivery leaves the deadline available to rearm.
     public mutating func consume(
-        _ retry      : AddonRetryTicket,
+        _ retry     : AddonRetryTicket,
         demandExists: Bool,
         isEnabled   : Bool,
         at instant  : RuntimeInstant
@@ -277,18 +293,21 @@ public struct AddonHealthStore: Sendable {
         try validate(instant)
         guard var record = records[retry.version],
               record.pendingRetry == retry,
-              instant.monotonic >= retry.deadline else {
+              instant.monotonic >= retry.deadline
+        else {
             return false
         }
+
         try validateOrder(instant.monotonic, after: record.lastAcceptedInstant)
         record.lastAcceptedInstant = instant.monotonic
-        record.pendingRetry = nil
-        records[retry.version] = record
+        record.pendingRetry        = nil
+        records[retry.version]     = record
+
         let owner = retry.version.verifiedIdentity.addonID
-        guard demandExists, isEnabled, !record.isQuarantined,
-              activeSessions[owner] == nil else {
+        guard demandExists, isEnabled, !record.isQuarantined, activeSessions[owner] == nil else {
             return false
         }
+
         return true
     }
 
@@ -302,40 +321,38 @@ public struct AddonHealthStore: Sendable {
     /// administrativelyReset is the deliberate host-only path that clears health
     /// history for an admitted version. It also requires a fresh session binding.
     @discardableResult
-    public mutating func administrativelyReset(
-        _ identity: AddonVersionIdentity
-    ) -> Bool {
+    public mutating func administrativelyReset(_ identity: AddonVersionIdentity) -> Bool {
         guard var record = records[identity] else { return false }
+
         let owner = identity.verifiedIdentity.addonID
         if activeSessions[owner]?.version == identity {
             removeActiveSession(owner: owner)
         }
+
         record.moderateIncidents.removeAll(keepingCapacity: true)
-        record.crashRetryCount = 0
-        record.pendingRetry = nil
+        record.crashRetryCount     = 0
+        record.pendingRetry        = nil
         record.lastAcceptedInstant = nil
-        record.isQuarantined = false
-        records[identity] = record
+        record.isQuarantined       = false
+        records[identity]          = record
         return true
     }
 
     /// administrativelyRemove deliberately releases a version tombstone. Runtime
     /// registration and normal provider restarts never call this eviction path.
     @discardableResult
-    public mutating func administrativelyRemove(
-        _ identity: AddonVersionIdentity
-    ) -> Bool {
+    public mutating func administrativelyRemove(_ identity: AddonVersionIdentity) -> Bool {
         guard let record = records.removeValue(forKey: identity) else { return false }
+
         if activeSessions[identity.verifiedIdentity.addonID]?.version == identity {
             removeActiveSession(owner: identity.verifiedIdentity.addonID)
         }
+
         retainedBytes -= record.charge
         return true
     }
 
-    public func snapshot(
-        for identity: AddonVersionIdentity
-    ) -> AddonHealthSnapshot? {
+    public func snapshot(for identity: AddonVersionIdentity) -> AddonHealthSnapshot? {
         records[identity].map(snapshot)
     }
 
@@ -345,21 +362,24 @@ public struct AddonHealthStore: Sendable {
         var earliest: Duration?
         for record in records.values {
             guard let deadline = record.pendingRetry?.deadline else { continue }
+
             earliest = earliest.map { min($0, deadline) } ?? deadline
         }
+
         return earliest
     }
 
     /// pendingRetryTickets projects the bounded canonical retry state for a host
     /// wake. Consumption remains the authority that validates due time and demand.
     var pendingRetryTickets: [AddonRetryTicket] {
-        records.values.compactMap(\.pendingRetry).sorted {
-            if $0.deadline != $1.deadline { return $0.deadline < $1.deadline }
-            let left = $0.version.verifiedIdentity
-            let right = $1.version.verifiedIdentity
+        records.values.compactMap(\.pendingRetry).sorted { first, second in
+            if first.deadline != second.deadline { return first.deadline < second.deadline }
+
+            let left  = first.version.verifiedIdentity
+            let right = second.version.verifiedIdentity
             if left.addonID != right.addonID { return left.addonID.rawValue < right.addonID.rawValue }
             if left.publisher != right.publisher { return left.publisher < right.publisher }
-            return $0.version.version.description < $1.version.version.description
+            return first.version.version.description < second.version.version.description
         }
     }
 
@@ -368,17 +388,18 @@ public struct AddonHealthStore: Sendable {
     mutating func cancelPendingRetries() {
         for identity in Array(records.keys) {
             guard var record = records[identity], record.pendingRetry != nil else { continue }
+
             record.pendingRetry = nil
-            records[identity] = record
+            records[identity]   = record
         }
     }
 
     private func snapshot(_ record: Record) -> AddonHealthSnapshot {
         AddonHealthSnapshot(
-            isQuarantined         : record.isQuarantined,
-            moderateIncidentCount : record.moderateIncidents.count,
-            crashRetryCount       : record.crashRetryCount,
-            hasPendingRetry       : record.pendingRetry != nil
+            isQuarantined        : record.isQuarantined,
+            moderateIncidentCount: record.moderateIncidents.count,
+            crashRetryCount      : record.crashRetryCount,
+            hasPendingRetry      : record.pendingRetry != nil
         )
     }
 
@@ -399,23 +420,24 @@ public struct AddonHealthStore: Sendable {
 
     private mutating func removeActiveSession(owner: AddonID) {
         guard activeSessions.removeValue(forKey: owner) != nil else { return }
+
         retainedBytes -= accountCharge(owner)
     }
 
     private mutating func cancelPendingRetries(owner: AddonID) {
         for identity in Array(records.keys) where identity.verifiedIdentity.addonID == owner {
             guard var record = records[identity], record.pendingRetry != nil else { continue }
+
             record.pendingRetry = nil
-            records[identity] = record
+            records[identity]   = record
         }
     }
 
     private func validate(_ instant: RuntimeInstant) throws {
-        guard instant.wall.timeIntervalSince1970.isFinite,
-              instant.monotonic >= .zero else {
+        guard instant.wall.timeIntervalSince1970.isFinite, instant.monotonic >= .zero else {
             throw AddonFailure(
-                code   : .invalidPayload,
-                reason : "The runtime clock is invalid."
+                code  : .invalidPayload,
+                reason: "The runtime clock is invalid."
             )
         }
     }
@@ -426,8 +448,8 @@ public struct AddonHealthStore: Sendable {
     ) throws {
         guard last.map({ instant >= $0 }) ?? true else {
             throw AddonFailure(
-                code   : .invalidPayload,
-                reason : "Health events must use nondecreasing monotonic time."
+                code  : .invalidPayload,
+                reason: "Health events must use nondecreasing monotonic time."
             )
         }
     }

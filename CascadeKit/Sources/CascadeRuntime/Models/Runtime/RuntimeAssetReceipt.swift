@@ -8,6 +8,7 @@ import Foundation
 
 /// RuntimeAssetReceipt binds one accepted asset reply to its host nonce and canonical connection.
 struct RuntimeAssetReceipt: Equatable, Sendable {
+
     let token          : UUID
     let incarnation    : RuntimeIncarnation
     let connectionToken: UUID

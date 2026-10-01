@@ -10,14 +10,17 @@ import Foundation
 /// SwiftData itself opens a URL: inode comparisons detect replacement but do not turn its
 /// framework-managed opens into descriptor-relative operations.
 enum SwiftDataArchiveDirectory {
+
     static let entryBytes             = 4_096
     private static let maximumEntries = 4_096
     private static let maximumDepth   = 8
+
     private static let managedNames: Set<String> = [
         "archive.store", "archive.store-wal", "archive.store-shm", "archive.store-journal"
     ]
 
     private struct Scan {
+
         var bytes             = entryBytes
         var entries           = 0
         var isComplete        = true
@@ -32,7 +35,8 @@ enum SwiftDataArchiveDirectory {
               root.absoluteString.utf8.count <= 4_096,
               root.query == nil,
               root.fragment == nil,
-              root.path.hasPrefix("/") else {
+              root.path.hasPrefix("/")
+        else {
             throw SwiftDataArchiveFailure.invalidConfiguration
         }
     }
@@ -43,21 +47,17 @@ enum SwiftDataArchiveDirectory {
         descriptor: Int32
     ) throws {
         try KeyedStorageDirectory.validateDirectory(descriptor)
-        var held  = stat()
-        var named = stat()
-        let heldResult = fstat(
-            descriptor,
-            &held
-        )
-        let namedResult = lstat(
-            root.path,
-            &named
-        )
+
+        var held        = stat()
+        var named       = stat()
+        let heldResult  = fstat(descriptor, &held)
+        let namedResult = lstat(root.path, &named)
         guard heldResult == 0,
               namedResult == 0,
               named.st_mode & S_IFMT == S_IFDIR,
               held.st_dev == named.st_dev,
-              held.st_ino == named.st_ino else {
+              held.st_ino == named.st_ino
+        else {
             throw SwiftDataArchiveFailure.unsafePath
         }
     }
@@ -67,17 +67,11 @@ enum SwiftDataArchiveDirectory {
         root      : URL,
         descriptor: Int32
     ) throws -> Int32 {
-        let duplicate = fcntl(
-            descriptor,
-            F_DUPFD_CLOEXEC,
-            0
-        )
+        let duplicate = fcntl(descriptor, F_DUPFD_CLOEXEC, 0)
         guard duplicate >= 0 else { throw SwiftDataArchiveFailure.unsafePath }
+
         do {
-            try validateHeldRoot(
-                root      : root,
-                descriptor: duplicate
-            )
+            try validateHeldRoot(root: root, descriptor: duplicate)
             return duplicate
         } catch {
             Darwin.close(duplicate)
@@ -90,17 +84,12 @@ enum SwiftDataArchiveDirectory {
         _ parent: Int32,
         name    : String
     ) throws -> Int32? {
-        guard let child = try KeyedStorageDirectory.child(
-            parent,
-            name: name
-        ) else { return nil }
-        guard flock(
-            child,
-            LOCK_EX | LOCK_NB
-        ) == 0 else {
+        guard let child = try KeyedStorageDirectory.child(parent, name: name) else { return nil }
+        guard flock(child, LOCK_EX | LOCK_NB) == 0 else {
             Darwin.close(child)
             throw SwiftDataArchiveFailure.unsafePath
         }
+
         return child
     }
 
@@ -110,14 +99,10 @@ enum SwiftDataArchiveDirectory {
         name    : String
     ) -> Int {
         var info = stat()
-        guard fstatat(
-            parent,
-            name,
-            &info,
-            AT_SYMLINK_NOFOLLOW
-        ) == 0 else { return 0 }
+        guard fstatat(parent, name, &info, AT_SYMLINK_NOFOLLOW) == 0 else { return 0 }
         guard info.st_mode & S_IFMT != S_IFDIR else { return entryBytes }
         guard info.st_size >= 0, info.st_size <= Int.max - entryBytes else { return Int.max }
+
         return entryBytes + Int(info.st_size)
     }
 
@@ -129,24 +114,19 @@ enum SwiftDataArchiveDirectory {
     ) -> SwiftDataArchiveInventory {
         var scan = Scan()
         do {
-            try validateHeldRoot(
-                root      : root,
-                descriptor: descriptor
-            )
+            try validateHeldRoot(root: root, descriptor: descriptor)
             try inspect(
                 descriptor    : descriptor,
                 depth         : 0,
                 fileInspection: fileInspection,
                 scan          : &scan
             )
-            try validateHeldRoot(
-                root      : root,
-                descriptor: descriptor
-            )
+            try validateHeldRoot(root: root, descriptor: descriptor)
         } catch {
             scan.isComplete       = false
             scan.hasUnsafeEntries = true
         }
+
         return SwiftDataArchiveInventory(
             bytes            : scan.bytes,
             isComplete       : scan.isComplete,
@@ -163,34 +143,30 @@ enum SwiftDataArchiveDirectory {
         scan          : inout Scan
     ) throws {
         guard depth <= maximumDepth else { throw SwiftDataArchiveFailure.unsafePath }
+
         try KeyedStorageDirectory.entries(
             descriptor,
             maximumCount    : maximumEntries,
             maximumNameBytes: 255
         ) { name in
             guard scan.entries < maximumEntries else { throw SwiftDataArchiveFailure.unsafePath }
+
             scan.entries += 1
             var information = stat()
-            guard fstatat(
-                descriptor,
-                name,
-                &information,
-                AT_SYMLINK_NOFOLLOW
-            ) == 0 else { throw SwiftDataArchiveFailure.unsafePath }
+            guard fstatat(descriptor, name, &information, AT_SYMLINK_NOFOLLOW) == 0 else {
+                throw SwiftDataArchiveFailure.unsafePath
+            }
+
             let kind  = information.st_mode & S_IFMT
             let known = depth == 0 && managedNames.contains(name)
             if !known { scan.hasUnknownEntries = true }
-            try add(
-                entryBytes,
-                scan: &scan
-            )
+            try add(entryBytes, scan: &scan)
             if kind == S_IFDIR {
                 scan.hasUnknownEntries = true
-                guard let child = try KeyedStorageDirectory.child(
-                    descriptor,
-                    name: name
-                ) else { throw SwiftDataArchiveFailure.unsafePath }
+                guard let child = try KeyedStorageDirectory.child(descriptor, name: name)
+                else { throw SwiftDataArchiveFailure.unsafePath }
                 defer { Darwin.close(child) }
+
                 try inspect(
                     descriptor    : child,
                     depth         : depth + 1,
@@ -199,32 +175,29 @@ enum SwiftDataArchiveDirectory {
                 )
             } else {
                 guard information.st_size >= 0,
-                      information.st_size <= Int.max else { throw SwiftDataArchiveFailure.unsafePath }
-                try add(
-                    Int(information.st_size),
-                    scan: &scan
-                )
+                      information.st_size <= Int.max
+                else { throw SwiftDataArchiveFailure.unsafePath }
+
+                try add(Int(information.st_size), scan: &scan)
                 guard kind == S_IFREG else {
                     scan.hasUnsafeEntries = true
                     return
                 }
+
                 do {
-                    guard let (file, identity) = try fileInspection.openFile(
-                        descriptor,
-                        name: name
-                    ) else { throw SwiftDataArchiveFailure.unsafePath }
+                    guard let (file, identity) = try fileInspection.openFile(descriptor, name: name)
+                    else { throw SwiftDataArchiveFailure.unsafePath }
                     defer { Darwin.close(file) }
+
                     // A racing replacement/growth invalidates the scan, but its larger checked
                     // length is still known retained storage and cannot be discarded with the error.
                     if identity.size > information.st_size {
-                        try add(
-                            identity.size - Int(information.st_size),
-                            scan: &scan
-                        )
+                        try add(identity.size - Int(information.st_size), scan: &scan)
                     }
                     guard identity.device == information.st_dev,
                           identity.inode == information.st_ino,
-                          identity.size == information.st_size else {
+                          identity.size == information.st_size
+                    else {
                         throw SwiftDataArchiveFailure.unsafePath
                     }
                 } catch {
@@ -241,6 +214,7 @@ enum SwiftDataArchiveDirectory {
     ) throws {
         let result = scan.bytes.addingReportingOverflow(bytes)
         guard !result.overflow else { throw SwiftDataArchiveFailure.accounting }
+
         scan.bytes = result.partialValue
     }
 
@@ -250,10 +224,7 @@ enum SwiftDataArchiveDirectory {
         root      : URL,
         descriptor: Int32
     ) throws {
-        try validateHeldRoot(
-            root      : root,
-            descriptor: descriptor
-        )
+        try validateHeldRoot(root: root, descriptor: descriptor)
         if let (file, _) = try KeyedStorageDirectory.file(
             descriptor,
             name   : "archive.store",
@@ -262,17 +233,11 @@ enum SwiftDataArchiveDirectory {
             Darwin.close(file)
             return
         }
-        let file = openat(
-            descriptor,
-            "archive.store",
-            O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC,
-            0o600
-        )
+
+        let file = openat(descriptor, "archive.store", O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0o600)
         guard file >= 0 else { throw SwiftDataArchiveFailure.unsafePath }
         defer { Darwin.close(file) }
-        guard fchmod(
-            file,
-            0o600
-        ) == 0 else { throw SwiftDataArchiveFailure.unsafePath }
+
+        guard fchmod(file, 0o600) == 0 else { throw SwiftDataArchiveFailure.unsafePath }
     }
 }

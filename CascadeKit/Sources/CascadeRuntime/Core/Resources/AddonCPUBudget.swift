@@ -9,15 +9,19 @@ import Foundation
 /// restarts. It is arithmetic only: advancing time accrues credit but does not
 /// establish that any CPU measurement was available or authentic.
 struct AddonCPUBudget: Sendable {
+
     enum Failure: Error, Equatable {
-        case invalidMonotonicInstant, accountingOverflow
+
+        case invalidMonotonicInstant
+        case accountingOverflow
     }
 
     /// Snapshot describes the signed accounting balance at one accepted instant.
     struct Snapshot: Equatable, Sendable {
-        let balance : Duration
+
+        let balance  : Duration
         let available: Duration
-        let debt    : Duration
+        let debt     : Duration
 
         var exceeded: Bool { balance < .zero }
     }
@@ -40,6 +44,7 @@ struct AddonCPUBudget: Sendable {
         guard instant >= .zero, instant <= Self.maximumInstant else {
             throw Failure.invalidMonotonicInstant
         }
+
         lastObservation = instant
     }
 
@@ -54,23 +59,25 @@ struct AddonCPUBudget: Sendable {
     @discardableResult
     mutating func charge(
         cpuNanoseconds: UInt64,
-        at instant: Duration
+        at instant    : Duration
     ) throws -> Snapshot {
-        let now = try validated(instant)
-        let creditedBalance = refilledBalance(at: now)
+        let now              = try validated(instant)
+        let creditedBalance  = refilledBalance(at: now)
         let candidateBalance = creditedBalance - Self.duration(nanoseconds: cpuNanoseconds)
+
         guard candidateBalance + Self.maximumDebt >= .zero else {
             throw Failure.accountingOverflow
         }
-        balance = candidateBalance
+
+        balance         = candidateBalance
         lastObservation = now
         return currentSnapshot()
     }
 
     /// advance commits a validated refill with no implied CPU measurement.
     private mutating func advance(to instant: Duration) throws {
-        let now = try validated(instant)
-        balance = refilledBalance(at: now)
+        let now         = try validated(instant)
+        balance         = refilledBalance(at: now)
         lastObservation = now
     }
 
@@ -78,9 +85,11 @@ struct AddonCPUBudget: Sendable {
     private func validated(_ instant: Duration) throws -> Duration {
         guard instant >= .zero,
               instant <= Self.maximumInstant,
-              instant >= lastObservation else {
+              instant >= lastObservation
+        else {
             throw Failure.invalidMonotonicInstant
         }
+
         return instant
     }
 
@@ -105,14 +114,8 @@ struct AddonCPUBudget: Sendable {
     private func currentSnapshot() -> Snapshot {
         Snapshot(
             balance  : balance,
-            available: max(
-                .zero,
-                balance
-            ),
-            debt     : max(
-                .zero,
-                .zero - balance
-            )
+            available: max(.zero, balance),
+            debt     : max(.zero, .zero - balance)
         )
     }
 }

@@ -10,6 +10,7 @@ import Foundation
 /// PreparedFile is an immutable capability for one exact shelf-entry lifetime.
 /// It retains no descriptor or store pin and is invalid after removal, relinking or host restart.
 public struct PreparedFile: Sendable {
+
     public let itemID        : UUID
     public let name          : String
     public let typeIdentifier: String
@@ -29,7 +30,9 @@ public struct PreparedFile: Sendable {
 /// FileWorkspaceHost exposes the app's local shelf through the existing durable runtime store.
 /// Its bounded gate serializes complete store flows, including delivery receipts.
 public actor FileWorkspaceHost {
+
     private enum State {
+
         case initialized
         case open
         case closed
@@ -43,13 +46,14 @@ public actor FileWorkspaceHost {
     private let governor          : ResourceGovernor
     private let directory         : URL
     private let afterDeliveryLease: (@Sendable () async -> Void)?
-    private var store   : FileWorkspaceStore?
 
-    private var state = State.initialized
-    private var closeRequested = false
+    private var store: FileWorkspaceStore?
+
+    private var state           = State.initialized
+    private var closeRequested  = false
     private var operationActive = false
-    private var waiterOrder: [UUID] = []
-    private var waiters: [UUID: CheckedContinuation<Void, any Error>] = [:]
+    private var waiterOrder    : [UUID] = []
+    private var waiters        : [UUID: CheckedContinuation<Void, any Error>] = [:]
 
     /// init creates one facade, store and namespace lifetime for a host-owned shelf directory.
     public init(
@@ -59,21 +63,23 @@ public actor FileWorkspaceHost {
         guard let owner = AddonID(rawValue: "app.cascade.file-shelf") else {
             throw FileWorkspaceError.ioFailure
         }
-        self.owner             = owner
-        self.governor          = governor
-        self.directory         = directory.standardizedFileURL
+
+        self.owner         = owner
+        self.governor      = governor
+        self.directory     = directory.standardizedFileURL
         afterDeliveryLease = nil
     }
 
     /// init is the test-only assembly seam for suspending after a delivery owns its checked source lease.
     init(
-        directory        : URL,
-        governor         : ResourceGovernor,
+        directory         : URL,
+        governor          : ResourceGovernor,
         afterDeliveryLease: @escaping @Sendable () async -> Void
     ) throws {
         guard let owner = AddonID(rawValue: "app.cascade.file-shelf") else {
             throw FileWorkspaceError.ioFailure
         }
+
         self.owner              = owner
         self.governor           = governor
         self.directory          = directory.standardizedFileURL
@@ -86,6 +92,7 @@ public actor FileWorkspaceHost {
             guard self.state == .initialized, !self.closeRequested else {
                 throw FileWorkspaceError.interrupted
             }
+
             do {
                 let lifetime = try await self.governor.fileWorkspaceLifetime(
                     directory: self.directory,
@@ -112,10 +119,12 @@ public actor FileWorkspaceHost {
     /// close ends this process lifetime permanently and releases retained in-memory charges.
     public func close() async throws {
         guard !closeRequested, state != .closed else { return }
+
         closeRequested = true
         do {
             try await withExclusive {
                 guard self.state == .open else { throw FileWorkspaceError.interrupted }
+
                 try await self.requireStore().close()
                 self.store = nil
                 self.state = .closed
@@ -165,10 +174,16 @@ public actor FileWorkspaceHost {
 
     /// renameExternalReference renames the original file without overwriting another file,
     /// preserving its shelf ID.
-    public func renameExternalReference(id: UUID, newName: String, revision: UInt64) async throws {
+    public func renameExternalReference(
+        id      : UUID,
+        newName : String,
+        revision: UInt64
+    ) async throws {
         try await withOpenExclusive {
             try await self.requireStore().renameExternalReference(
-                id: id, newName: newName, revision: revision
+                id      : id,
+                newName : newName,
+                revision: revision
             )
         }
     }
@@ -189,7 +204,7 @@ public actor FileWorkspaceHost {
 
     /// copy writes one prepared item to a new destination and removes it only after durable success.
     public func copy(
-        _ prepared   : PreparedFile,
+        _ prepared    : PreparedFile,
         to destination: URL
     ) async throws {
         try await withOpenExclusive {
@@ -222,31 +237,32 @@ public actor FileWorkspaceHost {
         guard prepared.ownership == .externalReference else {
             throw FileWorkspaceError.unsupported
         }
+
         let lease = try await withOpenExclusive {
             try await self.requireStore().lease(for: prepared.entry)
         }
         defer { lease.close() }
+
         return try await operation(lease.url)
     }
 
     private func copyReserved(
-        _ prepared   : PreparedFile,
+        _ prepared    : PreparedFile,
         to destination: URL
     ) async throws {
-        let store = try requireStore()
+        let store      = try requireStore()
         let deliveryID = try await store.beginDelivery(prepared.entry)
         var lease: FileReferenceLease?
         do {
-            let acquired = try await store.leaseForDelivery(
-                deliveryID,
-                itemID: prepared.itemID
-            )
-            lease = acquired
+            let acquired = try await store.leaseForDelivery(deliveryID, itemID: prepared.itemID)
+            lease        = acquired
             if let afterDeliveryLease { await afterDeliveryLease() }
+
             try Task.checkCancellation()
             try Self.copyDescriptor(acquired.descriptor, to: destination)
             acquired.close()
             lease = nil
+
             try await Self.finishDelivery(
                 store,
                 deliveryID: deliveryID,
@@ -266,6 +282,7 @@ public actor FileWorkspaceHost {
             } catch {
                 throw Self.map(error)
             }
+
             throw failure
         }
     }
@@ -274,38 +291,52 @@ public actor FileWorkspaceHost {
         _ body: () async throws -> Result
     ) async throws -> Result {
         guard !closeRequested else { throw FileWorkspaceError.interrupted }
+
         return try await withExclusive {
             guard self.state == .open, !self.closeRequested else {
                 throw FileWorkspaceError.interrupted
             }
+
             return try await body()
         }
     }
 
     private func requireStore() throws -> FileWorkspaceStore {
         guard let store else { throw FileWorkspaceError.ioFailure }
+
         return store
     }
 
     private static func finishDelivery(
-        _ store      : FileWorkspaceStore,
-        deliveryID  : UUID,
-        itemID      : UUID,
-        result      : Result<Void, FileWorkspaceError>
+        _ store   : FileWorkspaceStore,
+        deliveryID: UUID,
+        itemID    : UUID,
+        result    : Result<Void, FileWorkspaceError>
     ) async throws {
         try await Task.detached {
-            try await store.finishDelivery(deliveryID, itemID: itemID, result: result)
+            try await store.finishDelivery(
+                deliveryID,
+                itemID: itemID,
+                result: result
+            )
         }.value
     }
 
     private func withExclusive<Result: Sendable>(
         _ body: () async throws -> Result
     ) async throws -> Result {
-        do { try await acquirePermit() }
-        catch { throw Self.map(error) }
+        do {
+            try await acquirePermit()
+        } catch {
+            throw Self.map(error)
+        }
         defer { releasePermit() }
-        do { return try await body() }
-        catch { throw Self.map(error) }
+
+        do {
+            return try await body()
+        } catch {
+            throw Self.map(error)
+        }
     }
 
     private func acquirePermit() async throws {
@@ -317,6 +348,7 @@ public actor FileWorkspaceHost {
         guard waiterOrder.count < Self.maximumWaiters else {
             throw FileWorkspaceError.interrupted
         }
+
         let waiterID = UUID()
         try await withTaskCancellationHandler(operation: {
             try await withCheckedThrowingContinuation {
@@ -331,8 +363,10 @@ public actor FileWorkspaceHost {
         }, onCancel: {
             Task { await self.cancelWaiter(waiterID) }
         })
-        do { try Task.checkCancellation() }
-        catch {
+
+        do {
+            try Task.checkCancellation()
+        } catch {
             releasePermit()
             throw error
         }
@@ -340,6 +374,7 @@ public actor FileWorkspaceHost {
 
     private func cancelWaiter(_ id: UUID) {
         guard let continuation = waiters.removeValue(forKey: id) else { return }
+
         waiterOrder.removeAll { $0 == id }
         continuation.resume(throwing: CancellationError())
     }
@@ -348,37 +383,38 @@ public actor FileWorkspaceHost {
         while let id = waiterOrder.first {
             waiterOrder.removeFirst()
             guard let continuation = waiters.removeValue(forKey: id) else { continue }
+
             continuation.resume()
             return
         }
+
         operationActive = false
     }
 
     private static func copyDescriptor(
-        _ source     : Int32,
+        _ source      : Int32,
         to destination: URL
     ) throws {
         guard destination.isFileURL,
               destination.path.hasPrefix("/"),
               !destination.path.utf8.contains(0),
               !destination.lastPathComponent.isEmpty,
-              !destination.lastPathComponent.contains("/") else {
+              !destination.lastPathComponent.contains("/")
+        else {
             throw FileWorkspaceError.unsupported
         }
-        let parentURL = destination.deletingLastPathComponent()
+
+        let parentURL    = destination.deletingLastPathComponent()
         var sourceBefore = stat()
-        guard fstat(source, &sourceBefore) == 0,
-              sourceBefore.st_mode & S_IFMT == S_IFREG else {
+        guard fstat(source, &sourceBefore) == 0, sourceBefore.st_mode & S_IFMT == S_IFREG else {
             throw FileWorkspaceError.unavailable
         }
-        let parent = Darwin.open(
-            parentURL.path,
-            O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC
-        )
+
+        let parent = Darwin.open(parentURL.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
         guard parent >= 0 else { throw FileWorkspaceError.ioFailure }
         defer { Darwin.close(parent) }
 
-        let leaf = destination.lastPathComponent
+        let leaf   = destination.lastPathComponent
         let output = openat(
             parent,
             leaf,
@@ -386,9 +422,10 @@ public actor FileWorkspaceHost {
             mode_t(0o600)
         )
         guard output >= 0 else { throw FileWorkspaceError.ioFailure }
+
         var identity: FileReferenceIdentity?
         var outputOpen = true
-        var keep = false
+        var keep       = false
         defer {
             if outputOpen { Darwin.close(output) }
             if !keep, let identity {
@@ -399,9 +436,11 @@ public actor FileWorkspaceHost {
         var info = stat()
         guard fstat(output, &info) == 0,
               info.st_mode & S_IFMT == S_IFREG,
-              info.st_uid == getuid() else {
+              info.st_uid == getuid()
+        else {
             throw FileWorkspaceError.ioFailure
         }
+
         identity = FileReferenceIdentity(
             device    : UInt64(info.st_dev),
             inode     : UInt64(info.st_ino),
@@ -414,6 +453,7 @@ public actor FileWorkspaceHost {
             try Task.checkCancellation()
             let count = try buffer.withUnsafeMutableBytes { bytes -> Int in
                 guard let base = bytes.baseAddress else { return 0 }
+
                 while true {
                     let count = Darwin.read(source, base, bytes.count)
                     if count < 0, errno == EINTR { continue }
@@ -422,11 +462,14 @@ public actor FileWorkspaceHost {
                 }
             }
             if count == 0 { break }
+
             let next = copiedBytes.addingReportingOverflow(Int64(count))
             guard !next.overflow else { throw FileWorkspaceError.ioFailure }
+
             copiedBytes = next.partialValue
             try buffer.withUnsafeBytes { bytes in
                 guard let base = bytes.baseAddress else { return }
+
                 var offset = 0
                 while offset < count {
                     let written = Darwin.write(output, base.advanced(by: offset), count - offset)
@@ -436,6 +479,7 @@ public actor FileWorkspaceHost {
                 }
             }
         }
+
         guard fcopyfile(
             source,
             output,
@@ -444,6 +488,7 @@ public actor FileWorkspaceHost {
         ) == 0 else {
             throw FileWorkspaceError.ioFailure
         }
+
         var sourceAfter = stat()
         var outputAfter = stat()
         guard fstat(source, &sourceAfter) == 0,
@@ -458,12 +503,15 @@ public actor FileWorkspaceHost {
               sourceAfter.st_mtimespec.tv_nsec == sourceBefore.st_mtimespec.tv_nsec,
               sourceAfter.st_ctimespec.tv_sec == sourceBefore.st_ctimespec.tv_sec,
               sourceAfter.st_ctimespec.tv_nsec == sourceBefore.st_ctimespec.tv_nsec,
-              fsync(output) == 0 else {
+              fsync(output) == 0
+        else {
             throw FileWorkspaceError.ioFailure
         }
+
         let closeResult = Darwin.close(output)
-        outputOpen = false
+        outputOpen      = false
         guard closeResult == 0, fsync(parent) == 0 else { throw FileWorkspaceError.ioFailure }
+
         keep = true
     }
 
@@ -474,6 +522,7 @@ public actor FileWorkspaceHost {
     ) {
         let descriptor = openat(parent, leaf, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
         guard descriptor >= 0 else { return }
+
         var info = stat()
         let same = fstat(descriptor, &info) == 0
             && info.st_mode & S_IFMT == S_IFREG
@@ -490,6 +539,7 @@ public actor FileWorkspaceHost {
         if let failure = error as? AddonFailure, failure.code == .resourceDenied {
             return .quotaExceeded
         }
+
         return .ioFailure
     }
 }

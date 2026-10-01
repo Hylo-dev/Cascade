@@ -3,9 +3,11 @@
 //  CascadeKit
 //
 
-import Foundation
-
 enum ProcessMetricReductionStatus: Equatable, Sendable {
-    case baseline, interval
-    case reset(ProcessMetricFailure), unavailable(ProcessMetricFailure), invalid(ProcessMetricFailure)
+
+    case baseline
+    case interval
+    case reset      (ProcessMetricFailure)
+    case unavailable(ProcessMetricFailure)
+    case invalid    (ProcessMetricFailure)
 }

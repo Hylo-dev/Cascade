@@ -9,6 +9,7 @@ import Foundation
 /// RuntimeServiceDecisionAccess delays only broker decision returns needed for stale-authority tests.
 /// Its target identity prevents a wrapper from substituting a second broker authority.
 protocol RuntimeServiceDecisionAccess: Sendable {
+
     var serviceBrokerTarget: ServiceBroker { get }
 
     func consumeInvocation(
@@ -22,9 +23,9 @@ protocol RuntimeServiceDecisionAccess: Sendable {
     ) async throws -> ServiceSourceDescriptor
 
     func prepareInvocationCompletion(
-        _ id       : UUID,
-        response   : ServiceResponse,
-        receivedAt : RuntimeInstant
+        _ id      : UUID,
+        response  : ServiceResponse,
+        receivedAt: RuntimeInstant
     ) async throws -> ServiceBroker.CompletionPreparation
 
     func nextDeadline() async -> Duration?

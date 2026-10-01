@@ -8,6 +8,7 @@ import Foundation
 
 /// FileWorkspaceService dispatches only work consumed from the broker's canonical state.
 actor FileWorkspaceService {
+
     private static let contractID = "files.workspace"
     private static let featureID  = "workspace"
     private static let operation  = "command"
@@ -35,15 +36,13 @@ actor FileWorkspaceService {
             operation: Self.operation,
             now      : clock.now()
         )
+
         let command: FileWorkspaceCommand
         do {
             command = try JSONDecoder().decode(FileWorkspaceCommand.self, from: binding.invocation.payload)
             try command.validate()
         } catch {
-            _ = await broker.abandonInvocation(
-                work.id,
-                knownUnsent: true
-            )
+            _ = await broker.abandonInvocation(work.id, knownUnsent: true)
             throw Self.failure(.invalidPayload)
         }
 
@@ -74,6 +73,9 @@ actor FileWorkspaceService {
     }
 
     private static func failure(_ code: AddonFailure.Code) -> AddonFailure {
-        AddonFailure(code: code, reason: "The file workspace host boundary rejected this operation.")
+        AddonFailure(
+            code  : code,
+            reason: "The file workspace host boundary rejected this operation."
+        )
     }
 }

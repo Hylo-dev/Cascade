@@ -11,8 +11,10 @@ import Foundation
 /// Scope is supplied only after the runtime checks current host assignment and connection;
 /// neither an addon claim nor ContentDocument.Privacy grants that authority.
 struct AssetState: Sendable {
+
     /// Scope carries the immutable host-verified assignment for one connection import.
     struct Scope: Hashable, Sendable {
+
         let identity        : VerifiedAddonIdentity
         let verifiedDigest  : String
         let featureID       : String
@@ -43,17 +45,20 @@ struct AssetState: Sendable {
     /// PreparedOutput borrows admitted backings without granting publication authority.
     /// Its metadata remains charged by the runtime until the proposal leaves scope.
     struct PreparedOutput: Sendable {
+
         fileprivate let authorityID    : UUID
         fileprivate let stateRevision  : UInt64
         fileprivate let changes        : [PublicationID: Change]
         fileprivate let totalBytesAfter: Int
-        let owner                      : AddonID
-        let retainedBytesAfter         : Int
-        let requiredGrowth             : Int
-        let estimatedBytes             : Int
+
+        let owner             : AddonID
+        let retainedBytesAfter: Int
+        let requiredGrowth    : Int
+        let estimatedBytes    : Int
     }
 
     private struct Import: Sendable {
+
         let scope  : Scope
         let backing: AssetRasterBacking
     }
@@ -61,6 +66,7 @@ struct AssetState: Sendable {
     /// Pin retains document privacy as reference metadata, independently of authority.
     /// One alias can appear in both public and sensitive documents in a publication.
     fileprivate struct Pin: Sendable {
+
         let backing              : AssetRasterBacking
         var hasPublicReference   : Bool
         var hasSensitiveReference: Bool
@@ -68,6 +74,7 @@ struct AssetState: Sendable {
 
     /// Binding owns every retained timeline reference for one exact publication revision.
     fileprivate struct Binding: Sendable {
+
         let revision : UInt64
         let expiresAt: Date
         let pins     : [String: Pin]
@@ -78,6 +85,7 @@ struct AssetState: Sendable {
     }
 
     fileprivate enum Change: Sendable {
+
         case bind(Binding)
         case end
     }
@@ -86,6 +94,7 @@ struct AssetState: Sendable {
     /// overlapping old/new table storage during compaction. Charges remain reserved until
     /// synchronous cleanup and its proposal leave scope, before the owner pool shrinks.
     fileprivate enum MetadataCharge {
+
         static let imported    = 4_096
         static let publication = 2_048
         static let pin         = 1_024
@@ -94,31 +103,28 @@ struct AssetState: Sendable {
     static let maximumStateBytes = 8 * 1_024 * 1_024
 
     private let maximumRetainedBytes: Int
+
     private var authorityID         = UUID()
-    private var stateRevision       : UInt64                   = 0
-    private var isRevisionExhausted                             = false
-    private var imports             : [String: Import]         = [:]
-    private var bindings            : [PublicationID: Binding] = [:]
-    private(set) var retainedBytes                             = 0
+    private var stateRevision      : UInt64 = 0
+    private var isRevisionExhausted = false
+    private var imports            : [String: Import] = [:]
+    private var bindings           : [PublicationID: Binding] = [:]
+
+    private(set) var retainedBytes = 0
 
     init(maximumRetainedBytes: Int = maximumStateBytes) {
-        self.maximumRetainedBytes = min(
-            Self.maximumStateBytes,
-            max(
-                0,
-                maximumRetainedBytes
-            )
-        )
+        self.maximumRetainedBytes = min(Self.maximumStateBytes, max(0, maximumRetainedBytes))
     }
 
     /// retainedBytes reports the canonical metadata charge attributed to one owner pool.
     func retainedBytes(owner: AddonID) -> Int {
-        let importBytes = imports.values.reduce(0) { bytes, imported in
+        let importBytes  = imports.values.reduce(0) { bytes, imported in
             bytes + (imported.scope.identity.addonID == owner ? MetadataCharge.imported : 0)
         }
         let bindingBytes = bindings.reduce(0) { bytes, entry in
             bytes + (entry.key.addonID == owner ? entry.value.charge : 0)
         }
+
         return importBytes + bindingBytes
     }
 
@@ -126,6 +132,7 @@ struct AssetState: Sendable {
     func importAdmissionBytes(scope: Scope) throws -> Int {
         try validateScope(scope)
         try requireCapacity(additional: MetadataCharge.imported)
+
         return MetadataCharge.imported
     }
 
@@ -141,6 +148,7 @@ struct AssetState: Sendable {
             source : source,
             target : target
         )
+
         return try importAdmissionBytes(scope: target)
     }
 
@@ -157,10 +165,8 @@ struct AssetState: Sendable {
             source : source,
             target : target
         )
-        return try insert(
-            backing: imported.backing,
-            scope  : target
-        )
+
+        return try insert(backing: imported.backing, scope: target)
     }
 
     /// sharingSource requires the exact stored source and compatible host assignments.
@@ -180,12 +186,14 @@ struct AssetState: Sendable {
         guard source.identity == target.identity,
               source.verifiedDigest == target.verifiedDigest,
               source.connectionToken == target.connectionToken,
-              source.privacyPartition == target.privacyPartition else {
+              source.privacyPartition == target.privacyPartition
+        else {
             throw AddonFailure(
                 code  : .permissionDenied,
                 reason: "Asset sharing assignments are not compatible."
             )
         }
+
         try validateScope(target)
         return imported
     }
@@ -203,14 +211,13 @@ struct AssetState: Sendable {
                 reason: "Raster accounting owner does not match asset scope."
             )
         }
+
         let alias = "asset-" + UUID().uuidString
         // A collision must not replace a live import, even though UUID collision is negligible.
         guard imports[alias] == nil else {
-            throw AddonFailure(
-                code  : .resourceDenied,
-                reason: "Asset identity collision."
-            )
+            throw AddonFailure(code: .resourceDenied, reason: "Asset identity collision.")
         }
+
         let handle = try AssetHandle(
             assetID       : alias,
             owner         : backing.owner,
@@ -220,10 +227,8 @@ struct AssetState: Sendable {
             height        : backing.image.height,
             byteCount     : backing.image.bytesPerRow * backing.image.height
         )
-        imports[alias] = Import(
-            scope  : scope,
-            backing: backing
-        )
+
+        imports[alias] = Import(scope: scope, backing: backing)
         retainedBytes += charge
         advanceRevision()
         return handle
@@ -240,19 +245,14 @@ struct AssetState: Sendable {
             var hasChargedBinding = false
             try publication.forEachAssetReference { _, _ in
                 if !hasChargedBinding {
-                    try addCharge(
-                        MetadataCharge.publication,
-                        to: &bytes
-                    )
+                    try addCharge(MetadataCharge.publication, to: &bytes)
                     hasChargedBinding = true
                 }
-                try addCharge(
-                    MetadataCharge.pin,
-                    to: &bytes
-                )
+                try addCharge(MetadataCharge.pin, to: &bytes)
             }
         }
         try requireCapacity(additional: bytes)
+
         return bytes
     }
 
@@ -264,20 +264,23 @@ struct AssetState: Sendable {
         scopeForPublication: (PublicationID) throws -> Scope
     ) throws -> PreparedOutput {
         let estimate = try preparationBytes(output)
-        var changes             : [PublicationID: Change] = [:]
-        var projectedBytes                                = retainedBytes
-        var projectedOwnerBytes                           = retainedBytes(owner: output.owner)
+
+        var changes            : [PublicationID: Change] = [:]
+        var projectedBytes      = retainedBytes
+        var projectedOwnerBytes = retainedBytes(owner: output.owner)
         try output.forEachChangedPublication { publication in
             let scope = try scopeForPublication(publication.id)
             try validateScope(scope)
             guard scope.publicationID == publication.id,
                   scope.identity.addonID == output.owner,
-                  scope.connectionToken == connectionToken else {
+                  scope.connectionToken == connectionToken
+            else {
                 throw AddonFailure(
                     code  : .permissionDenied,
                     reason: "Asset publication scope does not match current host authority."
                 )
             }
+
             var pins: [String: Pin] = [:]
             try publication.forEachAssetReference { alias, privacy in
                 guard let imported = imports[alias], imported.scope == scope else {
@@ -286,22 +289,24 @@ struct AssetState: Sendable {
                         reason: "Asset alias is not imported by this publication and connection."
                     )
                 }
+
                 var pin = pins[alias] ?? Pin(
                     backing              : imported.backing,
                     hasPublicReference   : false,
                     hasSensitiveReference: false
                 )
                 switch privacy {
-                case .publicContent:
-                    pin.hasPublicReference = true
-                case .sensitive:
-                    pin.hasSensitiveReference = true
+                    case .publicContent:
+                        pin.hasPublicReference = true
+                    case .sensitive:
+                        pin.hasSensitiveReference = true
                 }
                 pins[alias] = pin
             }
             guard !pins.isEmpty || bindings[publication.id] != nil else {
                 return
             }
+
             let binding = Binding(
                 revision : publication.revision,
                 expiresAt: publication.expiresAt,
@@ -314,17 +319,19 @@ struct AssetState: Sendable {
             changes[publication.id] = .bind(binding)
         }
         output.forEachEndedPublicationID { publicationID in
-            let importBytes = imports.values.reduce(0) { bytes, imported in
+            let importBytes  = imports.values.reduce(0) { bytes, imported in
                 bytes + (imported.scope.publicationID == publicationID ? MetadataCharge.imported : 0)
             }
             let removedBytes = (bindings[publicationID]?.charge ?? 0) + importBytes
             guard removedBytes > 0 else {
                 return
             }
+
             projectedBytes -= removedBytes
             projectedOwnerBytes -= removedBytes
             changes[publicationID] = .end
         }
+
         return PreparedOutput(
             authorityID       : authorityID,
             stateRevision     : stateRevision,
@@ -332,10 +339,7 @@ struct AssetState: Sendable {
             totalBytesAfter   : projectedBytes,
             owner             : output.owner,
             retainedBytesAfter: projectedOwnerBytes,
-            requiredGrowth    : max(
-                0,
-                projectedOwnerBytes - retainedBytes(owner: output.owner)
-            ),
+            requiredGrowth    : max(0, projectedOwnerBytes - retainedBytes(owner: output.owner)),
             estimatedBytes    : estimate
         )
     }
@@ -354,16 +358,20 @@ struct AssetState: Sendable {
         guard publication.id.addonID == owner,
               publication.kind != .notice,
               instant.timeIntervalSince1970.isFinite,
-              publication.expiresAt > instant else {
+              publication.expiresAt > instant
+        else {
             throw Self.archiveFailure("Asset capture requires a current owner publication.")
         }
+
         let binding = bindings[publication.id]
         if let binding {
             guard binding.revision == publication.revision,
-                  binding.expiresAt == publication.expiresAt else {
+                  binding.expiresAt == publication.expiresAt
+            else {
                 throw Self.archiveFailure("Asset capture does not match the canonical revision and expiry.")
             }
         }
+
         try publication.forEachAssetReference { alias, _ in
             guard binding?.pins[alias] != nil else {
                 throw Self.archiveFailure("Asset capture is missing a canonical pin.")
@@ -372,29 +380,33 @@ struct AssetState: Sendable {
         guard let binding else {
             return
         }
+
         // Validate before calling user code, without retaining a second reference table.
         // Cold archive capture is bounded by existing publication and asset-state quotas.
         for (alias, pin) in binding.pins {
-            var hasPublic = false
+            var hasPublic    = false
             var hasSensitive = false
             publication.forEachAssetReference { reference, privacy in
                 guard reference == alias else {
                     return
                 }
+
                 switch privacy {
-                case .publicContent:
-                    hasPublic = true
-                case .sensitive:
-                    hasSensitive = true
+                    case .publicContent:
+                        hasPublic = true
+                    case .sensitive:
+                        hasSensitive = true
                 }
             }
             guard pin.backing.owner == owner,
                   hasPublic || hasSensitive,
                   pin.hasPublicReference == hasPublic,
-                  pin.hasSensitiveReference == hasSensitive else {
+                  pin.hasSensitiveReference == hasSensitive
+            else {
                 throw Self.archiveFailure("Asset capture references differ from the canonical binding.")
             }
         }
+
         for (alias, pin) in binding.pins {
             try visit(
                 alias,
@@ -412,15 +424,20 @@ struct AssetState: Sendable {
         aliasCount  : Int
     ) throws -> Int {
         try requireCapacity(additional: 0)
-        guard bindingCount >= 0, aliasCount >= 0, bindingCount <= aliasCount,
+        guard bindingCount >= 0,
+              aliasCount >= 0,
+              bindingCount <= aliasCount,
               (bindingCount == 0) == (aliasCount == 0),
-              bindingCount <= (maximumRetainedBytes - retainedBytes) / MetadataCharge.publication else {
+              bindingCount <= (maximumRetainedBytes - retainedBytes) / MetadataCharge.publication
+        else {
             throw Self.archiveFailure("Invalid or oversized restoration metadata counts.")
         }
+
         let bindingBytes = bindingCount * MetadataCharge.publication
         guard aliasCount <= (maximumRetainedBytes - retainedBytes - bindingBytes) / MetadataCharge.pin else {
             throw Self.archiveFailure("Restoration pin metadata exceeds the retained-state budget.")
         }
+
         return bindingBytes + aliasCount * MetadataCharge.pin
     }
 
@@ -437,26 +454,24 @@ struct AssetState: Sendable {
         guard backings.count <= maximumRetainedBytes / MetadataCharge.publication else {
             throw Self.archiveFailure("Restored asset input exceeds the bounded publication table.")
         }
+
         var estimate = 0
         for aliases in backings.values where !aliases.isEmpty {
-            try addCharge(
-                MetadataCharge.publication,
-                to: &estimate
-            )
+            try addCharge(MetadataCharge.publication, to: &estimate)
             guard aliases.count <= (maximumRetainedBytes - retainedBytes - estimate) / MetadataCharge.pin else {
                 throw Self.archiveFailure("Restored asset aliases exceed the metadata budget.")
             }
-            try addCharge(
-                aliases.count * MetadataCharge.pin,
-                to: &estimate
-            )
+
+            try addCharge(aliases.count * MetadataCharge.pin, to: &estimate)
         }
+
         var matchedInputs = 0
         try restoration.forEachRestoredPublication { publication in
             try requireUnboundRestorationID(publication.id)
             guard publication.id.addonID == restoration.owner else {
                 throw Self.archiveFailure("Restored asset publication has a foreign owner.")
             }
+
             if backings[publication.id] != nil {
                 matchedInputs += 1
             }
@@ -468,12 +483,15 @@ struct AssetState: Sendable {
             guard let aliases = backings[publication.id] else {
                 return
             }
+
             for (alias, backing) in aliases {
                 guard backing.owner == restoration.owner,
                       imports[alias] == nil,
-                      !bindings.values.contains(where: { $0.pins[alias] != nil }) else {
+                      !bindings.values.contains(where: { $0.pins[alias] != nil })
+                else {
                     throw Self.archiveFailure("Restored backing owner or alias collides with canonical assets.")
                 }
+
                 var referenced = false
                 publication.forEachAssetReference { reference, _ in
                     if reference == alias {
@@ -481,7 +499,8 @@ struct AssetState: Sendable {
                     }
                 }
                 guard referenced,
-                      !backings.contains(where: { $0.key != publication.id && $0.value[alias] != nil }) else {
+                      !backings.contains(where: { $0.key != publication.id && $0.value[alias] != nil })
+                else {
                     throw Self.archiveFailure("Restoration contains an extra or reused asset alias.")
                 }
             }
@@ -492,6 +511,7 @@ struct AssetState: Sendable {
         guard matchedInputs == backings.count else {
             throw Self.archiveFailure("Asset inputs include a terminal or unrelated publication.")
         }
+
         return estimate
     }
 
@@ -504,31 +524,31 @@ struct AssetState: Sendable {
         _ restoration: PublicationState.PreparedRestoration,
         backings     : [PublicationID: [String: AssetRasterBacking]]
     ) throws -> PreparedOutput {
-        let estimate = try restorationPreparationBytes(
-            restoration,
-            backings: backings
-        )
+        let estimate = try restorationPreparationBytes(restoration, backings: backings)
+
         var changes: [PublicationID: Change] = [:]
         restoration.forEachRestoredPublication { publication in
             guard let aliases = backings[publication.id], !aliases.isEmpty else {
                 return
             }
+
             var pins: [String: Pin] = [:]
             publication.forEachAssetReference { alias, privacy in
                 // The complete immutable input was checked before any proposal allocation.
                 guard let backing = aliases[alias] else {
                     preconditionFailure("Validated restoration backing disappeared.")
                 }
+
                 var pin = pins[alias] ?? Pin(
                     backing              : backing,
                     hasPublicReference   : false,
                     hasSensitiveReference: false
                 )
                 switch privacy {
-                case .publicContent:
-                    pin.hasPublicReference = true
-                case .sensitive:
-                    pin.hasSensitiveReference = true
+                    case .publicContent:
+                        pin.hasPublicReference = true
+                    case .sensitive:
+                        pin.hasSensitiveReference = true
                 }
                 pins[alias] = pin
             }
@@ -538,6 +558,7 @@ struct AssetState: Sendable {
                 pins     : pins
             ))
         }
+
         return PreparedOutput(
             authorityID       : authorityID,
             stateRevision     : stateRevision,
@@ -553,24 +574,23 @@ struct AssetState: Sendable {
     /// requireUnboundRestorationID rejects restoration over existing pins or pending imports.
     private func requireUnboundRestorationID(_ publicationID: PublicationID) throws {
         guard bindings[publicationID] == nil,
-              !imports.values.contains(where: { $0.scope.publicationID == publicationID }) else {
+              !imports.values.contains(where: { $0.scope.publicationID == publicationID })
+        else {
             throw Self.archiveFailure("Restored publication collides with existing asset ownership.")
         }
     }
 
     /// archiveFailure reports invalid host archive proposals without changing canonical state.
     private static func archiveFailure(_ reason: String) -> AddonFailure {
-        AddonFailure(
-            code  : .invalidPayload,
-            reason: reason
-        )
+        AddonFailure(code: .invalidPayload, reason: reason)
     }
 
     /// validatePrepared rejects proposals created by another state or before a mutation.
     func validatePrepared(_ prepared: PreparedOutput) throws {
         guard !isRevisionExhausted,
               prepared.authorityID == authorityID,
-              prepared.stateRevision == stateRevision else {
+              prepared.stateRevision == stateRevision
+        else {
             throw AddonFailure(
                 code  : .sessionRevoked,
                 reason: "Prepared asset authority changed before commit."
@@ -591,22 +611,26 @@ struct AssetState: Sendable {
             advanceRevision()
             return
         }
+
         for (publicationID, change) in prepared.changes {
             switch change {
-            case .bind(let binding):
-                if binding.pins.isEmpty {
+                case .bind(let binding):
+                    if binding.pins.isEmpty {
+                        bindings.removeValue(forKey: publicationID)
+                    } else {
+                        bindings[publicationID] = binding
+                    }
+
+                case .end:
                     bindings.removeValue(forKey: publicationID)
-                } else {
-                    bindings[publicationID] = binding
-                }
-            case .end:
-                bindings.removeValue(forKey: publicationID)
             }
         }
+
         compactImports { imported in
             if case .end? = prepared.changes[imported.scope.publicationID] {
                 return false
             }
+
             return true
         }
         compactBindings { _, _ in true }
@@ -627,6 +651,7 @@ struct AssetState: Sendable {
                 reason: "Asset alias does not belong to this publication and connection."
             )
         }
+
         imports.removeValue(forKey: assetID)
         compactImports { _ in true }
         retainedBytes -= MetadataCharge.imported
@@ -665,23 +690,19 @@ struct AssetState: Sendable {
         guard instant.timeIntervalSince1970.isFinite else {
             return
         }
+
         let previousImportCount  = imports.count
         let previousBindingCount = bindings.count
         compactImports { imported in
             let publicationID = imported.scope.publicationID
             return publications.recordAccounting(id: publicationID) == nil
-                || publications.publication(
-                    id: publicationID,
-                    at: instant
-                ) != nil
+                || publications.publication(id: publicationID, at: instant) != nil
         }
         compactBindings { publicationID, binding in
-            guard let publication = publications.publication(
-                id: publicationID,
-                at: instant
-            ) else {
+            guard let publication = publications.publication(id: publicationID, at: instant) else {
                 return false
             }
+
             return publication.revision == binding.revision
         }
         if imports.count != previousImportCount || bindings.count != previousBindingCount {
@@ -701,9 +722,11 @@ struct AssetState: Sendable {
         guard instant.timeIntervalSince1970.isFinite,
               let binding = bindings[publicationID],
               binding.revision == publicationRevision,
-              instant < binding.expiresAt else {
+              instant < binding.expiresAt
+        else {
             return nil
         }
+
         return binding.pins[assetID]?.backing.image
     }
 
@@ -715,7 +738,8 @@ struct AssetState: Sendable {
               !scope.verifiedDigest.isEmpty,
               scope.verifiedDigest.utf8.count <= 512,
               !scope.featureID.isEmpty,
-              scope.featureID.utf8.count <= 128 else {
+              scope.featureID.utf8.count <= 128
+        else {
             throw AddonFailure(
                 code  : .permissionDenied,
                 reason: "Asset scope lacks bounded host-verified identity and assignment."
@@ -727,7 +751,8 @@ struct AssetState: Sendable {
     private func requireCapacity(additional: Int) throws {
         guard !isRevisionExhausted,
               additional >= 0,
-              additional <= maximumRetainedBytes - retainedBytes else {
+              additional <= maximumRetainedBytes - retainedBytes
+        else {
             throw AddonFailure(
                 code  : .resourceDenied,
                 reason: "Asset retained-state metadata budget is exhausted."
@@ -746,6 +771,7 @@ struct AssetState: Sendable {
                 reason: "Asset proposal metadata budget is exhausted."
             )
         }
+
         bytes += charge
     }
 
@@ -758,24 +784,20 @@ struct AssetState: Sendable {
         for (alias, imported) in imports where keep(imported) {
             compactedImports[alias] = imported
         }
+
         imports = compactedImports
     }
 
     /// compactBindings releases historical table capacity after publication cleanup.
     private mutating func compactBindings(keeping keep: (PublicationID, Binding) -> Bool) {
         let survivingCount = bindings.reduce(0) { count, entry in
-            count + (keep(
-                entry.key,
-                entry.value
-            ) ? 1 : 0)
+            count + (keep(entry.key, entry.value) ? 1 : 0)
         }
         var compactedBindings = Dictionary<PublicationID, Binding>(minimumCapacity: survivingCount)
-        for (publicationID, binding) in bindings where keep(
-            publicationID,
-            binding
-        ) {
+        for (publicationID, binding) in bindings where keep(publicationID, binding) {
             compactedBindings[publicationID] = binding
         }
+
         bindings = compactedBindings
     }
 

@@ -10,8 +10,10 @@ import Foundation
 /// and negotiation are descriptive; only the issuing state owner's canonical record
 /// grants authority. It cannot be initialized or decoded by transport clients.
 public struct PublicationConnection: Equatable, Sendable {
+
     fileprivate let token: UUID
     fileprivate let owner: AddonID
+
     public let generation        : ConnectionGeneration
     public let negotiatedProtocol: NegotiatedProtocol
 
@@ -31,15 +33,20 @@ public struct PublicationConnection: Equatable, Sendable {
 /// suspension; the registry returns its exact accounting deltas so it cannot release
 /// bytes owned by publication records or another runtime component.
 struct PublicationSessionRegistry: Sendable {
+
     struct Accounting: Equatable, Sendable {
+
         let connectionBytes: Int
-        let namespaceBytes: Int
+        let namespaceBytes : Int
     }
+
     /// NamespaceBinding is a nonmutating quote for a verified publisher binding.
     /// It creates no connection, provider generation or sequence authority.
     struct NamespaceBinding: Sendable {
+
         fileprivate let identity: VerifiedAddonIdentity
-        let additionalBytes     : Int
+
+        let additionalBytes: Int
 
         fileprivate init(
             identity       : VerifiedAddonIdentity,
@@ -51,6 +58,7 @@ struct PublicationSessionRegistry: Sendable {
     }
 
     struct Session: Sendable {
+
         let connection            : PublicationConnection
         let identity              : VerifiedAddonIdentity
         let verifiedDigest        : String
@@ -60,8 +68,10 @@ struct PublicationSessionRegistry: Sendable {
 
     private static let connectionCharge = 4_096
     private static let namespaceCharge  = 1_024
+
     private let maximumConnections        : Int
     private let maximumPublisherNamespaces: Int
+
     private var connections: [AddonID: Session] = [:]
     private var publishers : [AddonID: String]  = [:]
 
@@ -81,6 +91,7 @@ struct PublicationSessionRegistry: Sendable {
                 reason: "Verified publisher must contain 1...512 UTF-8 bytes."
             )
         }
+
         if let publisher = publishers[identity.addonID] {
             guard publisher == identity.publisher else {
                 throw AddonFailure(
@@ -90,12 +101,14 @@ struct PublicationSessionRegistry: Sendable {
             }
             return 0
         }
+
         guard publishers.count < maximumPublisherNamespaces else {
             throw AddonFailure(
                 code  : .resourceDenied,
                 reason: "The publisher namespace capacity is exhausted."
             )
         }
+
         return Self.namespaceCharge
     }
 
@@ -111,10 +124,8 @@ struct PublicationSessionRegistry: Sendable {
                 reason: "The retained publication state budget is exhausted."
             )
         }
-        return NamespaceBinding(
-            identity       : identity,
-            additionalBytes: bytes
-        )
+
+        return NamespaceBinding(identity: identity, additionalBytes: bytes)
     }
 
     /// bindNamespace commits a quote only within the caller's already validated state transition.
@@ -130,7 +141,7 @@ struct PublicationSessionRegistry: Sendable {
     /// additionalBytes projects the exact connection and namespace growth without
     /// minting authority, so the runtime can reserve its owner pool first.
     func additionalBytes(identity: VerifiedAddonIdentity) throws -> Int {
-        let namespaceBytes = try namespaceAdmissionBytes(identity: identity)
+        let namespaceBytes  = try namespaceAdmissionBytes(identity: identity)
         let isNewConnection = connections[identity.addonID] == nil
         guard !isNewConnection || connections.count < maximumConnections else {
             throw AddonFailure(
@@ -138,6 +149,7 @@ struct PublicationSessionRegistry: Sendable {
                 reason: "The publication connection capacity is exhausted."
             )
         }
+
         return (isNewConnection ? Self.connectionCharge : 0) + namespaceBytes
     }
 
@@ -160,8 +172,10 @@ struct PublicationSessionRegistry: Sendable {
         connection     : PublicationConnection,
         additionalBytes: Int
     ) {
-        guard !identity.publisher.isEmpty, identity.publisher.utf8.count <= 512,
-            !verifiedDigest.isEmpty, verifiedDigest.utf8.count <= 512
+        guard !identity.publisher.isEmpty,
+              identity.publisher.utf8.count <= 512,
+              !verifiedDigest.isEmpty,
+              verifiedDigest.utf8.count <= 512
         else {
             throw AddonFailure(
                 code  : .invalidPayload,
@@ -169,15 +183,16 @@ struct PublicationSessionRegistry: Sendable {
             )
         }
         guard authorizedPublications.count <= 16,
-            Set(authorizedPublications).count == authorizedPublications.count,
-            authorizedPublications.allSatisfy({ $0.addonID == identity.addonID })
+              Set(authorizedPublications).count == authorizedPublications.count,
+              authorizedPublications.allSatisfy({ $0.addonID == identity.addonID })
         else {
             throw AddonFailure(
                 code  : .invalidPayload,
                 reason: "Host assignment requires at most 16 distinct publications owned by the addon."
             )
         }
-        _ = try additionalBytes(identity: identity)
+
+        _              = try additionalBytes(identity: identity)
         let negotiated = try ProtocolNegotiator.negotiate(
             offer                       : offer,
             manifestProtocol            : manifestProtocol,
@@ -188,16 +203,18 @@ struct PublicationSessionRegistry: Sendable {
             serviceHost                 : serviceHost,
             subscriptionHost            : subscriptionHost
         )
+
         let isNewConnection = connections[identity.addonID] == nil
         let isNewNamespace  = publishers[identity.addonID] == nil
         guard !isNewConnection || connections.count < maximumConnections,
-            !isNewNamespace || publishers.count < maximumPublisherNamespaces
+              !isNewNamespace || publishers.count < maximumPublisherNamespaces
         else {
             throw AddonFailure(
                 code  : .resourceDenied,
                 reason: "The publication connection or namespace capacity is exhausted."
             )
         }
+
         let additionalBytes = try additionalBytes(identity: identity)
         guard additionalBytes <= availableBytes else {
             throw AddonFailure(
@@ -205,11 +222,12 @@ struct PublicationSessionRegistry: Sendable {
                 reason: "The retained publication state budget is exhausted."
             )
         }
-        let connection = PublicationConnection(
+
+        let connection                = PublicationConnection(
             owner             : identity.addonID,
             negotiatedProtocol: negotiated
         )
-        publishers[identity.addonID] = identity.publisher
+        publishers[identity.addonID]  = identity.publisher
         connections[identity.addonID] = Session(
             connection            : connection,
             identity              : identity,
@@ -227,8 +245,8 @@ struct PublicationSessionRegistry: Sendable {
         sequence  : UInt64
     ) throws -> Session {
         guard let session = connections[connection.owner],
-            session.connection == connection,
-            session.connection.generation == generation
+              session.connection == connection,
+              session.connection.generation == generation
         else {
             throw AddonFailure(
                 code  : .sessionRevoked,
@@ -241,6 +259,7 @@ struct PublicationSessionRegistry: Sendable {
                 reason: "Output sequence is zero, stale or reused."
             )
         }
+
         return session
     }
 
@@ -250,16 +269,16 @@ struct PublicationSessionRegistry: Sendable {
         _ session: Session,
         sequence : UInt64
     ) {
-        var updated = session
-        updated.lastSequence = sequence
+        var updated                           = session
+        updated.lastSequence                  = sequence
         connections[session.identity.addonID] = updated
     }
 
     /// close releases only the matching active handle, keeping publisher identity
     /// and all publication history. Closing a superseded handle is a no-op.
-
     mutating func close(_ connection: PublicationConnection) -> Int {
         guard connections[connection.owner]?.connection == connection else { return 0 }
+
         connections.removeValue(forKey: connection.owner)
         return Self.connectionCharge
     }

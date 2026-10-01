@@ -8,6 +8,7 @@ import Foundation
 
 /// RuntimeArchiveEnvelope contains inert host archive values, never provider or pixel authority.
 struct RuntimeArchiveEnvelope: Equatable, Sendable {
+
     let publisher: Data
     let addon    : Data
     let digest   : Data
@@ -16,6 +17,7 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
 
     /// Record preserves one live publication or terminal session history with host provenance.
     struct Record: Equatable, Sendable {
+
         let instance       : Data
         let session        : Data
         let feature        : Data
@@ -29,12 +31,14 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
 
     /// Alias maps a publication-local label to an inert blob ID within the same archived partition.
     struct Alias: Equatable, Sendable {
+
         let name: Data
         let blob: Data
     }
 
     /// Blob stores one checked tightly packed RGBA8 raster, deduplicated within its partition.
     struct Blob: Equatable, Sendable {
+
         let id       : Data
         let partition: Data?
         let width    : Int
@@ -70,28 +74,12 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
         try RuntimeArchiveCost.require(
             records <= maximumRecords && aliases <= maximumAliases && blobs <= maximumBlobs
         )
+
         var bytes = 65_536
-        bytes = try RuntimeArchiveCost.add(
-            bytes,
-            RuntimeArchiveCost.multiply(
-                records,
-                4_096
-            )
-        )
-        bytes = try RuntimeArchiveCost.add(
-            bytes,
-            RuntimeArchiveCost.multiply(
-                aliases,
-                1_024
-            )
-        )
-        return try RuntimeArchiveCost.add(
-            bytes,
-            RuntimeArchiveCost.multiply(
-                blobs,
-                1_024
-            )
-        )
+        bytes     = try RuntimeArchiveCost.add(bytes, RuntimeArchiveCost.multiply(records, 4_096))
+        bytes     = try RuntimeArchiveCost.add(bytes, RuntimeArchiveCost.multiply(aliases, 1_024))
+
+        return try RuntimeArchiveCost.add(bytes, RuntimeArchiveCost.multiply(blobs, 1_024))
     }
 
     /// decode accepts only binary plists and performs no recursive Publication decoding.
@@ -100,26 +88,27 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
         try RuntimeArchiveCost.require(
             data.count <= maximumPayloadBytes && data.starts(with: Data("bplist00".utf8))
         )
-        return try PropertyListDecoder().decode(
-            Wire.self,
-            from: data
-        ).value
+
+        return try PropertyListDecoder().decode(Wire.self, from: data).value
     }
 
     /// encode requires caller-owned envelope memory and encoding workspace through output consumption.
     /// encodingReservationBytes includes output capacity and conservative controlled scalar overlap.
     func encode() throws -> Data {
         try validate()
-        let encoder = PropertyListEncoder()
+
+        let encoder          = PropertyListEncoder()
         encoder.outputFormat = .binary
-        let data = try encoder.encode(Wire(value: self))
+        let data             = try encoder.encode(Wire(value: self))
         try RuntimeArchiveCost.require(data.count <= Self.maximumPayloadBytes)
+
         return data
     }
 
     /// encodingReservationBytes requires existing envelope retention protection during validation.
     func encodingReservationBytes() throws -> Int {
         try validate()
+
         return try RuntimeArchiveCost.add(
             Self.maximumPayloadBytes,
             RuntimeArchiveCost.add(
@@ -136,13 +125,16 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
     /// uuidBytes preserves UUID octets without allocating an unbounded textual scalar.
     static func uuidBytes(_ uuid: UUID) -> Data {
         var value = uuid.uuid
+
         return withUnsafeBytes(of: &value) { Data($0) }
     }
 
     /// uuid reconstructs a fixed-size label; it never grants authority or reuses a live partition.
     static func uuid(_ data: Data) throws -> UUID {
         try RuntimeArchiveCost.require(data.count == 16)
+
         let bytes = Array(data)
+
         return UUID(
             uuid: (
                 bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
@@ -157,20 +149,15 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
         try RuntimeArchiveCost.require(
             records.count <= Self.maximumRecords && blobs.count <= Self.maximumBlobs
         )
-        _ = try Self.text(
-            publisher,
-            maximum: 512
-        )
-        _ = try Self.text(
-            digest,
-            maximum: 512
-        )
-        let addonName = try Self.text(
-            addon,
-            maximum: 255
-        )
+
+        _ = try Self.text(publisher, maximum: 512)
+        _ = try Self.text(digest, maximum: 512)
+
+        let addonName = try Self.text(addon, maximum: 255)
         try RuntimeArchiveCost.require(AddonID(rawValue: addonName) != nil)
+
         _ = try leafBytes()
+
         var blobByID: [Data: Blob] = [:]
         for blob in blobs {
             try RuntimeArchiveCost.require(blob.id.count == 16 && blobByID[blob.id] == nil)
@@ -182,6 +169,7 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
             )
             blobByID[blob.id] = blob
         }
+
         var instances  = Set<Data>()
         var usedBlobs  = Set<Data>()
         var aliasCount = 0
@@ -196,11 +184,10 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
             )
             try Self.validateIdentifier(record.feature)
             try Self.validatePartition(record.partition)
-            aliasCount = try RuntimeArchiveCost.add(
-                aliasCount,
-                record.aliases.count
-            )
+
+            aliasCount = try RuntimeArchiveCost.add(aliasCount, record.aliases.count)
             try RuntimeArchiveCost.require(aliasCount <= Self.maximumAliases)
+
             var names = Set<Data>()
             for alias in record.aliases {
                 try Self.validateIdentifier(alias.name)
@@ -211,26 +198,28 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
                         reason: "Dangling archive raster alias"
                     )
                 }
+
                 try RuntimeArchiveCost.require(blob.partition == record.partition)
                 usedBlobs.insert(alias.blob)
             }
         }
+
         try RuntimeArchiveCost.require(usedBlobs.count == blobs.count)
     }
 
     /// leafBytes counts occurrences, including repeated references to one binary-plist Data object.
     func leafBytes() throws -> Int {
         var bytes = 0
+
         func add(_ data: Data?) throws {
-            bytes = try RuntimeArchiveCost.add(
-                bytes,
-                data?.count ?? 0
-            )
+            bytes = try RuntimeArchiveCost.add(bytes, data?.count ?? 0)
             try RuntimeArchiveCost.require(bytes <= Self.maximumPayloadBytes)
         }
+
         try add(publisher)
         try add(addon)
         try add(digest)
+
         for record in records {
             try add(record.instance)
             try add(record.session)
@@ -242,11 +231,13 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
                 try add(alias.blob)
             }
         }
+
         for blob in blobs {
             try add(blob.id)
             try add(blob.partition)
             try add(blob.pixels)
         }
+
         return bytes
     }
 
@@ -256,30 +247,20 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
         maximum: Int
     ) throws -> String {
         try RuntimeArchiveCost.require(!data.isEmpty && data.count <= maximum)
-        guard
-            let text = String(
-                data    : data,
-                encoding: .utf8
-            )
-        else {
+        guard let text = String(data: data, encoding: .utf8) else {
             throw AddonFailure(
                 code  : .invalidPayload,
                 reason: "Invalid archive UTF-8"
             )
         }
+
         return text
     }
 
     private static func validateIdentifier(_ data: Data) throws {
-        let value = try text(
-            data,
-            maximum: 128
-        )
+        let value = try text(data, maximum: 128)
         try RuntimeArchiveCost.require(
-            value.range(
-                of     : "^[a-zA-Z][a-zA-Z0-9_.-]*$",
-                options: .regularExpression
-            ) != nil
+            value.range(of: "^[a-zA-Z][a-zA-Z0-9_.-]*$", options: .regularExpression) != nil
         )
     }
 
@@ -288,6 +269,7 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
     }
 
     private struct Budget {
+
         var leaves  = 0
         var aliases = 0
     }
@@ -300,6 +282,7 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
     ) throws -> any UnkeyedDecodingContainer {
         let values = try decoder.unkeyedContainer()
         try RuntimeArchiveCost.require(values.count.map { $0 == count } ?? true)
+
         return values
     }
 
@@ -310,20 +293,18 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
         maximum  : Int,
         budget   : inout Budget
     ) throws -> Data {
-        var values = try tuple(
-            decoder,
-            count: 2
-        )
+        var values = try tuple(decoder, count: 2)
+
         let declared = try values.decode(Int.self)
         try RuntimeArchiveCost.require(declared >= 0 && declared <= maximum)
-        let next = try RuntimeArchiveCost.add(
-            budget.leaves,
-            declared
-        )
+
+        let next = try RuntimeArchiveCost.add(budget.leaves, declared)
         try RuntimeArchiveCost.require(next <= maximumPayloadBytes)
+
         let bytes = try values.decode(Data.self)
         try RuntimeArchiveCost.require(bytes.count == declared && values.isAtEnd)
         budget.leaves = next
+
         return bytes
     }
 
@@ -335,6 +316,7 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
     ) throws -> Data? {
         let values = try decoder.unkeyedContainer()
         if values.isAtEnd { return nil }
+
         return try leaf(
             decoder,
             maximum: maximum,
@@ -351,22 +333,21 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
     ) throws -> [Value] {
         var values = try decoder.unkeyedContainer()
         try RuntimeArchiveCost.require(values.count.map { $0 <= maximum } ?? true)
+
         var result: [Value] = []
         if let count = values.count { result.reserveCapacity(count) }
         while !values.isAtEnd {
             try RuntimeArchiveCost.require(result.count < maximum)
-            result.append(
-                try read(
-                    values.superDecoder(),
-                    &budget
-                )
-            )
+            result.append(try read(values.superDecoder(), &budget))
         }
+
         return result
     }
 
     private struct Leaf: Encodable {
+
         let bytes: Data?
+
         func encode(to encoder: any Encoder) throws {
             var values = encoder.unkeyedContainer()
             if let bytes {
@@ -378,44 +359,45 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
 
     /// Wire is the version 1 positional root: schema, publisher, addon, digest, records, blobs.
     private struct Wire: Codable {
+
         let value: RuntimeArchiveEnvelope
+
         init(value: RuntimeArchiveEnvelope) { self.value = value }
 
         init(from decoder: any Decoder) throws {
-            var values = try tuple(
-                decoder,
-                count: 6
-            )
+            var values = try tuple(decoder, count: 6)
             try RuntimeArchiveCost.require(try values.decode(Int.self) == 1)
+
             var budget    = Budget()
             let publisher = try leaf(
                 values.superDecoder(),
                 maximum: 512,
                 budget : &budget
             )
-            let addon = try leaf(
+            let addon     = try leaf(
                 values.superDecoder(),
                 maximum: 255,
                 budget : &budget
             )
-            let digest = try leaf(
+            let digest    = try leaf(
                 values.superDecoder(),
                 maximum: 512,
                 budget : &budget
             )
-            let records = try array(
+            let records   = try array(
                 values.superDecoder(),
                 maximum: maximumRecords,
                 budget : &budget,
                 read   : readRecord
             )
-            let blobs = try array(
+            let blobs     = try array(
                 values.superDecoder(),
                 maximum: maximumBlobs,
                 budget : &budget,
                 read   : readBlob
             )
             try RuntimeArchiveCost.require(values.isAtEnd)
+
             value = RuntimeArchiveEnvelope(
                 publisher: publisher,
                 addon    : addon,
@@ -432,19 +414,15 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
             try values.encode(Leaf(bytes: value.publisher))
             try values.encode(Leaf(bytes: value.addon))
             try values.encode(Leaf(bytes: value.digest))
+
             var records = values.nestedUnkeyedContainer()
             for record in value.records {
-                try writeRecord(
-                    record,
-                    to: records.superEncoder()
-                )
+                try writeRecord(record, to: records.superEncoder())
             }
+
             var blobs = values.nestedUnkeyedContainer()
             for blob in value.blobs {
-                try writeBlob(
-                    blob,
-                    to: blobs.superEncoder()
-                )
+                try writeBlob(blob, to: blobs.superEncoder())
             }
         }
     }
@@ -454,21 +432,19 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
         _ decoder: any Decoder,
         budget   : inout Budget
     ) throws -> Record {
-        var values = try tuple(
-            decoder,
-            count: 9
-        )
-        let instance = try leaf(
+        var values = try tuple(decoder, count: 9)
+
+        let instance  = try leaf(
             values.superDecoder(),
             maximum: 16,
             budget : &budget
         )
-        let session = try leaf(
+        let session   = try leaf(
             values.superDecoder(),
             maximum: 16,
             budget : &budget
         )
-        let feature = try leaf(
+        let feature   = try leaf(
             values.superDecoder(),
             maximum: 128,
             budget : &budget
@@ -478,23 +454,26 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
             maximum: 16,
             budget : &budget
         )
+
         let revision = try values.decode(UInt64.self)
         let kindCode = try values.decode(Int.self)
         try RuntimeArchiveCost.require(kindCode == 0 || kindCode == 1)
-        let kind: Publication.Kind = kindCode == 0 ? .widget : .activity
+
+        let kind           : Publication.Kind = kindCode == 0 ? .widget : .activity
         let sessionDeadline = Date(timeIntervalSinceReferenceDate: try values.decode(Double.self))
         let publication     = try optionalLeaf(
             values.superDecoder(),
             maximum: 266240,
             budget : &budget
         )
-        let aliases = try array(
+        let aliases         = try array(
             values.superDecoder(),
             maximum: maximumAliases - budget.aliases,
             budget : &budget,
             read   : readAlias
         )
         try RuntimeArchiveCost.require(values.isAtEnd)
+
         return Record(
             instance       : instance,
             session        : session,
@@ -522,12 +501,10 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
         try values.encode(value.kind == .widget ? 0 : 1)
         try values.encode(value.sessionDeadline.timeIntervalSinceReferenceDate)
         try values.encode(Leaf(bytes: value.publication))
+
         var aliases = values.nestedUnkeyedContainer()
         for alias in value.aliases {
-            try writeAlias(
-                alias,
-                to: aliases.superEncoder()
-            )
+            try writeAlias(alias, to: aliases.superEncoder())
         }
     }
 
@@ -536,12 +513,10 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
         _ decoder: any Decoder,
         budget   : inout Budget
     ) throws -> Alias {
-        var values = try tuple(
-            decoder,
-            count: 2
-        )
+        var values = try tuple(decoder, count: 2)
         try RuntimeArchiveCost.require(budget.aliases < maximumAliases)
         budget.aliases += 1
+
         let name = try leaf(
             values.superDecoder(),
             maximum: 128,
@@ -553,10 +528,8 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
             budget : &budget
         )
         try RuntimeArchiveCost.require(values.isAtEnd)
-        return Alias(
-            name: name,
-            blob: blob
-        )
+
+        return Alias(name: name, blob: blob)
     }
 
     /// writeAlias traverses its fixed version 1 row without materializing an input-dependent key collection.
@@ -574,11 +547,9 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
         _ decoder: any Decoder,
         budget   : inout Budget
     ) throws -> Blob {
-        var values = try tuple(
-            decoder,
-            count: 5
-        )
-        let id = try leaf(
+        var values = try tuple(decoder, count: 5)
+
+        let id        = try leaf(
             values.superDecoder(),
             maximum: 16,
             budget : &budget
@@ -588,20 +559,16 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
             maximum: 16,
             budget : &budget
         )
+
         let width      = try values.decode(Int.self)
         let height     = try values.decode(Int.self)
-        let pixelBytes = try RuntimeArchiveCost.multiply(
-            RuntimeArchiveCost.multiply(
-                width,
-                height
-            ),
-            4
-        )
+        let pixelBytes = try RuntimeArchiveCost.multiply(RuntimeArchiveCost.multiply(width, height), 4)
         _ = try AssetRasterLayout(
             width    : width,
             height   : height,
             byteCount: pixelBytes
         )
+
         let pixels = try leaf(
             values.superDecoder(),
             maximum: 4_000_000,
@@ -609,6 +576,7 @@ struct RuntimeArchiveEnvelope: Equatable, Sendable {
         )
         try RuntimeArchiveCost.require(pixels.count == pixelBytes)
         try RuntimeArchiveCost.require(values.isAtEnd)
+
         return Blob(
             id       : id,
             partition: partition,

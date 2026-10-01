@@ -5,15 +5,15 @@
 
 import CascadeContracts
 import Foundation
-import OSLog
 
 /// ServiceSubscriptionBinding holds value projections only. Callers must ask the broker again after
 /// suspension.
 struct ServiceSubscriptionBinding: Sendable {
-    let grant: Grant
+
+    let grant       : Grant
     let permissionID: UUID
-    let interestID: UUID
-    let sourceID: UUID
-    let key: ServiceRegistry.SourceKey
-    let deadline: Duration
+    let interestID  : UUID
+    let sourceID    : UUID
+    let key         : ServiceRegistry.SourceKey
+    let deadline    : Duration
 }

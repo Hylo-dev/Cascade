@@ -10,6 +10,7 @@ import Foundation
 /// Production uses ResourceGovernor directly; test wrappers may delay only the return of a
 /// completed real mutation so actor reentrancy can be exercised without fake reservations.
 protocol RuntimeResourceAccess: Sendable {
+
     var resourceGovernorTarget: ResourceGovernor { get }
 
     func admit(
@@ -19,34 +20,34 @@ protocol RuntimeResourceAccess: Sendable {
 
     func release(
         _ reservationID: UUID,
-        owner           : AddonID
+        owner          : AddonID
     ) async throws
 
     func reduceStateReservation(
         _ reservationID: UUID,
-        owner           : AddonID,
-        toBytes bytes   : Int
+        owner          : AddonID,
+        toBytes bytes  : Int
     ) async -> Bool
 
     func resizeStateReservation(
         _ reservationID: UUID,
-        owner           : AddonID,
-        fromBytes       : Int,
-        toBytes         : Int
+        owner          : AddonID,
+        fromBytes      : Int,
+        toBytes        : Int
     ) async throws -> Bool
 
     func resizeDiskReservation(
         _ reservationID: UUID,
-        owner           : AddonID,
-        fromBytes       : Int,
-        toBytes         : Int
+        owner          : AddonID,
+        fromBytes      : Int,
+        toBytes        : Int
     ) async throws -> Bool
 
     func workspaceResizeMemoryReservation(
         _ reservationID: UUID,
-        owner           : AddonID,
-        fromBytes       : Int,
-        toBytes         : Int
+        owner          : AddonID,
+        fromBytes      : Int,
+        toBytes        : Int
     ) async throws -> Bool
 
     func workspaceAdmitObservedDisk(
@@ -71,11 +72,12 @@ protocol RuntimeResourceAccess: Sendable {
 }
 
 extension RuntimeResourceAccess {
+
     func workspaceResizeMemoryReservation(
         _ reservationID: UUID,
-        owner           : AddonID,
-        fromBytes       : Int,
-        toBytes         : Int
+        owner          : AddonID,
+        fromBytes      : Int,
+        toBytes        : Int
     ) async throws -> Bool {
         try await resourceGovernorTarget.resizeMemoryReservation(
             reservationID,

@@ -8,6 +8,7 @@ import Foundation
 
 /// NativeSwiftDataArchiveCommitCheck rejects root replacement before committing changed models.
 struct NativeSwiftDataArchiveCommitCheck: SwiftDataArchiveCommitChecking {
+
     func validateCommit(
         root      : URL,
         descriptor: Int32

@@ -12,6 +12,7 @@ import Foundation
 /// every retained owner before opening any framework store. Suspension retains the worker/lock;
 /// deinitialization releases only the descriptor, never retained disk accounting.
 actor SwiftDataArchive {
+
     nonisolated let identity              : VerifiedAddonIdentity
     nonisolated let resourceGovernorTarget: ResourceGovernor
 
@@ -19,6 +20,7 @@ actor SwiftDataArchive {
     private static let metadataBytes           = 16_384
     private static let frameworkWorkspaceBytes = 1_024 * 1_024
     private static let envelopeBytes           = 4_096
+
     // Read/open covers one maximum old row and one handoff; saves use the actual candidate.
     // These protected controlled buffers do not establish a ceiling on framework caches/RSS.
     private static let controlMemoryBytes = 65_536
@@ -35,6 +37,7 @@ actor SwiftDataArchive {
     private let commitCheck      : any SwiftDataArchiveCommitChecking
     private var worker           : SwiftDataArchiveWorker?
     private var active           : UUID?
+
     private var epoch                  = UUID()
     private var hasStarted             = false
     private var isSuspended            = false
@@ -42,10 +45,11 @@ actor SwiftDataArchive {
     private var permitsFrameworkAccess = false
     private var chargedBytes           = 0
     private var measuredBytes          = 0
-    private var rawInventoryStatus: SwiftDataArchiveInventoryStatus = .unobserved
+    private var rawInventoryStatus    : SwiftDataArchiveInventoryStatus = .unobserved
 
     /// Parent keeps the caller's already-locked open file description alive for discovery.
     private struct Parent: Sendable {
+
         let root      : URL
         let descriptor: Int32
         let name      : String
@@ -90,9 +94,11 @@ actor SwiftDataArchive {
     ) async throws -> SwiftDataArchive {
         try SwiftDataArchiveDirectory.validateRootURL(root)
         guard !identity.publisher.isEmpty,
-              identity.publisher.utf8.count <= 512 else {
+              identity.publisher.utf8.count <= 512
+        else {
             throw SwiftDataArchiveFailure.invalidConfiguration
         }
+
         let token = try await governor.admitObservedDisk(
             bytes                : 0,
             owner                : identity.addonID,
@@ -103,12 +109,10 @@ actor SwiftDataArchive {
             try Task.checkCancellation()
             descriptor = try KeyedStorageDirectory.openRoot(root)
         } catch {
-            try await governor.completeObservedDisk(
-                token,
-                owner: identity.addonID
-            )
+            try await governor.completeObservedDisk(token, owner: identity.addonID)
             throw error
         }
+
         let archive = SwiftDataArchive(
             identity   : identity,
             root       : root,
@@ -119,6 +123,7 @@ actor SwiftDataArchive {
             commitCheck: commitCheck
         )
         await archive.establishInventory()
+
         return archive
     }
 
@@ -137,6 +142,7 @@ actor SwiftDataArchive {
         guard !identity.publisher.isEmpty, identity.publisher.utf8.count <= 512 else {
             throw SwiftDataArchiveFailure.invalidConfiguration
         }
+
         let name = KeyedStorageRecord.hex(KeyedStorageRecord.namespaceDigest(identity))
         let root = parentRoot.appendingPathComponent(name)
         try SwiftDataArchiveDirectory.validateRootURL(root)
@@ -144,6 +150,7 @@ actor SwiftDataArchive {
             root      : parentRoot,
             descriptor: parentDescriptor
         )
+
         let token = try await governor.admitObservedDisk(
             bytes                : 0,
             owner                : identity.addonID,
@@ -157,12 +164,10 @@ actor SwiftDataArchive {
                 descriptor: parentDescriptor
             )
         } catch {
-            try await governor.completeObservedDisk(
-                token,
-                owner: identity.addonID
-            )
+            try await governor.completeObservedDisk(token, owner: identity.addonID)
             throw error
         }
+
         let archive = SwiftDataArchive(
             identity         : identity,
             root             : root,
@@ -179,6 +184,7 @@ actor SwiftDataArchive {
             directoryCreation: directoryCreation
         )
         await archive.establishInventory()
+
         return archive
     }
 
@@ -187,8 +193,11 @@ actor SwiftDataArchive {
 
     /// establishInventory records preexisting debt without granting framework write authority.
     private func establishInventory() async {
-        do { try await observe() }
-        catch { hasFault = true }
+        do {
+            try await observe()
+        } catch {
+            hasFault = true
+        }
     }
 
     /// status samples canonical owner/global debt; it grants no admission across suspension.
@@ -199,10 +208,16 @@ actor SwiftDataArchive {
                 owner: identity.addonID
             )
             let state: SwiftDataArchiveStatus.State
-            if hasFault || (!permitsFrameworkAccess && rawInventoryStatus != .absent) { state = .faulted }
-            else if isSuspended { state = .suspended }
-            else if !disk.permitsWrites { state = .overbudget }
-            else { state = hasStarted ? .ready : .unavailable }
+            if hasFault || (!permitsFrameworkAccess && rawInventoryStatus != .absent) {
+                state = .faulted
+            } else if isSuspended {
+                state = .suspended
+            } else if !disk.permitsWrites {
+                state = .overbudget
+            } else {
+                state = hasStarted ? .ready : .unavailable
+            }
+
             return SwiftDataArchiveStatus(
                 state             : state,
                 measuredBytes     : measuredBytes,
@@ -227,6 +242,7 @@ actor SwiftDataArchive {
         let operation = try begin(requiresStarted: false)
         isSuspended   = false
         defer { finish(operation) }
+
         return try await resourceGovernorTarget.withAssetDecodeReservation(
             bytes: Self.readMemoryBytes,
             owner: identity.addonID
@@ -243,10 +259,8 @@ actor SwiftDataArchive {
             if worker == nil {
                 try await growDisk(by: Self.frameworkWorkspaceBytes + Self.envelopeBytes)
                 try validate(operation)
-                try SwiftDataArchiveDirectory.prepareStore(
-                    root      : root,
-                    descriptor: descriptor
-                )
+                try SwiftDataArchiveDirectory.prepareStore(root: root, descriptor: descriptor)
+
                 let root = self.root
                 // Await completion even after cancellation: a container may have created files.
                 // Retain a returned worker before checking the epoch; no physical-close fiction.
@@ -256,11 +270,13 @@ actor SwiftDataArchive {
                 try validate(operation)
             }
             guard let worker else { throw SwiftDataArchiveFailure.unavailable }
+
             try await worker.validateArchive(identity: identity)
             try await observe()
             try validate(operation)
             hasStarted = true
             hasFault   = false
+
             return await status()
         } catch {
             let failure = error
@@ -276,8 +292,10 @@ actor SwiftDataArchive {
         replacing expectedRevision: UInt64?
     ) async throws -> SwiftDataArchiveSaveOutcome {
         try generation.validate()
+
         let operation = try begin(requiresStarted: true)
         defer { finish(operation) }
+
         return try await resourceGovernorTarget.withAssetDecodeReservation(
             bytes: SwiftDataArchiveGeneration.maximumPayloadBytes
                 + 2 * generation.payload.count + Self.controlMemoryBytes,
@@ -306,15 +324,13 @@ actor SwiftDataArchive {
             )
             try validate(operation)
             guard let worker else { throw SwiftDataArchiveFailure.unavailable }
-            try SwiftDataArchiveDirectory.validateHeldRoot(
-                root      : root,
-                descriptor: descriptor
-            )
+
+            try SwiftDataArchiveDirectory.validateHeldRoot(root: root, descriptor: descriptor)
             let accepted    = generation.ownedCopy()
             let root        = self.root
             let descriptor  = self.descriptor
             let commitCheck = self.commitCheck
-            let parent = self.parent
+            let parent      = self.parent
             try await worker.save(
                 accepted,
                 replacing   : expectedRevision,
@@ -326,14 +342,12 @@ actor SwiftDataArchive {
                             descriptor: parent.descriptor
                         )
                     }
-                    try commitCheck.validateCommit(
-                        root      : root,
-                        descriptor: descriptor
-                    )
+                    try commitCheck.validateCommit(root: root, descriptor: descriptor)
                 }
             )
             committed = true
             try await observe()
+
             return SwiftDataArchiveSaveOutcome(
                 revision: generation.revision,
                 status  : await status()
@@ -360,14 +374,12 @@ actor SwiftDataArchive {
     ) async throws -> Result {
         let admission = try begin(requiresStarted: true)
         defer { finish(admission) }
+
         return try await resourceGovernorTarget.withAssetDecodeReservation(
             bytes: Self.readMemoryBytes,
             owner: identity.addonID
         ) {
-            try await self.performRead(
-                admission: admission,
-                operation: operation
-            )
+            try await self.performRead(admission: admission, operation: operation)
         }
     }
 
@@ -381,6 +393,7 @@ actor SwiftDataArchive {
             try await observe()
             try validate(admission)
             guard let worker else { throw SwiftDataArchiveFailure.unavailable }
+
             generation = try await worker.read(identity: identity)
             try await observe()
             try validate(admission)
@@ -389,6 +402,7 @@ actor SwiftDataArchive {
             await observeAfterFailure(failure)
             throw failure
         }
+
         // No framework work follows the callback. Its host effects cannot be declared rolled
         // back because suspension or cancellation arrived while its final result was returning.
         return try await operation(generation)
@@ -398,7 +412,9 @@ actor SwiftDataArchive {
     func reconcile() async throws -> SwiftDataArchiveStatus {
         let operation = try begin(requiresStarted: false)
         defer { finish(operation) }
+
         try await observe()
+
         return await status()
     }
 
@@ -406,6 +422,7 @@ actor SwiftDataArchive {
     func suspend() async -> SwiftDataArchiveStatus {
         isSuspended = true
         epoch       = UUID()
+
         return await status()
     }
 
@@ -413,14 +430,17 @@ actor SwiftDataArchive {
     private func begin(requiresStarted: Bool) throws -> UUID {
         try Task.checkCancellation()
         guard active == nil else { throw SwiftDataArchiveFailure.busy }
+
         if requiresStarted {
             guard hasStarted, !isSuspended, !hasFault, permitsFrameworkAccess else {
                 throw SwiftDataArchiveFailure.unavailable
             }
         }
+
         let operation = UUID()
         epoch         = operation
         active        = operation
+
         return operation
     }
 
@@ -430,16 +450,14 @@ actor SwiftDataArchive {
         guard permitsFrameworkAccess, !hasFault, descriptor >= 0 else {
             throw SwiftDataArchiveFailure.unavailable
         }
+
         if let parent {
             try SwiftDataArchiveDirectory.validateHeldRoot(
                 root      : parent.root,
                 descriptor: parent.descriptor
             )
         }
-        try SwiftDataArchiveDirectory.validateHeldRoot(
-            root      : root,
-            descriptor: descriptor
-        )
+        try SwiftDataArchiveDirectory.validateHeldRoot(root: root, descriptor: descriptor)
     }
 
     /// validateAuthority permits an intentionally absent directory to reach strict provisioning.
@@ -458,6 +476,7 @@ actor SwiftDataArchive {
         guard let parent, rawInventoryStatus == .absent else {
             throw SwiftDataArchiveFailure.unsafePath
         }
+
         try await growDisk(by: SwiftDataArchiveDirectory.entryBytes)
         try validateAuthority(operation)
         try SwiftDataArchiveDirectory.validateHeldRoot(
@@ -472,6 +491,7 @@ actor SwiftDataArchive {
         } catch KeyedStorageFailure.io(let code) where code == EEXIST {
             // Another creator is not authority: observation must still validate/lock the child.
         }
+
         // Observation adopts any real child before cancellation checks and accounts files on failure.
         try await observe()
         try validate(operation)
@@ -490,7 +510,9 @@ actor SwiftDataArchive {
             owner    : identity.addonID,
             fromBytes: chargedBytes,
             toBytes  : target.partialValue
-        ) else { throw SwiftDataArchiveFailure.accounting }
+        )
+        else { throw SwiftDataArchiveFailure.accounting }
+
         chargedBytes = target.partialValue
     }
 
@@ -498,21 +520,21 @@ actor SwiftDataArchive {
     /// Fully counted safe unknown entries still block framework access without hiding their size.
     private func observe() async throws {
         rawInventoryStatus = .blocked
+
         let inventory = await directoryInventory()
         let mayRefund = inventory.isComplete && !inventory.hasUnsafeEntries
-        let observed = mayRefund ? inventory.bytes : max(
-            chargedBytes,
-            inventory.bytes
-        )
+        let observed  = mayRefund ? inventory.bytes : max(chargedBytes, inventory.bytes)
         guard try await resourceGovernorTarget.reconcileObservedDisk(
             token,
             owner        : identity.addonID,
             fromBytes    : chargedBytes,
             measuredBytes: observed
-        ) else {
+        )
+        else {
             hasFault = true
             throw SwiftDataArchiveFailure.accounting
         }
+
         chargedBytes           = observed
         measuredBytes          = observed
         permitsFrameworkAccess = inventory.permitsFrameworkAccess && descriptor >= 0
@@ -542,6 +564,7 @@ actor SwiftDataArchive {
                             root      : parent.root,
                             descriptor: parent.descriptor
                         )
+
                         return SwiftDataArchiveInventory(
                             bytes            : 0,
                             isComplete       : true,
@@ -555,10 +578,8 @@ actor SwiftDataArchive {
                     descriptor: parent.descriptor
                 )
             }
-            let inventory = await observer.inventory(
-                root      : root,
-                descriptor: descriptor
-            )
+
+            let inventory = await observer.inventory(root: root, descriptor: descriptor)
             // Parent identity may fail after an awaited scan; its already-known bytes remain owned.
             knownBytes = inventory.bytes
             if let parent {
@@ -567,16 +588,14 @@ actor SwiftDataArchive {
                     descriptor: parent.descriptor
                 )
             }
+
             return inventory
         } catch {
             return SwiftDataArchiveInventory(
                 bytes            : max(
                     knownBytes,
                     parent.map {
-                        SwiftDataArchiveDirectory.knownChildBytes(
-                            $0.descriptor,
-                            name: $0.name
-                        )
+                        SwiftDataArchiveDirectory.knownChildBytes($0.descriptor, name: $0.name)
                     } ?? 0
                 ),
                 isComplete       : false,
@@ -588,14 +607,19 @@ actor SwiftDataArchive {
 
     /// observeAfterFailure preserves accounting regardless of task cancellation or framework errors.
     private func observeAfterFailure(_ failure: any Error) async {
-        do { try await observe() }
-        catch { hasFault = true }
+        do {
+            try await observe()
+        } catch {
+            hasFault = true
+        }
+
         if let failure = failure as? SwiftDataArchiveFailure {
             switch failure {
-            case .corrupt, .futureFormat, .invalidGeneration, .accounting:
-                hasFault = true
-            default:
-                break
+                case .corrupt, .futureFormat, .invalidGeneration, .accounting:
+                    hasFault = true
+
+                default:
+                    break
             }
         }
     }

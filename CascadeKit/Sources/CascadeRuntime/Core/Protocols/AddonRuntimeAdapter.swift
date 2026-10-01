@@ -4,7 +4,6 @@
 //
 
 import CascadeContracts
-import Foundation
 
 /// AddonRuntimeAdapter is a synchronous host transport boundary with no production conformer yet.
 /// Implementations must not run addon code, wait for IPC or invoke AddonRuntime recursively.
@@ -13,6 +12,7 @@ import Foundation
 /// Runtime keeps an exact work credit until its matching synchronous receipt. An action
 /// acknowledgment releases that payload but does not terminate the provider job.
 protocol AddonRuntimeAdapter: Sendable {
+
     func takeIngress(
         _ handle   : RuntimeIngressHandle,
         incarnation: RuntimeIncarnation
@@ -50,5 +50,6 @@ protocol AddonRuntimeAdapter: Sendable {
     /// deliveryWasReceived is called only after runtime matches the exact current work credit.
     /// It must dispose the occupied payload synchronously without recursively entering runtime.
     func deliveryWasReceived(incarnation: RuntimeIncarnation)
+
     func processDidExit(incarnation: RuntimeIncarnation)
 }

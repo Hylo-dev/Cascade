@@ -4,7 +4,6 @@
 //
 
 import CascadeContracts
-import CryptoKit
 import Foundation
 import SwiftData
 
@@ -12,6 +11,7 @@ import SwiftData
 /// No external-storage attribute, relationship or separately committed blob is used.
 @Model
 final class SwiftDataArchiveRow {
+
     @Attribute(.unique)
     var namespace     : String
     var publisher     : String
@@ -35,9 +35,6 @@ final class SwiftDataArchiveRow {
         revision       = String(generation.revision)
         verifiedDigest = generation.verifiedDigest
         payload        = generation.payload
-        checksum       = SwiftDataArchiveWorker.checksum(
-            identity  : identity,
-            generation: generation
-        )
+        checksum       = SwiftDataArchiveWorker.checksum(identity: identity, generation: generation)
     }
 }

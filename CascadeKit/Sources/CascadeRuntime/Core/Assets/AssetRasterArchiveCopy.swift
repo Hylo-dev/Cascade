@@ -13,16 +13,15 @@ import Foundation
 /// is released or admitted here. Serial caller use needs only twice the largest raster as
 /// transient copy capacity; simultaneous callers must each protect their own operation.
 actor AssetRasterArchiveCopy {
+
     /// scratchBytes quotes checked CoreGraphics-copy and Data-bridge overlap, excluding output.
     /// It validates metadata without copying pixels, so admission precedes provider.data.
     static func scratchBytes(
         backing: AssetRasterBacking,
         owner  : AddonID
     ) throws -> Int {
-        let layout = try canonicalLayout(
-            backing: backing,
-            owner  : owner
-        )
+        let layout = try canonicalLayout(backing: backing, owner: owner)
+
         // AssetRasterLayout caps each raster at four million bytes.
         return layout.byteCount * 2
     }
@@ -35,14 +34,13 @@ actor AssetRasterArchiveCopy {
         owner  : AddonID
     ) throws -> Data {
         try Task.checkCancellation()
-        let layout = try Self.canonicalLayout(
-            backing: backing,
-            owner  : owner
-        )
+        let layout = try Self.canonicalLayout(backing: backing, owner: owner)
         guard let copied = backing.image.dataProvider?.data,
-              CFDataGetLength(copied) == layout.byteCount else {
+              CFDataGetLength(copied) == layout.byteCount
+        else {
             throw Self.failure("The canonical raster provider has an unexpected byte count.")
         }
+
         let result = copied as Data
         try Task.checkCancellation()
         return result
@@ -54,9 +52,9 @@ actor AssetRasterArchiveCopy {
         backing: AssetRasterBacking,
         owner  : AddonID
     ) throws -> AssetRasterLayout {
-        let image = backing.image
+        let image                 = backing.image
         let (byteCount, overflow) = image.bytesPerRow.multipliedReportingOverflow(by: image.height)
-        let bitmapInfo = CGBitmapInfo.byteOrder32Big.rawValue
+        let bitmapInfo            = CGBitmapInfo.byteOrder32Big.rawValue
             | CGImageAlphaInfo.premultipliedLast.rawValue
         guard backing.owner == owner,
               !overflow,
@@ -66,9 +64,11 @@ actor AssetRasterArchiveCopy {
               image.colorSpace?.name == CGColorSpace.sRGB,
               image.decode == nil,
               !image.shouldInterpolate,
-              image.renderingIntent == .defaultIntent else {
+              image.renderingIntent == .defaultIntent
+        else {
             throw Self.failure("The archive requires an owner-matched canonical RGBA8 raster.")
         }
+
         let layout = try AssetRasterLayout(
             width    : image.width,
             height   : image.height,
@@ -77,14 +77,12 @@ actor AssetRasterArchiveCopy {
         guard image.bytesPerRow == layout.rowBytes else {
             throw Self.failure("The archive raster must use tightly packed RGBA8 rows.")
         }
+
         return layout
     }
 
     /// failure rejects noncanonical inputs without allocating archive pixel storage.
     private static func failure(_ reason: String) -> AddonFailure {
-        AddonFailure(
-            code  : .invalidPayload,
-            reason: reason
-        )
+        AddonFailure(code: .invalidPayload, reason: reason)
     }
 }

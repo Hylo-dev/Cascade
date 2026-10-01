@@ -12,8 +12,10 @@ import Foundation
 /// quote until all original/remapped graph references disappear. Encoding also needs caller-owned
 /// output/parser workspace; Foundation's private parser allocations remain an estimate, not RSS proof.
 enum RuntimeArchivePublicationCodec {
+
     /// Footprint retains only scalar shape counts and Q, never a decoded Publication graph.
     struct Footprint: Equatable, Sendable {
+
         let nodes          : Int
         let assets         : Int
         let documents      : Int
@@ -50,102 +52,81 @@ enum RuntimeArchivePublicationCodec {
         timelineEntries: Int,
         jsonBytes      : Int
     ) throws -> Int {
-        let nodeUnit = max(
+        let nodeUnit     = max(
             1_024,
-            try RuntimeArchiveCost.multiply(
-                4,
-                MemoryLayout<ContentNode>.stride
-            )
+            try RuntimeArchiveCost.multiply(4, MemoryLayout<ContentNode>.stride)
         )
         let documentUnit = max(
             2_048,
-            try RuntimeArchiveCost.multiply(
-                4,
-                MemoryLayout<ContentDocument>.stride
-            )
+            try RuntimeArchiveCost.multiply(4, MemoryLayout<ContentDocument>.stride)
         )
-        let lightUnit = max(
+        let lightUnit    = max(
             256,
-            try RuntimeArchiveCost.multiply(
-                4,
-                MemoryLayout<GlassLight>.stride
-            )
+            try RuntimeArchiveCost.multiply(4, MemoryLayout<GlassLight>.stride)
         )
-        let entryUnit = try RuntimeArchiveCost.multiply(
-            4,
-            MemoryLayout<ScheduledEntry>.stride
-        )
+        let entryUnit    = try RuntimeArchiveCost.multiply(4, MemoryLayout<ScheduledEntry>.stride)
+
         var result = 65_536
         for (count, unit) in [
             (nodes, nodeUnit), (assets, 256), (documents, documentUnit),
             (lights, lightUnit), (timelineEntries, entryUnit), (jsonBytes, 4),
         ] {
-            result = try RuntimeArchiveCost.add(
-                result,
-                RuntimeArchiveCost.multiply(
-                    count,
-                    unit
-                )
-            )
+            result = try RuntimeArchiveCost.add(result, RuntimeArchiveCost.multiply(count, unit))
         }
+
         return result
     }
 
     /// encode validates the contract and caps its independently admitted JSON leaf.
     static func encode(_ publication: Publication) throws -> Data {
         try publication.validate()
+
         let data = try JSONEncoder().encode(publication)
         try RuntimeArchiveCost.require(data.count <= maximumPublicationBytes)
+
         return data
     }
 
     /// decode checks raw JSON size before the existing hardened contract decoder runs.
     static func decode(_ data: Data) throws -> Publication {
         try RuntimeArchiveCost.require(data.count <= maximumPublicationBytes)
-        return try JSONDecoder().decode(
-            Publication.self,
-            from: data
-        )
+
+        return try JSONDecoder().decode(Publication.self, from: data)
     }
 
     /// inspect releases its sole decoded graph before returning the small scalar summary.
     static func inspect(_ data: Data) throws -> Footprint {
         let publication = try decode(data)
-        var nodes       = 0
-        var assets      = 0
-        var documents   = 0
-        var lights      = 0
+
+        var nodes     = 0
+        var assets    = 0
+        var documents = 0
+        var lights    = 0
+
         func countNode(_ node: ContentNode) throws {
-            nodes = try RuntimeArchiveCost.add(
-                nodes,
-                1
-            )
+            nodes = try RuntimeArchiveCost.add(nodes, 1)
             for child in node.children ?? [] { try countNode(child) }
         }
+
         func countPresentations(_ presentations: PresentationSet) throws {
             for document in [
                 presentations.widget, presentations.compactLeading, presentations.compactTrailing,
                 presentations.minimal, presentations.expanded,
             ] {
                 guard let document else { continue }
-                documents = try RuntimeArchiveCost.add(
-                    documents,
-                    1
-                )
-                assets = try RuntimeArchiveCost.add(
-                    assets,
-                    document.assets.count
-                )
-                lights = try RuntimeArchiveCost.add(
-                    lights,
-                    document.glassLights?.count ?? 0
-                )
+
+                documents = try RuntimeArchiveCost.add(documents, 1)
+                assets    = try RuntimeArchiveCost.add(assets, document.assets.count)
+                lights    = try RuntimeArchiveCost.add(lights, document.glassLights?.count ?? 0)
                 try countNode(document.root)
             }
         }
+
         if let content = publication.content { try countPresentations(content) }
         for entry in publication.timeline ?? [] { try countPresentations(entry.content) }
+
         let entries = publication.timeline?.count ?? 0
+
         return try Footprint(
             nodes          : nodes,
             assets         : assets,
@@ -178,6 +159,7 @@ enum RuntimeArchivePublicationCodec {
                 && publication.revision == record.revision && publication.kind == record.kind
                 && record.publication != nil && record.kind != .notice
         )
+
         var references = Set<Data>()
         try publication.forEachAssetReference { asset, _ in
             try RuntimeArchiveCost.require(
@@ -186,6 +168,7 @@ enum RuntimeArchivePublicationCodec {
             )
             references.insert(Data(asset.utf8))
         }
+
         try RuntimeArchiveCost.require(references == Set(record.aliases.map(\.name)))
     }
 }
