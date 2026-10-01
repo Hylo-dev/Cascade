@@ -12,7 +12,7 @@ import Testing
 @MainActor
 final class ControllerFixture {
 
-    let resolver  : MutableDisplayResolver
+    let screen    : SimulatedScreen
     let monitor   : RecordingEventMonitor
     let panel     : NotchPanel
     let hostView  : NotchHostView
@@ -47,12 +47,12 @@ final class ControllerFixture {
             backingScale: 2,
             notch       : HardwareNotch(isPresent: true, size: CGSize(width: 200, height: 30))
         )
-        let resolver = MutableDisplayResolver(display: display)
+        let screen   = SimulatedScreen(display: display)
         let monitor  = RecordingEventMonitor()
         let hostView = NotchHostView(frame: .zero)
         let panel    = NotchPanel(contentView: hostView)
 
-        self.resolver = resolver
+        self.screen   = screen
         self.monitor  = monitor
         self.hostView = hostView
         self.panel    = panel
@@ -78,7 +78,7 @@ final class ControllerFixture {
             surface            : surface,
             activityHost       : activityHost,
             widgetHost         : widgetHost,
-            resolver           : resolver,
+            screen             : screen,
             monitor            : monitor,
             style              : style,
             autoGrantExpansions: autoGrantExpansions

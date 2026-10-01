@@ -18,7 +18,7 @@ final class ControllerTestDriver {
     let surface     : NotchController
     let activityHost: LiveActivityHost
     let widgetHost  : WidgetHost
-    let resolver    : MutableDisplayResolver
+    let screen      : SimulatedScreen
     let monitor     : RecordingEventMonitor
 
     private var isExpanded            = false
@@ -50,7 +50,7 @@ final class ControllerTestDriver {
         surface            : NotchController,
         activityHost       : LiveActivityHost,
         widgetHost         : WidgetHost,
-        resolver           : MutableDisplayResolver,
+        screen             : SimulatedScreen,
         monitor            : RecordingEventMonitor,
         style              : ExternalNotchStyle,
         autoGrantExpansions: Bool
@@ -58,7 +58,7 @@ final class ControllerTestDriver {
         self.surface             = surface
         self.activityHost        = activityHost
         self.widgetHost          = widgetHost
-        self.resolver            = resolver
+        self.screen              = screen
         self.monitor             = monitor
         self.style               = style
         self.autoGrantExpansions = autoGrantExpansions
@@ -102,7 +102,7 @@ final class ControllerTestDriver {
         monitor.onActiveDisplayMayHaveChanged = { [weak self] in
             guard let self else { return }
 
-            self.surface.updateDisplay(self.resolver.display)
+            self.surface.updateDisplay(self.screen.display)
         }
         monitor.onSpaceChanged   = { [weak surface] in surface?.handleSpaceChange() }
         monitor.onScreenLocked   = { [weak self] in self?.setVisible(false) }
@@ -112,7 +112,7 @@ final class ControllerTestDriver {
     func start() {
         isVisible = true
         activityHost.setVisible(true)
-        surface.updateDisplay(resolver.display)
+        surface.updateDisplay(screen.display)
         surface.start()
         reconcile()
     }

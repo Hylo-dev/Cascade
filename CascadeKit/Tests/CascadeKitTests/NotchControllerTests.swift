@@ -14,9 +14,9 @@ struct NotchControllerTests {
 
     @Test
     func softwareRestAndCompactActivityUseIndependentBoundsAndCenterGap() throws {
-        let fixture              = ControllerFixture(reducesMotion: true)
-        let display              = fixture.resolver.display
-        fixture.resolver.display = ActiveDisplay(
+        let fixture            = ControllerFixture(reducesMotion: true)
+        let display            = fixture.screen.display
+        fixture.screen.display = ActiveDisplay(
             displayID   : display.displayID,
             frame       : display.frame,
             backingScale: display.backingScale,
@@ -48,9 +48,9 @@ struct NotchControllerTests {
     func softwareExpandedActivityHasNoHardwareReservationAndMatchesBothStyles() throws {
         var bounds = [CGRect]()
         for style in [ExternalNotchStyle.notch, .dynamicIsland] {
-            let fixture              = ControllerFixture(reducesMotion: true, style: style)
-            let display              = fixture.resolver.display
-            fixture.resolver.display = ActiveDisplay(
+            let fixture            = ControllerFixture(reducesMotion: true, style: style)
+            let display            = fixture.screen.display
+            fixture.screen.display = ActiveDisplay(
                 displayID   : display.displayID,
                 frame       : display.frame,
                 backingScale: display.backingScale,
@@ -76,9 +76,9 @@ struct NotchControllerTests {
 
     @Test(arguments: [ExternalNotchStyle.notch, .dynamicIsland])
     func noLiveExpansionUsesTheSelectedSoftwareShape(style: ExternalNotchStyle) throws {
-        let fixture              = ControllerFixture(reducesMotion: true, style: style)
-        let display              = fixture.resolver.display
-        fixture.resolver.display = ActiveDisplay(
+        let fixture            = ControllerFixture(reducesMotion: true, style: style)
+        let display            = fixture.screen.display
+        fixture.screen.display = ActiveDisplay(
             displayID   : display.displayID,
             frame       : display.frame,
             backingScale: display.backingScale,
@@ -98,9 +98,9 @@ struct NotchControllerTests {
 
     @Test
     func expandedFallbackUsesDropletWithoutPretendingItIsALiveSession() throws {
-        let fixture              = ControllerFixture(reducesMotion: true, style: .dynamicIsland)
-        let display              = fixture.resolver.display
-        fixture.resolver.display = ActiveDisplay(
+        let fixture            = ControllerFixture(reducesMotion: true, style: .dynamicIsland)
+        let display            = fixture.screen.display
+        fixture.screen.display = ActiveDisplay(
             displayID   : display.displayID,
             frame       : display.frame,
             backingScale: display.backingScale,
@@ -121,9 +121,9 @@ struct NotchControllerTests {
 
     @Test(arguments: [CGFloat(1), CGFloat(2)])
     func narrowSoftwareDisplayKeepsEveryAnimatedDropletFrameInsideTheCanvas(scale: CGFloat) throws {
-        let morph                = RecordingMorphEngine()
-        let fixture              = ControllerFixture(morphEngine: morph, style: .dynamicIsland)
-        fixture.resolver.display = ActiveDisplay(
+        let morph              = RecordingMorphEngine()
+        let fixture            = ControllerFixture(morphEngine: morph, style: .dynamicIsland)
+        fixture.screen.display = ActiveDisplay(
             displayID   : 42,
             frame       : CGRect(x: -180, y: 100, width: 180, height: 500),
             backingScale: scale,
@@ -271,9 +271,9 @@ struct NotchControllerTests {
         morph: RecordingMorphEngine,
         style: ExternalNotchStyle
     ) -> ControllerFixture {
-        let fixture              = ControllerFixture(morphEngine: morph, style: style)
-        let display              = fixture.resolver.display
-        fixture.resolver.display = ActiveDisplay(
+        let fixture            = ControllerFixture(morphEngine: morph, style: style)
+        let display            = fixture.screen.display
+        fixture.screen.display = ActiveDisplay(
             displayID   : display.displayID,
             frame       : display.frame,
             backingScale: display.backingScale,
@@ -492,7 +492,7 @@ struct NotchControllerTests {
     func settingsAnchorTracksExpandedActivityHeightAndDisplayOrigin() throws {
         let fixture = ControllerFixture(reducesMotion: true)
         fixture.controller.present(ControllerActivityFixture(id: "tall", expandedContentHeight: 94))
-        fixture.resolver.display = ActiveDisplay(
+        fixture.screen.display = ActiveDisplay(
             displayID   : 42,
             frame       : CGRect(x: -1_000, y: 200, width: 1_000, height: 800),
             backingScale: 2,
@@ -930,9 +930,9 @@ struct NotchControllerTests {
 
     @Test
     func softwareDisplaysRejectHardwareCalibrationAndKeepTheFixedBump() throws {
-        let fixture              = ControllerFixture(reducesMotion: true)
-        let display              = fixture.resolver.display
-        fixture.resolver.display = ActiveDisplay(
+        let fixture            = ControllerFixture(reducesMotion: true)
+        let display            = fixture.screen.display
+        fixture.screen.display = ActiveDisplay(
             displayID   : display.displayID,
             frame       : display.frame,
             backingScale: display.backingScale,
@@ -1007,8 +1007,8 @@ struct NotchControllerTests {
         fixture.controller.start()
         fixture.controller.beginSizeCalibration()
         fixture.calibrationPresenter.onStep?(20, 10)
-        let previous             = fixture.resolver.display
-        fixture.resolver.display = ActiveDisplay(
+        let previous           = fixture.screen.display
+        fixture.screen.display = ActiveDisplay(
             displayID   : 77,
             frame       : previous.frame.offsetBy(dx: 1_000, dy: 0),
             backingScale: 2,
@@ -1124,10 +1124,10 @@ struct NotchControllerTests {
 
     @Test
     func compactAndClosedChromeStayAnchoredToHardwareWithAHaloGutter() throws {
-        let fixture              = ControllerFixture(reducesMotion: true)
-        let screen               = CGRect(x: 1_470, y: -200, width: 1_470, height: 956)
-        let hardware             = CGSize(width: 179, height: 32)
-        fixture.resolver.display = ActiveDisplay(
+        let fixture            = ControllerFixture(reducesMotion: true)
+        let screen             = CGRect(x: 1_470, y: -200, width: 1_470, height: 956)
+        let hardware           = CGSize(width: 179, height: 32)
+        fixture.screen.display = ActiveDisplay(
             displayID   : 42,
             frame       : screen,
             backingScale: 2,
@@ -1332,8 +1332,8 @@ struct NotchControllerTests {
         fixture.controller.present(ControllerActivityFixture(id: "music"))
         fixture.controller.start()
         morph.settle()
-        let original             = fixture.resolver.display
-        fixture.resolver.display = ActiveDisplay(
+        let original           = fixture.screen.display
+        fixture.screen.display = ActiveDisplay(
             displayID   : 42,
             frame       : CGRect(x: 0, y: 0, width: 280, height: 800),
             backingScale: 2,
@@ -1346,7 +1346,7 @@ struct NotchControllerTests {
         morph.settle()
         #expect(shape?.path?.boundingBoxOfPath.width == 280)
 
-        fixture.resolver.display = original
+        fixture.screen.display = original
         fixture.monitor.sendDisplayChange()
         morph.settle()
         #expect(shape?.path?.boundingBoxOfPath.width == 328)
@@ -1413,7 +1413,7 @@ struct NotchControllerTests {
         fixture.controller.start()
         #expect(fixture.panel.frame.width == 1_000)
 
-        fixture.resolver.display = ActiveDisplay(
+        fixture.screen.display = ActiveDisplay(
             displayID   : 42,
             frame       : CGRect(x: 0, y: 0, width: 1_440, height: 900),
             backingScale: 2,

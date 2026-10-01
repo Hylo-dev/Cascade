@@ -6,7 +6,7 @@ Cascade is a **standalone macOS app**: a high-performance Dynamic Notch built on
 
 ## Principles
 
-1. **Protocol-oriented first — and harder than usual.** Depend on abstractions (protocols), never on concrete implementations. Every service / resolver / monitor / engine / renderer / widget has its protocol so callers know only the contract and the app stays testable and mockable. This is the backbone of the whole project: the app depends on `NotchWidget`, not on any concrete widget, and on `ActiveDisplayResolving`, not on a specific screen scraper.
+1. **Protocol-oriented first — and harder than usual.** Depend on abstractions (protocols), never on concrete implementations. Every service / resolver / monitor / engine / renderer / widget has its protocol so callers know only the contract and the app stays testable and mockable. This is the backbone of the whole project: the app depends on `NotchWidget`, not on any concrete widget, and the display coordinator on `DisplayInventoryProviding`, not on `NSScreen` directly.
 2. **Immutable value models, by default.** Anything that describes state (notch geometry, screen snapshot, widget descriptor) is a value `struct` with `let` properties. The `NotchState` is an `@frozen OptionSet`. Mutable, framework-coupled state belongs to the UI layer (`@Observable`), not to the model.
 3. **Performance is a first-class constraint.** Cascade must not devour RAM, CPU or battery, and must never hang — it is always on screen. In the hot geometry / morph / rendering path we deliberately use `@frozen`, compact and aligned structs, contiguous storage, `InlineArray` and `UnsafePointer` for cache-friendly, allocation-free access. This is the **one** place where we trade safety for speed — explicitly, behind a clean API, never leaking the unsafety to callers. See **Performance-critical code**.
 4. **No unsafe unwraps in ordinary code.** `!` (force unwrap) and `try!` are forbidden outside the audited performance path. Use `guard let` / `if let`, `??`, or explicit error handling.
@@ -29,8 +29,8 @@ Every file opens with the standard Xcode banner: the file name and the product n
 - **Never use cryptic names. The more explanatory, the better.** A slightly longer name that says what it is always beats a short one that needs a comment.
 - Prefer `activeScreen` over `scr`, `notchWidth` over `nw`, `morphProgress` over `mp`. No abbreviations unless they are universal (`url`, `id`, `dpi`, `rgb`).
 - Types: `UpperCamelCase`. Members: `lowerCamelCase`.
-- Protocols: role name (`ActiveDisplayResolving`, `EventMonitoring`, `NotchRendering`, `WidgetHosting`) or capability suffix (`HardwareNotchDetecting`).
-- Concrete implementations: a qualifier that states their nature (`SafeAreaNotchDetector`, `MouseEventMonitor`, `SpringMorphEngine`, `CAShapeLayerNotchRenderer`).
+- Protocols: role name (`DisplayInventoryProviding`, `EventMonitoring`, `NotchRendering`, `WidgetHosting`) or capability suffix (`HardwareNotchDetecting`).
+- Concrete implementations: a qualifier that states their nature (`CoreAudioBluetoothRouteSource`, `MouseEventMonitor`, `SpringMorphEngine`, `CAShapeLayerNotchRenderer`).
 - Booleans read as questions (`isOpen`, `hasHardwareNotch`, `canExpand`, `isSuspended`).
 
 ## Comments — Antirez style, in English
@@ -119,20 +119,25 @@ When alignment would fight the compiler or hurt readability (very long lines, ge
 ## Services / Resolvers / Monitors / Engines / Renderers (protocol-oriented)
 
 ```swift
-/// ActiveDisplayResolving resolves which screen Cascade should follow and
-/// whether that screen has a hardware notch. It is a protocol so the engine
-/// can be tested against a fake multi-display layout, with no real screens.
-protocol ActiveDisplayResolving {
+/// DisplayInventoryProviding supplies the screens Cascade can live on, each
+/// with its hardware-notch metrics. It is a protocol so the display
+/// coordinator can be tested against a fake multi-display layout, with no
+/// real screens.
+@MainActor
+protocol DisplayInventoryProviding: AnyObject {
 
-    /// Resolve the screen the overlay should live on right now (mouse /
-    /// frontmost window) together with its hardware-notch metrics.
-    func resolveActiveDisplay() -> ActiveDisplay
+    var displays: [DisplayInventoryEntry] { get }
+    var onChange: (() -> Void)? { get set }
+
+    func start()
+    func stop()
 }
 
-final class SafeAreaNotchDetector: ActiveDisplayResolving {
-    // Reads NSScreen.safeAreaInsets / auxiliaryTop*Area to detect and measure
-    // the cut-out. No polling — driven by the event monitor and screen-change
-    // notifications.
+@MainActor
+final class DisplayInventory: NSObject, DisplayInventoryProviding {
+    // Snapshots NSScreen, safeAreaInsets and auxiliaryTop*Area included, to
+    // measure the cut-out. No polling: it reacts to AppKit's screen-parameter
+    // notification and reports only changes that move a surface or its notch.
 }
 ```
 
