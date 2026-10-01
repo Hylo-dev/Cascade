@@ -98,13 +98,18 @@ let package = Package(
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .target(
-            name: "CascadePluginEngine",
+            name: "CascadePluginHost",
             dependencies: ["CascadeContracts", "CascadePluginSDK"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .target(
+            name: "CascadePluginEngine",
+            dependencies: ["CascadeContracts", "CascadePluginSDK", "CascadePluginHost"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .testTarget(
             name: "CascadePluginEngineTests",
-            dependencies: ["CascadePluginEngine", "CascadePluginSDK", "CascadeContracts"],
+            dependencies: ["CascadePluginEngine", "CascadePluginHost", "CascadePluginSDK", "CascadeContracts"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .target(
