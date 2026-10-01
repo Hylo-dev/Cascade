@@ -20,11 +20,18 @@ final class FakeHostLink: PluginHostLink {
         var killed  = false
     }
 
-    private let state  = Mutex(State())
-    private let onLoss : @Sendable () -> Void
+    private let state       = Mutex(State())
+    private let onLoss      : @Sendable () -> Void
+    private let losesOnStart: Bool
 
-    init(onLoss: @escaping @Sendable () -> Void) {
-        self.onLoss = onLoss
+    /// init makes a link; one that `losesOnStart` dies the moment it is asked to load a plugin,
+    /// on the caller's thread, as a host may crash while the handshake is still being finished.
+    init(
+        losesOnStart: Bool,
+        onLoss      : @escaping @Sendable () -> Void
+    ) {
+        self.losesOnStart = losesOnStart
+        self.onLoss       = onLoss
     }
 
     var starts: [PluginID] {
@@ -48,6 +55,9 @@ final class FakeHostLink: PluginHostLink {
         entryPoint: String
     ) {
         state.withLock { $0.starts.append(plugin) }
+        if losesOnStart {
+            onLoss()
+        }
     }
 
     func handle(

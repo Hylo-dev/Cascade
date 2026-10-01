@@ -16,7 +16,14 @@ import Synchronization
 /// Stopping a plugin inside `handle()` kills the incarnation of the handshake, the only way to
 /// end a hung call; the next host loads every plugin but that one. A dispatch in flight when the
 /// host dies fails, which counts against its plugin, unless the kernel killed the host, when it
-/// is lost and counts against nobody. The supervisor decides when to connect again.
+/// is lost and counts against nobody. A call answered with nothing means the connection broke,
+/// so it is the loss itself, whatever order XPC reports the two in. The supervisor decides when
+/// to connect again.
+///
+/// Every call out, to the link, the engine or a completion, is decided under the lock and queued
+/// in the outbox there, then run in that order once the lock is released. A host lost on another
+/// thread while a handshake is being finished therefore reaches the engine after that handshake's
+/// `available`, never before it, and the engine always ends on the host's true state.
 public final class SharedHostExecutor: PluginExecutor {
 
     private enum Phase {
@@ -33,36 +40,19 @@ public final class SharedHostExecutor: PluginExecutor {
         let completion: @Sendable (PluginExecutionResult) -> Void
     }
 
-    /// Greeting is what a completed handshake hands over once the lock is released.
-    private struct Greeting {
-
-        let link    : any PluginHostLink
-        let plugins : [(PluginID, String)]
-        let observer: (@Sendable (PluginExecutorEvent) -> Void)?
-    }
-
-    /// Ending is what a lost host leaves to report once the lock is released.
-    private struct Ending {
-
-        let link      : (any PluginHostLink)?
-        let dispatches: [Dispatch]
-        let outcome   : PluginExecutionResult
-        let observer  : (@Sendable (PluginExecutorEvent) -> Void)?
-        let delay     : Duration?
-    }
-
     private struct State {
 
-        var phase        = Phase.disconnected
-        var generation   : UInt64 = 0
-        var link         : (any PluginHostLink)?
-        var plugins      : [PluginID: String] = [:]
-        var inFlight     : [UInt64: Dispatch] = [:]
-        var lastDispatch : UInt64 = 0
-        var isKilling    = false
-        var sawBreak     = false
-        var observer     : (@Sendable (PluginExecutorEvent) -> Void)?
-        var supervisor   = PluginHostSupervisor()
+        var phase       = Phase.disconnected
+        var generation  : UInt64 = 0
+        var link        : (any PluginHostLink)?
+        var plugins     : [PluginID: String] = [:]
+        var inFlight    : [UInt64: Dispatch] = [:]
+        var lastDispatch: UInt64 = 0
+        var isKilling   = false
+        var observer    : (@Sendable (PluginExecutorEvent) -> Void)?
+        var supervisor  = PluginHostSupervisor()
+        var outbox      : [@Sendable () -> Void] = []
+        var isDraining  = false
     }
 
     private let state    = Mutex(State())
@@ -91,24 +81,26 @@ public final class SharedHostExecutor: PluginExecutor {
     }
 
     public func observe(_ handler: @escaping @Sendable (PluginExecutorEvent) -> Void) {
-        let isReady = state.withLock { state in
-            state.observer = handler
-            return state.phase == .ready
-        }
+        state.withLock { state in
+            let event: PluginExecutorEvent = state.phase == .ready ? .available : .unavailable
 
-        handler(isReady ? .available : .unavailable)
+            state.observer = handler
+            state.outbox.append { handler(event) }
+        }
+        drain()
     }
 
     public func start(
         _ plugin  : PluginID,
         entryPoint: String
     ) {
-        let link = state.withLock { state in
+        state.withLock { state in
             state.plugins[plugin] = entryPoint
-            return state.phase == .ready ? state.link : nil
+            if state.phase == .ready, let link = state.link {
+                state.outbox.append { link.start(plugin, entryPoint: entryPoint) }
+            }
         }
-
-        link?.start(plugin, entryPoint: entryPoint)
+        drain()
         connectIfNeeded()
     }
 
@@ -117,56 +109,57 @@ public final class SharedHostExecutor: PluginExecutor {
         to plugin : PluginID,
         completion: @escaping @Sendable (PluginExecutionResult) -> Void
     ) {
-        let sent = state.withLock { state -> (link: any PluginHostLink, id: UInt64)? in
-            guard state.phase == .ready, let link = state.link else { return nil }
+        state.withLock { state in
+            guard state.phase == .ready, let link = state.link else {
+                state.outbox.append { completion(.lost) }
+                return
+            }
 
             state.lastDispatch += 1
 
-            let id = state.lastDispatch
+            let id         = state.lastDispatch
+            let generation = state.generation
+            let reply: @Sendable (PluginExecutionResult?) -> Void = { [weak self] result in
+                self?.finish(id, of: generation, with: result)
+            }
             state.inFlight[id] = Dispatch(plugin: plugin, completion: completion)
-            return (link, id)
+            state.outbox.append { link.handle(event, for: plugin, reply: reply) }
         }
-        guard let sent else {
-            completion(.lost)
-            return
-        }
-
-        sent.link.handle(event, for: plugin) { [weak self] result in
-            self?.finish(sent.id, with: result)
-        }
+        drain()
     }
 
     public func stop(_ plugin: PluginID) {
-        let link = state.withLock { state -> (any PluginHostLink)? in
+        state.withLock { state in
             state.plugins[plugin] = nil
-            guard state.phase == .ready, state.inFlight.values.contains(where: { $0.plugin == plugin }) else { return nil }
+            guard state.phase == .ready,
+                  state.inFlight.values.contains(where: { $0.plugin == plugin }),
+                  let link = state.link
+            else { return }
 
             state.isKilling = true
-            return state.link
+            state.outbox.append { link.kill() }
         }
-
-        link?.kill()
+        drain()
     }
 
-    /// finish completes one dispatch. A missing answer means the connection broke: the dispatch
-    /// is lost when the kernel killed the host, and fails otherwise, and the break is remembered
-    /// so the loss that follows still counts as a crash with a plugin inside.
+    /// finish completes one dispatch with the host's answer. No answer means the connection broke
+    /// before the host replied, which is the loss of that host.
     private func finish(
-        _ id       : UInt64,
-        with result: PluginExecutionResult?
+        _ id         : UInt64,
+        of generation: UInt64,
+        with result  : PluginExecutionResult?
     ) {
-        let done = state.withLock { state -> (Dispatch, PluginExecutionResult)? in
-            guard let dispatch = state.inFlight.removeValue(forKey: id) else { return nil }
+        guard let result else {
+            lose(generation)
+            return
+        }
 
-            if result == nil && !state.isKilling {
-                state.sawBreak = true
+        state.withLock { state in
+            if let dispatch = state.inFlight.removeValue(forKey: id) {
+                state.outbox.append { dispatch.completion(result) }
             }
-            return (dispatch, result ?? (state.isKilling ? .lost : PluginExecutionResult(outcome: .failed, cpuTime: .zero)))
         }
-
-        if let done {
-            done.0.completion(done.1)
-        }
+        drain()
     }
 
     private func connectIfNeeded() {
@@ -188,77 +181,73 @@ public final class SharedHostExecutor: PluginExecutor {
             }
         }
         link.hello { [weak self] incarnation in
-            self?.greet(generation, incarnation)
+            self?.greet(generation, with: incarnation)
         }
     }
 
     private func greet(
-        _ generation: UInt64,
-        _ incarnation: PluginHostIncarnation?
+        _ generation    : UInt64,
+        with incarnation: PluginHostIncarnation?
     ) {
         guard incarnation != nil else {
             lose(generation)
             return
         }
 
-        let now      = clock()
-        let greeting = state.withLock { state -> Greeting? in
-            guard state.generation == generation, state.phase == .connecting, let link = state.link else { return nil }
+        let now = clock()
+        state.withLock { state in
+            guard state.generation == generation, state.phase == .connecting, let link = state.link else { return }
 
             state.phase = .ready
             state.supervisor.launched(at: now)
-            return Greeting(
-                link    : link,
-                plugins : state.plugins.sorted { $0.key.rawValue < $1.key.rawValue }.map { ($0.key, $0.value) },
-                observer: state.observer
-            )
+            for (plugin, entryPoint) in state.plugins.sorted(by: { $0.key.rawValue < $1.key.rawValue }) {
+                state.outbox.append { link.start(plugin, entryPoint: entryPoint) }
+            }
+            if let observer = state.observer {
+                state.outbox.append { observer(.available) }
+            }
         }
-        guard let greeting else { return }
-
-        for (plugin, entryPoint) in greeting.plugins {
-            greeting.link.start(plugin, entryPoint: entryPoint)
-        }
-        greeting.observer?(.available)
+        drain()
     }
 
     /// lose ends one host. The engine hears that the host is unavailable before it hears about
     /// the dispatches the loss ended, so the plugins it primes again wait for the next host.
     private func lose(_ generation: UInt64) {
-        let now    = clock()
-        let ending = state.withLock { state -> Ending? in
-            guard state.generation == generation, state.phase == .connecting || state.phase == .ready else { return nil }
+        let now = clock()
+        state.withLock { state in
+            guard state.generation == generation, state.phase == .connecting || state.phase == .ready else { return }
 
             let cause: PluginHostSupervisor.Loss = state.isKilling
                 ? .killed
-                : (state.inFlight.isEmpty && !state.sawBreak ? .crashedIdle : .crashed)
-            let ending = Ending(
-                link      : state.link,
-                dispatches: Array(state.inFlight.values),
-                outcome   : state.isKilling ? .lost : PluginExecutionResult(outcome: .failed, cpuTime: .zero),
-                observer  : state.observer,
-                delay     : state.supervisor.lost(cause, at: now)
-            )
+                : (state.inFlight.isEmpty ? .crashedIdle : .crashed)
+            let outcome = state.isKilling
+                ? PluginExecutionResult.lost
+                : PluginExecutionResult(outcome: .failed, cpuTime: .zero)
+            let delay      = state.supervisor.lost(cause, at: now)
+            let dispatches = state.inFlight.values
+
+            if let link = state.link {
+                state.outbox.append { link.invalidate() }
+            }
+            if let observer = state.observer {
+                state.outbox.append { observer(.unavailable) }
+            }
+            for dispatch in dispatches {
+                state.outbox.append { dispatch.completion(outcome) }
+            }
+            if let delay {
+                let retry: @Sendable () -> Void = { [weak self] in
+                    self?.retry(generation)
+                }
+                state.outbox.append { [schedule] in schedule(delay, retry) }
+            }
 
             state.inFlight.removeAll()
             state.link      = nil
             state.isKilling = false
-            state.sawBreak  = false
-            state.phase     = ending.delay == nil ? .disconnected : .waiting
-            return ending
+            state.phase     = delay == nil ? .disconnected : .waiting
         }
-        guard let ending else { return }
-
-        ending.link?.invalidate()
-        ending.observer?(.unavailable)
-        for dispatch in ending.dispatches {
-            dispatch.completion(ending.outcome)
-        }
-
-        if let delay = ending.delay {
-            schedule(delay) { [weak self] in
-                self?.retry(generation)
-            }
-        }
+        drain()
     }
 
     private func retry(_ generation: UInt64) {
@@ -269,5 +258,29 @@ public final class SharedHostExecutor: PluginExecutor {
         }
 
         connectIfNeeded()
+    }
+
+    /// drain runs the outbox in order, one call at a time, with the lock released. Only one thread
+    /// drains at once; a call that queues more, or another thread that queues meanwhile, leaves
+    /// them to the thread already draining, so the order the lock decided is the order of calls.
+    private func drain() {
+        let claimed = state.withLock { state in
+            guard !state.isDraining else { return false }
+
+            state.isDraining = true
+            return true
+        }
+        guard claimed else { return }
+
+        while let call = state.withLock({ state -> (@Sendable () -> Void)? in
+            guard !state.outbox.isEmpty else {
+                state.isDraining = false
+                return nil
+            }
+
+            return state.outbox.removeFirst()
+        }) {
+            call()
+        }
     }
 }

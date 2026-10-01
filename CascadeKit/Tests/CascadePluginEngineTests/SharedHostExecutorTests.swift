@@ -33,8 +33,8 @@ struct SharedHostExecutorTests {
         }
     }
 
-    private func rig() -> Rig {
-        let transport = FakeHostTransport()
+    private func rig(losesOnStart: Bool = false) -> Rig {
+        let transport = FakeHostTransport(losesOnStart: losesOnStart)
         let time      = HostTime()
         let events    = Recorder<PluginExecutorEvent>()
         let executor  = SharedHostExecutor(
@@ -111,6 +111,53 @@ struct SharedHostExecutorTests {
 
         #expect(rig.results.values == [.failed])
         #expect(rig.time.delays == [.seconds(1)])
+    }
+
+    @Test
+    func aLossWhileTheHandshakeFinishesLeavesTheHostUnavailable() throws {
+        let rig = rig(losesOnStart: true)
+        rig.executor.start(clock, entryPoint: "ClockPlugin")
+        let link = try #require(rig.transport.links.first)
+
+        link.greet()
+        rig.dispatch(.refresh, to: clock)
+
+        #expect(rig.events.values.last == .unavailable)
+        #expect(rig.results.values == [.lost])
+    }
+
+    @Test
+    func crashesAnsweredBeforeTheLossNeverGiveUpTheHost() throws {
+        let rig = rig()
+        rig.executor.start(clock, entryPoint: "ClockPlugin")
+        for index in 0..<3 {
+            let link = try #require(rig.transport.links.last)
+            rig.time.set(index * 100)
+            link.greet()
+            rig.dispatch(.refresh, to: clock)
+            rig.time.set(index * 100 + 50)
+            link.answer(0, with: nil)
+            link.die()
+            rig.time.runDelayed()
+        }
+
+        #expect(rig.transport.links.count == 4)
+        #expect(rig.results.values == [.failed, .failed, .failed])
+    }
+
+    @Test
+    func aKillAnsweredBeforeTheLossIsLost() throws {
+        let rig = rig()
+        rig.executor.start(clock, entryPoint: "ClockPlugin")
+        let link = try #require(rig.transport.links.first)
+        link.greet()
+        rig.dispatch(.refresh, to: clock)
+
+        rig.executor.stop(clock)
+        link.answer(0, with: nil)
+        link.die()
+
+        #expect(rig.results.values == [.lost])
     }
 
     @Test
