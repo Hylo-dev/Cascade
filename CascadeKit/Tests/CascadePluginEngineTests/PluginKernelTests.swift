@@ -507,4 +507,16 @@ struct PluginKernelTests {
         #expect(kernel.invoke("next", value: nil, feature: "elsewhere", of: music, at: start).isEmpty)
         #expect(kernel.invoke("next", value: nil, feature: "now-playing", of: music, at: start) == [.dispatch(music, .action(next), token: 2)])
     }
+
+    @Test
+    func aSwitchedOffPluginIsNotRetried() throws {
+        var kernel = Fixtures.kernel()
+        _ = kernel.register(try Fixtures.music(), grants: ["automation.music"], at: start)
+        _ = kernel.complete(music, token: 1, result: PluginExecutionResult(outcome: .failed, cpuTime: .zero), at: start)
+        _ = kernel.setEnabled(false, for: music, at: start)
+
+        let later = kernel.tick(at: start.advanced(by: 60))
+
+        #expect(!later.contains { if case .dispatch = $0 { true } else { false } })
+    }
 }

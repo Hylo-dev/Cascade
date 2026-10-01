@@ -198,7 +198,9 @@ struct PluginKernel: Sendable {
 
                 case .retrying(let until) where now.monotonic >= until:
                     record.status = .idle
-                    prime(&record)
+                    if record.isEnabled {
+                        prime(&record)
+                    }
 
                 default:
                     break
