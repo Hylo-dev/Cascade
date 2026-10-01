@@ -103,4 +103,15 @@ struct PluginNodeDiffTests {
 
         #expect(ids(diff.updated) == ["root:zStack/layer0:text"])
     }
+
+    @Test
+    func aKindChangeUnderTheSameExplicitIDReplacesTheNode() throws {
+        let before = try table(PluginNode(.hStack(alignment: .center, spacing: nil), children: [PluginNode(.text("x"), id: "art")]))
+        let after  = try table(PluginNode(.hStack(alignment: .center, spacing: nil), children: [PluginNode(.symbol(name: "x"), id: "art")]))
+        let diff   = PluginNodeDiff(from: before, to: after)
+
+        #expect(ids(diff.removed) == ["#art:text"])
+        #expect(ids(diff.inserted) == ["#art:symbol"])
+        #expect(ids(diff.updated) == ["root:hStack"])
+    }
 }

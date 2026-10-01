@@ -102,14 +102,16 @@ public struct PluginNodeTable: Sendable {
         return index
     }
 
-    /// identity is `#` and the explicit id, or the parent's identity, the slot and the kind.
+    /// identity is `#`, the explicit id and the kind, or the parent's identity, the slot and the
+    /// kind. The kind is part of both, so a node that changes kind is a new node even under the
+    /// same explicit id, as a SwiftUI view of another type would be.
     private static func identity(
         of node     : PluginNode,
         under parent: PluginNodeID?,
         at slot     : String
     ) -> PluginNodeID {
         if let explicit = node.id {
-            return PluginNodeID(rawValue: "#" + explicit)
+            return PluginNodeID(rawValue: "#" + explicit + ":" + node.kind.name)
         }
 
         let prefix = parent.map { $0.rawValue + "/" } ?? ""

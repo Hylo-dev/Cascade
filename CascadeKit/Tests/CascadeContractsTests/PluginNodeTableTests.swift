@@ -41,7 +41,7 @@ struct PluginNodeTableTests {
         )
         let table = try table(root)
 
-        #expect(table.entries.map(\.id.rawValue) == ["root:vStack", "#row", "#row/0:text"])
+        #expect(table.entries.map(\.id.rawValue) == ["root:vStack", "#row:hStack", "#row:hStack/0:text"])
     }
 
     @Test
