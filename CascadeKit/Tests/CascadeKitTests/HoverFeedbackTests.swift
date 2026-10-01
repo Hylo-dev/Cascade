@@ -32,9 +32,3 @@ struct HoverFeedbackTests {
         #expect(performer.impulses == 0)
     }
 }
-
-@MainActor
-private final class HapticFixture: HapticFeedbackPerforming {
-    var impulses = 0
-    func performHoverFeedback() { impulses += 1 }
-}

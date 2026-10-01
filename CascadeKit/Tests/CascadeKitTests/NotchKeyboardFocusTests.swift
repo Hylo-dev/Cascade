@@ -23,8 +23,3 @@ struct NotchKeyboardFocusTests {
         #expect(!panel.canBecomeKey)
     }
 }
-
-@MainActor
-private final class KeyboardTarget: NSView, NotchKeyboardFocusTarget {
-    override var acceptsFirstResponder: Bool { true }
-}

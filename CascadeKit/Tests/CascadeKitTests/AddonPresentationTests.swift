@@ -397,50 +397,6 @@ private extension WidgetContext {
     static func testContext() -> WidgetContext { WidgetContext(state: .open, requestContent: {}) }
 }
 
-@MainActor private final class WidgetFixture: NotchWidget {
-    static let kind = WidgetKind("test")
-    let id: WidgetIdentifier
-    let size = GridSpan.small
-    var context: WidgetContext?
-    var suspensions = 0
-    var factoryCount = 0
-    init(id: String = "test") { self.id = WidgetIdentifier(id) }
-    func makeContentView() -> AnyView { factoryCount += 1; return AnyView(EmptyView()) }
-    func activate(in context: WidgetContext) { self.context = context }
-    func suspend() {
-        suspensions += 1
-        context?.setNeedsContent()
-    }
-}
-
-@MainActor private final class PresentationSinkFixture: AddonPresentationSink {
-    var registeredWidgets: [any NotchWidget] = []
-    var unregisteredWidgetIDs: [WidgetIdentifier] = []
-    var presentedActivities: [any NotchLiveActivity] = []
-    var shownNotices: [any NotchTransientNotice] = []
-    var updatedNotices: [any NotchTransientNotice] = []
-    func register(_ widget: any NotchWidget) { registeredWidgets.append(widget) }
-    func unregisterWidget(id: WidgetIdentifier) { unregisteredWidgetIDs.append(id) }
-    func present(_ activity: any NotchLiveActivity) { presentedActivities.append(activity) }
-    func showNotice(_ notice: any NotchTransientNotice) { shownNotices.append(notice) }
-    func updateNotice(_ notice: any NotchTransientNotice) { updatedNotices.append(notice) }
-    func dismissActivity(id: String) {}
-    func dismissActivities(from sourceID: String) {}
-}
-
-@MainActor private final class AssetResolverFixture: AddonPresentationAssetResolving {
-    struct Request: Equatable {
-        let assetID: String
-        let publicationID: PublicationID
-        let revision: UInt64
-    }
-    var requests: [Request] = []
-    func image(for assetID: String, publicationID: PublicationID, publicationRevision: UInt64) -> Image? {
-        requests.append(Request(assetID: assetID, publicationID: publicationID, revision: publicationRevision))
-        return nil
-    }
-}
-
 private func fixturePublication(kind: Publication.Kind, revision: UInt64, text: String, id: PublicationID = publicationID()) throws -> Publication {
     let doc = try ContentDocument(root: try ContentNode(kind: .text, text: text, assetID: nil, value: nil, deadline: nil, actionID: nil, children: nil), privacy: .publicContent, accessibilityLabel: text)
     let set: PresentationSet

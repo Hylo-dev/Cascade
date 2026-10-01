@@ -334,12 +334,6 @@ import CascadeRuntime
 
 }
 
-struct SeededGenerator: RandomNumberGenerator {
-    var state: UInt64
-    init(seed: UInt64) { state = seed }
-    mutating func next() -> UInt64 { state = state &* 6364136223846793005 &+ 1442695040888963407; return state }
-}
-
 private func graphAddon(_ name: String, dependencies: [String] = [], service: String? = nil, version: String = "1.0.0", features: [AddonFeature] = []) throws -> InstalledAddon {
     try replacing(installedFixture("focus"), id: "com.example." + name,
                   requires: dependencies.map { try requirement("service." + $0, ">=1.0.0 <2.0.0") },

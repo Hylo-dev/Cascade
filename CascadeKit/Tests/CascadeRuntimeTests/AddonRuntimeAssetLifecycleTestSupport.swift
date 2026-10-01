@@ -11,6 +11,7 @@ import Testing
 @testable import CascadeRuntime
 
 #if DEBUG
+
 struct AssetLifecycleFixture: Sendable {
     let root        : URL
     let runtime     : AddonRuntime
@@ -348,127 +349,6 @@ func lifecyclePNG(width: Int, height: Int) throws -> Data {
     )
     #expect(CGImageDestinationFinalize(destination))
     return data as Data
-}
-
-
-/// AssetLifecycleGate owns one checkpoint and one waiter. Terminal notification wakes a test
-/// when the real request returns before reaching the checkpoint, avoiding a stranded waiter.
-final class AssetLifecycleGate: @unchecked Sendable {
-    private let condition = NSCondition()
-    private var arrived = false
-    private var terminal = false
-    private var released = false
-    private var waiter: CheckedContinuation<Bool, Never>?
-    private var blocked: CheckedContinuation<Void, Never>?
-
-    func waitForArrival() async -> Bool {
-        await withCheckedContinuation { continuation in
-            condition.lock()
-            if arrived || terminal {
-                let result = arrived
-                condition.unlock()
-                continuation.resume(returning: result)
-            } else {
-                precondition(waiter == nil)
-                waiter = continuation
-                condition.unlock()
-            }
-        }
-    }
-
-    func holdAdmission() async {
-        await withCheckedContinuation { continuation in
-            condition.lock()
-            arrived = true
-            let notify = waiter
-            waiter = nil
-            let alreadyReleased = released
-            if !alreadyReleased { blocked = continuation }
-            condition.unlock()
-            notify?.resume(returning: true)
-            if alreadyReleased { continuation.resume() }
-        }
-    }
-
-    /// holdNative parks only the real off-main native worker, never the governor/runtime actor.
-    func holdNative() {
-        condition.lock()
-        arrived = true
-        let notify = waiter
-        waiter = nil
-        condition.unlock()
-        notify?.resume(returning: true)
-        condition.lock()
-        while !released { condition.wait() }
-        condition.unlock()
-    }
-
-    func release() {
-        condition.lock()
-        released = true
-        let continuation = blocked
-        blocked = nil
-        condition.broadcast()
-        condition.unlock()
-        continuation?.resume()
-    }
-
-    func finished() {
-        condition.lock()
-        terminal = true
-        let notify = waiter
-        waiter = nil
-        let result = arrived
-        condition.unlock()
-        notify?.resume(returning: result)
-    }
-}
-
-/// AssetLifecycleObserver counts real entries and can hold exactly one selected checkpoint.
-/// All authority, pixels and accounting come from the production operation being observed.
-final class AssetLifecycleObserver: AssetLifecycleTestObserver, @unchecked Sendable {
-    enum Point: String, CaseIterable, Sendable { case admission, native, none }
-    struct Snapshot: Sendable {
-        var reservationID: UUID?
-        var binding: AssetTransferBinding?
-        var admissions = 0
-        var decodeEntries = 0
-        var decodeReservations = 0
-        var nativeDraws = 0
-        var nativeReturns = 0
-        var aliasCommits = 0
-    }
-
-    let governor: ResourceGovernor
-    let point: Point
-    let gate = AssetLifecycleGate()
-    private let lock = NSLock()
-    private var value = Snapshot()
-
-    init(governor: ResourceGovernor, point: Point) {
-        self.governor = governor
-        self.point = point
-    }
-
-    func snapshot() -> Snapshot { lock.withLock { value } }
-
-    func admittedTransfer(reservationID: UUID, binding: AssetTransferBinding) async {
-        lock.withLock {
-            value.reservationID = reservationID
-            value.binding = binding
-            value.admissions += 1
-        }
-        if point == .admission { await gate.holdAdmission() }
-    }
-
-    func decodeEntered() { lock.withLock { value.decodeEntries += 1 } }
-    func decodeReservationEntered() { lock.withLock { value.decodeReservations += 1 } }
-    func nativeDrawCompleted() {
-        lock.withLock { value.nativeDraws += 1 }
-        if point == .native { gate.holdNative() }
-    }
-    func nativeScopeReturned() { lock.withLock { value.nativeReturns += 1 } }
-    func aliasCommitted() { lock.withLock { value.aliasCommits += 1 } }
 }
 
 extension AssetLifecycleFixture {
