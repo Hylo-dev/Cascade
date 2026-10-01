@@ -8,7 +8,7 @@ import Foundation
 
 /// PluginRecord is everything the kernel tracks for one registered plugin: what it declared and
 /// was granted, its supervisor state and health history, its pending events, its two budgets,
-/// the wake it asked for and the sources it holds.
+/// the wake it asked for, the sources it holds, and whether the user switched it on.
 struct PluginRecord: Sendable {
 
     let manifest      : PluginManifest
@@ -21,6 +21,7 @@ struct PluginRecord: Sendable {
     var throttledUntil: Duration
     var wake          : Date?
     var leased        : Set<String> = []
+    var isEnabled     = true
 
     init(
         manifest  : PluginManifest,
@@ -34,9 +35,12 @@ struct PluginRecord: Sendable {
         throttledUntil = instant
     }
 
-    /// isRunnable is true while the plugin may run: idle, handling or waiting out a retry.
+    /// isRunnable is true while the plugin may run: switched on, and idle, handling or waiting out
+    /// a retry.
     var isRunnable: Bool {
-        switch status {
+        guard isEnabled else { return false }
+
+        return switch status {
             case .idle, .handling, .retrying      : true
             case .disabledAfterHang, .quarantined: false
         }

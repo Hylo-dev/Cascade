@@ -104,6 +104,22 @@ public final class PluginEngine: Sendable {
         run { kernel, now in kernel.reenable(plugin, at: now) }
     }
 
+    public func setEnabled(
+        _ isEnabled: Bool,
+        for plugin : PluginID
+    ) {
+        run { kernel, now in kernel.setEnabled(isEnabled, for: plugin, at: now) }
+    }
+
+    public func invoke(
+        _ action : String,
+        value    : PluginValue? = nil,
+        feature  : String,
+        of plugin: PluginID
+    ) {
+        run { kernel, now in kernel.invoke(action, value: value, feature: feature, of: plugin, at: now) }
+    }
+
     /// state reads a plugin's state after everything already queued. It waits for the engine's
     /// queue, so it is for tests and tools: never call it from the main thread or the sink.
     public func state(of plugin: PluginID) -> PluginState? {

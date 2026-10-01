@@ -450,4 +450,61 @@ struct PluginKernelTests {
         #expect(kernel.complete(clock, token: 1, result: .lost, at: start) == [.dispatch(clock, .refresh, token: 2)])
         #expect(kernel.state(of: clock) == .active)
     }
+
+    @Test
+    func aSwitchedOffPluginShowsNothingAndHoldsNoSource() throws {
+        var kernel = Fixtures.kernel()
+        try playing(try Fixtures.text("Song"), in: &kernel)
+
+        let off = kernel.setEnabled(false, for: music, at: start)
+
+        #expect(off.contains(.stopSource("media.nowPlaying")))
+        #expect(off.contains { effect in
+            guard case .deliver(let changes) = effect else { return false }
+
+            return changes.map(\.key) == [activity] && changes.allSatisfy { $0.content == nil }
+        })
+        #expect(kernel.receive(try Fixtures.nowPlaying("Next"), at: start).isEmpty)
+        #expect(kernel.invoke("next", value: nil, feature: "now-playing", of: music, at: start).isEmpty)
+    }
+
+    @Test
+    func aSwitchedOnPluginLeasesItsSourcesAndIsAskedForItsContent() throws {
+        var kernel = Fixtures.kernel()
+        try playing(try Fixtures.text("Song"), in: &kernel)
+        _ = kernel.setEnabled(false, for: music, at: start)
+
+        let on = kernel.setEnabled(true, for: music, at: start)
+
+        #expect(on.contains(.startSource("media.nowPlaying")))
+        #expect(on.contains(.dispatch(music, .refresh, token: 2)))
+        #expect(kernel.setEnabled(true, for: music, at: start).isEmpty)
+    }
+
+    @Test
+    func anAnswerArrivingAfterTheSwitchIsDropped() throws {
+        var kernel = Fixtures.kernel()
+        _ = kernel.register(try Fixtures.music(), grants: ["automation.music"], at: start)
+        _ = kernel.setEnabled(false, for: music, at: start)
+
+        let late = kernel.complete(
+            music,
+            token : 1,
+            result: Fixtures.result(try Fixtures.output("now-playing", .activity, Fixtures.text("Song"))),
+            at    : start
+        )
+
+        #expect(!late.contains { if case .deliver = $0 { true } else { false } })
+    }
+
+    @Test
+    func aHostActionReachesThePluginOnlyWhenItsFeatureDeclaresIt() throws {
+        var kernel = Fixtures.kernel()
+        try playing(try Fixtures.text("Song"), in: &kernel)
+        let next = try PluginActionEvent(feature: "now-playing", action: "next")
+
+        #expect(kernel.invoke("eject", value: nil, feature: "now-playing", of: music, at: start).isEmpty)
+        #expect(kernel.invoke("next", value: nil, feature: "elsewhere", of: music, at: start).isEmpty)
+        #expect(kernel.invoke("next", value: nil, feature: "now-playing", of: music, at: start) == [.dispatch(music, .action(next), token: 2)])
+    }
 }

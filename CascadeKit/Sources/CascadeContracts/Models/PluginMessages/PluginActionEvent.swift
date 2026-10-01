@@ -5,9 +5,10 @@
 
 import Foundation
 
-/// PluginActionEvent tells a plugin that the user activated one of its controls. The kernel
-/// builds it from the control it found in the published document, so a plugin only ever
-/// receives an action its own document named. `value` is a toggle's new state or a slider's
+/// PluginActionEvent tells a plugin that the user activated one of its controls, or that Cascade
+/// invoked one of its declared actions for the user, such as a preview. The kernel builds it from
+/// the control it found in the published document or from the declaration, so a plugin only ever
+/// receives an action it named. `value` is a toggle's new state or a slider's
 /// released value, and absent for a button.
 public struct PluginActionEvent: Codable, Equatable, Sendable {
 

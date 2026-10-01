@@ -137,7 +137,8 @@ struct PluginKernel: Sendable {
 
     /// complete takes a plugin's answer to the dispatch `token` named. An answer to anything but
     /// the dispatch in flight, such as a hung plugin returning after the watchdog gave up on it,
-    /// is ignored. The output is applied first, then the CPU it cost is charged.
+    /// is ignored. The output is applied first, then the CPU it cost is charged. An answer that
+    /// arrives after the user switched the plugin off is dropped.
     mutating func complete(
         _ plugin: PluginID,
         token   : UInt64,
@@ -151,13 +152,17 @@ struct PluginKernel: Sendable {
 
         switch result.outcome {
             case .output(let output):
-                accept(output, from: plugin, &record, at: now, &effects)
+                if record.isEnabled {
+                    accept(output, from: plugin, &record, at: now, &effects)
+                }
 
             case .failed:
                 react(to: .threw, plugin, &record, at: now, &effects)
 
             case .lost:
-                prime(&record)
+                if record.isEnabled {
+                    prime(&record)
+                }
         }
 
         let rest = record.cpu.charge(result.cpuTime, at: now.monotonic)
@@ -255,7 +260,7 @@ struct PluginKernel: Sendable {
         _ plugin: PluginID,
         at now  : PluginInstant
     ) -> [PluginEngineEffect] {
-        guard var record = records[plugin], !record.isRunnable else { return [] }
+        guard var record = records[plugin], record.isEnabled, !record.isRunnable else { return [] }
 
         if record.status == .quarantined {
             record.history = PluginHealthHistory()
@@ -266,6 +271,57 @@ struct PluginKernel: Sendable {
         resume(plugin, &record, &effects)
         records[plugin] = record
 
+        schedule(at: now, into: &effects)
+        return effects
+    }
+
+    /// setEnabled is the user's switch for a plugin, apart from its health. A plugin switched off
+    /// stays loaded in its host but runs nothing: its content leaves the screen, its sources are
+    /// released and an answer still in flight is dropped. Switched on, it leases its sources again
+    /// and is asked for its content.
+    mutating func setEnabled(
+        _ isEnabled: Bool,
+        for plugin : PluginID,
+        at now     : PluginInstant
+    ) -> [PluginEngineEffect] {
+        guard var record = records[plugin], record.isEnabled != isEnabled else { return [] }
+
+        let wasRunnable  = record.isRunnable
+        record.isEnabled = isEnabled
+
+        var effects: [PluginEngineEffect] = []
+        if wasRunnable, !record.isRunnable {
+            halt(plugin, &record, &effects)
+        } else if !wasRunnable, record.isRunnable {
+            resume(plugin, &record, &effects)
+        }
+        records[plugin] = record
+
+        schedule(at: now, into: &effects)
+        return effects
+    }
+
+    /// invoke runs an action the host asks for on the user's behalf, such as a preview chosen in
+    /// Cascade's menu. It reaches the plugin only while the plugin runs and the feature is
+    /// available and declares the action; with no control to revert, a refused one is dropped.
+    mutating func invoke(
+        _ action : String,
+        value    : PluginValue?,
+        feature  : String,
+        of plugin: PluginID,
+        at now   : PluginInstant
+    ) -> [PluginEngineEffect] {
+        guard var record = records[plugin],
+              record.isRunnable,
+              let declared = availableFeature(feature, of: record),
+              declared.actions.contains(action),
+              let event = try? PluginActionEvent(feature: feature, action: action, value: value),
+              record.mailbox.queue(PluginMailbox.Action(event: event, request: nil, postedAt: now.monotonic))
+        else { return [] }
+
+        records[plugin] = record
+
+        var effects: [PluginEngineEffect] = []
         schedule(at: now, into: &effects)
         return effects
     }
@@ -369,7 +425,9 @@ struct PluginKernel: Sendable {
                     guard now.monotonic - action.postedAt <= Self.actionTimeout,
                           availableFeature(action.event.feature, of: record) != nil
                     else {
-                        effects.append(.reject(action.request))
+                        if let request = action.request {
+                            effects.append(.reject(request))
+                        }
                         continue
                     }
 

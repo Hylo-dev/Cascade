@@ -13,11 +13,12 @@ import CascadeContracts
 /// news, then a refresh, then the plugin's own wake.
 struct PluginMailbox: Sendable {
 
-    /// Action is an accepted action waiting for its turn.
+    /// Action is an accepted action waiting for its turn. A host action has no request: there is
+    /// no control to revert.
     struct Action: Equatable, Sendable {
 
         let event   : PluginActionEvent
-        let request : PluginActionRequest
+        let request : PluginActionRequest?
         let postedAt: Duration
     }
 
