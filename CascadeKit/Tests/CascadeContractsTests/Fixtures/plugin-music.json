@@ -1,0 +1,32 @@
+{
+  "manifestVersion": 2,
+  "id": "com.cascade.music",
+  "version": "1.0.0",
+  "compatibility": { "macOS": "15.0", "cascadeProtocol": { "major": 2, "minimumMinor": 0 } },
+  "execution": { "entryPoint": "MusicPlugin" },
+  "sourceApp": "com.apple.Music",
+  "REQUIRES": [
+    {
+      "kind": "anyOf",
+      "alternatives": [
+        { "kind": "appInstalled", "bundleID": "com.apple.Music" },
+        { "kind": "appInstalled", "bundleID": "com.spotify.client" }
+      ]
+    }
+  ],
+  "features": [
+    {
+      "id": "now-playing",
+      "surfaces": {
+        "activity": {},
+        "widget": { "sizes": ["2x1", "2x2"] }
+      },
+      "sources": ["media.nowPlaying"],
+      "services": ["media.commands"],
+      "components": [{ "id": "audio.spectrum", "version": 1 }, { "id": "media.scrubber", "version": 1 }],
+      "permissions": ["automation.music", "audio.capture"],
+      "actions": ["togglePlayback", "next", "previous", "seek", "setVolume"]
+    }
+  ],
+  "resources": { "profile": "eventDriven" }
+}
