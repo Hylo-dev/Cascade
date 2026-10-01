@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CA5CADE4000000000000000B /* CascadePluginHost in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE4000000000000000A /* CascadePluginHost */; };
+		CA5CADE4000000000000000F /* PluginHost.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = CA5CADE40000000000000001 /* PluginHost.xpc */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		CA5CADE40000000000000012 /* CascadePluginEngine in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE40000000000000010 /* CascadePluginEngine */; };
+		CA5CADE40000000000000013 /* CascadePluginHost in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE40000000000000011 /* CascadePluginHost */; };
 		CA5CADE10CA10CA10CA1A003 /* CascadeKit in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE10CA10CA10CA1A002 /* CascadeKit */; };
 		CA5CADE10CA10CA10CA1A004 /* CascadeRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE10CA10CA10CA1A005 /* CascadeRuntime */; };
 		CA5CADE20000000000000001 /* Config/FFmpeg/Artifacts/arm64/ffmpeg in Embed FFmpeg Helpers */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000011 /* Config/FFmpeg/Artifacts/arm64/ffmpeg */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -17,6 +21,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		CA5CADE4000000000000000C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0403125F2FE4355A00BA9823 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CA5CADE40000000000000003;
+			remoteInfo = PluginHost;
+		};
 		040312752FE4355A00BA9823 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 0403125F2FE4355A00BA9823 /* Project object */;
@@ -34,6 +45,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		CA5CADE4000000000000000E /* Embed XPC Services */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/XPCServices";
+			dstSubfolderSpec = 16;
+			files = (
+				CA5CADE4000000000000000F /* PluginHost.xpc in Embed XPC Services */,
+			);
+			name = "Embed XPC Services";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		CA5CADE20000000000000021 /* Copy FFmpeg Notices */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -62,6 +84,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		CA5CADE40000000000000001 /* PluginHost.xpc */ = {isa = PBXFileReference; explicitFileType = "wrapper.xpc-service"; includeInIndex = 0; path = PluginHost.xpc; sourceTree = BUILT_PRODUCTS_DIR; };
 		040312672FE4355A00BA9823 /* Cascade.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Cascade.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		040312742FE4355A00BA9823 /* CascadeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CascadeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0403127E2FE4355A00BA9823 /* CascadeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CascadeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -74,6 +97,11 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		CA5CADE40000000000000002 /* PluginHost */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PluginHost;
+			sourceTree = "<group>";
+		};
 		040312692FE4355A00BA9823 /* Cascade */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Cascade;
@@ -92,6 +120,14 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		CA5CADE40000000000000005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CA5CADE4000000000000000B /* CascadePluginHost in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		040312642FE4355A00BA9823 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -105,6 +141,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA5CADE40000000000000012 /* CascadePluginEngine in Frameworks */,
+				CA5CADE40000000000000013 /* CascadePluginHost in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -124,6 +162,7 @@
 				CA5CADE30000000000000001 /* Config/Signing.xcconfig */,
 				040312692FE4355A00BA9823 /* Cascade */,
 				CA5CADE20000000000000031 /* FFmpeg Bundle Inputs */,
+				CA5CADE40000000000000002 /* PluginHost */,
 				040312772FE4355A00BA9823 /* CascadeTests */,
 				040312812FE4355A00BA9823 /* CascadeUITests */,
 				040312682FE4355A00BA9823 /* Products */,
@@ -136,6 +175,7 @@
 				040312672FE4355A00BA9823 /* Cascade.app */,
 				040312742FE4355A00BA9823 /* CascadeTests.xctest */,
 				0403127E2FE4355A00BA9823 /* CascadeUITests.xctest */,
+				CA5CADE40000000000000001 /* PluginHost.xpc */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -155,6 +195,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		CA5CADE40000000000000003 /* PluginHost */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CA5CADE40000000000000007 /* Build configuration list for PBXNativeTarget "PluginHost" */;
+			buildPhases = (
+				CA5CADE40000000000000004 /* Sources */,
+				CA5CADE40000000000000005 /* Frameworks */,
+				CA5CADE40000000000000006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				CA5CADE40000000000000002 /* PluginHost */,
+			);
+			name = PluginHost;
+			packageProductDependencies = (
+				CA5CADE4000000000000000A /* CascadePluginHost */,
+			);
+			productName = PluginHost;
+			productReference = CA5CADE40000000000000001 /* PluginHost.xpc */;
+			productType = "com.apple.product-type.xpc-service";
+		};
 		040312662FE4355A00BA9823 /* Cascade */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 040312882FE4355A00BA9823 /* Build configuration list for PBXNativeTarget "Cascade" */;
@@ -165,10 +228,12 @@
 				040312652FE4355A00BA9823 /* Resources */,
 				CA5CADE20000000000000021 /* Copy FFmpeg Notices */,
 				CA5CADE20000000000000022 /* Embed FFmpeg Helpers */,
+				CA5CADE4000000000000000E /* Embed XPC Services */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				CA5CADE4000000000000000D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				040312692FE4355A00BA9823 /* Cascade */,
@@ -200,6 +265,8 @@
 			);
 			name = CascadeTests;
 			packageProductDependencies = (
+				CA5CADE40000000000000010 /* CascadePluginEngine */,
+				CA5CADE40000000000000011 /* CascadePluginHost */,
 			);
 			productName = CascadeTests;
 			productReference = 040312742FE4355A00BA9823 /* CascadeTests.xctest */;
@@ -238,6 +305,9 @@
 				LastSwiftUpdateCheck = 2630;
 				LastUpgradeCheck = 2700;
 				TargetAttributes = {
+					CA5CADE40000000000000003 = {
+						CreatedOnToolsVersion = 26.3;
+					};
 					040312662FE4355A00BA9823 = {
 						CreatedOnToolsVersion = 26.3;
 					};
@@ -272,11 +342,19 @@
 				040312662FE4355A00BA9823 /* Cascade */,
 				040312732FE4355A00BA9823 /* CascadeTests */,
 				0403127D2FE4355A00BA9823 /* CascadeUITests */,
+				CA5CADE40000000000000003 /* PluginHost */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		CA5CADE40000000000000006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		040312652FE4355A00BA9823 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -330,6 +408,13 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		CA5CADE40000000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		040312632FE4355A00BA9823 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -354,6 +439,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		CA5CADE4000000000000000D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CA5CADE40000000000000003 /* PluginHost */;
+			targetProxy = CA5CADE4000000000000000C /* PBXContainerItemProxy */;
+		};
 		040312762FE4355A00BA9823 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 040312662FE4355A00BA9823 /* Cascade */;
@@ -367,6 +457,44 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		CA5CADE40000000000000008 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/PluginHost-Info.plist";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = hylo.Cascade.PluginHost;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		CA5CADE40000000000000009 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/PluginHost-Info.plist";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = hylo.Cascade.PluginHost;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
 		040312862FE4355A00BA9823 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = CA5CADE30000000000000001 /* Config/Signing.xcconfig */;
@@ -644,6 +772,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		CA5CADE40000000000000007 /* Build configuration list for PBXNativeTarget "PluginHost" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CA5CADE40000000000000008 /* Debug */,
+				CA5CADE40000000000000009 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		040312622FE4355A00BA9823 /* Build configuration list for PBXProject "Cascade" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -690,6 +827,18 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		CA5CADE4000000000000000A /* CascadePluginHost */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CascadePluginHost;
+		};
+		CA5CADE40000000000000010 /* CascadePluginEngine */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CascadePluginEngine;
+		};
+		CA5CADE40000000000000011 /* CascadePluginHost */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CascadePluginHost;
+		};
 		CA5CADE10CA10CA10CA1A002 /* CascadeKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = CascadeKit;
