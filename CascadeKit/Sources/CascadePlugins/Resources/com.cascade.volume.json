@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 2,
+  "id": "com.cascade.volume",
+  "version": "1.0.0",
+  "compatibility": { "macOS": "15.0", "cascadeProtocol": { "major": 2, "minimumMinor": 0 } },
+  "execution": { "entryPoint": "VolumePlugin" },
+  "features": [
+    {
+      "id": "volume",
+      "surfaces": { "notice": {} },
+      "sources": ["volume"],
+      "components": [{ "id": "volume.level", "version": 1 }],
+      "actions": ["preview"]
+    }
+  ],
+  "resources": { "profile": "eventDriven" }
+}

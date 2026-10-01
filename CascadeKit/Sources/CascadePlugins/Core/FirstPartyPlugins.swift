@@ -15,6 +15,7 @@ public enum FirstPartyPlugins {
     public static let providers: [String: any PluginProvider] = [
         "ChargingPlugin": ChargingPlugin(),
         "ClockPlugin"   : ClockPlugin(),
+        "VolumePlugin"  : VolumePlugin(),
     ]
 
     /// manifests decodes every bundled manifest, in a stable order. One that fails validation
