@@ -49,9 +49,30 @@ final class WidgetHost {
     private var cachedViews  : [WidgetIdentifier: AnyView] = [:]
 
     private let resolver: NotchLayoutResolver
+    private let store   : (any WidgetArrangementStoring)?
 
-    init(metrics: NotchLayoutMetrics = .default) {
+    /// init(metrics:store:) takes the store edited arrangements persist to; without one, as in
+    /// tests, edits last for the session only.
+    init(
+        metrics: NotchLayoutMetrics = .default,
+        store  : (any WidgetArrangementStoring)? = nil
+    ) {
         self.resolver = NotchLayoutResolver(metrics: metrics)
+        self.store    = store
+    }
+
+    /// restoreArrangements reads the saved arrangements off the main thread and applies them
+    /// here. A display edited before they arrived keeps its newer edit.
+    func restoreArrangements() async {
+        guard let store else { return }
+
+        let saved = await store.load()
+        for (display, saved) in saved where editedArrangements[display] == nil {
+            editedArrangements[display] = saved
+        }
+
+        if let openState { update(state: openState, display: currentDisplay) }
+        onContentChanged?()
     }
 
     /// arrangement is the page the open display shows: its own once edited, the
@@ -230,10 +251,12 @@ final class WidgetHost {
         apply(edited)
     }
 
-    /// apply makes `edited` the open display's own arrangement, brings the
-    /// widgets' activation in line with it, and asks for a re-render.
+    /// apply makes `edited` the open display's own arrangement, saves every
+    /// edited arrangement, brings the widgets' activation in line with it, and
+    /// asks for a re-render.
     private func apply(_ edited: [WidgetIdentifier: WidgetPlacement]) {
         editedArrangements[currentDisplay] = edited
+        store?.save(editedArrangements)
         if let openState { update(state: openState, display: currentDisplay) }
         onContentChanged?()
     }
