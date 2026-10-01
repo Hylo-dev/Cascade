@@ -141,10 +141,7 @@ struct AddonRuntimeAssetTests {
 
         borrowed = nil
 
-        for _ in 0..<1000 {
-            if await fixture.governor.usage(.assetBytes) == 0 { break }
-            await Task.yield()
-        }
+        try await settle { await fixture.governor.usage(.assetBytes) == 0 }
 
         #expect(await fixture.governor.usage(.assetBytes) == 0)
 
@@ -205,10 +202,7 @@ struct AddonRuntimeAssetTests {
                 )
             }
 
-            for _ in 0..<1000 {
-                if await fixture.governor.usage(.assetBytes) == 0 { break }
-                await Task.yield()
-            }
+            try await settle { await fixture.governor.usage(.assetBytes) == 0 }
 
             #expect(await fixture.governor.usage(.assetBytes) == 0)
 
@@ -570,10 +564,7 @@ struct AddonRuntimeAssetTests {
         )
         #expect(await fixture.image(handle.assetID) == nil)
 
-        for _ in 0..<1000 {
-            if await fixture.governor.usage(.assetBytes) == 0 { break }
-            await Task.yield()
-        }
+        try await settle { await fixture.governor.usage(.assetBytes) == 0 }
 
         #expect(await fixture.governor.usage(.assetBytes) == 0)
 

@@ -552,6 +552,8 @@ struct MessageAddonAssetIntegrationTests {
         let released = try await fixture.exchange(release, sequence: 4)
 
         #expect(released.result == .acknowledged)
+
+        try await settle { await fixture.governor.usage(.retainedStateBytes) == beforeRetained }
         #expect(
             await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes == beforePool
         )
@@ -599,6 +601,12 @@ struct MessageAddonAssetIntegrationTests {
         #expect(failed.result == .failure)
 
         // The prepaid import quote was set before the protected decode; it must not survive it.
+        try await settle {
+            let retained = await fixture.governor.usage(.retainedStateBytes)
+            let memory   = await fixture.governor.usage(.admittedMemoryBytes)
+
+            return retained == beforeRetained && memory == beforeMemory
+        }
         #expect(
             await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes == beforePool
         )
@@ -650,6 +658,8 @@ struct MessageAddonAssetIntegrationTests {
         let releasedShared = try await fixture.exchange(releaseShared, sequence: 5)
 
         #expect(releasedShared.result == .acknowledged)
+
+        try await settle { await fixture.governor.usage(.retainedStateBytes) == afterImportRetained }
         #expect(
             await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes == afterImport
         )
@@ -1446,9 +1456,11 @@ struct MessageAddonAssetIntegrationTests {
             )
         )
 
-        for _ in 0..<1_000 {
-            if await fixture.governor.usage(.assetBytes) == beforeBytes { break }
-            await Task.yield()
+        try await settle {
+            let bytes    = await fixture.governor.usage(.assetBytes)
+            let retained = await fixture.governor.usage(.retainedStateBytes)
+
+            return bytes == beforeBytes && retained == beforeRetained
         }
 
         // The newly minted alias and its metadata quote are released; the independent pin stays.
@@ -1499,6 +1511,8 @@ struct MessageAddonAssetIntegrationTests {
                 .rejectedBeforeHandoff
             )
         )
+
+        try await settle { await fixture.governor.usage(.assetBytes) == beforeBytes }
         #expect(await fixture.governor.usage(.assetBytes) == beforeBytes)
         #expect(
             await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes == beforePool
@@ -1946,6 +1960,7 @@ struct MessageAddonAssetIntegrationTests {
 
         // No alias was committed, the exact assembler charge is refunded and the adapter staging
         // is drained on every outcome.
+        try await settle { await fixture.governor.usage(.assetBytes) == beforeBytes }
         #expect(await fixture.governor.usage(.assetBytes) == beforeBytes)
         #expect(await fixture.governor.usage(.assetBytes) == 0)
         #expect(await fixture.governor.usage(.admittedMemoryBytes) < beforeMemory)
@@ -2070,12 +2085,7 @@ struct MessageAddonAssetIntegrationTests {
         #expect(await fixture.governor.usage(.assetBytes) == chargedBytes)
 
         borrowed = nil
-        // A time deadline, not a yield count: under the full parallel run a
-        // thousand yields can elapse before the release reaches the governor.
-        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
-        while await fixture.governor.usage(.assetBytes) != 0, ContinuousClock.now < deadline {
-            try await Task.sleep(for: .milliseconds(1))
-        }
+        try await settle { await fixture.governor.usage(.assetBytes) == 0 }
 
         #expect(await fixture.governor.usage(.assetBytes) == 0)
 
@@ -2282,10 +2292,7 @@ struct MessageAddonAssetIntegrationTests {
         let beforePool = try #require(await fixture.runtime.diagnostics(owner: fixture.owner)).reservedStateBytes
         await fixture.channel.close()
         // Raster disposal refunds asynchronously after the last actual reference is dropped.
-        for _ in 0..<1_000 {
-            if await fixture.governor.usage(.assetBytes) == 0 { break }
-            await Task.yield()
-        }
+        try await settle { await fixture.governor.usage(.assetBytes) == 0 }
 
         #expect(await fixture.governor.usage(.assetBytes) == 0)
         #expect(await fixture.runtime.diagnostics(owner: fixture.owner)?.reservedStateBytes ?? Int.max < beforePool)
@@ -2360,10 +2367,7 @@ struct MessageAddonAssetIntegrationTests {
         )
 
         await channel.close()
-        for _ in 0..<1_000 {
-            if await fixture.governor.usage(.assetBytes) == 0 { break }
-            await Task.yield()
-        }
+        try await settle { await fixture.governor.usage(.assetBytes) == 0 }
 
         #expect(await fixture.governor.usage(.assetBytes) == 0)
 

@@ -1734,6 +1734,8 @@ func withInvocationHost(
         await host.cleanup()
     }
     // Keyed backend retains its 16 KiB canonical control allocation across logical close.
+    try await settle { await governor.usage(.admittedMemoryBytes, owner: owner) == 16_384 }
+
     let remainingMemory = await governor.usage(.admittedMemoryBytes, owner: owner)
     #expect(remainingMemory == 16_384, "Remaining memory: \(remainingMemory)")
 }

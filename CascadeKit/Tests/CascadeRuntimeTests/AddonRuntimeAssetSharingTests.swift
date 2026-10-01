@@ -89,10 +89,7 @@ struct AddonRuntimeAssetSharingTests {
 
         sourceImage = nil
         sharedImage = nil
-        for _ in 0..<1000 {
-            if await fixture.governor.usage(.assetBytes) == 0 { break }
-            await Task.yield()
-        }
+        try await settle { await fixture.governor.usage(.assetBytes) == 0 }
 
         #expect(await fixture.governor.usage(.assetBytes) == 0)
     }
@@ -194,10 +191,7 @@ struct AddonRuntimeAssetSharingTests {
 
         await fixture.runtime.stop()
         await fixture.runtime.observeExit(fixture.connection.incarnation)
-        for _ in 0..<1000 {
-            if await fixture.governor.usage(.assetBytes) == 0 { break }
-            await Task.yield()
-        }
+        try await settle { await fixture.governor.usage(.assetBytes) == 0 }
 
         #expect(await fixture.governor.usage(.assetBytes) == 0)
     }
