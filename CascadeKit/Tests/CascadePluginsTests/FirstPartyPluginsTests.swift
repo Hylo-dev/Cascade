@@ -5,6 +5,7 @@
 
 import CascadeContracts
 import CascadePluginSDK
+import Foundation
 import Testing
 
 @testable import CascadePlugins
@@ -12,8 +13,20 @@ import Testing
 @Suite
 struct FirstPartyPluginsTests {
 
+    /// everyBundledManifestValidates decodes each bundled JSON with the validation the loader
+    /// uses, so a broken manifest fails here instead of being left out at run time.
     @Test
-    func everyManifestValidatesAndHasAProvider() {
+    func everyBundledManifestValidates() throws {
+        let files = try #require(Bundle.module.urls(forResourcesWithExtension: "json", subdirectory: nil))
+
+        for file in files {
+            _ = try PluginManifest.decode(Data(contentsOf: file))
+        }
+        #expect(FirstPartyPlugins.manifests().count == files.count)
+    }
+
+    @Test
+    func everyManifestHasAProvider() {
         let manifests = FirstPartyPlugins.manifests()
 
         #expect(manifests.map(\.id.rawValue) == ["com.cascade.clock"])
