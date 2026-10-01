@@ -47,6 +47,10 @@ let package = Package(
             targets: ["CascadePluginHost"]
         ),
         .library(
+            name   : "CascadePlugins",
+            targets: ["CascadePlugins"]
+        ),
+        .library(
             name   : "CascadePluginEngine",
             targets: ["CascadePluginEngine"]
         ),
@@ -103,6 +107,17 @@ let package = Package(
         .target(
             name: "CascadePluginSDK",
             dependencies: ["CascadeContracts"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .target(
+            name: "CascadePlugins",
+            dependencies: ["CascadeContracts", "CascadePluginSDK"],
+            resources: [.process("Resources")],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .testTarget(
+            name: "CascadePluginsTests",
+            dependencies: ["CascadePlugins", "CascadePluginSDK", "CascadeContracts"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .target(
