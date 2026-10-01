@@ -35,6 +35,11 @@ struct PluginNodeContent: View {
                     children
                 }
 
+            case .regions:
+                ZStack {
+                    children
+                }
+
             case .spacer(let minLength):
                 Spacer(minLength: minLength.map { CGFloat($0) })
 

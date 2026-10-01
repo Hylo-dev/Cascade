@@ -58,6 +58,10 @@ extension PluginDocument {
             "A \(node.kind.name) node takes no children"
         )
         try ContractValidation.require(
+            node.kind != .regions || depth == 1 && node.children.count == 3,
+            "Regions are a document's root, with three regions"
+        )
+        try ContractValidation.require(
             node.modifiers.count <= maximumModifiers,
             "A node takes at most \(maximumModifiers) modifiers"
         )
@@ -86,7 +90,7 @@ extension PluginDocument {
             case .vStack(_, let spacing), .hStack(_, let spacing):
                 try length(spacing)
 
-            case .zStack, .clock:
+            case .zStack, .clock, .regions:
                 break
 
             case .spacer(let minimumLength):

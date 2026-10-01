@@ -9,7 +9,9 @@ import Foundation
 /// exists because Clock, a notice or Music needs it; a node with no consumer is left out.
 /// Time is drawn by the kernel: `clock` is the current time, and `date`, `timer` and
 /// `timerProgress` show the dates they are given, so none of them costs the plugin anything
-/// while it ticks, which is how the clock stops waking anything once a second.
+/// while it ticks, which is how the clock stops waking anything once a second. A `regions` node
+/// is the root of a notice's document, holding its compact leading, compact trailing and minimal
+/// regions in that order.
 public enum PluginNodeKind: Codable, Hashable, Sendable {
 
     case vStack(alignment: PluginHorizontalAlignment, spacing: Double?)
@@ -29,6 +31,7 @@ public enum PluginNodeKind: Codable, Hashable, Sendable {
     case toggle(isOn: Bool, action: String)
     case slider(value: Double, minimum: Double, maximum: Double, step: Double?, action: String)
     case component(id: String, version: Int, parameters: [String: PluginValue])
+    case regions
 
     /// name is the case's name. Structural identity includes it, so a node whose kind changes
     /// in the same slot becomes a new node, as a SwiftUI view of another type would.
@@ -51,13 +54,14 @@ public enum PluginNodeKind: Codable, Hashable, Sendable {
             case .toggle       : "toggle"
             case .slider       : "slider"
             case .component    : "component"
+            case .regions      : "regions"
         }
     }
 
     /// takesChildren separates containers and labelled controls from leaves.
     public var takesChildren: Bool {
         switch self {
-            case .vStack, .hStack, .zStack, .button, .toggle:
+            case .vStack, .hStack, .zStack, .button, .toggle, .regions:
                 true
 
             default:
