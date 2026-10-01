@@ -6,8 +6,6 @@
 import CascadeContracts
 import Foundation
 
-#if DEBUG
-
 /// BoundedAssetImageDecoder admits one operation before crossing an async worker boundary.
 /// One instance belongs to the runtime, alongside its shared raster coordinator. Busy calls
 /// fail immediately instead of retaining encoded Data in a per-image actor or dispatch queue.
@@ -94,5 +92,3 @@ final class BoundedAssetImageDecoder: AssetImageDecoding, @unchecked Sendable {
         AddonFailure(code: .resourceDenied, reason: reason)
     }
 }
-
-#endif
