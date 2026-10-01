@@ -24,5 +24,6 @@ public enum PluginCatalog {
         "media.scrubber"    : 1,
         "audio.outputPicker": 1,
         "power.battery"     : 1,
+        "volume.level"      : 1,
     ]
 }
