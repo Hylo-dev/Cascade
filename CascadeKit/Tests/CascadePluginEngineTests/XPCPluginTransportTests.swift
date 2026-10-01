@@ -13,8 +13,9 @@ import Testing
 @testable import CascadePluginEngine
 
 /// XPCPluginTransportTests run both ends of the real XPC code inside the test process, through
-/// an anonymous listener. The handshake then names this process, so these tests never call
-/// `kill`; killing a real PluginHost belongs to the integration check of the next plan.
+/// an anonymous listener. The handshake then names this process, which the incarnation refuses
+/// to signal, so a slow dispatch that trips the watchdog cannot kill the test runner; killing a
+/// real PluginHost belongs to the integration check of the next plan.
 @Suite
 struct XPCPluginTransportTests {
 

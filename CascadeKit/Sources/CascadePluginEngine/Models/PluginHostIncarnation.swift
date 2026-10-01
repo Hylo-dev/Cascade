@@ -46,10 +46,17 @@ public struct PluginHostIncarnation: Equatable, Sendable {
             && Self.path(of: pid) == path
     }
 
-    /// kill sends SIGKILL to this incarnation and returns true, or refuses when the PID is gone
-    /// or now names another process.
+    /// isKillable is true for a live incarnation that is not this process. A host reached through
+    /// an anonymous listener, as in tests, names this very process at handshake, and nothing may
+    /// signal that.
+    var isKillable: Bool {
+        pid != getpid() && isLive
+    }
+
+    /// kill sends SIGKILL to this incarnation and returns true, or refuses when the PID is gone,
+    /// now names another process, or is this one.
     func kill() -> Bool {
-        isLive && Darwin.kill(pid, SIGKILL) == 0
+        isKillable && Darwin.kill(pid, SIGKILL) == 0
     }
 
     private static func start(of pid: pid_t) -> (seconds: UInt64, microseconds: UInt64)? {

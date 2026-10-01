@@ -67,6 +67,14 @@ struct PluginHostIncarnationTests {
     }
 
     @Test
+    func neverKillsThisProcess() throws {
+        let own = try #require(PluginHostIncarnation(pid: getpid()))
+
+        #expect(own.isLive)
+        #expect(!own.isKillable)
+    }
+
+    @Test
     func refusesAProcessThatIsGone() throws {
         let process     = try sleeper()
         let incarnation = try #require(PluginHostIncarnation(pid: process.processIdentifier))
