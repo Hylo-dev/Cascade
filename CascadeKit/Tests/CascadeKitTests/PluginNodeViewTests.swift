@@ -44,6 +44,7 @@ struct PluginNodeViewTests {
                         ]
                     ),
                     PluginNode(.date(now, style: .time), modifiers: [.font(PluginFont(size: 18, design: .rounded, monospacedDigit: true))]),
+                    PluginNode(.clock, modifiers: [.font(PluginFont(size: 18, weight: .semibold, design: .rounded, monospacedDigit: true))]),
                     PluginNode(.timer(start: now, end: now.addingTimeInterval(60), countsDown: true), modifiers: [.contentTransition(.numericText(countsDown: true))]),
                     PluginNode(.timerProgress(start: now, end: now.addingTimeInterval(60))),
                     PluginNode(.progress(value: 0.4, total: 1, style: .linear), modifiers: [.opacity(0.8)]),

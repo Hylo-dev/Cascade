@@ -8,7 +8,8 @@ import SwiftUI
 
 /// PluginNodeContent draws a node without its modifiers: a `switch` over the tier-1 vocabulary,
 /// with children drawn as `PluginNodeView`s. Time is drawn by SwiftUI itself, so a timer or a
-/// relative date costs the plugin nothing. Controls read their optimistic value first and hand
+/// relative date costs the plugin nothing, and a clock redraws itself at every minute boundary,
+/// only while it is on screen. Controls read their optimistic value first and hand
 /// every change to the store; a toggle with two children shows the first while off and the
 /// second while on. A tier-2 component and an asset reserve their frame and draw
 /// nothing until the component and the asset pipeline exist.
@@ -54,6 +55,11 @@ struct PluginNodeContent: View {
 
             case .date(let date, let style):
                 Text(date, style: style.swiftUI)
+
+            case .clock:
+                TimelineView(.everyMinute) { context in
+                    Text(context.date, format: .dateTime.hour().minute())
+                }
 
             case .timer(let start, let end, let countsDown):
                 Text(timerInterval: start...end, countsDown: countsDown)

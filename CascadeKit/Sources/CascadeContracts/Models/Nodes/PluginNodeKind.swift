@@ -7,8 +7,9 @@ import Foundation
 
 /// PluginNodeKind is the tier-1 vocabulary of v1 plus the tier-2 component node. Every case
 /// exists because Clock, a notice or Music needs it; a node with no consumer is left out.
-/// Time is drawn by the kernel: `date`, `timer` and `timerProgress` cost the plugin nothing
-/// while they tick, which is how the clock stops waking anything once a second.
+/// Time is drawn by the kernel: `clock` is the current time, and `date`, `timer` and
+/// `timerProgress` show the dates they are given, so none of them costs the plugin anything
+/// while it ticks, which is how the clock stops waking anything once a second.
 public enum PluginNodeKind: Codable, Hashable, Sendable {
 
     case vStack(alignment: PluginHorizontalAlignment, spacing: Double?)
@@ -20,6 +21,7 @@ public enum PluginNodeKind: Codable, Hashable, Sendable {
     case asset(id: String)
     case shape(PluginShape)
     case date(Date, style: PluginDateStyle)
+    case clock
     case timer(start: Date, end: Date, countsDown: Bool)
     case timerProgress(start: Date, end: Date)
     case progress(value: Double, total: Double, style: PluginProgressStyle)
@@ -41,6 +43,7 @@ public enum PluginNodeKind: Codable, Hashable, Sendable {
             case .asset        : "asset"
             case .shape        : "shape"
             case .date         : "date"
+            case .clock        : "clock"
             case .timer        : "timer"
             case .timerProgress: "timerProgress"
             case .progress     : "progress"

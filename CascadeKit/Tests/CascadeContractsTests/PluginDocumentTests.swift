@@ -216,4 +216,14 @@ struct PluginDocumentTests {
         #expect(throws: Never.self) { try PluginDocument(root: sixteen) }
         #expect(throws: AddonFailure.self) { try PluginDocument(root: seventeen) }
     }
+
+    @Test
+    func aClockNodeRoundTripsAndValidates() throws {
+        let document = try PluginDocument(root: PluginNode(.clock))
+        let decoded  = try PluginDocument.decode(JSONEncoder().encode(document))
+
+        #expect(decoded == document)
+        #expect(decoded.root.kind.name == "clock")
+        #expect(!decoded.root.kind.takesChildren)
+    }
 }
