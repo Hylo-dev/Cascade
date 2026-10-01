@@ -165,5 +165,7 @@ struct PluginNodeViewTests {
         #expect(try opaquePixels("audio.spectrum") == 0)
         #expect(try opaquePixels("volume.level", ["level": .number(50)]) > 0)
         #expect(try opaquePixels("volume.level", ["level": .number(50)]) < (try opaquePixels("volume.level", ["level": .number(100)])))
+        #expect(try opaquePixels("power.battery", ["percentage": .number(1e300)]) > 0)
+        #expect(try opaquePixels("volume.level", ["level": .number(-1e300)]) == 0)
     }
 }

@@ -34,4 +34,11 @@ struct PluginVolumeStateTests {
         #expect(PluginVolumeState(percentage: 140, isMuted: false, announcement: 1).percentage == 100)
         #expect(PluginCatalog.components["volume.level"] == 1)
     }
+
+    @Test
+    func anOutOfRangeLevelIsClampedNotATrap() throws {
+        let huge = try PluginSourceEvent(source: "volume", fields: ["percentage": .number(-1e300), "isMuted": .bool(false), "announcement": .number(1)])
+
+        #expect(PluginVolumeState(huge)?.percentage == 0)
+    }
 }

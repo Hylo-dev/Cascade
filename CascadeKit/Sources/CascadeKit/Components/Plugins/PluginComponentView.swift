@@ -22,15 +22,22 @@ struct PluginComponentView: View {
         switch (id, version) {
             case ("power.battery", 1):
                 PluginBatteryComponent(
-                    percentage    : parameters["percentage"]?.number.map { Int($0.rounded()) },
+                    percentage    : parameters["percentage"]?.number.map(Self.percent),
                     isLowPowerMode: parameters["isLowPowerMode"]?.bool ?? false
                 )
 
             case ("volume.level", 1):
-                PluginVolumeLevelComponent(level: parameters["level"]?.number.map { Int($0.rounded()) } ?? 0)
+                PluginVolumeLevelComponent(level: parameters["level"]?.number.map(Self.percent) ?? 0)
 
             default:
                 Color.clear
         }
+    }
+
+    /// percent turns a parameter into a percentage. Validation only promises a finite number, so
+    /// it is clamped before it becomes an Int, which would trap past Int's range and take the
+    /// notch down with it.
+    private static func percent(_ value: Double) -> Int {
+        Int(min(100, max(0, value)).rounded())
     }
 }

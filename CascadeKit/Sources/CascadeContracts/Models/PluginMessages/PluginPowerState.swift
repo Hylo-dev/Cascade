@@ -38,9 +38,11 @@ public struct PluginPowerState: Equatable, Sendable {
               case .bool(let isLowPowerMode)?  = event.fields["isLowPowerMode"]
         else { return nil }
 
+        // A number is only known to be finite here, so it is clamped before it becomes an Int,
+        // which would trap past Int's range.
         var percentage: Int?
         if case .number(let value)? = event.fields["percentage"] {
-            percentage = Int(value.rounded())
+            percentage = Int(min(100, max(0, value)).rounded())
         }
 
         self.init(

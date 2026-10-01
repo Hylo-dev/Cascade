@@ -34,9 +34,11 @@ public struct PluginVolumeState: Equatable, Sendable {
               announcement >= 0, announcement < 9_007_199_254_740_992
         else { return nil }
 
+        // A number is only known to be finite here, so it is clamped before it becomes an Int,
+        // which would trap past Int's range.
         var percentage: Int?
         if case .number(let value)? = event.fields["percentage"] {
-            percentage = Int(value.rounded())
+            percentage = Int(min(100, max(0, value)).rounded())
         }
 
         self.init(percentage: percentage, isMuted: isMuted, announcement: UInt64(announcement))

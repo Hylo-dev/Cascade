@@ -39,4 +39,11 @@ struct PluginPowerStateTests {
     func theBatteryIsACatalogComponent() {
         #expect(PluginCatalog.components["power.battery"] == 1)
     }
+
+    @Test
+    func anOutOfRangeChargeIsClampedNotATrap() throws {
+        let huge = try PluginSourceEvent(source: "power", fields: ["percentage": .number(1e300), "isExternalPower": .bool(true), "isCharging": .bool(true), "isLowPowerMode": .bool(false)])
+
+        #expect(PluginPowerState(huge)?.percentage == 100)
+    }
 }
