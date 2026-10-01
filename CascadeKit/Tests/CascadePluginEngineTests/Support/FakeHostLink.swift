@@ -18,20 +18,25 @@ final class FakeHostLink: PluginHostLink {
         var starts  : [PluginID] = []
         var handled : [(event: PluginEvent, plugin: PluginID, reply: @Sendable (PluginExecutionResult?) -> Void)] = []
         var killed  = false
+        var sourceStarts: [String] = []
+        var sourceStops : [String] = []
     }
 
     private let state       = Mutex(State())
-    private let onLoss      : @Sendable () -> Void
-    private let losesOnStart: Bool
+    private let onLoss       : @Sendable () -> Void
+    private let onSourceEvent: @Sendable (PluginSourceEvent) -> Void
+    private let losesOnStart : Bool
 
     /// init makes a link; one that `losesOnStart` dies the moment it is asked to load a plugin,
     /// on the caller's thread, as a host may crash while the handshake is still being finished.
     init(
-        losesOnStart: Bool,
-        onLoss      : @escaping @Sendable () -> Void
+        losesOnStart : Bool,
+        onLoss       : @escaping @Sendable () -> Void,
+        onSourceEvent: @escaping @Sendable (PluginSourceEvent) -> Void
     ) {
-        self.losesOnStart = losesOnStart
-        self.onLoss       = onLoss
+        self.losesOnStart  = losesOnStart
+        self.onLoss        = onLoss
+        self.onSourceEvent = onSourceEvent
     }
 
     var starts: [PluginID] {
@@ -44,6 +49,14 @@ final class FakeHostLink: PluginHostLink {
 
     var wasKilled: Bool {
         state.withLock { $0.killed }
+    }
+
+    var sourceStarts: [String] {
+        state.withLock { $0.sourceStarts }
+    }
+
+    var sourceStops: [String] {
+        state.withLock { $0.sourceStops }
     }
 
     func hello(_ reply: @escaping @Sendable (PluginHostIncarnation?) -> Void) {
@@ -73,6 +86,19 @@ final class FakeHostLink: PluginHostLink {
     }
 
     func invalidate() {}
+
+    func startSource(_ name: String) {
+        state.withLock { $0.sourceStarts.append(name) }
+    }
+
+    func stopSource(_ name: String) {
+        state.withLock { $0.sourceStops.append(name) }
+    }
+
+    /// emit sends a source state from this host, as PluginHost's client proxy would.
+    func emit(_ event: PluginSourceEvent) {
+        onSourceEvent(event)
+    }
 
     /// greet completes the handshake with a made-up incarnation.
     func greet() {

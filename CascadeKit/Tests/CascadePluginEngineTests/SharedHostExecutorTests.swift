@@ -226,4 +226,48 @@ struct SharedHostExecutorTests {
 
         #expect(rig.results.values == [.failed])
     }
+
+    @Test
+    func aHostedSourceStartsInEveryHostAndOnlyTheLiveHostIsHeard() throws {
+        let rig      = rig()
+        let received = Recorder<PluginSourceEvent>()
+        let charging = try PluginEngineFixtures.power(charging: true)
+        rig.executor.start(clock, entryPoint: "ClockPlugin")
+        rig.executor.startSource("power") { received.record($0) }
+        let first = try #require(rig.transport.links.first)
+
+        #expect(first.sourceStarts.isEmpty)
+
+        first.greet()
+        first.emit(charging)
+
+        #expect(first.sourceStarts == ["power"])
+        #expect(received.values == [charging])
+
+        first.die()
+        rig.time.set(10)
+        rig.time.runDelayed()
+        let second = try #require(rig.transport.links.last)
+        second.greet()
+        first.emit(try PluginEngineFixtures.power(charging: false))
+
+        #expect(second.sourceStarts == ["power"])
+        #expect(received.values == [charging])
+    }
+
+    @Test
+    func aStoppedSourceStopsInTheHostAndIsNoLongerHeard() throws {
+        let rig      = rig()
+        let received = Recorder<PluginSourceEvent>()
+        rig.executor.start(clock, entryPoint: "ClockPlugin")
+        rig.executor.startSource("power") { received.record($0) }
+        let link = try #require(rig.transport.links.first)
+        link.greet()
+
+        rig.executor.stopSource("power")
+        link.emit(try PluginEngineFixtures.power(charging: true))
+
+        #expect(link.sourceStops == ["power"])
+        #expect(received.values.isEmpty)
+    }
 }

@@ -3,6 +3,7 @@
 //  CascadeKit
 //
 
+import CascadeContracts
 import Synchronization
 
 @testable import CascadePluginEngine
@@ -21,8 +22,11 @@ final class FakeHostTransport: PluginTransport {
         made.withLock { $0 }
     }
 
-    func connect(onLoss: @escaping @Sendable () -> Void) -> any PluginHostLink {
-        let link = FakeHostLink(losesOnStart: losesOnStart, onLoss: onLoss)
+    func connect(
+        onLoss       : @escaping @Sendable () -> Void,
+        onSourceEvent: @escaping @Sendable (PluginSourceEvent) -> Void
+    ) -> any PluginHostLink {
+        let link = FakeHostLink(losesOnStart: losesOnStart, onLoss: onLoss, onSourceEvent: onSourceEvent)
         made.withLock { $0.append(link) }
         return link
     }

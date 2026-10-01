@@ -3,6 +3,7 @@
 //  CascadeKit
 //
 
+import CascadeContracts
 import Foundation
 
 /// XPCPluginTransport reaches PluginHost over XPC: by its service name inside Cascade's bundle,
@@ -26,7 +27,10 @@ public struct XPCPluginTransport: PluginTransport {
         requirement = nil
     }
 
-    public func connect(onLoss: @escaping @Sendable () -> Void) -> any PluginHostLink {
-        XPCPluginHostLink(connection: open(), requirement: requirement, onLoss: onLoss)
+    public func connect(
+        onLoss       : @escaping @Sendable () -> Void,
+        onSourceEvent: @escaping @Sendable (PluginSourceEvent) -> Void
+    ) -> any PluginHostLink {
+        XPCPluginHostLink(connection: open(), requirement: requirement, onLoss: onLoss, onSourceEvent: onSourceEvent)
     }
 }

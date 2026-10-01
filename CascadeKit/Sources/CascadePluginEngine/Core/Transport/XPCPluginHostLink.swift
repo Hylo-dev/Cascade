@@ -24,14 +24,17 @@ final class XPCPluginHostLink: PluginHostLink {
     private let isLost      = Mutex(false)
 
     init(
-        connection : NSXPCConnection,
-        requirement: String?,
-        onLoss     : @escaping @Sendable () -> Void
+        connection   : NSXPCConnection,
+        requirement  : String?,
+        onLoss       : @escaping @Sendable () -> Void,
+        onSourceEvent: @escaping @Sendable (PluginSourceEvent) -> Void
     ) {
         self.connection = connection
         self.onLoss     = onLoss
 
         connection.remoteObjectInterface = NSXPCInterface(with: PluginHostProtocol.self)
+        connection.exportedInterface     = NSXPCInterface(with: PluginHostClientProtocol.self)
+        connection.exportedObject        = PluginHostClient(onSourceEvent: onSourceEvent)
         if let requirement {
             connection.setCodeSigningRequirement(requirement)
         }
@@ -73,6 +76,14 @@ final class XPCPluginHostLink: PluginHostLink {
             let decoded = output.flatMap { try? JSONDecoder().decode(PluginOutput.self, from: $0) }
             reply(PluginExecutionResult(output: decoded, cpuTime: .nanoseconds(Int64(clamping: nanoseconds))))
         }
+    }
+
+    func startSource(_ name: String) {
+        proxy {}?.startSource(name: name)
+    }
+
+    func stopSource(_ name: String) {
+        proxy {}?.stopSource(name: name)
     }
 
     func kill() {

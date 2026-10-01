@@ -20,6 +20,9 @@ import Synchronization
 /// so it is the loss itself, whatever order XPC reports the two in. The supervisor decides when
 /// to connect again.
 ///
+/// It also runs the hosted catalog sources the kernel leases: each one is started in every host
+/// after its handshake, and only the live host's states reach the kernel.
+///
 /// Every call out, to the link, the engine or a completion, is decided under the lock and queued
 /// in the outbox there, then run in that order once the lock is released. A host lost on another
 /// thread while a handshake is being finished therefore reaches the engine after that handshake's
@@ -53,6 +56,7 @@ public final class SharedHostExecutor: PluginExecutor {
         var supervisor  = PluginHostSupervisor()
         var outbox      : [@Sendable () -> Void] = []
         var isDraining  = false
+        var sources     : [String: @Sendable (PluginSourceEvent) -> Void] = [:]
     }
 
     private let state    = Mutex(State())
@@ -142,6 +146,47 @@ public final class SharedHostExecutor: PluginExecutor {
         drain()
     }
 
+    /// startSource runs a catalog source in PluginHost, `emit` receiving its states. It runs in
+    /// every host from now on, until `stopSource`.
+    public func startSource(
+        _ name: String,
+        emit  : @escaping @Sendable (PluginSourceEvent) -> Void
+    ) {
+        state.withLock { state in
+            state.sources[name] = emit
+            if state.phase == .ready, let link = state.link {
+                state.outbox.append { link.startSource(name) }
+            }
+        }
+        drain()
+        connectIfNeeded()
+    }
+
+    public func stopSource(_ name: String) {
+        state.withLock { state in
+            guard state.sources.removeValue(forKey: name) != nil else { return }
+
+            if state.phase == .ready, let link = state.link {
+                state.outbox.append { link.stopSource(name) }
+            }
+        }
+        drain()
+    }
+
+    /// relay hands a source state to its emitter, if it comes from the live host and the source
+    /// still runs.
+    private func relay(
+        _ event        : PluginSourceEvent,
+        from generation: UInt64
+    ) {
+        state.withLock { state in
+            guard state.generation == generation, state.phase == .ready, let emit = state.sources[event.source] else { return }
+
+            state.outbox.append { emit(event) }
+        }
+        drain()
+    }
+
     /// finish completes one dispatch with the host's answer. No answer means the connection broke
     /// before the host replied, which is the loss of that host.
     private func finish(
@@ -172,9 +217,10 @@ public final class SharedHostExecutor: PluginExecutor {
         }
         guard let generation else { return }
 
-        let link = transport.connect { [weak self] in
-            self?.lose(generation)
-        }
+        let link = transport.connect(
+            onLoss       : { [weak self] in self?.lose(generation) },
+            onSourceEvent: { [weak self] event in self?.relay(event, from: generation) }
+        )
         state.withLock { state in
             if state.generation == generation, state.phase == .connecting {
                 state.link = link
@@ -202,6 +248,9 @@ public final class SharedHostExecutor: PluginExecutor {
             state.supervisor.launched(at: now)
             for (plugin, entryPoint) in state.plugins.sorted(by: { $0.key.rawValue < $1.key.rawValue }) {
                 state.outbox.append { link.start(plugin, entryPoint: entryPoint) }
+            }
+            for name in state.sources.keys.sorted() {
+                state.outbox.append { link.startSource(name) }
             }
             if let observer = state.observer {
                 state.outbox.append { observer(.available) }

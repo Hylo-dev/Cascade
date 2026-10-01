@@ -24,6 +24,12 @@ public protocol PluginHostLink: AnyObject, Sendable {
         reply     : @escaping @Sendable (PluginExecutionResult?) -> Void
     )
 
+    /// startSource runs a catalog source in this host; its states arrive through the transport's
+    /// `onSourceEvent`.
+    func startSource(_ name: String)
+
+    func stopSource(_ name: String)
+
     /// kill sends SIGKILL to the incarnation of the handshake, and only to it.
     func kill()
 
