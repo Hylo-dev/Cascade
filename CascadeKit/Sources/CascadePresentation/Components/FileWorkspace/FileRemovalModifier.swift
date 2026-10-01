@@ -8,6 +8,7 @@ import AppKit
 import SwiftUI
 
 struct FileRemovalModifier: AnimatableModifier {
+
     nonisolated var progress: CGFloat
     let reduceMotion: Bool
 

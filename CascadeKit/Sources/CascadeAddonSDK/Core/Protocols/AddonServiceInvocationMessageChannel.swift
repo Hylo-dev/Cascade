@@ -13,9 +13,15 @@ import Foundation
 /// bytes, and settles suppression as well as success. Cancellation must not abandon physical
 /// work. No native conformer or full public AddonServiceClient is provided here.
 internal protocol AddonServiceInvocationMessageChannel: Sendable {
+
     var generation: ConnectionGeneration { get }
-    var profile: ServiceInvocationFrameProfile? { get }
-    func exchange(_ frame: Data, sequence: UInt64) async throws -> AddonServiceInvocationMessageExchangeResult
+    var profile   : ServiceInvocationFrameProfile? { get }
+
+    func exchange(
+        _ frame : Data,
+        sequence: UInt64
+    ) async throws -> AddonServiceInvocationMessageExchangeResult
+
     /// Idempotent physical withdrawal/drain; does not release caller buffers or observe exit.
     func close() async
 }

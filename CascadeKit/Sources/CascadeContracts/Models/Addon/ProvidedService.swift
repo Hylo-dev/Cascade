@@ -7,18 +7,20 @@ import Foundation
 
 /// ProvidedService is a validated value in the version 1 addon protocol.
 public struct ProvidedService: Codable, Equatable, Sendable {
-    public let kind: Kind
-    public let id: String
+
+    public let kind   : Kind
+    public let id     : String
     public let version: String
 
     public init(
-        kind: Kind,
-        id: String,
+        kind   : Kind,
+        id     : String,
         version: String
     ) throws {
-        self.kind = kind
-        self.id = id
+        self.kind    = kind
+        self.id      = id
         self.version = version
+
         try validate()
     }
 
@@ -28,10 +30,12 @@ public struct ProvidedService: Codable, Equatable, Sendable {
             Set(fields.allKeys.map(\.stringValue)).isSubset(of: Set(CodingKeys.allCases.map(\.rawValue))),
             "Unknown wire field"
         )
+
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        kind = try container.decode(Kind.self, forKey: .kind)
-        id = try container.decode(String.self, forKey: .id)
-        version = try container.decode(String.self, forKey: .version)
+        kind          = try container.decode(Kind.self, forKey: .kind)
+        id            = try container.decode(String.self, forKey: .id)
+        version       = try container.decode(String.self, forKey: .version)
+
         try validate()
     }
 
@@ -41,8 +45,14 @@ public struct ProvidedService: Codable, Equatable, Sendable {
             "Invalid provided service"
         )
     }
-    public enum Kind: String, Codable, Sendable { case service }
+
+    public enum Kind: String, Codable, Sendable {
+
+        case service
+    }
+
     private enum CodingKeys: String, CodingKey, CaseIterable {
+
         case kind
         case id
         case version

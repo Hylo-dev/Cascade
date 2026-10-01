@@ -8,6 +8,7 @@ import Foundation
 
 /// FileWorkspaceClient sends bounded shelf commands through one explicit connection grant.
 public struct FileWorkspaceClient: Sendable {
+
     private static let contractID = "files.workspace"
     private static let featureID  = "workspace"
     private static let operation  = "command"
@@ -23,6 +24,7 @@ public struct FileWorkspaceClient: Sendable {
     ) throws {
         try grant.validate()
         try grant.scope.validate()
+
         self.services = services
         self.grant    = grant
         self.now      = now
@@ -32,11 +34,14 @@ public struct FileWorkspaceClient: Sendable {
     public func send(_ command: FileWorkspaceCommand) async throws -> FileWorkspaceSnapshot {
         guard grant.serviceID == Self.contractID,
               grant.scope.featureID == Self.featureID,
-              grant.scope.operation == Self.operation else {
+              grant.scope.operation == Self.operation
+        else {
             throw Self.failure(.permissionDenied)
         }
+
         try command.validate()
         let payload = try JSONEncoder().encode(command)
+
         let invocation: ServiceInvocation
         do {
             invocation = try ServiceInvocation(
@@ -50,13 +55,17 @@ public struct FileWorkspaceClient: Sendable {
         } catch {
             throw Self.failure(.invalidPayload)
         }
+
         let response = try await services.invoke(invocation, grant: grant)
+
         do {
             try response.validate()
             guard response.contractID == Self.contractID,
-                  response.operation == Self.operation else {
+                  response.operation == Self.operation
+            else {
                 throw Self.failure(.invalidPayload)
             }
+
             return try FileWorkspaceSnapshot.decode(response.payload)
         } catch let failure as AddonFailure {
             throw failure
@@ -66,6 +75,9 @@ public struct FileWorkspaceClient: Sendable {
     }
 
     private static func failure(_ code: AddonFailure.Code) -> AddonFailure {
-        AddonFailure(code: code, reason: "The file workspace service rejected this operation.")
+        AddonFailure(
+            code  : code,
+            reason: "The file workspace service rejected this operation."
+        )
     }
 }

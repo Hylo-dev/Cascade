@@ -7,6 +7,7 @@ import Foundation
 
 /// FileConversionFormat names one broker-supported output format without exposing a command line.
 public struct FileConversionFormat: Codable, Equatable, Sendable {
+
     public let id                  : String
     public let label               : String
     public let outputTypeIdentifier: String
@@ -19,6 +20,7 @@ public struct FileConversionFormat: Codable, Equatable, Sendable {
         self.id                   = id
         self.label                = label
         self.outputTypeIdentifier = outputTypeIdentifier
+
         try validate()
     }
 
@@ -28,6 +30,7 @@ public struct FileConversionFormat: Codable, Equatable, Sendable {
             Set(fields.allKeys.map(\.stringValue)) == Set(CodingKeys.allCases.map(\.rawValue)),
             "Invalid conversion format fields"
         )
+
         let values = try decoder.container(keyedBy: CodingKeys.self)
         try self.init(
             id                  : values.decode(String.self, forKey: .id),
@@ -37,15 +40,20 @@ public struct FileConversionFormat: Codable, Equatable, Sendable {
     }
 
     public func validate() throws {
-        try ContractValidation.require(ContractValidation.identifier(id), "Invalid conversion format ID")
         try ContractValidation.require(
-            !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && label.utf8.count <= 4_096,
+            ContractValidation.identifier(id),
+            "Invalid conversion format ID"
+        )
+        try ContractValidation.require(
+            !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && label.utf8.count <= 4_096,
             "Invalid conversion format label"
         )
         try FileWorkspaceWire.validateTypeIdentifier(outputTypeIdentifier)
     }
 
     private enum CodingKeys: String, CodingKey, CaseIterable {
+
         case id, label, outputTypeIdentifier
     }
 }

@@ -10,6 +10,7 @@ import Foundation
 /// explicit request-side rejection. Ordinary throws and rejected reply delivery
 /// imply unknown effects, even for operations named read.
 internal enum AddonServiceInvocationMessageExchangeResult: Sendable {
+
     case response(Data)
     case rejectedBeforeHandoff
 }

@@ -18,8 +18,13 @@ import SwiftUI
 /// more than this path. Static light keeps using `notchGlassLights`.
 @MainActor
 public protocol NotchGlassLightReceiving: NSView {
+
     /// The outline the lights are normalized to once the notch settles, in
     /// the receiver's coordinates; y runs down from its top edge.
     var glassLightBounds: CGRect { get }
-    func setGlassLights(_ lights: [GlassLight], from emitter: NSView)
+
+    func setGlassLights(
+        _ lights    : [GlassLight],
+        from emitter: NSView
+    )
 }

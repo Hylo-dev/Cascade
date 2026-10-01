@@ -10,6 +10,7 @@ import Foundation
 /// The host assigns privacy partitions and rechecks all handles. Sharing creates a
 /// fresh alias for the destination publication while reusing the admitted raster.
 public protocol AddonAssetClient: Sendable {
+
     /// importAsset accepts complete encoded PNG/JPEG data, never paths or provider URLs.
     /// The host profile caps input at 1 MiB and decoded images at 1,000,000 pixels.
     func importAsset(

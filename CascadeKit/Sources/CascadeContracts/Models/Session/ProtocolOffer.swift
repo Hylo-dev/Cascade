@@ -8,6 +8,7 @@ import Foundation
 /// ProtocolOffer describes capabilities, never identity or permission. Future
 /// versions may be offered alongside common versions without becoming supported.
 public struct ProtocolOffer: Codable, Equatable, Sendable {
+
     public let schemaVersion : Int
     public let major         : Int
     public let minimumMinor  : Int
@@ -26,6 +27,7 @@ public struct ProtocolOffer: Codable, Equatable, Sendable {
         self.minimumMinor   = minimumMinor
         self.maximumMinor   = maximumMinor
         self.contentSchemas = contentSchemas
+
         try validate()
     }
 
@@ -35,12 +37,14 @@ public struct ProtocolOffer: Codable, Equatable, Sendable {
             Set(fields.allKeys.map(\.stringValue)) == Set(CodingKeys.allCases.map(\.rawValue)),
             "Protocol offer requires exactly its defined fields"
         )
-        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        let container  = try decoder.container(keyedBy: CodingKeys.self)
         schemaVersion  = try container.decode(Int.self, forKey: .schemaVersion)
         major          = try container.decode(Int.self, forKey: .major)
         minimumMinor   = try container.decode(Int.self, forKey: .minimumMinor)
         maximumMinor   = try container.decode(Int.self, forKey: .maximumMinor)
         contentSchemas = try container.decode([Int].self, forKey: .contentSchemas)
+
         try validate()
     }
 
@@ -65,10 +69,12 @@ public struct ProtocolOffer: Codable, Equatable, Sendable {
     /// decode checks the raw byte bound before allocating a decoded JSON object.
     public static func decode(_ data: Data) throws -> Self {
         try ContractValidation.require(data.count <= 8_192, "Protocol offer exceeds 8 KiB")
+
         return try JSONDecoder().decode(Self.self, from: data)
     }
 
     private enum CodingKeys: String, CodingKey, CaseIterable {
+
         case schemaVersion, major, minimumMinor, maximumMinor, contentSchemas
     }
 }

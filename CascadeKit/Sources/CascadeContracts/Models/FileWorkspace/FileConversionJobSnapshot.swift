@@ -7,7 +7,9 @@ import Foundation
 
 /// FileConversionJobSnapshot reports a bounded job result without private paths or error text.
 public struct FileConversionJobSnapshot: Codable, Equatable, Sendable {
+
     public enum State: String, Codable, Equatable, Sendable {
+
         case queued, running, completed, failed, cancelled, interrupted
     }
 
@@ -26,6 +28,7 @@ public struct FileConversionJobSnapshot: Codable, Equatable, Sendable {
         self.state     = state
         self.progress  = progress
         self.resultIDs = resultIDs
+
         try validate()
     }
 
@@ -35,12 +38,14 @@ public struct FileConversionJobSnapshot: Codable, Equatable, Sendable {
             Set(fields.allKeys.map(\.stringValue)).isSubset(of: Set(CodingKeys.allCases.map(\.rawValue))),
             "Unknown conversion job field"
         )
-        let values = try decoder.container(keyedBy: CodingKeys.self)
+
+        let values  = try decoder.container(keyedBy: CodingKeys.self)
         let results = try BoundedContractArray.decode(
             UUID.self,
             from   : values.superDecoder(forKey: .resultIDs),
             maximum: 32
         )
+
         try self.init(
             id       : values.decode(UUID.self, forKey: .id),
             state    : values.decode(State.self, forKey: .state),
@@ -51,6 +56,7 @@ public struct FileConversionJobSnapshot: Codable, Equatable, Sendable {
 
     public func validate() throws {
         try FileWorkspaceWire.validateIDs(resultIDs, requiresNonempty: false)
+
         if let progress {
             try ContractValidation.require(
                 progress.isFinite && (0...1).contains(progress),
@@ -60,6 +66,7 @@ public struct FileConversionJobSnapshot: Codable, Equatable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey, CaseIterable {
+
         case id, state, progress, resultIDs
     }
 }

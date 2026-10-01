@@ -26,12 +26,15 @@ import Foundation
 ///   awaits `channel.close()` and never retries a possibly completed mutation;
 /// - cancellation alone is never treated as proof of physical rejection or disposal.
 public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendable {
+
     private let channel: any AddonAssetMessageChannel
-    private let lock = NSLock()
-    private var closed = false
-    private var poisoned = false
-    private var busy = false
+    private let lock    = NSLock()
+
+    private var closed       = false
+    private var poisoned     = false
+    private var busy         = false
     private var lastSequence: UInt64 = 0
+
     /// drainTask is the one shared physical channel drain. Every caller that requires disposal
     /// awaits this exact task instead of mistaking a closed/poisoned flag for completed cleanup.
     private var drainTask: Task<Void, Never>?
@@ -62,6 +65,7 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
         publicationID: PublicationID
     ) async throws -> AssetHandle {
         let generation = try acquire()
+
         do {
             let handle = try await performImport(
                 data,
@@ -81,6 +85,7 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
         to     : PublicationID
     ) async throws -> AssetHandle {
         let generation = try acquire()
+
         do {
             let handle = try await performShare(
                 asset,
@@ -97,11 +102,9 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
 
     public func releaseAsset(_ asset: AssetHandle) async throws {
         let generation = try acquire()
+
         do {
-            try await performRelease(
-                asset,
-                generation: generation
-            )
+            try await performRelease(asset, generation: generation)
             try await concludeSuccess()
         } catch {
             await conclude()
@@ -119,13 +122,16 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
         generation   : ConnectionGeneration
     ) async throws -> AssetHandle {
         let profile = try requireProfile()
+
         // Cancellation before begin sends nothing.
         try Task.checkCancellation()
         guard !data.isEmpty, data.count <= AssetTransferFrameCodec.maximumTotalBytes else {
             throw failure(.invalidPayload)
         }
+
         var transferID: UUID?
-        var finishing = false
+        var finishing  = false
+
         do {
             let begun = try await exchange(
                 try AssetTransferRequest(
@@ -140,16 +146,16 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
             guard begun.result == .begun, let id = begun.transferID else {
                 throw failure(.invalidPayload)
             }
+
             transferID = id
             var offset = 0
             while offset < data.count {
                 // Every between-exchange boundary aborts a still-live transfer on cancellation.
                 try Task.checkCancellation()
-                let count = min(
-                    AssetTransferFrameCodec.maximumChunkBytes,
-                    data.count - offset
-                )
+
+                let count = min(AssetTransferFrameCodec.maximumChunkBytes, data.count - offset)
                 let chunk = data.subdata(in: offset..<(offset + count))
+
                 let acknowledgement = try await exchange(
                     try AssetTransferRequest(
                         requestID : UUID(),
@@ -162,12 +168,15 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
                     generation: generation
                 )
                 guard acknowledgement.result == .acknowledged,
-                    acknowledgement.transferID == id,
-                    acknowledgement.nextOffset == offset + count else {
+                      acknowledgement.transferID == id,
+                      acknowledgement.nextOffset == offset + count
+                else {
                     throw failure(.invalidPayload)
                 }
+
                 offset = acknowledgement.nextOffset ?? (offset + count)
             }
+
             // After the final chunk and before finish, cancellation still aborts the known live
             // transfer instead of abandoning the host's receiving assembly.
             try Task.checkCancellation()
@@ -186,12 +195,15 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
             guard imported.result == .imported, let handle = imported.assetHandle else {
                 throw failure(.invalidPayload)
             }
+
             // The imported alias must match the original begin publication and owner.
             guard handle.owner == publicationID.addonID,
-                handle.publicationID == publicationID else {
+                  handle.publicationID == publicationID
+            else {
                 await poison()
                 throw failure(.invalidPayload)
             }
+
             return handle
         } catch {
             // A terminal stale/expired failure already revoked the transfer at the host, so a
@@ -204,6 +216,7 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
                     generation: generation
                 )
             }
+
             throw error
         }
     }
@@ -218,6 +231,7 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
         let profile = try requireProfile()
         try Task.checkCancellation()
         try asset.validate()
+
         let response = try await exchange(
             try AssetTransferRequest(
                 requestID    : UUID(),
@@ -235,6 +249,7 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
             await poison()
             throw failure(.invalidPayload)
         }
+
         return handle
     }
 
@@ -245,6 +260,7 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
         let profile = try requireProfile()
         try Task.checkCancellation()
         try asset.validate()
+
         let response = try await exchange(
             try AssetTransferRequest(
                 requestID   : UUID(),
@@ -254,6 +270,7 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
             profile   : profile,
             generation: generation
         )
+
         guard response.result == .acknowledged else { throw hostFailure(response) }
     }
 
@@ -264,6 +281,7 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
     /// concurrent callers all await the same actual drain rather than a revoked flag.
     public func close() async {
         lock.withLock { closed = true }
+
         await drain()
     }
 
@@ -275,6 +293,7 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
             if Task.isCancelled { throw CancellationError() }
             if closed || poisoned { throw failure(.sessionRevoked) }
             guard !busy else { throw failure(.resourceDenied) }
+
             busy = true
             return channel.generation
         }
@@ -284,6 +303,7 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
     /// completed, so no later caller can enter the slot while disposal is still in flight.
     private func conclude() async {
         if isRevoked { await drain() }
+
         lock.withLock { busy = false }
     }
 
@@ -296,9 +316,11 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
 #endif
         let completed = lock.withLock {
             guard !closed, !poisoned else { return false }
+
             busy = false
             return true
         }
+
         guard completed else {
             await drain()
             lock.withLock { busy = false }
@@ -308,17 +330,19 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
 
     private func requireProfile() throws -> AssetTransferFrameProfile {
         guard channel.profile == .v1 else { throw failure(.versionConflict) }
+
         return .v1
     }
 
-    private var isClosed: Bool { lock.withLock { closed } }
+    private var isClosed  : Bool { lock.withLock { closed } }
     private var isPoisoned: Bool { lock.withLock { poisoned } }
-    private var isRevoked: Bool { lock.withLock { closed || poisoned } }
+    private var isRevoked : Bool { lock.withLock { closed || poisoned } }
 
     /// nextSequence advances the checked counter; a failed attempt keeps its consumed value.
     private func nextSequence() throws -> UInt64 {
         try lock.withLock {
             guard lastSequence < UInt64.max else { throw failure(.resourceDenied) }
+
             lastSequence += 1
             return lastSequence
         }
@@ -337,36 +361,32 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
             await poison()
             throw failure(.sessionRevoked)
         }
+
         let sequence = try nextSequence()
-        let frame = try AssetTransferFrameCodec.encode(
-            request,
-            profile: profile
-        )
+        let frame    = try AssetTransferFrameCodec.encode(request, profile: profile)
+
         let reply: Data
         do {
-            reply = try await channel.exchange(
-                frame,
-                sequence: sequence
-            )
+            reply = try await channel.exchange(frame, sequence: sequence)
         } catch {
             await poison()
             throw failure(.outcomeUnknown)
         }
+
         if isClosed {
             await poison()
             throw failure(.sessionRevoked)
         }
+
         let response: AssetTransferResponse
         do {
-            response = try AssetTransferFrameCodec.decodeResponse(
-                reply,
-                profile: profile
-            )
+            response = try AssetTransferFrameCodec.decodeResponse(reply, profile: profile)
             try response.validate(matching: request)
         } catch {
             await poison()
             throw failure(.invalidPayload)
         }
+
         if response.result == .failure { throw hostFailure(response) }
         return response
     }
@@ -380,6 +400,7 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
         generation  : ConnectionGeneration
     ) async {
         guard !isPoisoned, !isClosed else { return }
+
         do {
             _ = try await exchange(
                 try AssetTransferRequest(
@@ -392,6 +413,7 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
             )
         } catch {
             if isTerminalTransferFailure(error) { return }
+
             await poison()
         }
     }
@@ -399,6 +421,7 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
     /// poison is one-way and idempotent; every caller awaits the same shared channel drain.
     private func poison() async {
         lock.withLock { poisoned = true }
+
         await drain()
     }
 
@@ -408,9 +431,10 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
     private func drain() async {
         let task: Task<Void, Never> = lock.withLock {
             if let drainTask { return drainTask }
+
             let channel = self.channel
             let created = Task { await channel.close() }
-            drainTask = created
+            drainTask   = created
             return created
         }
 #if DEBUG
@@ -423,9 +447,10 @@ public final class MessageAddonAssetClient: AddonAssetClient, @unchecked Sendabl
     /// a revoked/finished transfer or an expired deadline. A redundant abort would be refused.
     private func isTerminalTransferFailure(_ error: any Error) -> Bool {
         guard let failure = error as? AddonFailure else { return false }
+
         switch failure.code {
-        case .sessionRevoked, .deadlineExceeded: return true
-        default: return false
+            case .sessionRevoked, .deadlineExceeded: return true
+            default: return false
         }
     }
 

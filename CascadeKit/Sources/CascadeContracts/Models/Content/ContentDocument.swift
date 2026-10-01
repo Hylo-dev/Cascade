@@ -7,28 +7,31 @@ import Foundation
 
 /// ContentDocument is a validated, versioned description of addon content.
 public struct ContentDocument: Codable, Equatable, Sendable {
-    public let schemaVersion: Int
-    public let root: ContentNode
+
+    public let schemaVersion     : Int
+    public let root              : ContentNode
     public let accessibilityLabel: String
-    public let privacy: Privacy
-    public let assets: [String]
-    public let glassLights: [GlassLight]?
+    public let privacy           : Privacy
+    public let assets            : [String]
+    public let glassLights       : [GlassLight]?
+
     public var assetIDs: [String] { assets }
 
     public init(
-        schemaVersion: Int,
-        root: ContentNode,
+        schemaVersion     : Int,
+        root              : ContentNode,
         accessibilityLabel: String,
-        privacy: Privacy,
-        assets: [String],
-        glassLights: [GlassLight]? = nil
+        privacy           : Privacy,
+        assets            : [String],
+        glassLights       : [GlassLight]? = nil
     ) throws {
-        self.schemaVersion = schemaVersion
-        self.root = root
+        self.schemaVersion      = schemaVersion
+        self.root               = root
         self.accessibilityLabel = accessibilityLabel
-        self.privacy = privacy
-        self.assets = assets
-        self.glassLights = glassLights
+        self.privacy            = privacy
+        self.assets             = assets
+        self.glassLights        = glassLights
+
         try validate()
     }
 
@@ -38,29 +41,32 @@ public struct ContentDocument: Codable, Equatable, Sendable {
             Set(fields.allKeys.map(\.stringValue)).isSubset(of: Set(CodingKeys.allCases.map(\.rawValue))),
             "Unknown wire field"
         )
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        schemaVersion = try container.decode(Int.self, forKey: .schemaVersion)
-        root = try container.decode(ContentNode.self, forKey: .root)
+
+        let container      = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion      = try container.decode(Int.self, forKey: .schemaVersion)
+        root               = try container.decode(ContentNode.self, forKey: .root)
         accessibilityLabel = try container.decode(String.self, forKey: .accessibilityLabel)
-        privacy = try container.decode(Privacy.self, forKey: .privacy)
-        assets = try BoundedContractArray.decode(
+        privacy            = try container.decode(Privacy.self, forKey: .privacy)
+        assets             = try BoundedContractArray.decode(
             String.self,
-            from    : container.superDecoder(forKey: .assets),
-            maximum : 64
+            from   : container.superDecoder(forKey: .assets),
+            maximum: 64
         )
         try ContractValidation.require(
             !container.contains(.glassLights) || schemaVersion >= 2,
             "Glass lights require content schema 2 or later"
         )
+
         if container.contains(.glassLights), try !container.decodeNil(forKey: .glassLights) {
             glassLights = try BoundedContractArray.decode(
                 GlassLight.self,
-                from    : container.superDecoder(forKey: .glassLights),
-                maximum : GlassLight.maximumCount
+                from   : container.superDecoder(forKey: .glassLights),
+                maximum: GlassLight.maximumCount
             )
         } else {
             glassLights = nil
         }
+
         try validate()
     }
 
@@ -91,16 +97,19 @@ public struct ContentDocument: Codable, Equatable, Sendable {
         try ContractValidation.unique(root.actionIdentifiers, "Duplicate actions")
         try ContractValidation.bytes(self, maximum: 65_536)
     }
+
     public enum Privacy: String, Codable, Sendable {
+
         case publicContent, sensitive
+
         public static var `public`: Self { .publicContent }
 
         public init(from decoder: any Decoder) throws {
             let value = try decoder.singleValueContainer().decode(String.self)
             switch value {
-            case "public", "publicContent": self = .publicContent
-            case "sensitive": self = .sensitive
-            default: throw AddonFailure(code: .invalidPayload, reason: "Unknown privacy")
+                case "public", "publicContent": self = .publicContent
+                case "sensitive"              : self = .sensitive
+                default: throw AddonFailure(code: .invalidPayload, reason: "Unknown privacy")
             }
         }
     }
@@ -108,33 +117,37 @@ public struct ContentDocument: Codable, Equatable, Sendable {
     /// encode validates and archives bounded values without retaining provider objects.
     public func encode() throws -> Data {
         try validate()
+
         return try JSONEncoder().encode(self)
     }
 
     /// decode checks the raw budget before JSON parsing begins.
     public static func decode(_ data: Data) throws -> Self {
         try ContractValidation.require(data.count <= 65_536, "Content exceeds 64 KiB")
+
         return try JSONDecoder().decode(Self.self, from: data)
     }
 
     public init(
-        schemaVersion: Int = 1,
-        root: ContentNode,
-        privacy: Privacy,
+        schemaVersion     : Int = 1,
+        root              : ContentNode,
+        privacy           : Privacy,
         accessibilityLabel: String,
-        assetIDs: [String] = [],
-        glassLights: [GlassLight]? = nil
+        assetIDs          : [String] = [],
+        glassLights       : [GlassLight]? = nil
     ) throws {
         try self.init(
-            schemaVersion: schemaVersion,
-            root: root,
+            schemaVersion     : schemaVersion,
+            root              : root,
             accessibilityLabel: accessibilityLabel,
-            privacy: privacy,
-            assets: assetIDs,
-            glassLights: glassLights
+            privacy           : privacy,
+            assets            : assetIDs,
+            glassLights       : glassLights
         )
     }
+
     private enum CodingKeys: String, CodingKey, CaseIterable {
+
         case schemaVersion
         case root
         case accessibilityLabel

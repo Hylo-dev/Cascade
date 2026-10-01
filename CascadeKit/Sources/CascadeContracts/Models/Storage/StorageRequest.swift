@@ -9,6 +9,7 @@ import Foundation
 /// Use StorageFrameCodec for untrusted bytes: direct Codable does not check the
 /// frame size or negotiated profile. The authenticated transport owns admission.
 public struct StorageRequest: Codable, Equatable, Sendable {
+
     public let schemaVersion: Int
     public let requestID    : UUID
     public let operation    : StorageOperation
@@ -27,6 +28,7 @@ public struct StorageRequest: Codable, Equatable, Sendable {
         self.operation     = operation
         self.key           = key
         self.value         = value
+
         try validate()
     }
 
@@ -34,93 +36,63 @@ public struct StorageRequest: Codable, Equatable, Sendable {
     /// Foundation keyed containers supply semantic fields, not lexical duplicate-key detection.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        schemaVersion = try container.decode(
-            Int.self,
-            forKey: .schemaVersion
-        )
-        try ContractValidation.require(
-            schemaVersion == 1,
-            "Unsupported storage request schema"
-        )
-        let operationName = try container.decode(
-            String.self,
-            forKey: .operation
-        )
+        schemaVersion = try container.decode(Int.self, forKey: .schemaVersion)
+        try ContractValidation.require(schemaVersion == 1, "Unsupported storage request schema")
+
+        let operationName = try container.decode(String.self, forKey: .operation)
         guard let operation = StorageOperation(rawValue: operationName) else {
             throw AddonFailure(
                 code  : .invalidPayload,
                 reason: "Unknown storage operation"
             )
         }
+
         self.operation = operation
+
         let fields = try decoder.container(keyedBy: WireKey.self)
-        let expected: Set<String> =
-            operation == .write
+        let expected: Set<String> = operation == .write
             ? ["schemaVersion", "requestID", "operation", "key", "value"]
             : ["schemaVersion", "requestID", "operation", "key"]
         try ContractValidation.require(
             Set(fields.allKeys.map(\.stringValue)) == expected,
             "Storage request requires exactly its operation fields"
         )
-        requestID = try container.decode(
-            UUID.self,
-            forKey: .requestID
-        )
-        key = try container.decode(
-            String.self,
-            forKey: .key
-        )
-        value =
-            operation == .write
-            ? try container.decode(
-                Data.self,
-                forKey: .value
-            ) : nil
+
+        requestID = try container.decode(UUID.self, forKey: .requestID)
+        key       = try container.decode(String.self, forKey: .key)
+        value     = operation == .write ? try container.decode(Data.self, forKey: .value) : nil
+
         try validate()
     }
 
     /// encode emits only the operation's exact field set; absent and empty remain distinct.
     public func encode(to encoder: any Encoder) throws {
         try validate()
+
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(
-            schemaVersion,
-            forKey: .schemaVersion
-        )
-        try container.encode(
-            requestID,
-            forKey: .requestID
-        )
-        try container.encode(
-            operation,
-            forKey: .operation
-        )
-        try container.encode(
-            key,
-            forKey: .key
-        )
+        try container.encode(schemaVersion, forKey: .schemaVersion)
+        try container.encode(requestID, forKey: .requestID)
+        try container.encode(operation, forKey: .operation)
+        try container.encode(key, forKey: .key)
         if let value {
-            try container.encode(
-                value,
-                forKey: .value
-            )
+            try container.encode(value, forKey: .value)
         }
     }
 
     /// validate preserves the existing key and value limits without normalizing keys.
     public func validate() throws {
+        try ContractValidation.require(schemaVersion == 1, "Unsupported storage request schema")
         try ContractValidation.require(
-            schemaVersion == 1,
-            "Unsupported storage request schema"
-        )
-        try ContractValidation.require(
-            !key.isEmpty && key.utf8.count <= StorageFrameCodec.maximumKeyBytes && !key.utf8.contains(0),
+            !key.isEmpty
+                && key.utf8.count <= StorageFrameCodec.maximumKeyBytes
+                && !key.utf8.contains(0),
             "Invalid storage key"
         )
         try ContractValidation.require(
             (operation == .write) == (value != nil),
             "Storage value is required only for writes"
         )
+
         if let value {
             try ContractValidation.require(
                 value.count <= StorageFrameCodec.maximumValueBytes,
@@ -143,6 +115,7 @@ public struct StorageRequest: Codable, Equatable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
+
         case schemaVersion, requestID, operation, key, value
     }
 }

@@ -7,6 +7,7 @@ import Foundation
 
 /// ServiceScope is a validated value in the version 1 addon protocol.
 public struct ServiceScope: Codable, Equatable, Sendable {
+
     public let featureID: String
     public let operation: String
 
@@ -16,6 +17,7 @@ public struct ServiceScope: Codable, Equatable, Sendable {
     ) throws {
         self.featureID = featureID
         self.operation = operation
+
         try validate()
     }
 
@@ -25,14 +27,17 @@ public struct ServiceScope: Codable, Equatable, Sendable {
             Set(allKeys.allKeys.map(\.stringValue)).isSubset(of: ["featureID", "operation"]),
             "Unknown service scope field"
         )
+
         let fields = try decoder.container(keyedBy: WireKey.self)
         try ContractValidation.require(
             Set(fields.allKeys.map(\.stringValue)).isSubset(of: Set(CodingKeys.allCases.map(\.rawValue))),
             "Unknown wire field"
         )
+
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        featureID = try container.decode(String.self, forKey: .featureID)
-        operation = try container.decode(String.self, forKey: .operation)
+        featureID     = try container.decode(String.self, forKey: .featureID)
+        operation     = try container.decode(String.self, forKey: .operation)
+
         try validate()
     }
 
@@ -44,6 +49,7 @@ public struct ServiceScope: Codable, Equatable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey, CaseIterable {
+
         case featureID
         case operation
     }

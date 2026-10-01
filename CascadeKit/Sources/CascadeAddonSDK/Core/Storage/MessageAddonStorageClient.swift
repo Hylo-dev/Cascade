@@ -18,42 +18,63 @@ import Foundation
 /// before using this client. Logical admission is not a quota reservation, authentication or
 /// whole-process memory bound. Physical correlation/receipt guarantees come from the channel.
 public final class MessageAddonStorageClient: AddonStorageClient, @unchecked Sendable {
-    private let channel: any AddonStorageMessageChannel
+
+    private let channel   : any AddonStorageMessageChannel
     private let generation: ConnectionGeneration
-    private let profile: StorageFrameProfile
+    private let profile   : StorageFrameProfile
+
     /// This intentionally non-Sendable ledger is accessed only inside lock.withLock.
     private let lifecycle: StorageRequestLifecycle
-    private let lock = NSLock()
-    private var closed = false
+    private let lock      = NSLock()
+
+    private var closed   = false
     private var poisoned = false
+
     /// Exact slot identity prevents an old operation's cleanup from clearing newer work.
-    private var operationID: UUID?
-    private var currentTicket: StorageRequestLifecycle.Ticket?
+    private var operationID    : UUID?
+    private var currentTicket  : StorageRequestLifecycle.Ticket?
     private var localCompletion: StorageRequestLifecycle.LocalFailure?
-    private var drainTask: Task<Void, Never>?
+    private var drainTask      : Task<Void, Never>?
 
     public init(channel: any AddonStorageMessageChannel) throws {
         let generation = channel.generation
-        let lifecycle = try StorageRequestLifecycle(generation: generation, profile: channel.profile)
-        self.channel = channel
+        let lifecycle  = try StorageRequestLifecycle(generation: generation, profile: channel.profile)
+
+        self.channel    = channel
         self.generation = generation
-        self.profile = .v1_1
-        self.lifecycle = lifecycle
+        self.profile    = .v1_1
+        self.lifecycle  = lifecycle
     }
 
     public func read(key: String) async throws -> Data? {
-        let response = try await perform(.read, key: key, value: nil)
+        let response = try await perform(
+            .read,
+            key  : key,
+            value: nil
+        )
         if response.result == .failure { throw hostFailure(response) }
+
         return response.value
     }
 
-    public func write(_ data: Data, key: String) async throws {
-        let response = try await perform(.write, key: key, value: data)
+    public func write(
+        _ data: Data,
+        key   : String
+    ) async throws {
+        let response = try await perform(
+            .write,
+            key  : key,
+            value: data
+        )
         if response.result == .failure { throw hostFailure(response) }
     }
 
     public func remove(key: String) async throws {
-        let response = try await perform(.remove, key: key, value: nil)
+        let response = try await perform(
+            .remove,
+            key  : key,
+            value: nil
+        )
         if response.result == .failure { throw hostFailure(response) }
     }
 
@@ -65,33 +86,58 @@ public final class MessageAddonStorageClient: AddonStorageClient, @unchecked Sen
             closed = true
             record(lifecycle.close())
         }
+
         await drain()
     }
 
 #if DEBUG
     /// Inert task-local checkpoints observe production boundaries without replacing disposal.
-    @TaskLocal internal static var preparedObserver: (@Sendable () async -> Void)?
-    @TaskLocal internal static var consumedObserver: (@Sendable () async -> Void)?
-    @TaskLocal internal static var drainWaitObserver: (@Sendable () -> Void)?
-    @TaskLocal internal static var encodingObserver: (@Sendable () -> Void)?
+    @TaskLocal
+    internal static var preparedObserver: (@Sendable () async -> Void)?
+
+    @TaskLocal
+    internal static var consumedObserver: (@Sendable () async -> Void)?
+
+    @TaskLocal
+    internal static var drainWaitObserver: (@Sendable () -> Void)?
+
+    @TaskLocal
+    internal static var encodingObserver: (@Sendable () -> Void)?
 #endif
 
-    private func perform(_ operation: StorageOperation, key: String, value: Data?) async throws -> StorageResponse {
+    private func perform(
+        _ operation: StorageOperation,
+        key        : String,
+        value      : Data?
+    ) async throws -> StorageResponse {
         let id = try acquire()
+
         do {
-            let request = try StorageRequest(requestID: UUID(), operation: operation, key: key, value: value)
+            let request = try StorageRequest(
+                requestID: UUID(),
+                operation: operation,
+                key      : key,
+                value    : value
+            )
             let ticket = try lock.withLock {
                 guard !closed, !poisoned else { throw failure(.sessionRevoked) }
+
                 try Task.checkCancellation()
-                let issued = try lifecycle.begin(request)
+                let issued    = try lifecycle.begin(request)
                 currentTicket = issued
                 return issued
             }
+
             return try await withTaskCancellationHandler {
-                try await exchange(request, ticket: ticket, operationID: id)
+                try await exchange(
+                    request,
+                    ticket     : ticket,
+                    operationID: id
+                )
             } onCancel: {
                 self.lock.withLock {
                     guard self.currentTicket == ticket else { return }
+
                     self.record(self.lifecycle.cancel(ticket))
                 }
             }
@@ -104,29 +150,36 @@ public final class MessageAddonStorageClient: AddonStorageClient, @unchecked Sen
     private func acquire() throws -> UUID {
         try lock.withLock {
             guard !closed, !poisoned else { throw failure(.sessionRevoked) }
+
             try Task.checkCancellation()
             guard operationID == nil else { throw failure(.resourceDenied) }
-            let id = UUID()
-            operationID = id
+
+            let id          = UUID()
+            operationID     = id
             localCompletion = nil
             return id
         }
     }
 
     private func exchange(
-        _ request: StorageRequest,
-        ticket: StorageRequestLifecycle.Ticket,
+        _ request  : StorageRequest,
+        ticket     : StorageRequestLifecycle.Ticket,
         operationID: UUID
     ) async throws -> StorageResponse {
         guard channel.generation == generation, channel.profile == profile else {
-            throw await poisonFailure(ticket, readCode: .sessionRevoked, beforeHandoff: true)
+            throw await poisonFailure(
+                ticket,
+                readCode     : .sessionRevoked,
+                beforeHandoff: true
+            )
         }
 #if DEBUG
         Self.encodingObserver?()
 #endif
         let frame: Data
-        do { frame = try StorageFrameCodec.encode(request, profile: profile) }
-        catch {
+        do {
+            frame = try StorageFrameCodec.encode(request, profile: profile)
+        } catch {
             lock.withLock { record(lifecycle.cancel(ticket)) }
             throw error
         }
@@ -134,31 +187,42 @@ public final class MessageAddonStorageClient: AddonStorageClient, @unchecked Sen
         await Self.preparedObserver?()
 #endif
         guard channel.generation == generation, channel.profile == profile else {
-            throw await poisonFailure(ticket, readCode: .sessionRevoked, beforeHandoff: true)
+            throw await poisonFailure(
+                ticket,
+                readCode     : .sessionRevoked,
+                beforeHandoff: true
+            )
         }
+
         try lock.withLock {
             if Task.isCancelled { record(lifecycle.cancel(ticket)) }
             if let localCompletion { throw localFailure(localCompletion) }
             guard !closed, !poisoned else { throw failure(.sessionRevoked) }
+
             try lifecycle.beginHandoff(ticket)
         }
 
         let result: AddonStorageMessageExchangeResult
-        do { result = try await channel.exchange(frame, sequence: ticket.sequence) }
-        catch { throw await poisonFailure(ticket, readCode: .dependencyUnavailable) }
+        do {
+            result = try await channel.exchange(frame, sequence: ticket.sequence)
+        } catch {
+            throw await poisonFailure(ticket, readCode: .dependencyUnavailable)
+        }
 
         guard channel.generation == generation, channel.profile == profile else {
             throw await poisonFailure(ticket, readCode: .sessionRevoked)
         }
+
         let reply: Data
         switch result {
-        case .rejectedBeforeHandoff:
-            let completion = lock.withLock {
-                record(lifecycle.observeHandoff(.rejectedBeforeHandoff, ticket: ticket))
-                return localCompletion ?? .notSent
-            }
-            throw localFailure(completion)
-        case .response(let bytes): reply = bytes
+            case .rejectedBeforeHandoff:
+                let completion = lock.withLock {
+                    record(lifecycle.observeHandoff(.rejectedBeforeHandoff, ticket: ticket))
+                    return localCompletion ?? .notSent
+                }
+                throw localFailure(completion)
+
+            case .response(let bytes): reply = bytes
         }
 
         let response: StorageResponse
@@ -167,9 +231,15 @@ public final class MessageAddonStorageClient: AddonStorageClient, @unchecked Sen
             // Correlation/semantic validation and retirement are synchronous in one domain.
             // A reply may consume the attempting ticket before any accepted observation.
             _ = try lock.withLock {
-                try lifecycle.consume(response, generation: generation, sequence: ticket.sequence)
+                try lifecycle.consume(
+                    response,
+                    generation: generation,
+                    sequence  : ticket.sequence
+                )
             }
-        } catch { throw await poisonFailure(ticket, readCode: .invalidPayload) }
+        } catch {
+            throw await poisonFailure(ticket, readCode: .invalidPayload)
+        }
 #if DEBUG
         await Self.consumedObserver?()
 #endif
@@ -181,6 +251,7 @@ public final class MessageAddonStorageClient: AddonStorageClient, @unchecked Sen
     /// holds the lock.
     private func record(_ completion: StorageRequestLifecycle.LocalCompletion?) {
         guard let completion, completion.ticket == currentTicket, localCompletion == nil else { return }
+
         localCompletion = completion.failure
     }
 
@@ -190,15 +261,17 @@ public final class MessageAddonStorageClient: AddonStorageClient, @unchecked Sen
     /// cancellation that won earlier has a stored outcome and its response is discarded.
     private func finalize(_ id: UUID) async throws {
         let decision: (revoked: Bool, completion: StorageRequestLifecycle.LocalFailure?) = lock.withLock {
-            let revoked = closed || poisoned
+            let revoked    = closed || poisoned
             let completion = localCompletion ?? (revoked ? .closed : nil)
             if !revoked { clearOperation(id) }
             return (revoked, completion)
         }
+
         if decision.revoked {
             await drain()
             lock.withLock { clearOperation(id) }
         }
+
         if let completion = decision.completion { throw localFailure(completion) }
     }
 
@@ -207,17 +280,19 @@ public final class MessageAddonStorageClient: AddonStorageClient, @unchecked Sen
     /// unknown. A poison-induced ledger close is not an explicit user close and must not
     /// disguise a read validation/transport error as one.
     private func poisonFailure(
-        _ ticket: StorageRequestLifecycle.Ticket,
-        readCode: AddonFailure.Code,
+        _ ticket     : StorageRequestLifecycle.Ticket,
+        readCode     : AddonFailure.Code,
         beforeHandoff: Bool = false
     ) async -> any Error {
         let error: any Error = lock.withLock {
             poisoned = true
             _ = lifecycle.close()
+
             if let localCompletion { return localFailure(localCompletion) }
             if closed { return failure(.sessionRevoked) }
             return failure(ticket.operation == .read || beforeHandoff ? readCode : .outcomeUnknown)
         }
+
         await drain()
         return error
     }
@@ -225,11 +300,13 @@ public final class MessageAddonStorageClient: AddonStorageClient, @unchecked Sen
     private func conclude(_ id: UUID) async {
         let revoked = lock.withLock {
             guard operationID == id else { return false }
+
             if let currentTicket { _ = lifecycle.cancel(currentTicket) }
             let revoked = closed || poisoned
             if !revoked { clearOperation(id) }
             return revoked
         }
+
         if revoked {
             await drain()
             lock.withLock { clearOperation(id) }
@@ -240,17 +317,19 @@ public final class MessageAddonStorageClient: AddonStorageClient, @unchecked Sen
     /// identity prevents stale catch/finalization cleanup.
     private func clearOperation(_ id: UUID) {
         guard operationID == id else { return }
-        operationID = nil
-        currentTicket = nil
+
+        operationID     = nil
+        currentTicket   = nil
         localCompletion = nil
     }
 
     private func drain() async {
         let task: Task<Void, Never> = lock.withLock {
             if let drainTask { return drainTask }
+
             let channel = self.channel
             let created = Task { await channel.close() }
-            drainTask = created
+            drainTask   = created
             return created
         }
 #if DEBUG
@@ -261,19 +340,24 @@ public final class MessageAddonStorageClient: AddonStorageClient, @unchecked Sen
 
     private func localFailure(_ completion: StorageRequestLifecycle.LocalFailure) -> any Error {
         switch completion {
-        case .cancelled: return CancellationError()
-        case .closed: return failure(.sessionRevoked)
-        case .notSent: return failure(.dependencyUnavailable)
-        case .outcomeUnknown: return failure(.outcomeUnknown)
+            case .cancelled: return CancellationError()
+            case .closed: return failure(.sessionRevoked)
+            case .notSent: return failure(.dependencyUnavailable)
+            case .outcomeUnknown: return failure(.outcomeUnknown)
         }
     }
 
     private func hostFailure(_ response: StorageResponse) -> AddonFailure {
-        AddonFailure(code: response.failureCode ?? .invalidPayload,
-                     reason: response.failureReason ?? "The storage host refused this request.")
+        AddonFailure(
+            code  : response.failureCode ?? .invalidPayload,
+            reason: response.failureReason ?? "The storage host refused this request."
+        )
     }
 
     private func failure(_ code: AddonFailure.Code) -> AddonFailure {
-        AddonFailure(code: code, reason: "The storage client cannot complete this operation (\(code.rawValue)).")
+        AddonFailure(
+            code  : code,
+            reason: "The storage client cannot complete this operation (\(code.rawValue))."
+        )
     }
 }

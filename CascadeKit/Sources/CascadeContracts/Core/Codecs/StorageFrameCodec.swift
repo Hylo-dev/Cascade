@@ -9,6 +9,7 @@ import Foundation
 /// service payloads. Callers own and preadmit input, decoding workspace and output lifetimes.
 /// These value bounds do not qualify Foundation parser workspace or whole-process memory.
 public enum StorageFrameCodec {
+
     /// maximumEncodedBytes covers 174,768 slash-escaped base64 bytes, 1,536 escaped
     /// key bytes and 512 fixed bytes. Failure-only frames need at most 25,088 bytes.
     /// The enclosing transport must still enforce its total 512 KiB envelope limit.
@@ -24,6 +25,7 @@ public enum StorageFrameCodec {
     ) throws -> Data {
         try requireProfile(profile)
         try request.validate()
+
         return try encodeValue(request)
     }
 
@@ -34,6 +36,7 @@ public enum StorageFrameCodec {
     ) throws -> Data {
         try requireProfile(profile)
         try response.validate()
+
         return try encodeValue(response)
     }
 
@@ -44,10 +47,8 @@ public enum StorageFrameCodec {
     ) throws -> StorageRequest {
         try requireProfile(profile)
         try requireFrameSize(data)
-        return try JSONDecoder().decode(
-            StorageRequest.self,
-            from: data
-        )
+
+        return try JSONDecoder().decode(StorageRequest.self, from: data)
     }
 
     /// decodeResponse checks capability and raw size before Foundation interprets JSON.
@@ -57,10 +58,8 @@ public enum StorageFrameCodec {
     ) throws -> StorageResponse {
         try requireProfile(profile)
         try requireFrameSize(data)
-        return try JSONDecoder().decode(
-            StorageResponse.self,
-            from: data
-        )
+
+        return try JSONDecoder().decode(StorageResponse.self, from: data)
     }
 
     private static func requireProfile(_ profile: StorageFrameProfile?) throws {
@@ -84,8 +83,10 @@ public enum StorageFrameCodec {
     private static func encodeValue<Value: Encodable>(_ value: Value) throws -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
+
         let data = try encoder.encode(value)
         try requireFrameSize(data)
+
         return data
     }
 }

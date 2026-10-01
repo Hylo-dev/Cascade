@@ -7,15 +7,17 @@ import Foundation
 
 /// ScheduledEntry is a validated value in the version 1 addon protocol.
 public struct ScheduledEntry: Codable, Equatable, Sendable {
-    public let date: Date
+
+    public let date   : Date
     public let content: PresentationSet
 
     public init(
-        date: Date,
+        date   : Date,
         content: PresentationSet
     ) throws {
-        self.date = date
+        self.date    = date
         self.content = content
+
         try validate()
     }
 
@@ -25,9 +27,11 @@ public struct ScheduledEntry: Codable, Equatable, Sendable {
             Set(fields.allKeys.map(\.stringValue)).isSubset(of: Set(CodingKeys.allCases.map(\.rawValue))),
             "Unknown wire field"
         )
+
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        date = try container.decode(Date.self, forKey: .date)
-        content = try container.decode(PresentationSet.self, forKey: .content)
+        date          = try container.decode(Date.self, forKey: .date)
+        content       = try container.decode(PresentationSet.self, forKey: .content)
+
         try validate()
     }
 
@@ -36,6 +40,7 @@ public struct ScheduledEntry: Codable, Equatable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey, CaseIterable {
+
         case date
         case content
     }

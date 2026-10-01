@@ -7,6 +7,7 @@ import Foundation
 
 /// FileWorkspacePresentation is one bounded, host-rendered snapshot of the shared file shelf.
 public struct FileWorkspacePresentation: Codable, Equatable, Sendable {
+
     public static let maximumActions = 64
     public static let maximumFormats = 32
 
@@ -31,6 +32,7 @@ public struct FileWorkspacePresentation: Codable, Equatable, Sendable {
         self.formats          = formats
         self.selectedFormatID = selectedFormatID
         self.actions          = actions
+
         try validate()
     }
 
@@ -40,7 +42,8 @@ public struct FileWorkspacePresentation: Codable, Equatable, Sendable {
             Set(fields.allKeys.map(\.stringValue)).isSubset(of: Set(CodingKeys.allCases.map(\.rawValue))),
             "Unknown file workspace presentation field"
         )
-        let values = try decoder.container(keyedBy: CodingKeys.self)
+
+        let values   = try decoder.container(keyedBy: CodingKeys.self)
         let selected = try BoundedContractArray.decode(
             UUID.self,
             from   : values.superDecoder(forKey: .selectedEntryIDs),
@@ -56,6 +59,7 @@ public struct FileWorkspacePresentation: Codable, Equatable, Sendable {
             from   : values.superDecoder(forKey: .actions),
             maximum: Self.maximumActions
         )
+
         try self.init(
             snapshot        : values.decode(FileWorkspaceSnapshot.self, forKey: .snapshot),
             mode            : values.decode(FileWorkspaceMode.self, forKey: .mode),
@@ -69,11 +73,23 @@ public struct FileWorkspacePresentation: Codable, Equatable, Sendable {
     public func validate() throws {
         try snapshot.validate()
         try FileWorkspaceWire.validateIDs(selectedEntryIDs, requiresNonempty: false)
-        try ContractValidation.require(formats.count <= Self.maximumFormats, "Too many conversion formats")
-        try ContractValidation.require(actions.count <= Self.maximumActions, "Too many file workspace actions")
+        try ContractValidation.require(
+            formats.count <= Self.maximumFormats,
+            "Too many conversion formats"
+        )
+        try ContractValidation.require(
+            actions.count <= Self.maximumActions,
+            "Too many file workspace actions"
+        )
         try ContractValidation.unique(formats.map(\.id), "Duplicate conversion formats")
-        try ContractValidation.unique(actions.map(\.semanticKey), "Duplicate file workspace action binding")
-        try ContractValidation.unique(actions.map(\.descriptor.id), "Duplicate file workspace action descriptor")
+        try ContractValidation.unique(
+            actions.map(\.semanticKey),
+            "Duplicate file workspace action binding"
+        )
+        try ContractValidation.unique(
+            actions.map(\.descriptor.id),
+            "Duplicate file workspace action descriptor"
+        )
 
         let entryIDs  = Set(snapshot.entries.map(\.id))
         let resultIDs = Set(snapshot.jobs.flatMap(\.resultIDs))
@@ -87,21 +103,25 @@ public struct FileWorkspacePresentation: Codable, Equatable, Sendable {
             selectedFormatID.map(formatIDs.contains) ?? true,
             "Selected conversion format is not presented"
         )
+
         for format in formats { try format.validate() }
         for action in actions {
             try action.validate()
+
             if let entryID = action.entryID {
                 try ContractValidation.require(
                     entryIDs.contains(entryID) || resultIDs.contains(entryID),
                     "File workspace action references an unpresented entry"
                 )
             }
+
             if let formatID = action.formatID {
                 try ContractValidation.require(
                     formatIDs.contains(formatID),
                     "File workspace action references an unpresented format"
                 )
             }
+
             if let jobID = action.jobID {
                 try ContractValidation.require(
                     jobIDs.contains(jobID),
@@ -113,10 +133,10 @@ public struct FileWorkspacePresentation: Codable, Equatable, Sendable {
 
     /// action returns the exact descriptor published for one semantic control.
     public func action(
-        for role : FileWorkspaceActionBinding.Role,
-        entryID  : UUID? = nil,
-        formatID : String? = nil,
-        jobID    : UUID? = nil
+        for role: FileWorkspaceActionBinding.Role,
+        entryID : UUID? = nil,
+        formatID: String? = nil,
+        jobID   : UUID? = nil
     ) -> ActionDescriptor? {
         actions.first {
             $0.role == role && $0.entryID == entryID && $0.formatID == formatID && $0.jobID == jobID
@@ -132,6 +152,7 @@ public struct FileWorkspacePresentation: Codable, Equatable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey, CaseIterable {
+
         case snapshot, mode, selectedEntryIDs, formats, selectedFormatID, actions
     }
 }
@@ -141,7 +162,9 @@ public struct FileWorkspacePresentation: Codable, Equatable, Sendable {
 /// The renderer uses the target only to choose a control. It always dispatches the immutable
 /// descriptor verbatim, so target identifiers never become authority or synthesized payloads.
 public struct FileWorkspaceActionBinding: Codable, Equatable, Sendable {
+
     public enum Role: String, Codable, Equatable, Sendable {
+
         case openList, closeList, select, nextPage, convert, selectFormat, start, cancel
         case remove, relink, preview, reveal
     }
@@ -164,6 +187,7 @@ public struct FileWorkspaceActionBinding: Codable, Equatable, Sendable {
         self.formatID   = formatID
         self.jobID      = jobID
         self.descriptor = descriptor
+
         try validate()
     }
 
@@ -173,6 +197,7 @@ public struct FileWorkspaceActionBinding: Codable, Equatable, Sendable {
             Set(fields.allKeys.map(\.stringValue)).isSubset(of: Set(CodingKeys.allCases.map(\.rawValue))),
             "Unknown file workspace action field"
         )
+
         let values = try decoder.container(keyedBy: CodingKeys.self)
         try self.init(
             role      : values.decode(Role.self, forKey: .role),
@@ -185,33 +210,38 @@ public struct FileWorkspaceActionBinding: Codable, Equatable, Sendable {
 
     public func validate() throws {
         try descriptor.validate()
+
         if let formatID {
             try ContractValidation.require(
                 ContractValidation.identifier(formatID),
                 "Invalid file workspace action format"
             )
         }
+
         switch role {
-        case .select, .remove, .relink, .preview, .reveal:
-            try ContractValidation.require(
-                entryID != nil && formatID == nil && jobID == nil,
-                "File workspace entry action requires exactly one entry target"
-            )
-        case .selectFormat:
-            try ContractValidation.require(
-                entryID == nil && formatID != nil && jobID == nil,
-                "File workspace format action requires exactly one format target"
-            )
-        case .cancel:
-            try ContractValidation.require(
-                entryID == nil && formatID == nil && jobID != nil,
-                "File workspace cancel action requires exactly one job target"
-            )
-        case .openList, .closeList, .nextPage, .convert, .start:
-            try ContractValidation.require(
-                entryID == nil && formatID == nil && jobID == nil,
-                "File workspace global action cannot carry a target"
-            )
+            case .select, .remove, .relink, .preview, .reveal:
+                try ContractValidation.require(
+                    entryID != nil && formatID == nil && jobID == nil,
+                    "File workspace entry action requires exactly one entry target"
+                )
+
+            case .selectFormat:
+                try ContractValidation.require(
+                    entryID == nil && formatID != nil && jobID == nil,
+                    "File workspace format action requires exactly one format target"
+                )
+
+            case .cancel:
+                try ContractValidation.require(
+                    entryID == nil && formatID == nil && jobID != nil,
+                    "File workspace cancel action requires exactly one job target"
+                )
+
+            case .openList, .closeList, .nextPage, .convert, .start:
+                try ContractValidation.require(
+                    entryID == nil && formatID == nil && jobID == nil,
+                    "File workspace global action cannot carry a target"
+                )
         }
     }
 
@@ -222,6 +252,7 @@ public struct FileWorkspaceActionBinding: Codable, Equatable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey, CaseIterable {
+
         case role, entryID, formatID, jobID, descriptor
     }
 }

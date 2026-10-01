@@ -20,11 +20,18 @@ import Foundation
 /// Ordinary throws guarantee staging disposal, but never prove request rejection or rollback.
 /// Cancellation must not abandon outstanding physical work. No production OS conformer ships.
 public protocol AddonStorageMessageChannel: Sendable {
+
     /// Immutable, nonblocking physical-handshake description; it authenticates no peer itself.
     var generation: ConnectionGeneration { get }
+
     /// Storage schema-1 syntax under canonical negotiated 1.1 or cumulative 1.2; nil if unavailable.
     var profile: StorageFrameProfile? { get }
-    func exchange(_ frame: Data, sequence: UInt64) async throws -> AddonStorageMessageExchangeResult
+
+    func exchange(
+        _ frame : Data,
+        sequence: UInt64
+    ) async throws -> AddonStorageMessageExchangeResult
+
     /// Idempotently revoke physical admission and drain outstanding exchange/staging/receipts.
     /// This does not observe OS process exit or release caller-owned buffers/embedding scopes.
     func close() async

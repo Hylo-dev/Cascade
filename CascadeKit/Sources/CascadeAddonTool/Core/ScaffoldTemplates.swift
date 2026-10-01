@@ -7,19 +7,40 @@ import CascadeContracts
 import Foundation
 
 enum ScaffoldTemplates {
-    static func files(name: String, id: AddonID, sdkPath: String) throws -> [ScaffoldFile] {
-        let target = name + "Addon"
+
+    static func files(
+        name   : String,
+        id     : AddonID,
+        sdkPath: String
+    ) throws -> [ScaffoldFile] {
+        let target   = name + "Addon"
         let provider = name + "Provider"
         let manifest: [String: Any] = [
-            "manifestVersion": 1, "id": id.rawValue, "version": "0.1.0",
+            "manifestVersion": 1,
+            "id": id.rawValue,
+            "version": "0.1.0",
             "compatibility": ["macOS": ">=14.0", "cascadeProtocol": ["major": 1, "minimumMinor": 0]],
             "execution": ["owner": "cascade", "activation": "onDemand", "entryPoint": "provider"],
-            "bundledLibraries": [], "REQUIRES": [], "PROVIDES": [], "features": [], "permissions": [],
-            "resources": ["profile": "eventDriven", "requestedMemoryMiB": 16, "maximumConcurrentWork": 1, "background": "none"],
+            "bundledLibraries": [],
+            "REQUIRES": [],
+            "PROVIDES": [],
+            "features": [],
+            "permissions": [],
+            "resources": [
+                "profile": "eventDriven",
+                "requestedMemoryMiB": 16,
+                "maximumConcurrentWork": 1,
+                "background": "none"
+            ],
         ]
-        var manifestData = try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys])
+
+        var manifestData = try JSONSerialization.data(
+            withJSONObject: manifest,
+            options       : [.prettyPrinted, .sortedKeys]
+        )
         _ = try AddonManifest.decode(manifestData)
         manifestData.append(10)
+
         let package = #"""
         // swift-tools-version: 6.2
         import PackageDescription
@@ -49,6 +70,7 @@ enum ScaffoldTemplates {
             swiftLanguageModes: [.v6]
         )
         """#
+
         let source = #"""
         import CascadeAddonSDK
         import CascadeContracts
@@ -104,6 +126,7 @@ enum ScaffoldTemplates {
             }
         }
         """#
+
         let tests = #"""
         import CascadeAddonSDK
         import CascadeContracts
@@ -224,6 +247,7 @@ enum ScaffoldTemplates {
             func remove(key: String) async throws { throw unavailable }
         }
         """#
+
         let readme = """
         # \(name) addon source example
 
@@ -242,6 +266,7 @@ enum ScaffoldTemplates {
         No signing credentials, launcher, installation, build or test run was performed by init.
         Do not treat these unit tests or manifest validation as runtime admission proof.
         """
+
         return [
             ScaffoldFile(path: "Manifest.json", data: manifestData),
             textFile("Package.swift", package),
@@ -259,20 +284,24 @@ enum ScaffoldTemplates {
         var literal = "\""
         for scalar in value.unicodeScalars {
             switch scalar.value {
-            case 0x22: literal += "\\\""
-            case 0x5C: literal += "\\\\"
-            case 0x0A: literal += "\\n"
-            case 0x0D: literal += "\\r"
-            case 0x09: literal += "\\t"
-            case 0..<0x20, 0x7F...0x9F, 0x2028, 0x2029:
-                literal += "\\u{\(String(scalar.value, radix: 16))}"
-            default: literal.unicodeScalars.append(scalar)
+                case 0x22: literal += "\\\""
+                case 0x5C: literal += "\\\\"
+                case 0x0A: literal += "\\n"
+                case 0x0D: literal += "\\r"
+                case 0x09: literal += "\\t"
+                case 0..<0x20, 0x7F...0x9F, 0x2028, 0x2029:
+                    literal += "\\u{\(String(scalar.value, radix: 16))}"
+                default: literal.unicodeScalars.append(scalar)
             }
         }
+
         return literal + "\""
     }
 
-    private static func textFile(_ path: String, _ text: String) -> ScaffoldFile {
+    private static func textFile(
+        _ path: String,
+        _ text: String
+    ) -> ScaffoldFile {
         ScaffoldFile(path: path, data: Data((text + "\n").utf8))
     }
 }

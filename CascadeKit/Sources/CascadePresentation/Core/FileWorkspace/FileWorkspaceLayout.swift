@@ -7,6 +7,7 @@ import CoreGraphics
 
 /// FileWorkspaceLayout contains deterministic geometry shared by rendering and previews.
 public enum FileWorkspaceLayout {
+
     public static let maximumVisibleCards = 4
 
     public static func cardTransforms(
@@ -14,6 +15,7 @@ public enum FileWorkspaceLayout {
         reduceMotion: Bool
     ) -> [FileCardTransform] {
         let visibleCount = min(max(0, count), maximumVisibleCards)
+
         return (0..<visibleCount).map { index in
             if reduceMotion {
                 return FileCardTransform(
@@ -24,6 +26,7 @@ public enum FileWorkspaceLayout {
                     scale          : 1
                 )
             }
+
             return FileCardTransform(
                 index          : index,
                 rotationDegrees: index == 0 ? 1.75 : -Double(index * 4),
@@ -42,7 +45,8 @@ public enum FileWorkspaceLayout {
     public static func conversionFrames(in bounds: CGRect) -> FileConversionFrames {
         let insetBounds = bounds.insetBy(dx: 12, dy: 10)
         let centerWidth = min(124, max(92, insetBounds.width * 0.28))
-        let groupWidth = max(72, (insetBounds.width - centerWidth) / 2)
+        let groupWidth  = max(72, (insetBounds.width - centerWidth) / 2)
+
         let inputs = CGRect(
             x     : insetBounds.minX,
             y     : insetBounds.minY,
@@ -55,8 +59,9 @@ public enum FileWorkspaceLayout {
             width : groupWidth,
             height: insetBounds.height
         )
+
         let gapMidX = (inputs.maxX + results.minX) / 2
-        let arrow = CGRect(
+        let arrow   = CGRect(
             x     : gapMidX - 18,
             y     : bounds.midY - 12,
             width : 36,
@@ -74,6 +79,7 @@ public enum FileWorkspaceLayout {
             width : centerWidth - 8,
             height: 28
         )
+
         return FileConversionFrames(
             inputs  : inputs,
             arrow   : arrow,

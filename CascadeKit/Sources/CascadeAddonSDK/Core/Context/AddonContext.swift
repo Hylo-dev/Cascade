@@ -9,6 +9,7 @@ import Foundation
 /// AddonContext injects capabilities for one connection generation, without host engine access.
 /// Grants are a snapshot, not proof of authorization: the broker must recheck every operation.
 public struct AddonContext: Sendable {
+
     public let services  : any AddonServiceClient
     public let storage   : any AddonStorageClient
     public let assets    : any AddonAssetClient
@@ -40,11 +41,15 @@ public struct AddonContext: Sendable {
         grants    : [Grant]
     ) throws {
         guard grants.allSatisfy({ $0.generation == generation }),
-            Set(grants.map(\.id)).count == grants.count,
-            grants.count <= 64
+              Set(grants.map(\.id)).count == grants.count,
+              grants.count <= 64
         else {
-            throw AddonFailure(code: .invalidPayload, reason: "Invalid context grant snapshot")
+            throw AddonFailure(
+                code  : .invalidPayload,
+                reason: "Invalid context grant snapshot"
+            )
         }
+
         self.services   = services
         self.storage    = storage
         self.assets     = assets

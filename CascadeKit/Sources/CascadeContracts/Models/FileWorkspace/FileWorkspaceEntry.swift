@@ -7,6 +7,7 @@ import Foundation
 
 /// FileWorkspaceEntry is display metadata; its UUID never grants file access.
 public struct FileWorkspaceEntry: Codable, Equatable, Sendable {
+
     public let id              : UUID
     public let name            : String
     public let typeIdentifier  : String
@@ -28,6 +29,7 @@ public struct FileWorkspaceEntry: Codable, Equatable, Sendable {
         self.availability     = availability
         self.ownership        = ownership
         self.thumbnailAssetID = thumbnailAssetID
+
         try validate()
     }
 
@@ -37,6 +39,7 @@ public struct FileWorkspaceEntry: Codable, Equatable, Sendable {
             Set(fields.allKeys.map(\.stringValue)).isSubset(of: Set(CodingKeys.allCases.map(\.rawValue))),
             "Unknown file entry field"
         )
+
         let values = try decoder.container(keyedBy: CodingKeys.self)
         try self.init(
             id              : values.decode(UUID.self, forKey: .id),
@@ -51,7 +54,8 @@ public struct FileWorkspaceEntry: Codable, Equatable, Sendable {
     /// validate bounds untrusted labels and keeps asset aliases free of paths or URLs.
     public func validate() throws {
         try ContractValidation.require(
-            !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && name.utf8.count <= 4_096,
+            !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && name.utf8.count <= 4_096,
             "Invalid file name"
         )
         try FileWorkspaceWire.validateTypeIdentifier(typeIdentifier)
@@ -62,6 +66,7 @@ public struct FileWorkspaceEntry: Codable, Equatable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey, CaseIterable {
+
         case id, name, typeIdentifier, availability, ownership, thumbnailAssetID
     }
 }

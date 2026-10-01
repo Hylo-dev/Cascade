@@ -8,6 +8,7 @@ import Darwin
 import Foundation
 
 struct AddonToolResult {
+
     let exitCode: Int32
-    let output: String
+    let output  : String
 }

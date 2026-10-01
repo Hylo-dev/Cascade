@@ -11,18 +11,20 @@ import SwiftUI
 /// Host callbacks dispatch descriptors across the process boundary; providers never run here.
 @MainActor
 public struct ContentRenderer: View {
+
     private let document: ContentDocument
-    private let assets: any ContentAssetResolving
+    private let assets  : any ContentAssetResolving
     private let dispatch: @MainActor (ActionDescriptor) -> Void
 
     public init(
         document: ContentDocument,
-        assets: any ContentAssetResolving,
+        assets  : any ContentAssetResolving,
         dispatch: @escaping @MainActor (ActionDescriptor) -> Void
     ) throws {
         try document.validate()
+
         self.document = document
-        self.assets = assets
+        self.assets   = assets
         self.dispatch = dispatch
     }
 
@@ -37,108 +39,123 @@ public struct ContentRenderer: View {
     // Type erasure only wraps host-created views from a bounded tree. No view is serialized.
     private func nodeView(_ node: ContentNode) -> AnyView {
         switch node.kind {
-        case .text:
-            return AnyView(Text(node.text ?? ""))
-        case .symbol:
-            return AnyView(
-                Image(systemName: node.text ?? "questionmark")
-                    .accessibilityHidden(true)
-            )
-        case .image:
-            return AnyView(
-                (assets.image(for: node.assetID ?? "") ?? Image(systemName: "photo"))
-                    .resizable()
-                    .scaledToFit()
-                    .accessibilityLabel(node.accessibilityLabel ?? "")
-            )
-        case .row:
-            return AnyView(
-                HStack {
-                    ForEach(Array((node.children ?? []).enumerated()), id: \.offset) { _, child in
-                        nodeView(child)
+            case .text:
+                return AnyView(Text(node.text ?? ""))
+
+            case .symbol:
+                return AnyView(
+                    Image(systemName: node.text ?? "questionmark")
+                        .accessibilityHidden(true)
+                )
+
+            case .image:
+                return AnyView(
+                    (assets.image(for: node.assetID ?? "") ?? Image(systemName: "photo"))
+                        .resizable()
+                        .scaledToFit()
+                        .accessibilityLabel(node.accessibilityLabel ?? "")
+                )
+
+            case .row:
+                return AnyView(
+                    HStack {
+
+                        ForEach(Array((node.children ?? []).enumerated()), id: \.offset) { _, child in
+                            nodeView(child)
+                        }
                     }
-                }
-            )
-        case .column:
-            return AnyView(
-                VStack(alignment: .leading) {
-                    ForEach(Array((node.children ?? []).enumerated()), id: \.offset) { _, child in
-                        nodeView(child)
+                )
+
+            case .column:
+                return AnyView(
+                    VStack(alignment: .leading) {
+
+                        ForEach(Array((node.children ?? []).enumerated()), id: \.offset) { _, child in
+                            nodeView(child)
+                        }
                     }
-                }
-            )
-        case .progress:
-            let fraction = node.value ?? 0
-            return AnyView(
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(Color.secondary)
-                        Capsule()
-                            .fill(Color.accentColor)
-                            .frame(width: geometry.size.width * fraction)
+                )
+
+            case .progress:
+                let fraction = node.value ?? 0
+                return AnyView(
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+
+                            Capsule()
+                                .fill(Color.secondary)
+
+                            Capsule()
+                                .fill(Color.accentColor)
+                                .frame(width: geometry.size.width * fraction)
+                        }
                     }
-                }
-                .frame(height: 4)
-                .accessibilityElement()
-                .accessibilityLabel(document.accessibilityLabel)
-                .accessibilityValue(fraction.formatted(.percent))
-            )
-        case .countdown:
-            // SwiftUI owns timer text updates and visibility lifetime; no provider timer exists.
-            let deadline = node.deadline ?? .distantPast
-            return AnyView(
-                Text(timerInterval: min(Date.now, deadline)...deadline, countsDown: true)
-                    .monospacedDigit()
-            )
-        case .clock:
-            let includesSeconds = node.clockFormat == .hourMinuteSecond
-            return AnyView(
-                TimelineView(
-                    .periodic(
-                        from: Date(
-                            timeIntervalSince1970: floor(
-                                Date.now.timeIntervalSince1970 / (includesSeconds ? 1 : 60)
-                            ) * (includesSeconds ? 1 : 60)
-                        ),
-                        by: includesSeconds ? 1 : 60
-                    )
-                ) { context in
-                    Text(
-                        context.date,
-                        format: includesSeconds
-                            ? .dateTime.hour().minute().second()
-                            : .dateTime.hour().minute()
-                    )
-                    .monospacedDigit()
-                }
-            )
-        case .action:
-            // Reconstruction is guaranteed by node validation. Failed validation never dispatches.
-            return AnyView(
-                Button(node.text ?? "") {
-                    do {
-                        let action = try ActionDescriptor(
-                            id: node.actionID ?? "",
-                            label: node.text ?? "",
-                            payload: node.actionPayload ?? Data()
+                    .frame(height: 4)
+                    .accessibilityElement()
+                    .accessibilityLabel(document.accessibilityLabel)
+                    .accessibilityValue(fraction.formatted(.percent))
+                )
+
+            case .countdown:
+                // SwiftUI owns timer text updates and visibility lifetime; no provider timer exists.
+                let deadline = node.deadline ?? .distantPast
+                return AnyView(
+                    Text(timerInterval: min(Date.now, deadline)...deadline, countsDown: true)
+                        .monospacedDigit()
+                )
+
+            case .clock:
+                let includesSeconds = node.clockFormat == .hourMinuteSecond
+                return AnyView(
+                    TimelineView(
+                        .periodic(
+                            from: Date(
+                                timeIntervalSince1970: floor(
+                                    Date.now.timeIntervalSince1970 / (includesSeconds ? 1 : 60)
+                                ) * (includesSeconds ? 1 : 60)
+                            ),
+                            by  : includesSeconds ? 1 : 60
                         )
-                        dispatch(action)
-                    } catch {
-                        assertionFailure("Validated action could not be reconstructed: \(error)")
+                    ) { context in
+                        Text(
+                            context.date,
+                            format: includesSeconds
+                                ? .dateTime.hour().minute().second()
+                                : .dateTime.hour().minute()
+                        )
+                        .monospacedDigit()
                     }
+                )
+
+            case .action:
+                // Reconstruction is guaranteed by node validation. Failed validation never dispatches.
+                return AnyView(
+                    Button(node.text ?? "") {
+                        do {
+                            let action = try ActionDescriptor(
+                                id     : node.actionID ?? "",
+                                label  : node.text ?? "",
+                                payload: node.actionPayload ?? Data()
+                            )
+                            dispatch(action)
+                        } catch {
+                            assertionFailure("Validated action could not be reconstructed: \(error)")
+                        }
+                    }
+                )
+
+            case .fileWorkspace:
+                guard let presentation = node.fileWorkspace,
+                      let workspace = try? CascadeFileWorkspace(
+                        presentation,
+                        assets  : assets,
+                        dispatch: dispatch
+                      )
+                else {
+                    return AnyView(EmptyView())
                 }
-            )
-        case .fileWorkspace:
-            guard let presentation = node.fileWorkspace,
-                  let workspace = try? CascadeFileWorkspace(
-                    presentation,
-                    assets  : assets,
-                    dispatch: dispatch
-                  ) else {
-                return AnyView(EmptyView())
-            }
-            return AnyView(workspace)
+
+                return AnyView(workspace)
         }
     }
 }

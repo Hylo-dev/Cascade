@@ -8,16 +8,22 @@ import Foundation
 /// ServiceEvent binds a validated service payload to its subscription and connection grant.
 /// Authentication, revocation and matching the current generation remain broker responsibilities.
 public struct ServiceEvent: Codable, Equatable, Sendable {
-    public let schemaVersion: Int
-    public let subscriptionID: UUID
-    public let token: Grant
-    public let response: ServiceResponse
 
-    public init(subscriptionID: UUID, token: Grant, response: ServiceResponse) throws {
-        schemaVersion = 1
+    public let schemaVersion : Int
+    public let subscriptionID: UUID
+    public let token         : Grant
+    public let response      : ServiceResponse
+
+    public init(
+        subscriptionID: UUID,
+        token         : Grant,
+        response      : ServiceResponse
+    ) throws {
+        schemaVersion       = 1
         self.subscriptionID = subscriptionID
-        self.token = token
-        self.response = response
+        self.token          = token
+        self.response       = response
+
         try validate()
     }
 
@@ -39,13 +45,18 @@ public struct ServiceEvent: Codable, Equatable, Sendable {
             ],
             "Unknown service event fields"
         )
-        let values = try decoder.container(keyedBy: CodingKeys.self)
-        schemaVersion = try values.decode(Int.self, forKey: .schemaVersion)
+
+        let values     = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion  = try values.decode(Int.self, forKey: .schemaVersion)
         subscriptionID = try values.decode(UUID.self, forKey: .subscriptionID)
-        token = try values.decode(Grant.self, forKey: .token)
-        response = try values.decode(ServiceResponse.self, forKey: .response)
+        token          = try values.decode(Grant.self, forKey: .token)
+        response       = try values.decode(ServiceResponse.self, forKey: .response)
+
         try validate()
     }
 
-    private enum CodingKeys: String, CodingKey { case schemaVersion, subscriptionID, token, response }
+    private enum CodingKeys: String, CodingKey {
+
+        case schemaVersion, subscriptionID, token, response
+    }
 }

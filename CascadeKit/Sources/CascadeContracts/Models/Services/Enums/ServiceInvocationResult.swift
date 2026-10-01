@@ -9,7 +9,8 @@ import Foundation
 /// means this exchange caused no new dispatch. A retained logical request may
 /// already have run; refusal is not the SDK's rejected-before-handoff proof.
 public enum ServiceInvocationResult: Equatable, Sendable {
+
     case completed(ServiceResponse)
-    case refused(code: AddonFailure.Code, reason: String)
+    case refused  (code: AddonFailure.Code, reason: String)
     case outcomeUnknown
 }

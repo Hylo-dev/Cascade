@@ -8,6 +8,7 @@ import Foundation
 
 /// CascadeImage builds a validated durable image description.
 public struct CascadeImage: CascadeContent {
+
     public let contentNode: ContentNode
 
     public init(

@@ -6,4 +6,7 @@
 import CascadeContracts
 import Foundation
 
-public enum AddonServiceMessageKind: Sendable { case invocation, control }
+public enum AddonServiceMessageKind: Sendable {
+
+    case invocation, control
+}

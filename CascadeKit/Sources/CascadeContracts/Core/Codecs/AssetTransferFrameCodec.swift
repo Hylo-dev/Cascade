@@ -9,6 +9,7 @@ import Foundation
 /// service payloads. Callers own and preadmit input, decoding workspace and output lifetimes.
 /// These value bounds do not qualify Foundation parser workspace or whole-process memory.
 public enum AssetTransferFrameCodec {
+
     /// maximumEncodedBytes covers a 65,536-byte chunk: 87,384 base64 characters,
     /// at most 174,768 slash-escaped bytes plus 512 fixed bytes = 175,280.
     /// Failure reasons need at most 4,096 * 6 + 512 = 25,088 bytes.
@@ -36,6 +37,7 @@ public enum AssetTransferFrameCodec {
     ) throws -> Data {
         try requireProfile(profile)
         try request.validate()
+
         return try encodeValue(request)
     }
 
@@ -46,6 +48,7 @@ public enum AssetTransferFrameCodec {
     ) throws -> Data {
         try requireProfile(profile)
         try response.validate()
+
         return try encodeValue(response)
     }
 
@@ -56,10 +59,8 @@ public enum AssetTransferFrameCodec {
     ) throws -> AssetTransferRequest {
         try requireProfile(profile)
         try requireFrameSize(data)
-        return try JSONDecoder().decode(
-            AssetTransferRequest.self,
-            from: data
-        )
+
+        return try JSONDecoder().decode(AssetTransferRequest.self, from: data)
     }
 
     /// decodeResponse checks capability and raw size before Foundation interprets JSON.
@@ -69,10 +70,8 @@ public enum AssetTransferFrameCodec {
     ) throws -> AssetTransferResponse {
         try requireProfile(profile)
         try requireFrameSize(data)
-        return try JSONDecoder().decode(
-            AssetTransferResponse.self,
-            from: data
-        )
+
+        return try JSONDecoder().decode(AssetTransferResponse.self, from: data)
     }
 
     private static func requireProfile(_ profile: AssetTransferFrameProfile?) throws {
@@ -96,8 +95,10 @@ public enum AssetTransferFrameCodec {
     private static func encodeValue<Value: Encodable>(_ value: Value) throws -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
+
         let data = try encoder.encode(value)
         try requireFrameSize(data)
+
         return data
     }
 }

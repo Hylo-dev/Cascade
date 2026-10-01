@@ -28,15 +28,22 @@ import Foundation
 /// contract against the real host. The protocol makes no claim that any native transport is
 /// installed or qualified.
 public protocol AddonAssetMessageChannel: Sendable {
+
     /// generation identifies the physical handshake that issued this channel.
     var generation: ConnectionGeneration { get }
+
     /// profile is the asset syntax this channel can carry, or nil when unsupported.
     var profile: AssetTransferFrameProfile? { get }
+
     /// exchange sends exactly one authenticated frame and returns its exact encoded reply.
     /// The channel consumes the matching host receipt and disposes its request/reply staging
     /// before returning; the caller owns the returned bytes only within its bounded scope and
     /// never receives or manipulates the receipt itself.
-    func exchange(_ frame: Data, sequence: UInt64) async throws -> Data
+    func exchange(
+        _ frame : Data,
+        sequence: UInt64
+    ) async throws -> Data
+
     /// close idempotently revokes this connection and drains any outstanding exchange.
     func close() async
 }

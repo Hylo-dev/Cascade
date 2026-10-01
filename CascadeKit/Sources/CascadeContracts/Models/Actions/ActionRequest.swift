@@ -7,30 +7,32 @@ import Foundation
 
 /// ActionRequest is a validated value in the version 1 addon protocol.
 public struct ActionRequest: Codable, Equatable, Sendable {
-    public let schemaVersion: Int
-    public let requestID: UUID
-    public let publicationID: PublicationID
-    public let actionID: String
-    public let input: Data
-    public let deadline: Date
+
+    public let schemaVersion   : Int
+    public let requestID       : UUID
+    public let publicationID   : PublicationID
+    public let actionID        : String
+    public let input           : Data
+    public let deadline        : Date
     public let observedRevision: UInt64
 
     public init(
-        schemaVersion: Int,
-        requestID: UUID,
-        publicationID: PublicationID,
-        actionID: String,
-        input: Data,
-        deadline: Date,
+        schemaVersion   : Int,
+        requestID       : UUID,
+        publicationID   : PublicationID,
+        actionID        : String,
+        input           : Data,
+        deadline        : Date,
         observedRevision: UInt64
     ) throws {
-        self.schemaVersion = schemaVersion
-        self.requestID = requestID
-        self.publicationID = publicationID
-        self.actionID = actionID
-        self.input = input
-        self.deadline = deadline
+        self.schemaVersion    = schemaVersion
+        self.requestID        = requestID
+        self.publicationID    = publicationID
+        self.actionID         = actionID
+        self.input            = input
+        self.deadline         = deadline
         self.observedRevision = observedRevision
+
         try validate()
     }
 
@@ -40,14 +42,16 @@ public struct ActionRequest: Codable, Equatable, Sendable {
             Set(fields.allKeys.map(\.stringValue)).isSubset(of: Set(CodingKeys.allCases.map(\.rawValue))),
             "Unknown wire field"
         )
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        schemaVersion = try container.decode(Int.self, forKey: .schemaVersion)
-        requestID = try container.decode(UUID.self, forKey: .requestID)
-        publicationID = try container.decode(PublicationID.self, forKey: .publicationID)
-        actionID = try container.decode(String.self, forKey: .actionID)
-        input = try container.decode(Data.self, forKey: .input)
-        deadline = try container.decode(Date.self, forKey: .deadline)
+
+        let container    = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion    = try container.decode(Int.self, forKey: .schemaVersion)
+        requestID        = try container.decode(UUID.self, forKey: .requestID)
+        publicationID    = try container.decode(PublicationID.self, forKey: .publicationID)
+        actionID         = try container.decode(String.self, forKey: .actionID)
+        input            = try container.decode(Data.self, forKey: .input)
+        deadline         = try container.decode(Date.self, forKey: .deadline)
         observedRevision = try container.decode(UInt64.self, forKey: .observedRevision)
+
         try validate()
     }
 
@@ -61,6 +65,7 @@ public struct ActionRequest: Codable, Equatable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey, CaseIterable {
+
         case schemaVersion
         case requestID
         case publicationID

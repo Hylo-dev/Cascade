@@ -16,10 +16,18 @@ import Foundation
 /// reception; neither bind nor synchronous handoff may execute a receiver/handler. close
 /// drains physical staging, independently of running user handlers.
 public protocol AddonServiceMessageChannel: Sendable {
-    var generation: ConnectionGeneration { get }
-    var invocationProfile: ServiceInvocationFrameProfile? { get }
+
+    var generation         : ConnectionGeneration { get }
+    var invocationProfile  : ServiceInvocationFrameProfile? { get }
     var subscriptionProfile: ServiceSubscriptionFrameProfile? { get }
-    func exchange(_ frame: Data, kind: AddonServiceMessageKind, sequence: UInt64) async throws -> AddonServiceMessageExchangeResult
+
+    func exchange(
+        _ frame : Data,
+        kind    : AddonServiceMessageKind,
+        sequence: UInt64
+    ) async throws -> AddonServiceMessageExchangeResult
+
     func bindServiceEvents(_ receiver: @escaping @Sendable (Data) async throws -> Void) throws
+
     func close() async
 }

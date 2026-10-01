@@ -7,15 +7,17 @@ import Foundation
 
 /// ProtocolVersion is a validated value in the version 1 addon protocol.
 public struct ProtocolVersion: Codable, Equatable, Sendable {
-    public let major: Int
+
+    public let major       : Int
     public let minimumMinor: Int
 
     public init(
-        major: Int,
+        major       : Int,
         minimumMinor: Int
     ) throws {
-        self.major = major
+        self.major        = major
         self.minimumMinor = minimumMinor
+
         try validate()
     }
 
@@ -25,9 +27,11 @@ public struct ProtocolVersion: Codable, Equatable, Sendable {
             Set(fields.allKeys.map(\.stringValue)).isSubset(of: Set(CodingKeys.allCases.map(\.rawValue))),
             "Unknown wire field"
         )
+
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        major = try container.decode(Int.self, forKey: .major)
-        minimumMinor = try container.decode(Int.self, forKey: .minimumMinor)
+        major         = try container.decode(Int.self, forKey: .major)
+        minimumMinor  = try container.decode(Int.self, forKey: .minimumMinor)
+
         try validate()
     }
 
@@ -39,6 +43,7 @@ public struct ProtocolVersion: Codable, Equatable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey, CaseIterable {
+
         case major
         case minimumMinor
     }
