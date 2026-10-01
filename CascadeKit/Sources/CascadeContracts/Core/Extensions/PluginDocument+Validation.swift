@@ -7,11 +7,18 @@ import Foundation
 
 extension PluginDocument {
 
-    /// validate enforces the document limits and every value's range in one depth-first walk.
-    /// It stops at the first violation, so a hostile document costs at most the node budget to
-    /// reject. The byte limit is checked on an estimate, 64 bytes per node plus every string,
-    /// because in process the document is never encoded; `decode` checks the real bytes.
+    /// validate enforces every limit and every value's range, then encodes the document once to
+    /// check its real size, so a document the SDK accepts in process always fits on the wire.
+    /// That costs one encoding per publication, at human frequency. A decoded document skips
+    /// the encoding: `decode` already bounded the bytes it came from.
     public func validate() throws {
+        try validateStructure()
+        try ContractValidation.bytes(self, maximum: Self.maximumBytes)
+    }
+
+    /// validateStructure checks the limits and ranges in one depth-first walk that stops at the
+    /// first violation, so rejecting a document costs at most the node budget.
+    func validateStructure() throws {
         try ContractValidation.require(schema == Self.schemaVersion, "Unsupported document schema")
         try ContractValidation.require(glassLights.count <= GlassLight.maximumCount, "Too many glass lights")
 
@@ -43,13 +50,16 @@ extension PluginDocument {
         budget: inout ValidationBudget
     ) throws {
         budget.nodes += 1
-        budget.bytes += 64
 
         try ContractValidation.require(budget.nodes <= maximumNodes, "Document exceeds \(maximumNodes) nodes")
         try ContractValidation.require(depth <= maximumDepth, "Document deeper than \(maximumDepth)")
         try ContractValidation.require(
             node.kind.takesChildren || node.children.isEmpty,
             "A \(node.kind.name) node takes no children"
+        )
+        try ContractValidation.require(
+            node.modifiers.count <= maximumModifiers,
+            "A node takes at most \(maximumModifiers) modifiers"
         )
         try ContractValidation.require(
             node.modifiers.count(where: \.isLayer) == node.layers.count,
@@ -59,24 +69,19 @@ extension PluginDocument {
         if let id = node.id {
             try ContractValidation.require(ContractValidation.identifier(id), "Invalid node ID")
             try ContractValidation.require(budget.explicitIDs.insert(id).inserted, "Duplicate node ID")
-            budget.bytes += id.utf8.count
         }
 
-        try validate(kind: node.kind, budget: &budget)
+        try validate(kind: node.kind)
         for modifier in node.modifiers {
-            try validate(modifier: modifier, budget: &budget)
+            try validate(modifier: modifier)
         }
-        try ContractValidation.require(budget.bytes <= maximumBytes, "Document exceeds 64 KiB")
 
         for child in node.children + node.layers {
             try visit(child, depth: depth + 1, budget: &budget)
         }
     }
 
-    private static func validate(
-        kind  : PluginNodeKind,
-        budget: inout ValidationBudget
-    ) throws {
+    private static func validate(kind: PluginNodeKind) throws {
         switch kind {
             case .vStack(_, let spacing), .hStack(_, let spacing):
                 try length(spacing)
@@ -89,7 +94,6 @@ extension PluginDocument {
 
             case .text(let text):
                 try ContractValidation.require(text.utf8.count <= 4_096, "Text exceeds 4 KiB")
-                budget.bytes += text.utf8.count
 
             case .symbol(let name):
                 try ContractValidation.require(ContractValidation.identifier(name), "Invalid symbol name")
@@ -135,15 +139,12 @@ extension PluginDocument {
 
                 for (key, value) in parameters {
                     try ContractValidation.require(ContractValidation.identifier(key), "Invalid component parameter")
-                    try validate(value: value, budget: &budget)
+                    try validate(value: value)
                 }
         }
     }
 
-    private static func validate(
-        modifier: PluginModifier,
-        budget  : inout ValidationBudget
-    ) throws {
+    private static func validate(modifier: PluginModifier) throws {
         switch modifier {
             case .font(let font):
                 try ContractValidation.require((font.style == nil) != (font.size == nil), "A font has a style or a size")
@@ -193,7 +194,6 @@ extension PluginDocument {
 
             case .accessibilityLabel(let label):
                 try ContractValidation.require(label.utf8.count <= 512, "Accessibility label exceeds 512 bytes")
-                budget.bytes += label.utf8.count
 
             case .contentTransition, .transition, .overlay, .background:
                 break
@@ -213,14 +213,10 @@ extension PluginDocument {
         )
     }
 
-    private static func validate(
-        value : PluginValue,
-        budget: inout ValidationBudget
-    ) throws {
+    private static func validate(value: PluginValue) throws {
         switch value {
             case .string(let text):
                 try ContractValidation.require(text.utf8.count <= 256, "Component parameter exceeds 256 bytes")
-                budget.bytes += text.utf8.count
 
             case .number(let number):
                 try ContractValidation.require(number.isFinite, "Component parameter is not finite")
@@ -249,6 +245,5 @@ extension PluginDocument {
 private struct ValidationBudget {
 
     var nodes       = 0
-    var bytes       = 0
     var explicitIDs = Set<String>()
 }

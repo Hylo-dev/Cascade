@@ -182,4 +182,38 @@ struct PluginDocumentTests {
 
         #expect(rejected)
     }
+
+    @Test
+    func rejectsInProcessDocumentsThatWouldNotFitOnTheWire() {
+        let modified = PluginNode(
+            .vStack(alignment: .center, spacing: nil),
+            children: (0..<200).map { index in
+                PluginNode(
+                    .text("\(index)"),
+                    modifiers: [
+                        .font(PluginFont(style: .subheadline, weight: .ultraLight, design: .monospaced, monospacedDigit: true)),
+                        .frame(width: 1.2345678901234567, height: 2.345678901234567, maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing),
+                        .foregroundStyle(.gradient([.white, .black, .white, .black])),
+                        .padding(.horizontal, length: 3.456789012345678),
+                    ]
+                )
+            }
+        )
+        let quoted   = PluginNode(
+            .vStack(alignment: .center, spacing: nil),
+            children: Array(repeating: PluginNode(.text(String(repeating: "\"", count: 4_000))), count: 12)
+        )
+
+        #expect(throws: AddonFailure.self) { try PluginDocument(root: modified) }
+        #expect(throws: AddonFailure.self) { try PluginDocument(root: quoted) }
+    }
+
+    @Test
+    func acceptsSixteenModifiersOnANodeAndRejectsSeventeen() {
+        let sixteen   = PluginNode(.spacer(minLength: nil), modifiers: Array(repeating: .opacity(1), count: 16))
+        let seventeen = PluginNode(.spacer(minLength: nil), modifiers: Array(repeating: .opacity(1), count: 17))
+
+        #expect(throws: Never.self) { try PluginDocument(root: sixteen) }
+        #expect(throws: AddonFailure.self) { try PluginDocument(root: seventeen) }
+    }
 }

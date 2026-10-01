@@ -10,10 +10,11 @@ import Foundation
 /// keeps it, and a document that breaks a limit is rejected whole, so the previous one stays.
 public struct PluginDocument: Codable, Equatable, Sendable {
 
-    public static let schemaVersion = 2
-    public static let maximumBytes  = 65_536
-    public static let maximumNodes  = 256
-    public static let maximumDepth  = 12
+    public static let schemaVersion    = 2
+    public static let maximumBytes     = 65_536
+    public static let maximumNodes     = 256
+    public static let maximumDepth     = 12
+    public static let maximumModifiers = 16
 
     public let schema     : Int
     public let root       : PluginNode
@@ -39,7 +40,7 @@ public struct PluginDocument: Codable, Equatable, Sendable {
         root          = try container.decode(PluginNode.self, forKey: .root)
         glassLights   = try container.decodeIfPresent([GlassLight].self, forKey: .glassLights) ?? []
 
-        try validate()
+        try validateStructure()
     }
 
     /// decode rejects oversized data before the JSON parser sees it.
