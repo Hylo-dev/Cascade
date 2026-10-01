@@ -11,8 +11,8 @@ import SwiftUI
 /// relative date costs the plugin nothing, and a clock redraws itself at every minute boundary,
 /// only while it is on screen. Controls read their optimistic value first and hand
 /// every change to the store; a toggle with two children shows the first while off and the
-/// second while on. A tier-2 component and an asset reserve their frame and draw
-/// nothing until the component and the asset pipeline exist.
+/// second while on. An asset reserves its frame and draws nothing until the asset pipeline
+/// exists; a tier-2 component draws through `PluginComponentView`.
 struct PluginNodeContent: View {
 
     let model: PluginNodeModel
@@ -109,8 +109,11 @@ struct PluginNodeContent: View {
                     Slider(value: thumb(value), in: minimum...maximum, onEditingChanged: released)
                 }
 
-            case .asset, .component:
+            case .asset:
                 Color.clear
+
+            case .component(let id, let version, let parameters):
+                PluginComponentView(id: id, version: version, parameters: parameters)
         }
     }
 

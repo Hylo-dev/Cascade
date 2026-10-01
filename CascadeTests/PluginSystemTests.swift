@@ -28,6 +28,8 @@ struct PluginSystemTests {
 
         func showNotice(_ notice: any NotchTransientNotice) {}
 
+        func updateNotice(_ notice: any NotchTransientNotice) {}
+
         func dismissActivity(id: String) {}
     }
 

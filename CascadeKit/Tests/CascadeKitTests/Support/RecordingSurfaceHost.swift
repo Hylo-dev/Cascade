@@ -13,6 +13,7 @@ final class RecordingSurfaceHost: PluginSurfaceHosting {
     private(set) var registrations = 0
     private(set) var shown        : [(notice: any NotchTransientNotice, revision: UInt64)] = []
     private(set) var dismissed    : [String] = []
+    private(set) var updated      : [UInt64] = []
 
     func register(_ widget: NotchWidget) {
         registrations += 1
@@ -25,6 +26,10 @@ final class RecordingSurfaceHost: PluginSurfaceHosting {
 
     func showNotice(_ notice: any NotchTransientNotice) {
         shown.append((notice, notice.contentRevision))
+    }
+
+    func updateNotice(_ notice: any NotchTransientNotice) {
+        updated.append(notice.contentRevision)
     }
 
     func dismissActivity(id: String) {

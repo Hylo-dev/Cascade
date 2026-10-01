@@ -10,10 +10,14 @@ import CascadePluginEngine
 /// publication sink does: one store per publication, and for a widget one `PluginWidget` on the
 /// grid, registered with its first content and removed with its withdrawal. Later publications
 /// only update the store. A notice gets one store and one `PluginNotice`, shown again for every
-/// publication and dismissed with its withdrawal. Activities are routed by the Music
+/// publication, or only enriched in place when the publication asks to update, and dismissed with
+/// its withdrawal. Activities are routed by the Music
 /// sub-project; until then their publications are not shown.
 @MainActor
 public final class PluginSurfaceRouter {
+
+    /// components lists the tier-2 components these surfaces draw, for the engine's capabilities.
+    public static let components: Set<String> = PluginComponentView.identifiers
 
     private let host      : any PluginSurfaceHosting
     private let sizes     : [PluginPublicationKey: GridSpan]
@@ -107,7 +111,10 @@ public final class PluginSurfaceRouter {
         )
         notices[key] = notice
         notice.update(attributes)
-        host.showNotice(notice)
+        switch attributes.delivery {
+            case .show  : host.showNotice(notice)
+            case .update: host.updateNotice(notice)
+        }
     }
 
     /// place makes the store for a widget's first content, fills it, then registers the widget,

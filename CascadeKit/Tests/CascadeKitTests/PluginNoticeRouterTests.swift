@@ -126,4 +126,20 @@ struct PluginNoticeRouterTests {
 
         #expect(widths == alone)
     }
+
+    @Test
+    func anUpdateEnrichesTheNoticeWithoutShowingItAgain() throws {
+        let host      = RecordingSurfaceHost()
+        let router    = router(host)
+        var publisher = PluginPublicationStore()
+        let (document, shown) = try notice()
+        let enriched  = try PluginNoticeAttributes(duration: 4, accessibilityLabel: "Charging, 81%", delivery: .update)
+        router.apply([try publish((document, shown), in: &publisher)], rejected: [])
+
+        router.apply([try publish((document, enriched), in: &publisher)], rejected: [])
+
+        #expect(host.shown.count == 1)
+        #expect(host.updated == [2])
+        #expect(host.shown[0].notice.accessibilityLabel == "Charging, 81%")
+    }
 }

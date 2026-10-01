@@ -140,4 +140,23 @@ struct PluginNodeViewTests {
 
         #expect(drawn.fittingSize == expected.fittingSize)
     }
+
+    @Test
+    func theBatteryIsDrawnAndAnUnknownComponentOnlyKeepsItsFrame() throws {
+        func pixels(_ id: String) throws -> Int {
+            let frame: PluginModifier = .frame(width: 26, height: 12, maxWidth: nil, maxHeight: nil, alignment: .center)
+            var publisher = PluginRenderFixtures.Publisher()
+            let store     = PluginNodeStore(key: PluginRenderFixtures.key, submit: { _ in })
+            store.apply(publisher.publish(try PluginDocument(root: PluginNode(.component(id: id, version: 1, parameters: ["percentage": .number(80)]), modifiers: [frame]))))
+            let image  = try #require(ImageRenderer(content: PluginDocumentView(store: store)).cgImage)
+            let bitmap = NSBitmapImageRep(cgImage: image)
+
+            return (0..<bitmap.pixelsWide).reduce(0) { count, x in
+                count + (0..<bitmap.pixelsHigh).count { y in (bitmap.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0 }
+            }
+        }
+
+        #expect(try pixels("power.battery") > 0)
+        #expect(try pixels("audio.spectrum") == 0)
+    }
 }
