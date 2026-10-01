@@ -153,10 +153,10 @@ nonisolated private final class BluetoothBackgroundCallbackProbe: @unchecked Sen
     private func invokeCallbacksOnCurrentQueue() throws {
         let callback = lock.withLock { (observer, notification, selector) }
 
-        guard let observer = callback.0,
+        guard let observer     = callback.0,
               let notification = callback.1,
-              let selector = callback.2,
-              let device = IOBluetoothDevice(addressString: "AA-BB-CC-DD-EE-FF")
+              let selector     = callback.2,
+              let device       = IOBluetoothDevice(addressString: "AA-BB-CC-DD-EE-FF")
         else {
             throw BluetoothMonitorTestFailure.assertion(
                 "The callback probe could not build its Objective-C fixtures."

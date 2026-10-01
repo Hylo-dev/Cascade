@@ -9,18 +9,22 @@ import Testing
 @testable import Cascade
 
 struct SettingsTests {
+
     @MainActor
     @Test
     func nativeSettingsPresentationKeepsItsInitialSizeAndAnchor() throws {
         let screen = try #require(NSScreen.main)
-        let notch = CGRect(x: screen.frame.midX - 220, y: screen.frame.maxY - 144, width: 440, height: 144)
+        let notch  = CGRect(x: screen.frame.midX - 220, y: screen.frame.maxY - 144, width: 440, height: 144)
+
         var presentationChanges: [Bool] = []
+
         let presenter = CascadeSettingsWindowController(
             onFocusChanged       : { _ in },
             onPresentationChanged: { presentationChanges.append($0) }
         )
         let services = CascadeServices()
         presenter.show(services: services, notchFrame: notch)
+
         let window = try #require(presenter.window)
         #expect(window.frame.width == min(760, screen.visibleFrame.width))
         #expect(window.frame.height >= min(570, notch.minY - 8 - screen.visibleFrame.minY))
@@ -29,8 +33,10 @@ struct SettingsTests {
 
         presenter.updateNotchFrame(nil)
         #expect(window.isVisible)
+
         presenter.windowDidResignKey(Notification(name: NSWindow.didResignKeyNotification))
         #expect(presentationChanges == [true])
+
         presenter.close()
         #expect(presentationChanges == [true, false])
     }
@@ -38,15 +44,17 @@ struct SettingsTests {
     @MainActor
     @Test
     func spotlightPreviewUsesTheProvidedAnchorAndReleasesItsReservation() throws {
-        let screen = try #require(NSScreen.main)
-        let bounds = CGRect(x: screen.frame.midX - 48, y: screen.frame.maxY - 8, width: 96, height: 8)
+        let screen  = try #require(NSScreen.main)
+        let bounds  = CGRect(x: screen.frame.midX - 48, y: screen.frame.maxY - 8, width: 96, height: 8)
         let droplet = RecordingSpotlightDroplet()
+
         var reservedAnchor: SpotlightDisplayAnchor?
-        var ready: (() -> Void)?
-        var releaseCount = 0
+        var ready         : (() -> Void)?
+        var releaseCount   = 0
+
         let coordinator = SpotlightCoordinator(
-            droplet: droplet,
-            anchor : {
+            droplet            : droplet,
+            anchor             : {
                 SpotlightDisplayAnchor(
                     displayID    : screen.cascadeRuntimeDisplayID,
                     screen       : screen,
@@ -55,7 +63,7 @@ struct SettingsTests {
             },
             reservePresentation: { anchor, completion in
                 reservedAnchor = anchor
-                ready = completion
+                ready          = completion
             },
             releasePresentation: { releaseCount += 1 }
         )
@@ -63,9 +71,11 @@ struct SettingsTests {
         coordinator.preview()
         #expect(reservedAnchor?.restingBounds == bounds)
         #expect(droplet.previewAnchor == nil)
+
         ready?()
         #expect(droplet.previewAnchor?.restingBounds == bounds)
         #expect(releaseCount == 0)
+
         droplet.finishPreview()
         #expect(releaseCount == 1)
     }
@@ -80,7 +90,9 @@ struct SettingsTests {
             restingBounds: CGRect(x: screen.frame.midX - 48, y: screen.frame.maxY - 8, width: 96, height: 8)
         )
         let droplet = RecordingSpotlightDroplet()
+
         var releaseCount = 0
+
         let coordinator = SpotlightCoordinator(
             droplet            : droplet,
             anchor             : { anchor },
@@ -107,8 +119,10 @@ struct SettingsTests {
             restingBounds: CGRect(x: screen.frame.midX - 48, y: screen.frame.maxY - 8, width: 96, height: 8)
         )
         let droplet = RecordingSpotlightDroplet()
-        var ready: (() -> Void)?
+
+        var ready       : (() -> Void)?
         var releaseCount = 0
+
         let coordinator = SpotlightCoordinator(
             droplet            : droplet,
             anchor             : { anchor },
@@ -155,6 +169,7 @@ struct SettingsTests {
         #expect(fixture.droplet.cancelCount == 1)
         #expect(fixture.droplet.playCount == 1)
         #expect(fixture.releaseCount == 0)
+
         fixture.droplet.finishPreview()
         #expect(fixture.releaseCount == 0)
     }
@@ -185,15 +200,16 @@ struct SettingsTests {
 
         #expect(fixture.coordinator.handle(type: .keyDown, event: fixture.shortcutEvent()))
         await Task.yield()
+
         fixture.droplet.finishPlay()
         fixture.coordinator.receive(SpotlightWindowSnapshot(
             generation: 1,
-            processID: fixture.processID,
-            isVisible: false,
-            isFocused: false,
-            isSettled: false,
-            isReady: false,
-            frame: nil
+            processID : fixture.processID,
+            isVisible : false,
+            isFocused : false,
+            isSettled : false,
+            isReady   : false,
+            frame     : nil
         ))
         #expect(fixture.tap.nativeInvocationCount == 1)
 
@@ -213,25 +229,27 @@ struct SettingsTests {
 
         #expect(fixture.coordinator.handle(type: .keyDown, event: fixture.shortcutEvent()))
         await Task.yield()
+
         fixture.droplet.finishPlay()
         fixture.coordinator.receive(SpotlightWindowSnapshot(
             generation: 1,
-            processID: fixture.processID,
-            isVisible: false,
-            isFocused: false,
-            isSettled: false,
-            isReady: false,
-            frame: nil
+            processID : fixture.processID,
+            isVisible : false,
+            isFocused : false,
+            isSettled : false,
+            isReady   : false,
+            frame     : nil
         ))
         #expect(fixture.coordinator.handle(type: .keyDown, event: fixture.shortcutEvent()))
+
         fixture.coordinator.receive(SpotlightWindowSnapshot(
             generation: 2,
-            processID: fixture.processID,
-            isVisible: true,
-            isFocused: false,
-            isSettled: false,
-            isReady: false,
-            frame: nil
+            processID : fixture.processID,
+            isVisible : true,
+            isFocused : false,
+            isSettled : false,
+            isReady   : false,
+            frame     : nil
         ))
 
         try await Task.sleep(for: .milliseconds(30))
@@ -239,12 +257,12 @@ struct SettingsTests {
 
         fixture.coordinator.receive(SpotlightWindowSnapshot(
             generation: 2,
-            processID: fixture.processID,
-            isVisible: false,
-            isFocused: false,
-            isSettled: false,
-            isReady: false,
-            frame: nil
+            processID : fixture.processID,
+            isVisible : false,
+            isFocused : false,
+            isSettled : false,
+            isReady   : false,
+            frame     : nil
         ))
         #expect(fixture.releaseCount == 1)
     }
@@ -256,24 +274,25 @@ struct SettingsTests {
 
         #expect(fixture.coordinator.handle(type: .keyDown, event: fixture.shortcutEvent()))
         await Task.yield()
+
         fixture.droplet.finishPlay()
         fixture.coordinator.receive(SpotlightWindowSnapshot(
             generation: 1,
-            processID: fixture.processID,
-            isVisible: false,
-            isFocused: false,
-            isSettled: false,
-            isReady: false,
-            frame: nil
+            processID : fixture.processID,
+            isVisible : false,
+            isFocused : false,
+            isSettled : false,
+            isReady   : false,
+            frame     : nil
         ))
         fixture.coordinator.receive(SpotlightWindowSnapshot(
             generation: 1,
-            processID: fixture.processID,
-            isVisible: true,
-            isFocused: false,
-            isSettled: false,
-            isReady: false,
-            frame: nil
+            processID : fixture.processID,
+            isVisible : true,
+            isFocused : false,
+            isSettled : false,
+            isReady   : false,
+            frame     : nil
         ))
 
         try await Task.sleep(for: .milliseconds(30))
@@ -281,12 +300,12 @@ struct SettingsTests {
 
         fixture.coordinator.receive(SpotlightWindowSnapshot(
             generation: 1,
-            processID: fixture.processID,
-            isVisible: false,
-            isFocused: false,
-            isSettled: false,
-            isReady: false,
-            frame: nil
+            processID : fixture.processID,
+            isVisible : false,
+            isFocused : false,
+            isSettled : false,
+            isReady   : false,
+            frame     : nil
         ))
         #expect(fixture.releaseCount == 1)
     }
@@ -300,11 +319,13 @@ struct SettingsTests {
 
         #expect(fixture.droplet.cancelCount == 0)
         #expect(fixture.droplet.playCount == 0)
+
         fixture.droplet.finishPreview()
         #expect(fixture.releaseCount == 1)
 
         fixture.coordinator.preview()
         #expect(fixture.droplet.previewCount == 2)
+
         fixture.droplet.finishPreview()
         #expect(fixture.releaseCount == 2)
     }
@@ -316,17 +337,19 @@ struct SettingsTests {
             below : CGRect(x: 280, y: 656, width: 440, height: 144),
             within: CGRect(x: 0, y: 40, width: 1_000, height: 730)
         )
+
         #expect(frame == CGRect(x: 0, y: 40, width: 1_000, height: 608))
     }
 
     @Test
     func aWindowBelowTheNotchKeepsItsChosenPosition() {
         let proposed = CGRect(x: 100, y: 70, width: 760, height: 500)
-        let frame = SettingsWindowPlacement.constrain(
+        let frame    = SettingsWindowPlacement.constrain(
             proposed,
             below : CGRect(x: 280, y: 656, width: 440, height: 144),
             within: CGRect(x: 0, y: 40, width: 1_000, height: 730)
         )
+
         #expect(frame == proposed)
     }
 
@@ -337,6 +360,7 @@ struct SettingsTests {
             below : CGRect(x: -720, y: 856, width: 440, height: 144),
             within: CGRect(x: -1_000, y: 240, width: 1_000, height: 730)
         )
+
         #expect(frame == CGRect(x: -760, y: 348, width: 760, height: 500))
     }
 
@@ -358,10 +382,11 @@ struct SettingsTests {
     @MainActor
     @Test
     func displayPreferencesPersistAsTheSingleServiceValue() throws {
-        let suite = "Cascade.SettingsTests.\(UUID().uuidString)"
+        let suite    = "Cascade.SettingsTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let display = DisplayIdentity(rawValue: "offline-display")
+
+        let display  = DisplayIdentity(rawValue: "offline-display")
         let expected = DisplayPresentationPreferences(
             activityMode: .fixedDisplay(display),
             styles      : [display: .dynamicIsland]
@@ -376,21 +401,21 @@ struct SettingsTests {
 
     @Test
     func fixedOfflineDisplayAndDuplicateNamesRemainDistinct() {
-        let first = DisplayIdentity(rawValue: "first-uuid")
-        let second = DisplayIdentity(rawValue: "second-uuid")
+        let first   = DisplayIdentity(rawValue: "first-uuid")
+        let second  = DisplayIdentity(rawValue: "second-uuid")
         let offline = DisplayIdentity(rawValue: "offline-uuid")
         let choices = DisplaySettingsModel.activityDisplayChoices(
             displays: [
                 NotchDisplayDescriptor(
-                    runtimeID      : 10,
-                    identity       : first,
-                    name           : "Studio Display",
+                    runtimeID       : 10,
+                    identity        : first,
+                    name            : "Studio Display",
                     hasHardwareNotch: false
                 ),
                 NotchDisplayDescriptor(
-                    runtimeID      : 20,
-                    identity       : second,
-                    name           : "Studio Display",
+                    runtimeID       : 20,
+                    identity        : second,
+                    name            : "Studio Display",
                     hasHardwareNotch: false
                 ),
             ],
@@ -404,5 +429,6 @@ struct SettingsTests {
 }
 
 private extension Collection where Element: Hashable {
+
     var uniqueCount: Int { Set(self).count }
 }

@@ -23,7 +23,7 @@ final class CascadeUITestsLaunchTests: XCTestCase {
         app.launch()
 
         let attachment = XCTAttachment(screenshot: app.screenshot())
-        attachment.name = "Launch Screen"
+        attachment.name     = "Launch Screen"
         attachment.lifetime = .keepAlways
         add(attachment)
     }

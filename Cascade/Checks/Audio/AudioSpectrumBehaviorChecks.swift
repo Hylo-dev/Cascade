@@ -26,6 +26,7 @@ enum AudioSpectrumBehaviorChecks {
             let isolatedAnalyzer = AudioSpectrumAnalyzer()
             let tone             = signal(frequency: frequency, amplitude: 0.4)
             var frame            = AudioSpectrumFrame.silence
+
             for _ in 0..<8 {
                 frame = measure(isolatedAnalyzer, tone)
             }
@@ -43,8 +44,9 @@ enum AudioSpectrumBehaviorChecks {
         check(loud.bands[2] > quiet.bands[2], "Actual amplitude must control height")
 
         let transientAnalyzer = AudioSpectrumAnalyzer()
-        var impulse = silence
-        impulse[1_024] = 1
+        var impulse           = silence
+        impulse[1_024]        = 1
+
         let transient = measure(transientAnalyzer, impulse)
         check(transient.bands.contains { $0 > 0 }, "A real transient must register")
         check(
@@ -54,7 +56,7 @@ enum AudioSpectrumBehaviorChecks {
 
         let antiphaseTone = signal(frequency: 750, amplitude: 0.4)
         let invertedTone  = antiphaseTone.map { -$0 }
-        let stereo = antiphaseTone.withUnsafeBufferPointer { left in
+        let stereo        = antiphaseTone.withUnsafeBufferPointer { left in
             invertedTone.withUnsafeBufferPointer { right in
                 AudioSpectrumAnalyzer().analyze(
                     left      : left,
@@ -77,6 +79,7 @@ enum AudioSpectrumBehaviorChecks {
 
         checkPCMExchange()
         await checkMonitorLifecycle()
+
         print("Audio spectrum checks passed")
     }
 
@@ -92,12 +95,14 @@ enum AudioSpectrumBehaviorChecks {
         let right    = UnsafeMutablePointer<Float>.allocate(capacity: 2_048)
         left.initialize(repeating: 0, count: 2_048)
         right.initialize(repeating: 0, count: 2_048)
+
         defer {
             left.deallocate()
             right.deallocate()
         }
 
         check(!exchange.copyLatest(left: left, right: right), "No PCM must mean no new snapshot")
+
         feed(
             exchange,
             frames: 1_024,
@@ -199,12 +204,14 @@ enum AudioSpectrumBehaviorChecks {
         var firstIterator = first.makeAsyncIterator()
         let firstSilence  = await firstIterator.next()
         check(firstSilence == .silence, "A fresh source must clear the last source's waveform")
+
         let oldRequest = driver.latest()
 
         let second         = monitor.start(sourceBundleIdentifier: "test.player.second")
         var secondIterator = second.makeAsyncIterator()
         let secondSilence  = await secondIterator.next()
         check(secondSilence == .silence, "Replacing a capture must start from measured silence")
+
         let newRequest = driver.latest()
         check(
             newRequest.source == "test.player.second",
@@ -219,6 +226,7 @@ enum AudioSpectrumBehaviorChecks {
         oldRequest.continuation.yield(AudioSpectrumFrame(bands: [1, 1, 1, 1, 1, 1]))
         await drainMainActor()
         check(monitor.status == .capturing, "Late status from a replaced tap must be ignored")
+
         let oldResult = await firstIterator.next()
         check(oldResult == nil, "Replacing capture must finish its previous stream")
 
@@ -232,13 +240,15 @@ enum AudioSpectrumBehaviorChecks {
         newRequest.continuation.yield(measured)
         await drainMainActor()
         check(monitor.status == .stopped, "Late callbacks cannot revive a stopped capture")
+
         let stoppedResult = await secondIterator.next()
         check(stoppedResult == nil, "Stop must finish the stream synchronously")
         check(driver.stopCount >= 3, "Replacing and ending streams must release the capture driver")
 
-        var shortLived: CoreAudioSpectrumMonitor? = CoreAudioSpectrumMonitor(driver: driver)
+        var shortLived       : CoreAudioSpectrumMonitor? = CoreAudioSpectrumMonitor(driver: driver)
         let orphaned          = shortLived?.start(sourceBundleIdentifier: nil)
         let stopsBeforeDeinit = driver.stopCount
+
         shortLived = nil
         check(
             driver.stopCount == stopsBeforeDeinit + 1,
@@ -254,11 +264,13 @@ enum AudioSpectrumBehaviorChecks {
         let driver    = DelayedSpectrumCaptureDriver()
         let requester = AudioCapturePermissionRequester(driver: driver)
         let task      = Task { await requester.requestAccess() }
+
         await drainMainActor()
         check(driver.requestCount == 1, "Startup must request system audio even with no player running")
 
         let request = driver.latest()
         check(request.source == nil, "Startup permission must not depend on music metadata")
+
         request.status(.capturing)
         let result = await task.value
         check(result == .capturing, "Successful setup must finish without waiting for audible samples")
@@ -357,6 +369,7 @@ private nonisolated final class DelayedSpectrumCaptureDriver: AudioSpectrumCaptu
     func latest() -> Request {
         requests.withLock { requests in
             guard let request = requests.last else { fatalError("Expected an actual start request") }
+
             return request
         }
     }

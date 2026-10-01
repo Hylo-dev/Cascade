@@ -81,6 +81,7 @@ struct BluetoothAudioRouteChecks {
         }
 
         reducer.replaceBaseline(builtIn)
+
         let virtual = BluetoothAudioRouteSnapshot(
             uid          : airPods.uid,
             name         : "Fake AirPods",
@@ -92,6 +93,7 @@ struct BluetoothAudioRouteChecks {
         )
 
         reducer.replaceBaseline(nil)
+
         let lowerCase = BluetoothAudioRouteSnapshot(
             uid          : "ec-46-54-00-4b-67:output",
             name         : "Bellsprouts",
@@ -103,6 +105,7 @@ struct BluetoothAudioRouteChecks {
         )
 
         await checkMonitorLifecycle(builtIn: builtIn, airPods: airPods)
+
         print("Bluetooth audio route checks passed")
     }
 
@@ -114,13 +117,17 @@ struct BluetoothAudioRouteChecks {
         let workspace = NotificationCenter()
         let monitor   = BluetoothAudioRouteMonitor(
             workspaceCenter: workspace,
-            sourceFactory  : { queue in source.bind(to: queue); return source }
+            sourceFactory  : { queue in
+                source.bind(to: queue)
+                return source
+            }
         )
 
         let stream    = monitor.start()
         let collector = Task { () -> [BluetoothConnectedDevice] in
             var values: [BluetoothConnectedDevice] = []
             for await value in stream { values.append(value) }
+
             return values
         }
 
@@ -166,7 +173,10 @@ struct BluetoothAudioRouteChecks {
         )
         let unavailable = BluetoothAudioRouteMonitor(
             workspaceCenter: workspace,
-            sourceFactory  : { queue in unavailableSource.bind(to: queue); return unavailableSource }
+            sourceFactory  : { queue in
+                unavailableSource.bind(to: queue)
+                return unavailableSource
+            }
         )
         var unavailableIterator = unavailable.start().makeAsyncIterator()
         let unavailableValue    = await unavailableIterator.next()
@@ -174,6 +184,7 @@ struct BluetoothAudioRouteChecks {
             unavailableValue == nil,
             "failed registration finishes stream without a fabricated connection"
         )
+
         unavailable.stop()
     }
 
@@ -218,6 +229,7 @@ nonisolated private final class ControlledAudioRouteSource: BluetoothAudioRouteS
         }
 
         starts.continuation.yield(())
+
         return registrationSucceeds
     }
 

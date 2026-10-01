@@ -12,6 +12,7 @@ import Testing
 @testable import Cascade
 
 final class WeakObjectReference {
+
     weak var value: AnyObject?
 
     init(_ value: AnyObject?) { self.value = value }

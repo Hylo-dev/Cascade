@@ -11,7 +11,10 @@ import Foundation
 @MainActor
 private enum MusicProgressScrollChecks {
 
-    struct Failure: Error { let message: String }
+    struct Failure: Error {
+
+        let message: String
+    }
 
     static func require(
         _ condition: Bool,
@@ -50,22 +53,32 @@ private enum MusicProgressScrollChecks {
 
         let native = NSEvent(cgEvent: event)!
         precondition(native.phase == phase && native.hasPreciseScrollingDeltas == precise)
+
         return native
     }
 
     static func main() async {
         _ = NSApplication.shared
-        do { try await checkScroll(); print("Music progress scroll checks passed") }
-        catch { print("FAILED: \(error)"); exit(1) }
+
+        do {
+            try await checkScroll()
+            print("Music progress scroll checks passed")
+        } catch {
+            print("FAILED: \(error)")
+            exit(1)
+        }
     }
 
     static func checkScroll() async throws {
         let slider = MusicProgressControl(frame: NSRect(x: 0, y: 0, width: 300, height: 18))
-        slider.minValue = 0; slider.maxValue = 180; slider.doubleValue = 60
+        slider.minValue    = 0
+        slider.maxValue    = 180
+        slider.doubleValue = 60
 
         var previews     : [Double] = []
         var commits      : [Double] = []
         var cancellations = 0
+
         slider.onPreview = { previews.append($0) }
         slider.onCommit  = { commits.append($0) }
         slider.onCancel  = { cancellations += 1 }
@@ -77,29 +90,35 @@ private enum MusicProgressScrollChecks {
             "Wheel must preview immediately in five-second steps"
         )
         try require(commits.isEmpty, "Wheel burst must not send a command for every tick")
+
         try await Task.sleep(for: .milliseconds(280))
         try require(
             commits == [70] && !slider.isScrubbing,
             "A wheel burst must commit exactly once after settling"
         )
 
-        commits.removeAll(); previews.removeAll()
+        commits.removeAll()
+        previews.removeAll()
+
         slider.scrollWheel(with: scroll(x: -10, precise: true, phase: .began))
         try await Task.sleep(for: .milliseconds(250))
         try require(
             slider.isScrubbing && commits.isEmpty,
             "A resting finger must not prematurely end a trackpad gesture"
         )
+
         slider.scrollWheel(with: scroll(x: -5, precise: true, phase: .changed))
         try require(
             slider.doubleValue == 73,
             "Horizontal trackpad motion must support fine seeking"
         )
+
         slider.scrollWheel(with: scroll(precise: true, phase: .ended))
         try require(
             commits == [73] && !slider.isScrubbing,
             "Finger release must commit the trackpad gesture once"
         )
+
         slider.scrollWheel(with: scroll(x: -50, precise: true, momentum: 1))
         try require(
             slider.doubleValue == 73 && commits == [73],
@@ -108,8 +127,10 @@ private enum MusicProgressScrollChecks {
 
         slider.scrollWheel(with: scroll(y: -500, precise: true, phase: .began))
         try require(slider.doubleValue == 0, "Scroll must clamp to the beginning")
+
         slider.scrollWheel(with: scroll(y: 5000, precise: true, phase: .changed))
         try require(slider.doubleValue == 180, "Scroll must clamp to the track duration")
+
         slider.scrollWheel(with: scroll(precise: true, phase: .cancelled))
         try require(
             slider.doubleValue == 73 && cancellations == 1 && commits == [73],
@@ -127,8 +148,10 @@ private enum MusicProgressScrollChecks {
 
         slider.isEnabled = true
         slider.scrollWheel(with: scroll(y: -1))
+
         var replacementCommits = 0
         slider.onCommit = { _ in replacementCommits += 1 }
+
         try await Task.sleep(for: .milliseconds(280))
         try require(
             commits == [73, 68] && replacementCommits == 0,
@@ -153,6 +176,7 @@ private enum MusicProgressScrollChecks {
 
         slider.moveRight(nil)
         try require(replacementCommits == 1, "Keyboard seeking must still commit immediately")
+
         _ = slider.accessibilityPerformIncrement()
         try require(replacementCommits == 2, "Accessibility seeking must remain native")
     }

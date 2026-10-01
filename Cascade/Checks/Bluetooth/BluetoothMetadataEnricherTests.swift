@@ -14,6 +14,7 @@ enum BluetoothMetadataEnricherTests {
         let reader   = BluetoothMetadataReaderProbe(samples: [BluetoothDeviceMetadata(), complete])
         let enricher = BluetoothMetadataEnricher(reader: reader, retryDelay: .milliseconds(1))
         let stream   = AsyncStream<BluetoothDeviceMetadata>.makeStream()
+
         enricher.enrich(deviceID: "AA-BB-CC-DD-EE-FF") { stream.continuation.yield($0) }
 
         var iterator = stream.stream.makeAsyncIterator()
@@ -29,6 +30,7 @@ enum BluetoothMetadataEnricherTests {
             reader.readCount == 2 && !reader.didReadOnMainThread,
             "Metadata must use at most two background reads per connection."
         )
+
         enricher.cancelAll()
 
         let cancelledReader = BluetoothMetadataReaderProbe(
@@ -67,6 +69,7 @@ enum BluetoothMetadataEnricherTests {
             completeReader.readCount == 1,
             "A complete measurement must not schedule an unnecessary retry."
         )
+
         completeEnricher.cancelAll()
     }
 }
@@ -74,10 +77,10 @@ enum BluetoothMetadataEnricherTests {
 /// BluetoothMetadataReaderProbe protects its small test record across detached reads.
 nonisolated private final class BluetoothMetadataReaderProbe: BluetoothDeviceMetadataReading, @unchecked Sendable {
 
-    private let lock            = NSLock()
-    private let samples        : [BluetoothDeviceMetadata]
-    private var count           = 0
-    private var mainThreadRead  = false
+    private let lock           = NSLock()
+    private let samples       : [BluetoothDeviceMetadata]
+    private var count          = 0
+    private var mainThreadRead = false
 
     init(samples: [BluetoothDeviceMetadata]) {
         self.samples = samples
@@ -91,6 +94,7 @@ nonisolated private final class BluetoothMetadataReaderProbe: BluetoothDeviceMet
             mainThreadRead = mainThreadRead || Thread.isMainThread
             let sample = samples[min(count, samples.count - 1)]
             count += 1
+
             return sample
         }
     }

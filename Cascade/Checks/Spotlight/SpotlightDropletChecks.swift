@@ -26,6 +26,7 @@ private enum SpotlightDropletChecks {
             try checkInvalidNativeSize()
             try checkSoftwareAnchorMetrics()
             try checkNativeWindowHandoff()
+
             print("Spotlight droplet checks passed (7 behaviors)")
         } catch {
             print("FAILED: \(error)")
@@ -109,7 +110,7 @@ private enum SpotlightDropletChecks {
         var previous = timeline.frame(at: 0)
 
         for millisecond in 1...600 {
-            let frame = timeline.frame(at: Double(millisecond) / 1000)
+            let frame       = timeline.frame(at: Double(millisecond) / 1000)
             let coordinates = [
                 frame.dropletBounds.minX, frame.dropletBounds.minY,
                 frame.dropletBounds.width, frame.dropletBounds.height,
@@ -176,7 +177,7 @@ private enum SpotlightDropletChecks {
     /// a software-notch display whose real compact surface is 96 × 8.
     private static func checkSoftwareAnchorMetrics() throws {
         let restingBounds = CGRect(x: 708, y: 974, width: 96, height: 8)
-        let layout = SpotlightDropletLayout(
+        let layout        = SpotlightDropletLayout(
             screenFrame       : CGRect(x: 0, y: 0, width: 1512, height: 982),
             restingNotchBounds: restingBounds,
             nativeSize        : CGSize(width: 520, height: 87)

@@ -10,5 +10,6 @@ import Testing
 
 @MainActor
 final class SpotlightCounter {
+
     var value = 0
 }

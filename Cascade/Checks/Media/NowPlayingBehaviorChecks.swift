@@ -28,11 +28,13 @@ private enum NowPlayingBehaviorChecks {
         try await checkQuittingRepeatsTheEmptySelection()
 
         print("Now Playing behavior checks passed")
+
         if CommandLine.arguments.contains("--probe") { await probeAuthorizedPlayers() }
     }
 
     private static func checkImmediatePresentation() async throws {
         let now = Date.now
+
         func track(
             playing : Bool,
             position: Double = 20,
@@ -71,11 +73,13 @@ private enum NowPlayingBehaviorChecks {
             presentation.displayed.position(at: now.addingTimeInterval(10)) == 20,
             "Pending pause must freeze progress immediately"
         )
+
         presentation.receive(playing)
         try expect(
             !presentation.displayed.isPlaying,
             "An older read must not flash the previous playback state"
         )
+
         presentation.receive(track(playing: false))
         presentation.succeed(pause)
         try expect(
@@ -92,6 +96,7 @@ private enum NowPlayingBehaviorChecks {
             presentation.displayed.isPlaying,
             "Resume must change the icon without waiting for IO"
         )
+
         presentation.fail(resume)
         try expect(
             !presentation.displayed.isPlaying && presentation.commandError != nil,
@@ -107,6 +112,7 @@ private enum NowPlayingBehaviorChecks {
             presentation.displayed.elapsed == 90,
             "Seek must retain the committed position while waiting"
         )
+
         presentation.succeed(seek)
         try await Task.sleep(for: .milliseconds(60))
         try expect(
@@ -120,16 +126,19 @@ private enum NowPlayingBehaviorChecks {
             at        : now
         )!
         presentation.receive(track(playing: true, id: "B"))
+
         let current = presentation.begin(
             .togglePlayback,
             capability: .togglePlayback,
             at        : now
         )!
+
         presentation.fail(previous)
         try expect(
             presentation.pendingCapability == .togglePlayback && !presentation.displayed.isPlaying,
             "Late completions must not undo a new track's intent"
         )
+
         presentation.fail(current)
         try expect(
             presentation.displayed.title == "B" && presentation.displayed.isPlaying,
@@ -355,6 +364,7 @@ private enum NowPlayingBehaviorChecks {
         )
 
         selection.receive(nil, from: .spotify)
+
         let fallback = sample(
             source : .music,
             title  : "Radio A",
@@ -504,9 +514,11 @@ private enum NowPlayingBehaviorChecks {
         await provider.requestAccess()
         var heldReads = requests.stream.makeAsyncIterator()
         _ = await heldReads.next()
+
         try await provider.send(.togglePlayback, matching: paused)
         let readIsPending = await reader.hasHeldRead
         try expect(readIsPending, "Play must finish while the metadata reply is still held")
+
         await reader.releaseRead()
         let updated = await snapshots.next()
         try expect(
@@ -576,9 +588,13 @@ private enum NowPlayingBehaviorChecks {
             let observation = Task {
                 for await snapshot in stream { received.latest = snapshot }
             }
-            defer { provider.stop(); observation.cancel() }
+            defer {
+                provider.stop()
+                observation.cancel()
+            }
 
             try await waitUntil("Initial playback must be available") { received.latest == original }
+
             try await provider.send(.previousTrack, matching: original)
             try await waitUntil("Previous must recover from \(name) without another player event") {
                 received.latest == previous
@@ -613,6 +629,7 @@ private enum NowPlayingBehaviorChecks {
 
         try await provider.send(.previousTrack, matching: original)
         provider.stop()
+
         try await Task.sleep(for: .milliseconds(100))
         let stoppedReadCount = await reader.readCount
         try await Task.sleep(for: .milliseconds(1_100))
@@ -668,13 +685,18 @@ private enum NowPlayingBehaviorChecks {
         let observation = Task {
             for await snapshot in stream { received.latest = snapshot }
         }
-        defer { provider.stop(); observation.cancel() }
+        defer {
+            provider.stop()
+            observation.cancel()
+        }
 
         try await waitUntil("Initial playback must be available") { received.latest == original }
+
         let heldReadStarted = await reader.holdNextRead()
         await provider.requestAccess()
         var started = heldReadStarted.makeAsyncIterator()
         _ = await started.next()
+
         try await provider.send(.previousTrack, matching: original)
 
         // Both old wall-clock confirmation deadlines pass while the read is held.
@@ -732,8 +754,13 @@ private enum NowPlayingBehaviorChecks {
         )
         let received    = SnapshotRecorder()
         let stream      = provider.start()
-        let observation = Task { for await snapshot in stream { received.latest = snapshot } }
-        defer { provider.stop(); observation.cancel() }
+        let observation = Task {
+            for await snapshot in stream { received.latest = snapshot }
+        }
+        defer {
+            provider.stop()
+            observation.cancel()
+        }
 
         try await waitUntil("Initial playback must be available") { received.latest == playing }
         let readsBefore = await reader.readCount
@@ -777,8 +804,13 @@ private enum NowPlayingBehaviorChecks {
         )
         let recorder    = EmissionRecorder()
         let stream      = provider.start()
-        let observation = Task { for await snapshot in stream { recorder.values.append(snapshot) } }
-        defer { provider.stop(); observation.cancel() }
+        let observation = Task {
+            for await snapshot in stream { recorder.values.append(snapshot) }
+        }
+        defer {
+            provider.stop()
+            observation.cancel()
+        }
 
         try await waitUntil("Initial playback must be available") { recorder.values.last == playing }
 
@@ -786,6 +818,7 @@ private enum NowPlayingBehaviorChecks {
         try await waitUntil("A stop empties the selection") { recorder.values.last == .some(nil) }
 
         let emptiesBeforeQuit = recorder.values.filter { $0 == nil }.count
+
         running.targets = [:]
         provider.receivePlayerNotification(nil, from: .music)
         try await waitUntil("Quitting repeats the empty selection") {
@@ -852,6 +885,7 @@ private enum NowPlayingBehaviorChecks {
         func holdNextRead() -> AsyncStream<Void> {
             let pair = AsyncStream<Void>.makeStream()
             heldReadSignal = pair.continuation
+
             return pair.stream
         }
 
@@ -877,6 +911,7 @@ private enum NowPlayingBehaviorChecks {
             guard !hasReadTransition else { return settled }
 
             hasReadTransition = true
+
             return try transition.get()
         }
 
@@ -946,7 +981,10 @@ private enum NowPlayingBehaviorChecks {
 
         func requestAccess(_ target: ScriptablePlayerTarget) {}
 
-        func reset() { heldRead?.resume(returning: nil); heldRead = nil }
+        func reset() {
+            heldRead?.resume(returning: nil)
+            heldRead = nil
+        }
 
         func discardArtwork(_ source: ScriptableMusicSource) {}
 
@@ -991,6 +1029,7 @@ private enum NowPlayingBehaviorChecks {
             }
 
             if shouldDeny { throw ScriptableMusicError.permissionRequired(.music) }
+
             await reader.update(playing)
         }
     }
@@ -999,6 +1038,7 @@ private enum NowPlayingBehaviorChecks {
     /// player, request Automation permission, or send any playback command.
     private static func probeAuthorizedPlayers() async {
         let reader = ScriptableMusicAppleEventReader()
+
         for source in ScriptableMusicSource.allCases {
             guard let application = NSRunningApplication
                 .runningApplications(withBundleIdentifier: source.bundleIdentifier)
@@ -1012,6 +1052,7 @@ private enum NowPlayingBehaviorChecks {
                 source           : source,
                 processIdentifier: application.processIdentifier
             )
+
             do {
                 if let snapshot = try await reader.read(target) {
                     print("\(source.displayName): \(snapshot.title) — \(snapshot.artist); playing=\(snapshot.isPlaying), artwork=\(snapshot.artworkData?.count ?? 0) bytes")
@@ -1045,7 +1086,10 @@ private enum NowPlayingBehaviorChecks {
         )
     }
 
-    private enum CheckFailure: Error { case failed(String) }
+    private enum CheckFailure: Error {
+
+        case failed(String)
+    }
 
     private static func expect(
         _ condition: @autoclosure () -> Bool,

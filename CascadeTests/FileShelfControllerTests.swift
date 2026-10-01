@@ -13,21 +13,38 @@ import Testing
 
 @Suite
 struct FileShelfControllerTests {
+
     @MainActor
     @Test
     func keyboardResponderSurvivesReplacingItsFileContent() throws {
         var events: [FileShelfEntryInteraction] = []
+
         let container = FileShelfKeyboardView(content: AnyView(Text("Deck"))) { events.append($0) }
-        let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 400, height: 124),
-                              styleMask: [.borderless], backing: .buffered, defer: false)
+        let window    = NSWindow(
+            contentRect: CGRect(x: 0, y: 0, width: 400, height: 124),
+            styleMask  : [.borderless],
+            backing    : .buffered,
+            defer      : false
+        )
         window.contentView = container
         #expect(window.makeFirstResponder(container))
+
         container.update(content: AnyView(Text("List"))) { events.append($0) }
         #expect(window.firstResponder === container)
+
         for code: UInt16 in [124, 51, 51] {
-            let event = try #require(NSEvent.keyEvent(with: .keyDown, location: .zero,
-                modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber,
-                context: nil, characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: code))
+            let event = try #require(NSEvent.keyEvent(
+                with                       : .keyDown,
+                location                   : .zero,
+                modifierFlags              : [],
+                timestamp                  : 0,
+                windowNumber               : window.windowNumber,
+                context                    : nil,
+                characters                 : "",
+                charactersIgnoringModifiers: "",
+                isARepeat                  : false,
+                keyCode                    : code
+            ))
             container.keyDown(with: event)
         }
         #expect(events == [.moveFocus(offset: 1, extendSelection: false), .delete, .delete])
@@ -36,14 +53,17 @@ struct FileShelfControllerTests {
     @MainActor
     @Test
     func deletingTheLastFileKeepsItsContextForTheDissolve() async throws {
-        let fixture = try FileShelfFixture()
+        let fixture    = try FileShelfFixture()
         let controller = FileShelfController(host: fixture.host, preferenceChanged: { _ in })
         await controller.start()
+
         let source = try fixture.file(name: "last.txt", contents: "keep")
         await controller.acceptRegularFiles([source])
         await controller.perform(try #require(controller.presentation.action(for: .openList)))
+
         let id = try #require(controller.presentation.snapshot.entries.first?.id)
         controller.handle(.delete, entryID: id)
+
         // The mutation completes before the UI releases the disappearing last card.
         for _ in 0..<50 {
             if controller.presentation.snapshot.entries.isEmpty { break }
@@ -51,6 +71,7 @@ struct FileShelfControllerTests {
         }
         #expect(controller.presentation.snapshot.entries.isEmpty)
         #expect(controller.isOccupied)
+
         await controller.waitForInteraction()
         #expect(!controller.isOccupied)
         #expect(FileManager.default.fileExists(atPath: source.path))
@@ -60,9 +81,11 @@ struct FileShelfControllerTests {
     @Test
     func restoreAdmissionAndPaginationStayBounded() async throws {
         let fixture = try FileShelfFixture()
+
         var preferences: [Bool] = []
+
         let controller = FileShelfController(
-            host: fixture.host,
+            host             : fixture.host,
             preferenceChanged: { preferences.append($0) }
         )
 
@@ -85,10 +108,11 @@ struct FileShelfControllerTests {
         #expect(controller.preparedFiles.count == 12)
         #expect(preferences.last == true)
 
-        let open = try #require(controller.presentation.action(for: .openList))
+        let open        = try #require(controller.presentation.action(for: .openList))
         let updateCount = preferences.count
         await controller.perform(open)
         #expect(preferences.count == updateCount + 1)
+
         let selected = controller.presentation.snapshot.entries.prefix(2).map(\.id)
         for id in selected {
             let action = try #require(controller.presentation.action(for: .select, entryID: id))
@@ -115,9 +139,10 @@ struct FileShelfControllerTests {
     @MainActor
     @Test
     func hoverIsTransientAndNilClearingIsIdempotent() async throws {
-        let fixture = try FileShelfFixture()
+        let fixture    = try FileShelfFixture()
         let controller = FileShelfController(host: fixture.host, preferenceChanged: { _ in })
         await controller.start()
+
         let files = try (0..<5).map {
             try fixture.file(name: "hover-\($0).png", contents: "image")
         }
@@ -131,6 +156,7 @@ struct FileShelfControllerTests {
         controller.showHover(nil)
         let clearedRevision = controller.contentRevision
         #expect(controller.presentation.snapshot.entries.isEmpty)
+
         controller.showHover(nil)
         #expect(controller.contentRevision == clearedRevision)
     }
@@ -138,7 +164,7 @@ struct FileShelfControllerTests {
     @MainActor
     @Test
     func admissionAcknowledgementIsMonotonicAndRejectsAStaleCallback() async throws {
-        let fixture = try FileShelfFixture()
+        let fixture    = try FileShelfFixture()
         let controller = FileShelfController(host: fixture.host, preferenceChanged: { _ in })
         await controller.start()
 
@@ -147,6 +173,7 @@ struct FileShelfControllerTests {
         ])
         #expect(controller.admissionSequence == 1)
         #expect(controller.pendingAdmissionSequence == 1)
+
         controller.consumeAdmissionAnimation(1)
         #expect(controller.pendingAdmissionSequence == 0)
 
@@ -155,8 +182,10 @@ struct FileShelfControllerTests {
         ])
         #expect(controller.admissionSequence == 2)
         #expect(controller.pendingAdmissionSequence == 2)
+
         controller.consumeAdmissionAnimation(1)
         #expect(controller.pendingAdmissionSequence == 2)
+
         controller.consumeAdmissionAnimation(2)
         #expect(controller.pendingAdmissionSequence == 0)
     }
@@ -164,7 +193,7 @@ struct FileShelfControllerTests {
     @MainActor
     @Test
     func unsupportedDropShowsOneHonestMessage() async throws {
-        let fixture = try FileShelfFixture()
+        let fixture    = try FileShelfFixture()
         let controller = FileShelfController(host: fixture.host, preferenceChanged: { _ in })
         await controller.start()
 
@@ -178,11 +207,13 @@ struct FileShelfControllerTests {
     @MainActor
     @Test
     func removingAnExternalReferenceKeepsTheOriginal() async throws {
-        let fixture = try FileShelfFixture()
+        let fixture    = try FileShelfFixture()
         let controller = FileShelfController(host: fixture.host, preferenceChanged: { _ in })
         await controller.start()
+
         let source = try fixture.file(name: "original.txt", contents: "stays")
         await controller.acceptRegularFiles([source])
+
         let id = try #require(controller.presentation.snapshot.entries.first?.id)
         await controller.perform(try #require(controller.presentation.action(for: .openList)))
         await controller.perform(try #require(
@@ -196,13 +227,15 @@ struct FileShelfControllerTests {
     @MainActor
     @Test
     func focusSelectionAndDeleteFollowFinderStyleInteractions() async throws {
-        let fixture = try FileShelfFixture()
+        let fixture    = try FileShelfFixture()
         let controller = FileShelfController(host: fixture.host, preferenceChanged: { _ in })
         await controller.start()
+
         await controller.acceptRegularFiles(try (0..<5).map {
             try fixture.file(name: "selection-\($0).txt", contents: "\($0)")
         })
         await controller.perform(try #require(controller.presentation.action(for: .openList)))
+
         let ids = controller.presentation.snapshot.entries.map(\.id)
 
         controller.handle(.click(modifiers: []), entryID: ids[1])
@@ -217,22 +250,28 @@ struct FileShelfControllerTests {
         controller.handle(.delete, entryID: ids[2])
         await controller.waitForInteraction()
         #expect(controller.presentation.snapshot.totalCount == 4)
-        #expect(try String(contentsOf: fixture.input.appendingPathComponent("selection-2.txt"), encoding: .utf8) == "2")
+        #expect(try String(
+            contentsOf: fixture.input.appendingPathComponent("selection-2.txt"),
+            encoding  : .utf8
+        ) == "2")
     }
 
     @MainActor
     @Test
     func deckDragIncludesEveryShelfItemWhileListDragUsesSelection() async throws {
-        let fixture = try FileShelfFixture()
+        let fixture    = try FileShelfFixture()
         let controller = FileShelfController(host: fixture.host, preferenceChanged: { _ in })
         await controller.start()
+
         await controller.acceptRegularFiles(try (0..<25).map {
             try fixture.file(name: "drag-\($0).txt", contents: "\($0)")
         })
+
         let first = try #require(controller.presentation.snapshot.entries.first?.id)
         #expect(controller.filesForDrag(from: first).count == 25)
 
         await controller.perform(try #require(controller.presentation.action(for: .openList)))
+
         let ids = controller.presentation.snapshot.entries.prefix(2).map(\.id)
         ids.forEach { controller.handle(.click(modifiers: []), entryID: $0) }
         #expect(controller.filesForDrag(from: ids[0]).map(\.itemID) == ids)
@@ -241,15 +280,17 @@ struct FileShelfControllerTests {
     @MainActor
     @Test
     func deleteRemovesAnItemFromTheSecondPageOnlyFromTheShelf() async throws {
-        let fixture = try FileShelfFixture()
+        let fixture    = try FileShelfFixture()
         let controller = FileShelfController(host: fixture.host, preferenceChanged: { _ in })
         await controller.start()
+
         let sources = try (0..<15).map {
             try fixture.file(name: "page-\($0).txt", contents: "\($0)")
         }
         await controller.acceptRegularFiles(sources)
         await controller.perform(try #require(controller.presentation.action(for: .openList)))
         await controller.perform(try #require(controller.presentation.action(for: .nextPage)))
+
         let id = try #require(controller.presentation.snapshot.entries.first?.id)
 
         controller.handle(.delete, entryID: id)
@@ -263,12 +304,15 @@ struct FileShelfControllerTests {
     @Test
     func clearingEveryPageKeepsOriginalsAndStopsPreferringTheShelf() async throws {
         let fixture = try FileShelfFixture()
+
         var preferences: [Bool] = []
+
         let controller = FileShelfController(
-            host: fixture.host,
+            host             : fixture.host,
             preferenceChanged: { preferences.append($0) }
         )
         await controller.start()
+
         let sources = try (0..<25).map {
             try fixture.file(name: "clear-\($0).txt", contents: "original-\($0)")
         }
@@ -283,6 +327,7 @@ struct FileShelfControllerTests {
         #expect(!controller.isClearing)
         #expect(controller.statusMessage == nil)
         #expect(preferences.last == false)
+
         for (index, source) in sources.enumerated() {
             #expect(try String(contentsOf: source, encoding: .utf8) == "original-\(index)")
         }
@@ -293,24 +338,28 @@ struct FileShelfControllerTests {
     func promiseDelegateOutlivesVisualDragAndReceiptsStayPerItem() async throws {
         let fixture = try FileShelfFixture()
         try await fixture.host.restore()
-        let first = try fixture.file(name: "first.txt", contents: "first")
-        let second = try fixture.file(name: "second.txt", contents: "second")
-        let ids = try await fixture.host.addOriginals([first, second])
-        let prepared = try await fixture.host.prepareItems(ids: ids)
+
+        let first     = try fixture.file(name: "first.txt", contents: "first")
+        let second    = try fixture.file(name: "second.txt", contents: "second")
+        let ids       = try await fixture.host.addOriginals([first, second])
+        let prepared  = try await fixture.host.prepareItems(ids: ids)
         let providers = prepared.map { item in
             FileShelfPromiseProvider.make(file: item) { file, destination in
                 try await fixture.host.copy(file, to: destination)
             }
         }
+
         let retainedDelegate = WeakObjectReference(providers[0].delegate as AnyObject?)
         #expect(retainedDelegate.value != nil)
 
         let collision = fixture.output.appendingPathComponent("first.txt")
         try Data("exists".utf8).write(to: collision)
+
         let firstError = await write(providers[0], to: collision)
         #expect(firstError != nil)
 
         await Task.yield() // The promise remains valid after the visual drag session has ended.
+
         let destination = fixture.output.appendingPathComponent("second.txt")
         let secondError = await write(providers[1], to: destination)
         #expect(secondError == nil)
@@ -325,12 +374,12 @@ struct FileShelfControllerTests {
     @Test
     func dragViewHitTestingUsesSuperviewCoordinates() {
         let parent = NSView(frame: CGRect(x: 0, y: 0, width: 300, height: 200))
-        let view = FileShelfDragView(
-            content: AnyView(Color.clear.frame(width: 80, height: 40)),
-            files: [],
+        let view   = FileShelfDragView(
+            content          : AnyView(Color.clear.frame(width: 80, height: 40)),
+            files            : [],
             accessibilityName: "File",
-            activate: {},
-            copy: { _, _ in }
+            activate         : {},
+            copy             : { _, _ in }
         )
         view.frame = CGRect(x: 90, y: 70, width: 80, height: 40)
         parent.addSubview(view)
@@ -349,36 +398,37 @@ struct FileShelfControllerTests {
     @Test
     func reverseScrollClosesOnlyOnANewGesture() {
         var policy = FileShelfScrollGesturePolicy()
+
         let opened = policy.navigation(
-            delta: CGSize(width: -4, height: 0),
-            phase: .began,
-            momentumPhase: [],
-            behavior: .open,
+            delta                    : CGSize(width: -4, height: 0),
+            phase                    : .began,
+            momentumPhase            : [],
+            behavior                 : .open,
             isAtHorizontalLeadingEdge: true
         )
         #expect(opened == .horizontalNegative)
         #expect(opened?.inverse == .horizontalPositive)
 
         #expect(policy.navigation(
-            delta: CGSize(width: 8, height: 0),
-            phase: .changed,
-            momentumPhase: [],
-            behavior: .close(expectedDirection: .horizontalPositive),
+            delta                    : CGSize(width: 8, height: 0),
+            phase                    : .changed,
+            momentumPhase            : [],
+            behavior                 : .close(expectedDirection: .horizontalPositive),
             isAtHorizontalLeadingEdge: true
         ) == nil)
         _ = policy.navigation(
-            delta: .zero,
-            phase: .ended,
-            momentumPhase: [],
-            behavior: .close(expectedDirection: .horizontalPositive),
+            delta                    : .zero,
+            phase                    : .ended,
+            momentumPhase            : [],
+            behavior                 : .close(expectedDirection: .horizontalPositive),
             isAtHorizontalLeadingEdge: true
         )
 
         #expect(policy.navigation(
-            delta: CGSize(width: 4, height: 0),
-            phase: .began,
-            momentumPhase: [],
-            behavior: .close(expectedDirection: .horizontalPositive),
+            delta                    : CGSize(width: 4, height: 0),
+            phase                    : .began,
+            momentumPhase            : [],
+            behavior                 : .close(expectedDirection: .horizontalPositive),
             isAtHorizontalLeadingEdge: true
         ) == .horizontalPositive)
     }
@@ -386,32 +436,33 @@ struct FileShelfControllerTests {
     @Test
     func listScrollReportsBothHorizontalDirectionsOncePerGesture() {
         var policy = FileShelfScrollGesturePolicy()
+
         #expect(policy.navigation(
-            delta: CGSize(width: 4, height: 0),
-            phase: .began,
-            momentumPhase: [],
-            behavior: .close(expectedDirection: .horizontalPositive),
+            delta                    : CGSize(width: 4, height: 0),
+            phase                    : .began,
+            momentumPhase            : [],
+            behavior                 : .close(expectedDirection: .horizontalPositive),
             isAtHorizontalLeadingEdge: false
         ) == .horizontalPositive)
         #expect(policy.navigation(
-            delta: CGSize(width: -8, height: 0),
-            phase: .changed,
-            momentumPhase: [],
-            behavior: .close(expectedDirection: .horizontalPositive),
+            delta                    : CGSize(width: -8, height: 0),
+            phase                    : .changed,
+            momentumPhase            : [],
+            behavior                 : .close(expectedDirection: .horizontalPositive),
             isAtHorizontalLeadingEdge: true
         ) == nil)
         _ = policy.navigation(
-            delta: .zero,
-            phase: .ended,
-            momentumPhase: [],
-            behavior: .close(expectedDirection: .horizontalPositive),
+            delta                    : .zero,
+            phase                    : .ended,
+            momentumPhase            : [],
+            behavior                 : .close(expectedDirection: .horizontalPositive),
             isAtHorizontalLeadingEdge: true
         )
         #expect(policy.navigation(
-            delta: CGSize(width: -4, height: 0),
-            phase: .began,
-            momentumPhase: [],
-            behavior: .close(expectedDirection: .horizontalPositive),
+            delta                    : CGSize(width: -4, height: 0),
+            phase                    : .began,
+            momentumPhase            : [],
+            behavior                 : .close(expectedDirection: .horizontalPositive),
             isAtHorizontalLeadingEdge: true
         ) == .horizontalNegative)
     }
@@ -419,27 +470,31 @@ struct FileShelfControllerTests {
     @Test
     func scrollNavigationIgnoresOrphanedChangesAndMomentum() {
         var policy = FileShelfScrollGesturePolicy()
+
         #expect(policy.navigation(
-            delta: CGSize(width: 12, height: 0),
-            phase: .changed,
-            momentumPhase: [],
-            behavior: .open,
+            delta                    : CGSize(width: 12, height: 0),
+            phase                    : .changed,
+            momentumPhase            : [],
+            behavior                 : .open,
             isAtHorizontalLeadingEdge: true
         ) == nil)
         #expect(policy.navigation(
-            delta: CGSize(width: 12, height: 0),
-            phase: .began,
-            momentumPhase: .changed,
-            behavior: .open,
+            delta                    : CGSize(width: 12, height: 0),
+            phase                    : .began,
+            momentumPhase            : .changed,
+            behavior                 : .open,
             isAtHorizontalLeadingEdge: true
         ) == nil)
     }
 
-    private func write(_ provider: NSFilePromiseProvider, to url: URL) async -> (any Error)? {
+    private func write(
+        _ provider: NSFilePromiseProvider,
+        to url    : URL
+    ) async -> (any Error)? {
         await withCheckedContinuation { continuation in
             provider.delegate?.filePromiseProvider(
                 provider,
-                writePromiseTo: url,
+                writePromiseTo   : url,
                 completionHandler: { continuation.resume(returning: $0) }
             )
         }

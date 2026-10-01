@@ -27,6 +27,7 @@ private enum MusicSpacebarChecks {
             )!
             event.flags = flags
             event.setIntegerValueField(.keyboardEventAutorepeat, value: repeating ? 1 : 0)
+
             return event
         }
 
@@ -69,6 +70,7 @@ private enum MusicSpacebarChecks {
             reply.withLock { $0 = passed }
             done.signal()
         }
+
         tapThread.start()
         done.wait()
         context.release()

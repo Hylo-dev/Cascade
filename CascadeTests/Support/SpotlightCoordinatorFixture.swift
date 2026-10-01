@@ -10,20 +10,23 @@ import Testing
 
 @MainActor
 final class SpotlightCoordinatorFixture {
-    let processID: pid_t = 42
-    let droplet = RecordingSpotlightDroplet()
-    let tap = RecordingSpotlightTap()
+
+    let processID  : pid_t = 42
+    let droplet     = RecordingSpotlightDroplet()
+    let tap         = RecordingSpotlightTap()
     let coordinator: SpotlightCoordinator
-    private let shortcut: SpotlightShortcut
+
+    private let shortcut      : SpotlightShortcut
     private let releaseCounter: SpotlightCounter
+
     var releaseCount: Int { releaseCounter.value }
 
     init(
-        handoffTimeout   : Duration = .seconds(1.8),
-        hasShortcut      : Bool = true,
-        initiallyEnabled : Bool = true
+        handoffTimeout  : Duration = .seconds(1.8),
+        hasShortcut     : Bool = true,
+        initiallyEnabled: Bool = true
     ) throws {
-        let screen = try #require(NSScreen.main)
+        let screen   = try #require(NSScreen.main)
         let shortcut = try #require(SpotlightShortcut(preference: [
             "enabled": true,
             "value"  : ["parameters": [32, 49, 1 << 20]],
@@ -34,8 +37,10 @@ final class SpotlightCoordinatorFixture {
             restingBounds: CGRect(x: screen.frame.midX - 48, y: screen.frame.maxY - 8, width: 96, height: 8)
         )
         self.shortcut = shortcut
-        let releaseCounter = SpotlightCounter()
+
+        let releaseCounter  = SpotlightCounter()
         self.releaseCounter = releaseCounter
+
         coordinator = SpotlightCoordinator(
             droplet            : droplet,
             tap                : tap,
@@ -50,8 +55,13 @@ final class SpotlightCoordinatorFixture {
     }
 
     func shortcutEvent() -> CGEvent {
-        let event = CGEvent(keyboardEventSource: nil, virtualKey: shortcut.keyCode, keyDown: true)!
+        let event = CGEvent(
+            keyboardEventSource: nil,
+            virtualKey         : shortcut.keyCode,
+            keyDown            : true
+        )!
         event.flags = shortcut.flags
+
         return event
     }
 }

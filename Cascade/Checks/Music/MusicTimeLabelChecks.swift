@@ -15,9 +15,11 @@ private enum MusicTimeLabelChecks {
             let label = MusicTimeLabelView(
                 font: .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
             )
+
             func glyphs() -> [CATextLayer] {
                 label.layer?.sublayers?.compactMap { $0 as? CATextLayer } ?? []
             }
+
             func rolling() -> [String] {
                 glyphs()
                     .filter { $0.animation(forKey: kCATransition) != nil }

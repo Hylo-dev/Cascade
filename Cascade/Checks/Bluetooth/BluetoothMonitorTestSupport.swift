@@ -34,6 +34,7 @@ enum BluetoothMonitorTestMain {
         try BluetoothBatteryMetadataTests.run()
         try await BluetoothMetadataEnricherTests.run()
         try await BluetoothMonitorLifecycleTests.run()
+
         print("Bluetooth monitor tests: reducer, metadata, enrichment and lifecycle checks passed")
     }
 }

@@ -35,12 +35,14 @@ private enum MusicArtworkChecks {
         )
 
         let halo = rgba(glow)
+
         func alpha(
             _ column: Int,
             _ row   : Int
         ) -> UInt8 {
             halo[(row * glow.width + column) * 4 + 3]
         }
+
         require(alpha(0, 0) == 0, "The glow fades to nothing at its corners")
         require(alpha(glow.width / 2, glow.width / 2) > 80, "It is strongest under the cover")
         require(
@@ -86,6 +88,7 @@ private enum MusicArtworkChecks {
                 space           : CGColorSpaceCreateDeviceRGB(),
                 bitmapInfo      : CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
             )!
+
             context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
         }
 

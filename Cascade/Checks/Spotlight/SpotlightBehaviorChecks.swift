@@ -11,8 +11,9 @@ import Foundation
 struct SpotlightBehaviorChecks {
 
     static func main() {
-        var gate = SpotlightHandoffState()
+        var gate  = SpotlightHandoffState()
         let first = gate.begin()!
+
         precondition(gate.begin() == nil, "A held shortcut must not start a second droplet")
         precondition(gate.shouldBufferInput, "Typing during the delayed reveal must be retained")
         precondition(
@@ -34,6 +35,7 @@ struct SpotlightBehaviorChecks {
             gate.begin() == nil,
             "An already visible search must close before opening again"
         )
+
         gate.nativeWillClose()
         let cancelled = gate.begin()!
         gate.cancel()
@@ -41,6 +43,7 @@ struct SpotlightBehaviorChecks {
             !gate.requestNative(generation: cancelled),
             "Cancelled animation must never reopen Spotlight"
         )
+
         let current = gate.begin()!
         precondition(
             !gate.acceptNativeReady(generation: cancelled),
@@ -50,10 +53,12 @@ struct SpotlightBehaviorChecks {
         gate.cancel()
         precondition(!gate.shouldBufferInput, "Timeout/disable must release the keyboard gate")
 
-        var rapid = SpotlightHandoffState()
+        var rapid   = SpotlightHandoffState()
         let opening = rapid.begin()!
+
         precondition(rapid.requestNative(generation: opening))
         precondition(rapid.acceptNativeReady(generation: opening))
+
         rapid.nativeWillClose()
         let reopening = rapid.begin()
         precondition(
@@ -77,10 +82,12 @@ struct SpotlightBehaviorChecks {
         )
         precondition(rapid.begin() != nil, "Open-close-open must also restart during native launch")
 
-        var escape = SpotlightHandoffState()
+        var escape       = SpotlightHandoffState()
         let beforeEscape = escape.begin()!
+
         precondition(escape.requestNative(generation: beforeEscape))
         precondition(escape.acceptNativeReady(generation: beforeEscape))
+
         escape.nativeMayDismiss()
         let reservedToggle = escape.reserveToggleAfterPossibleDismissal()
         precondition(
@@ -100,7 +107,8 @@ struct SpotlightBehaviorChecks {
         )
 
         var existingNative = SpotlightHandoffState()
-        let reused = existingNative.begin()!
+        let reused         = existingNative.begin()!
+
         precondition(existingNative.requestNative(generation: reused))
         precondition(
             !existingNative.claimNativeInvocation(isVisible: true, generation: reused),
@@ -124,9 +132,11 @@ struct SpotlightBehaviorChecks {
         )
 
         var slowNative = SpotlightHandoffState()
-        let slowFirst = slowNative.begin()!
+        let slowFirst  = slowNative.begin()!
+
         precondition(slowNative.requestNative(generation: slowFirst))
         precondition(slowNative.claimNativeInvocation(isVisible: false, generation: slowFirst))
+
         slowNative.nativeWillClose()
         let slowReplacement = slowNative.begin()!
         precondition(slowNative.requestNative(generation: slowReplacement))
@@ -153,6 +163,7 @@ struct SpotlightBehaviorChecks {
         let readStarted        = DispatchSemaphore(value: 0)
         let readMayReturn      = DispatchSemaphore(value: 0)
         let inspectionFinished = DispatchSemaphore(value: 0)
+
         DispatchQueue.global().async {
             readStarted.signal()
             readMayReturn.wait()
