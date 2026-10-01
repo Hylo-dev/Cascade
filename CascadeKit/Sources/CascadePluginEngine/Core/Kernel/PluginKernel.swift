@@ -87,8 +87,9 @@ struct PluginKernel: Sendable {
         return effects
     }
 
-    /// setVisible records which surfaces are on screen. A surface that becomes visible with
-    /// stale content, or none, asks its plugin for one refresh; opening and closing the notch
+    /// setVisible records which surfaces are on screen. A surface that becomes visible with stale
+    /// content asks its plugin for one refresh, and asking renews the content's age, so a plugin
+    /// with nothing new is not asked again on the next opening; opening and closing the notch
     /// otherwise wakes no plugin.
     mutating func setVisible(
         _ isVisible: Bool,
@@ -100,10 +101,11 @@ struct PluginKernel: Sendable {
             return []
         }
         guard visible.insert(key).inserted,
-              store.isStale(key, at: now.monotonic),
+              store.isStale(key, at: now.wall),
               records[key.plugin]?.isRunnable == true
         else { return [] }
 
+        store.renew(key, at: now.wall)
         records[key.plugin]?.mailbox.post(.refresh)
 
         var effects: [PluginEngineEffect] = []
@@ -265,29 +267,33 @@ struct PluginKernel: Sendable {
     /// nextDelay is how long the engine's one timer may sleep: until the earliest watchdog,
     /// retry, held event or wake, and at most a day. Nil means nothing is due.
     func nextDelay(at now: PluginInstant) -> Duration? {
-        var earliest: Duration?
+        [deadlineDelay(at: now), wakeDelay(at: now)].compactMap { $0 }.min()
+    }
 
-        for record in records.values {
-            var due: Duration?
-            switch record.status {
-                case .handling(_, let deadline)          : due = deadline
-                case .retrying(let until)                : due = until
-                case .idle where !record.mailbox.isEmpty : due = record.throttledUntil
-                default                                  : break
+    /// wakeDelay is how long until the earliest wake a plugin asked for, at most a day. Wakes are
+    /// civil times, so the engine waits for one on the wall clock, which keeps running while the
+    /// Mac sleeps; everything else waits on uptime, which a clock change cannot move.
+    func wakeDelay(at now: PluginInstant) -> Duration? {
+        records.values
+            .filter(\.isRunnable)
+            .compactMap(\.wake)
+            .min()
+            .map { wake in .seconds(min(max(0, wake.timeIntervalSince(now.wall)), Self.maximumSleep)) }
+    }
+
+    /// deadlineDelay is how long until the earliest watchdog, retry or held event.
+    private func deadlineDelay(at now: PluginInstant) -> Duration? {
+        records.values
+            .compactMap { record -> Duration? in
+                switch record.status {
+                    case .handling(_, let deadline)         : deadline
+                    case .retrying(let until)               : until
+                    case .idle where !record.mailbox.isEmpty: record.throttledUntil
+                    default                                 : nil
+                }
             }
-
-            if let wake = record.wake, record.isRunnable {
-                let seconds = min(max(0, wake.timeIntervalSince(now.wall)), Self.maximumSleep)
-                let wakeDue = now.monotonic + .seconds(seconds)
-                due         = min(due ?? wakeDue, wakeDue)
-            }
-
-            if let due {
-                earliest = min(earliest ?? due, due)
-            }
-        }
-
-        return earliest.map { max(.zero, $0 - now.monotonic) }
+            .min()
+            .map { max(.zero, $0 - now.monotonic) }
     }
 
     /// schedule dispatches the next pending event of every idle plugin its budgets allow.
@@ -397,9 +403,9 @@ struct PluginKernel: Sendable {
 
         return store.apply(
             document,
-            staleAfter: publication.staleAfter.map { .seconds($0) },
+            staleAfter: publication.staleAfter,
             for       : key,
-            at        : now.monotonic
+            at        : now.wall
         )
     }
 

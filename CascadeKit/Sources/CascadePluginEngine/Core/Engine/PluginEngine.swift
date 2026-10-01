@@ -108,16 +108,17 @@ public final class PluginEngine: Sendable {
     /// execute runs one kernel operation under the lock, then performs its effects and rearms
     /// the timer with the lock released.
     private func execute(_ operation: (inout PluginKernel, PluginInstant) -> [PluginEngineEffect]) {
-        let now              = PluginInstant.now()
-        let (effects, delay) = kernel.withLock { kernel in
+        let now                      = PluginInstant.now()
+        let (effects, delay, isWake) = kernel.withLock { kernel in
             let effects = operation(&kernel, now)
-            return (effects, kernel.nextDelay(at: now))
+            let delay   = kernel.nextDelay(at: now)
+            return (effects, delay, delay != nil && delay == kernel.wakeDelay(at: now))
         }
 
         for effect in effects {
             perform(effect)
         }
-        rearm(after: delay)
+        rearm(after: delay, onWallClock: isWake)
     }
 
     private func perform(_ effect: PluginEngineEffect) {
@@ -149,16 +150,24 @@ public final class PluginEngine: Sendable {
         }
     }
 
-    /// rearm points the one timer at the next due moment, or disarms it.
-    private func rearm(after delay: Duration?) {
+    /// rearm points the one timer at the next due moment, or disarms it. A wake is waited for on
+    /// the wall clock, which runs on while the Mac sleeps, so a wake asked for midnight still
+    /// comes at midnight; watchdogs, retries and held events wait on uptime, which a clock
+    /// change cannot move.
+    private func rearm(
+        after delay: Duration?,
+        onWallClock: Bool
+    ) {
         guard let delay else {
             timer.schedule(deadline: .distantFuture)
             return
         }
 
-        timer.schedule(
-            deadline: .now() + delay / .seconds(1),
-            leeway  : .milliseconds(10)
-        )
+        let seconds = delay / .seconds(1)
+        if onWallClock {
+            timer.schedule(wallDeadline: .now() + seconds, leeway: .milliseconds(10))
+        } else {
+            timer.schedule(deadline: .now() + seconds, leeway: .milliseconds(10))
+        }
     }
 }

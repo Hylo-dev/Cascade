@@ -15,7 +15,7 @@ struct PluginActionAuthorizerTests {
 
     private func entry() throws -> PluginPublicationStore.Entry? {
         var store = PluginPublicationStore()
-        _ = store.apply(try PluginEngineFixtures.controls(), staleAfter: nil, for: key, at: .zero)
+        _ = store.apply(try PluginEngineFixtures.controls(), staleAfter: nil, for: key, at: PluginEngineFixtures.start.wall)
         return store[key]
     }
 

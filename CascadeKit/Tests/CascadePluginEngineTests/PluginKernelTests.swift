@@ -355,4 +355,66 @@ struct PluginKernelTests {
 
         #expect(kernel.tick(at: start.advanced(by: 11)) == [.reject(request)])
     }
+
+    @Test
+    func contentAgesWhileTheMacSleeps() throws {
+        var kernel = Fixtures.kernel()
+        try playing(Fixtures.text("Song"), in: &kernel, staleAfter: 60)
+        let awake = PluginInstant(
+            wall     : start.wall.addingTimeInterval(120),
+            monotonic: start.monotonic + .seconds(1)
+        )
+
+        #expect(kernel.setVisible(true, for: activity, at: awake) == [.dispatch(music, .refresh, token: 2)])
+    }
+
+    @Test
+    func anUnchangedSourceStateWakesNoPlugin() throws {
+        let song   = try Fixtures.nowPlaying("Song")
+        var kernel = Fixtures.kernel()
+        try playing(Fixtures.text("Song"), in: &kernel)
+        _ = kernel.receive(song, at: start)
+        _ = kernel.complete(music, token: 2, result: Fixtures.result(try PluginOutput()), at: start)
+
+        #expect(kernel.receive(song, at: start).isEmpty)
+    }
+
+    @Test
+    func aRefreshAnsweredWithNothingNewIsNotAskedAgainOnTheNextOpening() throws {
+        var kernel = Fixtures.kernel()
+        try playing(Fixtures.text("Song"), in: &kernel, staleAfter: 60)
+        _ = kernel.setVisible(true, for: activity, at: start.advanced(by: 61))
+        _ = kernel.complete(music, token: 2, result: Fixtures.result(try PluginOutput()), at: start.advanced(by: 61))
+        _ = kernel.setVisible(false, for: activity, at: start.advanced(by: 62))
+
+        #expect(kernel.setVisible(true, for: activity, at: start.advanced(by: 63)).isEmpty)
+    }
+
+    @Test
+    func aSurfaceWithNoContentAsksForNothing() throws {
+        var kernel = Fixtures.kernel()
+        _ = kernel.register(try Fixtures.music(), grants: ["automation.music"], at: start)
+        _ = kernel.complete(music, token: 1, result: Fixtures.result(try PluginOutput()), at: start)
+
+        #expect(kernel.setVisible(true, for: activity, at: start.advanced(by: 1)).isEmpty)
+    }
+
+    @Test
+    func theWakeIsReportedApartFromTheDeadlines() throws {
+        var kernel = Fixtures.kernel()
+        _ = kernel.register(try Fixtures.clock(), grants: [], at: start)
+        let output = try PluginOutput(
+            publications: [PluginPublication(feature: "time", surface: .widget, document: Fixtures.text("12:00"), staleAfter: 1)],
+            wake        : start.wall.addingTimeInterval(5)
+        )
+        _ = kernel.complete(clock, token: 1, result: Fixtures.result(output), at: start)
+
+        #expect(kernel.wakeDelay(at: start) == .seconds(5))
+
+        let later = start.advanced(by: 2)
+        _ = kernel.setVisible(true, for: PluginPublicationKey(plugin: clock, feature: "time", surface: .widget), at: later)
+
+        #expect(kernel.nextDelay(at: later) == .milliseconds(250))
+        #expect(kernel.wakeDelay(at: later) == .seconds(3))
+    }
 }

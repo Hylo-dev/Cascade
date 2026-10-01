@@ -37,9 +37,10 @@ struct PluginSourceLeases: Sendable {
     }
 
     /// record keeps the event as its source's latest state and returns who must receive it. A
-    /// source with no holders is not running, so its event is dropped.
+    /// source with no holders is not running, and a state equal to the latest one changes
+    /// nothing for a plugin that already has it, so neither reaches any plugin.
     mutating func record(_ event: PluginSourceEvent) -> Set<PluginID> {
-        guard let current = holders[event.source] else { return [] }
+        guard let current = holders[event.source], latest[event.source] != event else { return [] }
 
         latest[event.source] = event
         return current
