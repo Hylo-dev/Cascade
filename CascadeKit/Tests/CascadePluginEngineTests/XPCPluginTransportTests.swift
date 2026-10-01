@@ -1,0 +1,124 @@
+//
+//  XPCPluginTransportTests.swift
+//  CascadeKit
+//
+
+import CascadeContracts
+import CascadePluginHost
+import CascadePluginSDK
+import Dispatch
+import Foundation
+import Testing
+
+@testable import CascadePluginEngine
+
+/// XPCPluginTransportTests run both ends of the real XPC code inside the test process, through
+/// an anonymous listener. The handshake then names this process, so these tests never call
+/// `kill`; killing a real PluginHost belongs to the integration check of the next plan.
+@Suite
+struct XPCPluginTransportTests {
+
+    /// Host is an anonymous listener serving the given plugins, kept alive by the test.
+    private final class Host {
+
+        let listener: NSXPCListener
+        let delegate: PluginHostListener
+
+        init(_ providers: [String: any PluginProvider]) {
+            delegate = PluginHostListener(service: PluginHostService(runner: PluginRunner(providers: providers)), requirement: nil)
+            listener = NSXPCListener.anonymous()
+            listener.delegate = delegate
+            listener.resume()
+        }
+
+        var transport: XPCPluginTransport {
+            XPCPluginTransport(endpoint: listener.endpoint)
+        }
+    }
+
+    private let clock = PluginEngineFixtures.clockID
+
+    @Test
+    func theHandshakeNamesThisProcess() async {
+        let host = Host([:])
+        let link = host.transport.connect(onLoss: {})
+        defer { link.invalidate() }
+
+        let incarnation = await withCheckedContinuation { continuation in
+            link.hello { continuation.resume(returning: $0) }
+        }
+
+        #expect(incarnation?.pid == getpid())
+    }
+
+    @Test
+    func anEventRoundTripsThroughTheHost() async throws {
+        let output = try PluginEngineFixtures.output("time", .widget, PluginEngineFixtures.text("12:00"))
+        let host   = Host(["ClockPlugin": ScriptedProvider { _ in output }])
+        let link   = host.transport.connect(onLoss: {})
+        defer { link.invalidate() }
+
+        link.start(clock, entryPoint: "ClockPlugin")
+        let result = await withCheckedContinuation { continuation in
+            link.handle(.refresh, for: clock) { continuation.resume(returning: $0) }
+        }
+
+        #expect(result?.output == output)
+    }
+
+    @Test
+    func aThrowingPluginAnswersWithAFailure() async {
+        let host = Host(["ClockPlugin": ScriptedProvider { _ in throw CancellationError() }])
+        let link = host.transport.connect(onLoss: {})
+        defer { link.invalidate() }
+
+        link.start(clock, entryPoint: "ClockPlugin")
+        let result = await withCheckedContinuation { continuation in
+            link.handle(.refresh, for: clock) { continuation.resume(returning: $0) }
+        }
+
+        #expect(result?.outcome == .failed)
+    }
+
+    @Test
+    func aBrokenConnectionAnswersNothingAndReportsTheLoss() async throws {
+        let gate   = DispatchSemaphore(value: 0)
+        let losses = Recorder<Bool>()
+        let host   = Host([
+            "ClockPlugin": ScriptedProvider { _ in
+                _ = gate.wait(timeout: .now() + 5)
+                return try PluginOutput()
+            },
+        ])
+        let link = host.transport.connect { losses.record(true) }
+        link.start(clock, entryPoint: "ClockPlugin")
+
+        async let result = withCheckedContinuation { continuation in
+            link.handle(.refresh, for: clock) { continuation.resume(returning: $0) }
+        }
+        try await Task.sleep(for: .milliseconds(50))
+        link.invalidate()
+
+        #expect(await result == nil)
+        #expect(try await eventually { !losses.values.isEmpty })
+        gate.signal()
+    }
+
+    @Test
+    func theEngineRunsAPluginThroughTheXPCHost() async throws {
+        let face   = try PluginEngineFixtures.text("12:00")
+        let output = try PluginEngineFixtures.output("time", .widget, face)
+        let host   = Host(["ClockPlugin": ScriptedProvider { _ in output }])
+        let sink   = RecordingSink()
+        let engine = PluginEngine(
+            executor: SharedHostExecutor(transport: host.transport),
+            sources : [:],
+            sink    : sink
+        )
+
+        engine.register(try PluginEngineFixtures.clock(), grants: [])
+
+        #expect(try await eventually { sink.changes.count == 1 })
+        #expect(sink.changes.first?.content?.document == face)
+    }
+}
