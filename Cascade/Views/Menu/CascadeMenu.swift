@@ -107,6 +107,7 @@ struct CascadeMenu: View {
         }
 
         Button("Test Volume Alert") { services.previewVolume() }
+            .disabled(!services.volumeEnabled)
 
         Divider()
 
@@ -118,6 +119,7 @@ struct CascadeMenu: View {
 
             Button("Low Power Mode · Yellow") { services.previewCharging(lowPower: true) }
         }
+        .disabled(!services.chargingEnabled)
 
         Divider()
 
