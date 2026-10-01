@@ -12,7 +12,7 @@ import SwiftUI
 /// unavailable.
 struct PluginComponentView: View {
 
-    static let identifiers: Set<String> = ["power.battery"]
+    static let identifiers: Set<String> = ["power.battery", "volume.level"]
 
     let id        : String
     let version   : Int
@@ -25,6 +25,9 @@ struct PluginComponentView: View {
                     percentage    : parameters["percentage"]?.number.map { Int($0.rounded()) },
                     isLowPowerMode: parameters["isLowPowerMode"]?.bool ?? false
                 )
+
+            case ("volume.level", 1):
+                PluginVolumeLevelComponent(level: parameters["level"]?.number.map { Int($0.rounded()) } ?? 0)
 
             default:
                 Color.clear

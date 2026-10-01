@@ -142,21 +142,28 @@ struct PluginNodeViewTests {
     }
 
     @Test
-    func theBatteryIsDrawnAndAnUnknownComponentOnlyKeepsItsFrame() throws {
-        func pixels(_ id: String) throws -> Int {
+    func everyCatalogComponentIsDrawnAndAnUnknownOneOnlyKeepsItsFrame() throws {
+        /// opaquePixels counts the pixels a component draws at more than half opacity, so a bar's
+        /// fill tells from its dimmed track.
+        func opaquePixels(
+            _ id        : String,
+            _ parameters: [String: PluginValue] = ["percentage": .number(80)]
+        ) throws -> Int {
             let frame: PluginModifier = .frame(width: 26, height: 12, maxWidth: nil, maxHeight: nil, alignment: .center)
             var publisher = PluginRenderFixtures.Publisher()
             let store     = PluginNodeStore(key: PluginRenderFixtures.key, submit: { _ in })
-            store.apply(publisher.publish(try PluginDocument(root: PluginNode(.component(id: id, version: 1, parameters: ["percentage": .number(80)]), modifiers: [frame]))))
+            store.apply(publisher.publish(try PluginDocument(root: PluginNode(.component(id: id, version: 1, parameters: parameters), modifiers: [frame]))))
             let image  = try #require(ImageRenderer(content: PluginDocumentView(store: store)).cgImage)
             let bitmap = NSBitmapImageRep(cgImage: image)
 
             return (0..<bitmap.pixelsWide).reduce(0) { count, x in
-                count + (0..<bitmap.pixelsHigh).count { y in (bitmap.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0 }
+                count + (0..<bitmap.pixelsHigh).count { y in (bitmap.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.5 }
             }
         }
 
-        #expect(try pixels("power.battery") > 0)
-        #expect(try pixels("audio.spectrum") == 0)
+        #expect(try opaquePixels("power.battery") > 0)
+        #expect(try opaquePixels("audio.spectrum") == 0)
+        #expect(try opaquePixels("volume.level", ["level": .number(50)]) > 0)
+        #expect(try opaquePixels("volume.level", ["level": .number(50)]) < (try opaquePixels("volume.level", ["level": .number(100)])))
     }
 }
