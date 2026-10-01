@@ -214,7 +214,7 @@ struct SettingsTests {
         #expect(fixture.tap.nativeInvocationCount == 1)
 
         #expect(fixture.coordinator.handle(type: .keyDown, event: fixture.shortcutEvent()))
-        try await Task.sleep(for: .milliseconds(30))
+        try await fixture.waitForReleases(1)
         #expect(fixture.releaseCount == 1)
 
         #expect(fixture.coordinator.handle(type: .keyDown, event: fixture.shortcutEvent()))

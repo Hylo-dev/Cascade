@@ -54,6 +54,16 @@ final class SpotlightCoordinatorFixture {
         )
     }
 
+    /// waitForReleases waits until the coordinator has released the presentation `count` times,
+    /// so a handoff timeout that fires late on a loaded machine still counts. It gives up after
+    /// two seconds and leaves the caller's expectation to fail.
+    func waitForReleases(_ count: Int) async throws {
+        let deadline = ContinuousClock.now.advanced(by: .seconds(2))
+        while releaseCount < count, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+    }
+
     func shortcutEvent() -> CGEvent {
         let event = CGEvent(
             keyboardEventSource: nil,
