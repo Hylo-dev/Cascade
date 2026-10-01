@@ -13,6 +13,7 @@ import Foundation
 public enum FirstPartyPlugins {
 
     public static let providers: [String: any PluginProvider] = [
+        "BatteryPlugin" : BatteryPlugin(),
         "ChargingPlugin": ChargingPlugin(),
         "ClockPlugin"   : ClockPlugin(),
     ]
