@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		CA5CADE4000000000000000B /* CascadePluginHost in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE4000000000000000A /* CascadePluginHost */; };
-		CA5CADE4000000000000000F /* PluginHost.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = CA5CADE40000000000000001 /* PluginHost.xpc */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		CA5CADE4000000000000000F /* PluginHost.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = CA5CADE40000000000000001 /* PluginHost.xpc */; };
 		CA5CADE40000000000000012 /* CascadePluginEngine in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE40000000000000010 /* CascadePluginEngine */; };
 		CA5CADE40000000000000013 /* CascadePluginHost in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE40000000000000011 /* CascadePluginHost */; };
 		CA5CADE10CA10CA10CA1A003 /* CascadeKit in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE10CA10CA10CA1A002 /* CascadeKit */; };
@@ -466,6 +466,10 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/PluginHost-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = hylo.Cascade.PluginHost;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -485,6 +489,10 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/PluginHost-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = hylo.Cascade.PluginHost;
 				PRODUCT_NAME = "$(TARGET_NAME)";
