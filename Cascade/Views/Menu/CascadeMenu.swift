@@ -154,9 +154,6 @@ struct CascadeMenu: View {
                         }
                         Button("Check Audio Permission Again") { services.retryAudioCapture() }
 
-                    case .unsupported:
-                        Text("The bars require macOS 14.2 or later.")
-
                     case .unavailable:
                         Text("Audio isn’t available to the visualizer")
                         Button("Retry Audio Visualizer") { services.retryAudioCapture() }

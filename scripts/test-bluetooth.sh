@@ -48,7 +48,7 @@ CLANG_MODULE_CACHE_PATH="$module_cache" \
 SWIFT_MODULE_CACHE_PATH="$module_cache" \
 /usr/bin/xcrun swiftc \
     -swift-version 6 \
-    -target arm64-apple-macosx14.0 \
+    -target arm64-apple-macosx15.0 \
     -default-isolation MainActor \
     -enable-upcoming-feature MemberImportVisibility \
     -enable-upcoming-feature InferIsolatedConformances \
@@ -72,7 +72,7 @@ CLANG_MODULE_CACHE_PATH="$module_cache" \
 SWIFT_MODULE_CACHE_PATH="$module_cache" \
 /usr/bin/xcrun swiftc \
     -swift-version 6 \
-    -target arm64-apple-macosx14.0 \
+    -target arm64-apple-macosx15.0 \
     -default-isolation MainActor \
     -warnings-as-errors \
     -parse-as-library \

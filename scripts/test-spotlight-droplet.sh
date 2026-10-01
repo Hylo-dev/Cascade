@@ -9,7 +9,7 @@ export CLANG_MODULE_CACHE_PATH=/private/tmp/cascade-spotlight-droplet-module-cac
 check_directory=$(mktemp -d /private/tmp/cascade-spotlight-droplet-checks.XXXXXX)
 trap 'rm -rf "$check_directory"' EXIT
 
-/usr/bin/xcrun swiftc -swift-version 6 -target arm64-apple-macosx14.0 \
+/usr/bin/xcrun swiftc -swift-version 6 -target arm64-apple-macosx15.0 \
     -default-isolation MainActor -warnings-as-errors -parse-as-library \
     -D SPOTLIGHT_DROPLET_TESTS \
     "$project_directory/Cascade/Views/Spotlight/SpotlightDropletGlassView.swift" \

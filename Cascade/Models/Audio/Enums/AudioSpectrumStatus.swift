@@ -9,6 +9,5 @@ nonisolated enum AudioSpectrumStatus: Equatable, Sendable {
     case stopped
     case capturing
     case permissionRequired
-    case unsupported
     case unavailable(String)
 }

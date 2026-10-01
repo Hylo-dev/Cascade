@@ -70,7 +70,7 @@ The morph is one interpolation between two geometries, driven by a normalized pr
 ### High level (SwiftUI)
 
 - **Widget content** is rendered with SwiftUI, hosted inside the expanded notch via `NSHostingView`.
-- **State** lives in `@Observable` holders on the main actor (Observation framework, macOS 14): the `NotchState`, the active screen, the resolved geometry. Observation's fine-grained tracking means a side opening only invalidates the views that actually read that side.
+- **State** lives in `@Observable` holders on the main actor (Observation framework): the `NotchState`, the active screen, the resolved geometry. Observation's fine-grained tracking means a side opening only invalidates the views that actually read that side.
 
 ### Widget plugin layer (the modular surface)
 
@@ -136,8 +136,8 @@ A widget is a guest in an always-on overlay, so the protocol is deliberately str
 ## Performance & platform rules (important)
 
 - **Do not devour RAM, CPU or battery, and never hang.** This is why the app must be careful: it is always on screen. Prefer the design that allocates less and wakes the CPU less.
-- **Deployment floor is macOS 14 (Sonoma).** State holders use **`@Observable`** (Observation framework). `async`/`await`, `actor`, `TaskGroup`, `@MainActor` are all fine. Before proposing an API, check it exists on macOS 14 and flag it if not.
-- **`InlineArray` is Swift 6.2 stdlib.** Its runtime ships with the newest OS, so on a macOS 14 floor it must be gated behind `@available(macOS 26, *)` with a fixed-capacity fallback (a small tuple or a `reserveCapacity`'d `ContiguousArray`). Keep its use inside the fast path and behind the gate.
+- **Deployment floor is macOS 15 (Sequoia).** State holders use **`@Observable`** (Observation framework), and shared state that crosses threads can use `Mutex` and `Atomic` from Synchronization. `async`/`await`, `actor`, `TaskGroup`, `@MainActor` are all fine outside the plugin engine, which avoids actors by design. Before proposing an API, check it exists on macOS 15 and flag it if not.
+- **`InlineArray` is Swift 6.2 stdlib.** Its runtime ships with the newest OS, so on a macOS 15 floor it must be gated behind `@available(macOS 26, *)` with a fixed-capacity fallback (a small tuple or a `reserveCapacity`'d `ContiguousArray`). Keep its use inside the fast path and behind the gate.
 - **The compositor is sacred.** Never stall the `CATransaction` commit; never do per-frame heavy work or allocation in the `CADisplayLink` callback.
 - **The fast path is a small, audited blast radius.** `@frozen`, contiguous storage and `UnsafePointer` are allowed there *on purpose*, wrapped behind safe APIs and documented. Everywhere else the normal safety rules hold.
 - **Renderer:** update `CAShapeLayer.path`, not `draw(_:)`. The morph runs on its own layer; opening a side must not recompute unrelated layers. Target 120 Hz or better.

@@ -1948,17 +1948,6 @@
         }
       }
     },
-    "The bars require macOS 14.2 or later.": {
-      "comment": "Menu bar menu, status line (disabled item)",
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le barre richiedono macOS 14.2 o successivo."
-          }
-        }
-      }
-    },
     "The bars turn on during playback.": {
       "comment": "Menu bar menu, status line (disabled item)",
       "localizations": {

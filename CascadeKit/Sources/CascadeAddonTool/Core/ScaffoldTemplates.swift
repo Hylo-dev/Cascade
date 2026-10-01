@@ -47,7 +47,7 @@ enum ScaffoldTemplates {
 
         let package = Package(
             name: \#(swiftLiteral(target)),
-            platforms: [.macOS(.v14)],
+            platforms: [.macOS(.v15)],
             products: [.library(name: \#(swiftLiteral(target)), targets: [\#(swiftLiteral(target))])],
             dependencies: [.package(name: "CascadeSDK", path: \#(swiftLiteral(sdkPath)))],
             targets: [

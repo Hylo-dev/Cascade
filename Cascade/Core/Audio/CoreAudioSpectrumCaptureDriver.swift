@@ -56,11 +56,6 @@ nonisolated final class CoreAudioSpectrumCaptureDriver: AudioSpectrumCaptureDriv
         session?.stop()
         session = nil
 
-        guard #available(macOS 14.2, *) else {
-            status(.unsupported)
-            return
-        }
-
         let capture = CoreAudioSpectrumCaptureSession(
             queue       : queue,
             continuation: continuation,

@@ -54,9 +54,8 @@ nonisolated final class CoreAudioSpectrumCaptureSession: @unchecked Sendable {
         right.deallocate()
     }
 
-    /// start follows Apple's Core Audio tap capture API, gated at its SDK availability boundary.
+    /// start follows Apple's Core Audio tap capture API.
     /// https://developer.apple.com/documentation/coreaudio/capturing-system-audio-with-core-audio-taps
-    @available(macOS 14.2, *)
     func start(sourceBundleIdentifier: String?) throws {
         guard isCurrent() else { throw SpectrumCaptureFailure("Capture cancelled") }
 
@@ -175,7 +174,7 @@ nonisolated final class CoreAudioSpectrumCaptureSession: @unchecked Sendable {
             aggregateID = AudioObjectID(kAudioObjectUnknown)
         }
 
-        if #available(macOS 14.2, *), tapID != kAudioObjectUnknown {
+        if tapID != kAudioObjectUnknown {
             logCleanup(AudioHardwareDestroyProcessTap(tapID), operation: "Destroy output tap")
             tapID = AudioObjectID(kAudioObjectUnknown)
         }
@@ -199,7 +198,6 @@ nonisolated final class CoreAudioSpectrumCaptureSession: @unchecked Sendable {
         continuation.yield(frame)
     }
 
-    @available(macOS 14.2, *)
     private func makeTapDescription(sourceBundleIdentifier: String?) -> CATapDescription {
         if let sourceBundleIdentifier, !sourceBundleIdentifier.isEmpty {
             if #available(macOS 26, *) {

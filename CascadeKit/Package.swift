@@ -18,7 +18,7 @@ let package = Package(
     name: "CascadeKit",
     defaultLocalization: "en",
     platforms: [
-        .macOS(.v14)  // Floor: Sonoma. @Observable, CADisplayLink, safeAreaInsets.
+        .macOS(.v15)  // Floor: Sequoia. Mutex and Atomic, @Observable, CADisplayLink, safeAreaInsets.
     ],
     products: [
         .executable(name: "cascade-addon", targets: ["CascadeAddonTool"]),

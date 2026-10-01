@@ -1,6 +1,6 @@
 # StandaloneClock public source example
 
-`StandaloneClockProvider` is a source-only Swift 6.2 library for macOS 14. It uses only the public `CascadeAddonSDK` and `CascadeContracts` products and publishes a declarative `clock(format: .hourMinute)` widget from an exact host-assigned `PublicationID`. The host supplies the authenticated owner and, when recreating the provider, its previously accepted revision.
+`StandaloneClockProvider` is a source-only Swift 6.2 library for macOS 15. It uses only the public `CascadeAddonSDK` and `CascadeContracts` products and publishes a declarative `clock(format: .hourMinute)` widget from an exact host-assigned `PublicationID`. The host supplies the authenticated owner and, when recreating the provider, its previously accepted revision.
 
 Set `CASCADE_SDK_PATH` to an absolute public SDK package path, then build or test an independent copy:
 

@@ -17,7 +17,7 @@ cascade-addon validate /absolute/path/to/ServiceConsumer/Manifests/Consumer.json
 cascade-addon validate /absolute/path/to/ServiceConsumer/Manifests/Provider.json
 ```
 
-Use a Swift 6.2 or newer toolchain on macOS 14 or newer. There is no implicit
+Use a Swift 6.2 or newer toolchain on macOS 15 or newer. There is no implicit
 repository fallback or remote SDK release dependency. Direct SDK dependencies
 select only `CascadeAddonSDK` and `CascadeContracts`; the SDK also reaches its
 public presentation target. The consumer does not depend on the provider

@@ -14,7 +14,7 @@ else { fatalError("Set CASCADE_SDK_PATH to an absolute public SDK package direct
 
 let package = Package(
     name              : "StandaloneClock",
-    platforms         : [.macOS(.v14)],
+    platforms         : [.macOS(.v15)],
     products          : [.library(name: "StandaloneClockProvider", targets: ["StandaloneClockProvider"])],
     dependencies      : [.package(name: "PublicCascadeSDK", path: sdkPath)],
     targets           : [

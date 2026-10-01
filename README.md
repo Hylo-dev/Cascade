@@ -7,7 +7,7 @@ modular widgets. See [`PRODUCT.md`](PRODUCT.md) for what it does and
 
 ## Requirements
 
-- macOS 14 (Sonoma) or newer to run.
+- macOS 15 (Sequoia) or newer to run.
 - Xcode 26 or newer to build. Day-to-day development and verification happen on
   Xcode 27 beta; Xcode 26 is expected to work but is not regularly tested.
 
