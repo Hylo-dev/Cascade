@@ -6,27 +6,43 @@
 import SwiftUI
 
 /// WidgetHost is the layout workspace: the widget instances (deduplicated), the
-/// pages, and the rendering of the current page onto the grid.
+/// arrangement of page 0 on each display, and the rendering of the open
+/// display's arrangement onto the grid.
 ///
-/// - `widgets` holds each instance once, keyed by id; a screen references widgets
-///   by id, so one widget shown on several screens is never duplicated.
-/// - `screens` are the ordered pages (the slider will page through them; for now
-///   there is one).
-/// - It owns the pure `NotchLayoutResolver` and turns the current screen's
+/// - `widgets` holds each instance once, keyed by id; an arrangement references
+///   widgets by id, so one widget shown on several displays is never duplicated.
+/// - A display nobody edited shows the shared default arrangement, which
+///   auto-places every widget as it registers. The first edit on a display gives
+///   it its own copy, keyed by the display's stable identity. An edited
+///   arrangement never auto-places a newly registered widget: it waits in the
+///   gallery, as a new widget does on a phone's home screen.
+/// - An arrangement keeps the place of a widget that is not registered right now,
+///   such as a plugin switched off, so it comes back where it was; an edit that
+///   covers its cells drops that place, so the two can never overlap.
+/// - It owns the pure `NotchLayoutResolver` and turns the open display's
 ///   arrangement into a positioned SwiftUI `ZStack` for the renderer.
 ///
-/// Lifecycle: when the notch opens the host `activate`s the current screen's
-/// widgets (handing each a context) and `suspend`s them when it closes, so a
-/// closed notch holds no widget resources.
+/// Lifecycle: when the notch opens on a display the host `activate`s the widgets
+/// of that display's arrangement (handing each a context) and `suspend`s every
+/// other one, and it suspends them all when the notch closes, so a closed notch,
+/// and a widget taken off the grid, hold no widget resources.
 @MainActor
 final class WidgetHost {
 
-    /// Fired when a widget asks for a content refresh; the controller re-renders.
+    /// unidentifiedDisplay keys the arrangement of a display CoreGraphics gives no UUID; such
+    /// displays share one arrangement.
+    nonisolated static let unidentifiedDisplay = DisplayIdentity(rawValue: "unidentified")
+
+    /// Fired when a widget asks for a content refresh or the arrangement changes;
+    /// the controller re-renders.
     var onContentChanged: (() -> Void)?
 
     private var widgets           : [WidgetIdentifier: NotchWidget] = [:]
-    private var screens           : [NotchScreen] = [NotchScreen(id: 0)]
-    private var currentScreenIndex = 0
+    private var registrationOrder : [WidgetIdentifier] = []
+    private var defaultArrangement: [WidgetIdentifier: WidgetPlacement] = [:]
+    private var editedArrangements: [DisplayIdentity: [WidgetIdentifier: WidgetPlacement]] = [:]
+    private var currentDisplay     = WidgetHost.unidentifiedDisplay
+    private var openState         : NotchState?
 
     private var contexts     : [WidgetIdentifier: WidgetContext] = [:]
     private var activeWidgets: Set<WidgetIdentifier> = []
@@ -38,52 +54,67 @@ final class WidgetHost {
         self.resolver = NotchLayoutResolver(metrics: metrics)
     }
 
-    private var currentScreen: NotchScreen {
-        get { screens[currentScreenIndex] }
-        set { screens[currentScreenIndex] = newValue }
+    /// arrangement is the page the open display shows: its own once edited, the
+    /// shared default until then.
+    var arrangement: [WidgetIdentifier: WidgetPlacement] {
+        editedArrangements[currentDisplay] ?? defaultArrangement
+    }
+
+    /// gallery lists the registered widgets that are not on the open display's
+    /// grid, in the order they registered, for the editing gallery to offer.
+    var gallery: [NotchWidget] {
+        let arrangement = arrangement
+
+        return registrationOrder.compactMap { id in
+            arrangement[id] == nil ? widgets[id] : nil
+        }
     }
 
     /// register adds a widget instance and, if it isn't placed yet, auto-places
-    /// it into the first free block of the current screen's main rows.
+    /// it into the first free block of the default arrangement's main rows.
     func register(_ widget: NotchWidget) {
+        if widgets[widget.id] == nil { registrationOrder.append(widget.id) }
         widgets[widget.id] = widget
         cachedViews.removeValue(forKey: widget.id)
 
-        guard currentScreen.arrangement[widget.id] == nil else { return }
+        guard defaultArrangement[widget.id] == nil else { return }
 
         if let placement = autoPlacement(for: widget.size) {
-            currentScreen.arrangement[widget.id] = placement
+            defaultArrangement[widget.id] = placement
         }
     }
 
     /// unregister removes one instance and revokes its context before provider
-    /// cleanup runs.
+    /// cleanup runs. An edited arrangement keeps its place for when it returns.
     func unregister(id: WidgetIdentifier) {
-        contexts.removeValue(forKey: id)?.revoke()
-        cachedViews.removeValue(forKey: id)
-
-        if activeWidgets.remove(id) != nil { widgets[id]?.suspend() }
+        suspend(id)
         widgets.removeValue(forKey: id)
-
-        for index in screens.indices { screens[index].arrangement.removeValue(forKey: id) }
+        registrationOrder.removeAll { $0 == id }
+        defaultArrangement.removeValue(forKey: id)
         onContentChanged?()
     }
 
-    /// update activates the current screen's widgets when the notch is open and
-    /// suspends them all when it closes. (Per-screen activation; switching
-    /// screens will re-run this once paging exists.)
-    func update(state: NotchState) {
+    /// update activates the open display's widgets when the notch is open and
+    /// suspends every other one; it suspends them all when the notch closes.
+    func update(
+        state  : NotchState,
+        display: DisplayIdentity = WidgetHost.unidentifiedDisplay
+    ) {
         guard !state.isClosed else {
-            activeWidgets.forEach {
-                contexts.removeValue(forKey: $0)?.revoke()
-                cachedViews.removeValue(forKey: $0)
-                widgets[$0]?.suspend()
-            }
-            activeWidgets.removeAll()
+            activeWidgets.forEach(suspend)
+            openState = nil
             return
         }
 
-        for id in currentScreen.arrangement.keys {
+        openState      = state
+        currentDisplay = display
+
+        let arrangement = arrangement
+        for id in activeWidgets where arrangement[id] == nil {
+            suspend(id)
+        }
+
+        for id in arrangement.keys {
             guard let widget = widgets[id] else { continue }
 
             if activeWidgets.contains(id) {
@@ -100,7 +131,116 @@ final class WidgetHost {
         }
     }
 
-    /// makeContentView builds the current screen's content: it resolves every
+    // MARK: - Editing
+
+    /// move drops a widget with its top-leading cell on `position`. A drop that
+    /// does not fit, off the grid or over another widget, is refused and the
+    /// widget keeps its place.
+    @discardableResult
+    func move(
+        _ id       : WidgetIdentifier,
+        to position: GridPosition,
+        on grid    : NotchGrid
+    ) -> Bool {
+        guard let current = arrangement[id] else { return false }
+
+        let moved = WidgetPlacement(position: position, span: current.span)
+        guard grid.fits(moved, among: placements(besides: id)) else { return false }
+
+        commit(moved, for: id)
+        return true
+    }
+
+    /// resize switches a widget to another of its sizes. It keeps its origin when
+    /// the new size fits there, moves to the first free fit of the main rows when
+    /// it does not, and is refused when the size fits nowhere.
+    @discardableResult
+    func resize(
+        _ id   : WidgetIdentifier,
+        to span: GridSpan,
+        on grid: NotchGrid
+    ) -> Bool {
+        guard let current = arrangement[id] else { return false }
+
+        let others  = placements(besides: id)
+        let inPlace = WidgetPlacement(position: current.position, span: span)
+        guard let resized = grid.fits(inPlace, among: others)
+                ? inPlace
+                : grid.firstFit(for: span, among: others)
+        else { return false }
+
+        commit(resized, for: id)
+        return true
+    }
+
+    /// add puts a gallery widget on the grid at the first free fit of the chosen
+    /// size, and is refused when the size fits nowhere.
+    @discardableResult
+    func add(
+        _ id   : WidgetIdentifier,
+        size   : GridSpan,
+        on grid: NotchGrid
+    ) -> Bool {
+        guard widgets[id] != nil,
+              arrangement[id] == nil,
+              let placement = grid.firstFit(for: size, among: placements(besides: id))
+        else { return false }
+
+        commit(placement, for: id)
+        return true
+    }
+
+    /// remove takes a widget off the open display's grid. It is suspended at once,
+    /// so a removed plugin widget tells the engine it is no longer visible.
+    func remove(_ id: WidgetIdentifier) {
+        guard arrangement[id] != nil else { return }
+
+        var edited = arrangement
+        edited.removeValue(forKey: id)
+        apply(edited)
+    }
+
+    /// canAdd tells the gallery whether a size has a free fit, so a button that
+    /// would be refused is shown disabled instead.
+    func canAdd(
+        _ span : GridSpan,
+        on grid: NotchGrid
+    ) -> Bool {
+        grid.firstFit(for: span, among: placements(besides: nil)) != nil
+    }
+
+    /// placements are the blocks of the registered widgets on the open display's
+    /// grid, except `id`'s own: an absent widget's place never blocks an edit.
+    private func placements(besides id: WidgetIdentifier?) -> [WidgetPlacement] {
+        arrangement.compactMap { other, placement in
+            other != id && widgets[other] != nil ? placement : nil
+        }
+    }
+
+    /// commit stores one widget's new place and drops the place of any absent
+    /// widget it now covers.
+    private func commit(
+        _ placement: WidgetPlacement,
+        for id     : WidgetIdentifier
+    ) {
+        var edited = arrangement.filter { other, kept in
+            widgets[other] != nil || !kept.overlaps(placement)
+        }
+        edited[id] = placement
+        apply(edited)
+    }
+
+    /// apply makes `edited` the open display's own arrangement, brings the
+    /// widgets' activation in line with it, and asks for a re-render.
+    private func apply(_ edited: [WidgetIdentifier: WidgetPlacement]) {
+        editedArrangements[currentDisplay] = edited
+        if let openState { update(state: openState, display: currentDisplay) }
+        onContentChanged?()
+    }
+
+    // MARK: - Rendering
+
+    /// makeContentView builds the open display's content: it resolves every
     /// placement to a frame and drops each widget's view into a `ZStack` at that
     /// frame. Frames come back in the host view's (y-up) coordinates, so we flip
     /// y for SwiftUI.
@@ -114,7 +254,7 @@ final class WidgetHost {
             interior     : interior,
             notchWidth   : notchWidth,
             topBandHeight: topBandHeight,
-            placements   : currentScreen.arrangement
+            placements   : arrangement
         )
 
         let placed = layout.frames.compactMap { id, rect -> PositionedWidget? in
@@ -149,6 +289,15 @@ final class WidgetHost {
         onContentChanged?()
     }
 
+    /// suspend revokes a widget's context before suspending it, so a retained
+    /// copy can no longer ask for content.
+    private func suspend(_ id: WidgetIdentifier) {
+        contexts.removeValue(forKey: id)?.revoke()
+        cachedViews.removeValue(forKey: id)
+
+        if activeWidgets.remove(id) != nil { widgets[id]?.suspend() }
+    }
+
     /// PositionedWidget pairs a widget's resolved view with its frame, ready to
     /// position in the `ZStack`.
     private struct PositionedWidget: Identifiable {
@@ -159,13 +308,13 @@ final class WidgetHost {
     }
 
     /// autoPlacement finds the first-fit placement in the main rows (1 and 2),
-    /// skipping cells already taken on the current screen. Row 0 (the notch
+    /// skipping cells already taken in the default arrangement. Row 0 (the notch
     /// band) is reserved for explicit / drag-and-drop placement, since its
     /// availability depends on the live notch geometry.
     private func autoPlacement(for span: GridSpan) -> WidgetPlacement? {
         NotchGrid(columns: resolver.metrics.columns, bandColumns: 0 ..< 0).firstFit(
             for  : span,
-            among: Array(currentScreen.arrangement.values)
+            among: Array(defaultArrangement.values)
         )
     }
 }

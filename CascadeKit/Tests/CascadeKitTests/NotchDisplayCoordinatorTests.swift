@@ -1218,6 +1218,32 @@ struct NotchDisplayCoordinatorTests {
     }
 
     @Test
+    func theOwnersIdentityPicksTheArrangementItsWidgetsComeFrom() throws {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
+        let widget  = CoordinatorWidgetFixture()
+        fixture.coordinator.register(widget)
+        fixture.coordinator.start()
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
+        fixture.widgetHost.remove(widget.id)
+        #expect(widget.suspensions == 1)
+
+        fixture.surfaces[20]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 2
+        )
+        let closeGeneration = try #require(fixture.surfaces[10]?.closeRequests.last)
+        fixture.surfaces[10]?.finishCollapse(generation: closeGeneration)
+
+        #expect(widget.activations == 2)
+        #expect(fixture.widgetHost.arrangement[widget.id] != nil)
+    }
+
+    @Test
     func staleCloseCompletionCannotGrantThePendingDisplay() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
         fixture.coordinator.start()

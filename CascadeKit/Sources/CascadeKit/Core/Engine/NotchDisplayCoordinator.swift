@@ -1336,9 +1336,15 @@ final class NotchDisplayCoordinator {
                 continue
             }
 
-            let widgetsVisible = projections.values.contains { $0.showsWidgets }
-            if widgetsVisible {
-                widgetHost.update(state: .open)
+            // Only the expanded owner shows widgets, so at most one display's
+            // arrangement is live; its stable identity picks that arrangement.
+            let widgetDisplayID = projections.first { $0.value.showsWidgets }?.key
+            let widgetsVisible  = widgetDisplayID != nil
+            if let widgetDisplayID {
+                widgetHost.update(
+                    state  : .open,
+                    display: surfaces[widgetDisplayID]?.entry.identity ?? WidgetHost.unidentifiedDisplay
+                )
             }
 
             let accepted = Set(result.accepted.map(ObjectIdentifier.init))
