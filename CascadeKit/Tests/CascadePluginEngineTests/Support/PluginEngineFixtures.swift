@@ -102,4 +102,32 @@ enum PluginEngineFixtures {
     static func power(charging: Bool) throws -> PluginSourceEvent {
         try PluginSourceEvent(source: "power", fields: ["charging": .bool(charging)])
     }
+
+    static func kernel(
+        sources: Set<String> = ["media.nowPlaying"],
+        policy : any PluginHealthPolicy = StandardHealthPolicy()
+    ) -> PluginKernel {
+        PluginKernel(
+            capabilities: PluginHostCapabilities(sources: sources, services: [], components: ["media.scrubber"]),
+            policy      : policy
+        )
+    }
+
+    static func output(
+        _ feature : String,
+        _ surface : PluginSurfaceKind,
+        _ document: PluginDocument?,
+        staleAfter: Double? = nil
+    ) throws -> PluginOutput {
+        try PluginOutput(
+            publications: [PluginPublication(feature: feature, surface: surface, document: document, staleAfter: staleAfter)]
+        )
+    }
+
+    static func result(
+        _ output: PluginOutput?,
+        cpuTime : Duration = .milliseconds(1)
+    ) -> PluginExecutionResult {
+        PluginExecutionResult(output: output, cpuTime: cpuTime)
+    }
 }
