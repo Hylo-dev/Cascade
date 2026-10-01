@@ -6,14 +6,6 @@
 import CascadeContracts
 import Foundation
 
-public enum FocusCommand: String, Codable, Sendable, CaseIterable {
-
-    case start
-    case pause
-    case resume
-    case end
-}
-
 /// FocusSession is a civil-clock reducer. Starting an already active session never resets its time.
 public struct FocusSession: Codable, Equatable, Sendable {
 
