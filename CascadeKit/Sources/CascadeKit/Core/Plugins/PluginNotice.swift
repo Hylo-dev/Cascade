@@ -61,32 +61,16 @@ final class PluginNotice: NotchTransientNotice {
         self.attributes = attributes
     }
 
-    /// region is the node a region draws, for tests and accessibility checks.
-    func region(_ index: Int) -> PluginNodeModel? {
-        guard let root = store.root, root.children.indices.contains(index) else { return nil }
-
-        return store.model(root.children[index])
-    }
-
     func makeCompactLeadingView(in context: NotchActivityViewContext) -> AnyView {
-        AnyView(
-            PluginRegionView(store: store, index: 0)
-                .frame(maxWidth: context.availableSize.width, maxHeight: context.availableSize.height, alignment: .leading)
-        )
+        region(0, alignment: .leading, in: context)
     }
 
     func makeCompactTrailingView(in context: NotchActivityViewContext) -> AnyView {
-        AnyView(
-            PluginRegionView(store: store, index: 1)
-                .frame(maxWidth: context.availableSize.width, maxHeight: context.availableSize.height, alignment: .trailing)
-        )
+        region(1, alignment: .trailing, in: context)
     }
 
     func makeMinimalView(in context: NotchActivityViewContext) -> AnyView {
-        AnyView(
-            PluginRegionView(store: store, index: 2)
-                .frame(maxWidth: context.availableSize.width, maxHeight: context.availableSize.height)
-        )
+        region(2, alignment: .center, in: context)
     }
 
     func activate(in context: LiveActivityContext) {
@@ -95,5 +79,20 @@ final class PluginNotice: NotchTransientNotice {
 
     func suspend() {
         visibility(false)
+    }
+
+    /// region frames one region in its slot and reads it to VoiceOver as the notice's sentence,
+    /// as Cascade's own notices do, instead of the texts and symbol names it is drawn from.
+    private func region(
+        _ index   : Int,
+        alignment : Alignment,
+        in context: NotchActivityViewContext
+    ) -> AnyView {
+        AnyView(
+            PluginRegionView(store: store, index: index)
+                .frame(maxWidth: context.availableSize.width, maxHeight: context.availableSize.height, alignment: alignment)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(attributes.accessibilityLabel)
+        )
     }
 }

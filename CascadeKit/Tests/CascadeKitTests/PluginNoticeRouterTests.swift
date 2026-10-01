@@ -89,30 +89,41 @@ struct PluginNoticeRouterTests {
         #expect(host.dismissed == ["plugin:com.cascade.power/charging"])
     }
 
-    @Test
-    func eachRegionDrawsItsOwnNode() throws {
+    /// views are a notice's three factories, laid out in a compact slot.
+    private func views() throws -> [NSHostingView<AnyView>] {
         let host      = RecordingSurfaceHost()
         let router    = router(host)
         var publisher = PluginPublicationStore()
-        router.apply([try publish(notice(), in: &publisher)], rejected: [])
+        let document  = try PluginDocument(
+            root: PluginNode(
+                .regions,
+                children: [PluginNode(.text("W")), PluginNode(.text("WWWWWWWW")), PluginNode(.text("WWWW"))]
+            )
+        )
+        let attributes = try PluginNoticeAttributes(duration: 4, accessibilityLabel: "Notice")
+        router.apply([try publish((document, attributes), in: &publisher)], rejected: [])
         let shown   = try #require(host.shown.first?.notice)
-        let context = NotchActivityViewContext(presentation: .compactLeading, availableSize: CGSize(width: 116, height: 24))
-        let views   = [
+        let context = NotchActivityViewContext(presentation: .compactLeading, availableSize: CGSize(width: 160, height: 24))
+
+        return [
             shown.makeCompactLeadingView(in: context),
             shown.makeCompactTrailingView(in: context),
             shown.makeMinimalView(in: context),
-        ]
-
-        for view in views {
+        ].map { view in
             let hosting = NSHostingView(rootView: view)
-            hosting.frame = CGRect(x: 0, y: 0, width: 116, height: 24)
+            hosting.frame = CGRect(x: 0, y: 0, width: 160, height: 24)
             hosting.layoutSubtreeIfNeeded()
-
-            #expect(hosting.fittingSize.width > 0)
+            return hosting
         }
-        let notice = try #require(shown as? PluginNotice)
-        #expect(notice.region(0)?.kind == .text("Charging"))
-        #expect(notice.region(1)?.kind == .text("80%"))
-        #expect(notice.region(2)?.kind == .symbol(name: "battery.100percent"))
+    }
+
+    @Test
+    func eachSlotDrawsItsOwnRegion() throws {
+        let widths = try views().map(\.fittingSize.width)
+        let alone  = ["W", "WWWWWWWW", "WWWW"].map { text in
+            NSHostingView(rootView: Text(verbatim: text)).fittingSize.width
+        }
+
+        #expect(widths == alone)
     }
 }
