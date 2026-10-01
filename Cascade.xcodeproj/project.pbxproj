@@ -9,8 +9,6 @@
 /* Begin PBXBuildFile section */
 		CA5CADE4000000000000000B /* CascadePluginHost in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE4000000000000000A /* CascadePluginHost */; };
 		CA5CADE4000000000000000F /* PluginHost.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = CA5CADE40000000000000001 /* PluginHost.xpc */; };
-		CA5CADE40000000000000012 /* CascadePluginEngine in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE40000000000000010 /* CascadePluginEngine */; };
-		CA5CADE40000000000000013 /* CascadePluginHost in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE40000000000000011 /* CascadePluginHost */; };
 		CA5CADE10CA10CA10CA1A003 /* CascadeKit in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE10CA10CA10CA1A002 /* CascadeKit */; };
 		CA5CADE10CA10CA10CA1A004 /* CascadeRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE10CA10CA10CA1A005 /* CascadeRuntime */; };
 		CA5CADE20000000000000001 /* Config/FFmpeg/Artifacts/arm64/ffmpeg in Embed FFmpeg Helpers */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000011 /* Config/FFmpeg/Artifacts/arm64/ffmpeg */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -141,8 +139,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CA5CADE40000000000000012 /* CascadePluginEngine in Frameworks */,
-				CA5CADE40000000000000013 /* CascadePluginHost in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -265,8 +261,6 @@
 			);
 			name = CascadeTests;
 			packageProductDependencies = (
-				CA5CADE40000000000000010 /* CascadePluginEngine */,
-				CA5CADE40000000000000011 /* CascadePluginHost */,
 			);
 			productName = CascadeTests;
 			productReference = 040312742FE4355A00BA9823 /* CascadeTests.xctest */;
@@ -836,14 +830,6 @@
 
 /* Begin XCSwiftPackageProductDependency section */
 		CA5CADE4000000000000000A /* CascadePluginHost */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = CascadePluginHost;
-		};
-		CA5CADE40000000000000010 /* CascadePluginEngine */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = CascadePluginEngine;
-		};
-		CA5CADE40000000000000011 /* CascadePluginHost */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = CascadePluginHost;
 		};
