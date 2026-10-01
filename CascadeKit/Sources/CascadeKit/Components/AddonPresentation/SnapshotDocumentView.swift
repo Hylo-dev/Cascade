@@ -17,9 +17,9 @@ struct SnapshotDocumentView: View {
 
     var body: some View {
         if redactsSensitiveContent && document.privacy == .sensitive {
-            Label("Sensitive content hidden", systemImage: "eye.slash")
+            Label(String(localized: "Sensitive content hidden", bundle: .module), systemImage: "eye.slash")
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Sensitive content hidden")
+                .accessibilityLabel(String(localized: "Sensitive content hidden", bundle: .module))
         } else if let renderer = try? ContentRenderer(
             document: document,
             assets  : assets,

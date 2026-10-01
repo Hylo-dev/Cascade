@@ -33,7 +33,9 @@ final class SnapshotWidget: NotchWidget {
         self.document      = document
         self.assets        = assets
         self.actions       = actions
-        accessibilityLabel = document.privacy == .sensitive ? "Sensitive content hidden" : document.accessibilityLabel
+        accessibilityLabel = document.privacy == .sensitive
+            ? String(localized: "Sensitive content hidden", bundle: .module)
+            : document.accessibilityLabel
     }
 
     func makeContentView() -> AnyView {
@@ -71,7 +73,9 @@ final class SnapshotWidget: NotchWidget {
         self.document      = document
         self.assets        = assets
         self.actions       = actions
-        accessibilityLabel = document.privacy == .sensitive ? "Sensitive content hidden" : document.accessibilityLabel
+        accessibilityLabel = document.privacy == .sensitive
+            ? String(localized: "Sensitive content hidden", bundle: .module)
+            : document.accessibilityLabel
 
         if context != nil { permit = ActionPermit { [actions] action in actions.dispatch(action) } }
         context?.setNeedsContent()

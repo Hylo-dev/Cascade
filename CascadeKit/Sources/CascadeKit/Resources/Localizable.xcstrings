@@ -166,6 +166,17 @@
         }
       }
     },
+    "Sensitive content hidden": {
+      "comment": "Placeholder and accessibility label shown instead of a widget whose content is marked sensitive.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contenuto sensibile nascosto"
+          }
+        }
+      }
+    },
     "Settings…": {
       "comment": "Tooltip of the settings button in the expanded notch.",
       "localizations": {
