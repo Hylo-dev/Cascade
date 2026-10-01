@@ -45,7 +45,10 @@ nonisolated struct NotchGlassLightSources {
     }
 
     @discardableResult
-    mutating func update(_ lights: [GlassLight], for token: Token) -> Bool {
+    mutating func update(
+        _ lights : [GlassLight],
+        for token: Token
+    ) -> Bool {
         guard generations[token.source] == token.generation else { return false }
 
         let bounded = Array(lights.prefix(GlassLight.maximumCount))

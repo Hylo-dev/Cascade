@@ -93,7 +93,10 @@ final class MusicPlaybackPresentation {
 
     func succeed(_ id: UUID) {
         guard token == id else { return }
-        guard preview != nil, !isConfirmed else { clear(); return }
+        guard preview != nil, !isConfirmed else {
+            clear()
+            return
+        }
 
         confirmationTask?.cancel()
         confirmationTask = Task { [weak self, confirmationTimeout] in

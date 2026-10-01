@@ -219,7 +219,10 @@ final class NotchGlassRenderer: NotchGlassRendering {
     /// larger body; a collapse keeps the larger layout and scales it down, so
     /// the glass is never stretched past the size it was laid out at. Settling
     /// on the target lays it out exactly, leaving an identity transform at rest.
-    private func placeGlass(body: NotchGlassBody, target: NotchGlassBody) {
+    private func placeGlass(
+        body  : NotchGlassBody,
+        target: NotchGlassBody
+    ) {
         guard let glass, let layer = glass.layer else { return }
 
         if body == target || reference == nil || target.rect.height >= body.rect.height,

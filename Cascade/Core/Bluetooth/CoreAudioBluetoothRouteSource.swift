@@ -106,7 +106,10 @@ nonisolated final class CoreAudioBluetoothRouteSource: BluetoothAudioRouteSource
         // HAL's UID/name CFString properties transfer ownership to the caller.
         let storage = UnsafeMutablePointer<Unmanaged<CFString>?>.allocate(capacity: 1)
         storage.initialize(to: nil)
-        defer { storage.deinitialize(count: 1); storage.deallocate() }
+        defer {
+            storage.deinitialize(count: 1)
+            storage.deallocate()
+        }
 
         var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
         guard AudioObjectGetPropertyData(objectID, &address, 0, nil, &size, storage) == noErr,

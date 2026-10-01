@@ -214,7 +214,10 @@ public final class AddonPresentationBridge {
         }
     }
 
-    private func holdPending(_ publication: Publication, at instant: Date) {
+    private func holdPending(
+        _ publication: Publication,
+        at instant   : Date
+    ) {
         let old     = presented.removeValue(forKey: publication.id)
         let waiting = pending[publication.id]
 
@@ -232,7 +235,10 @@ public final class AddonPresentationBridge {
         )
     }
 
-    private func resolvedContent(of publication: Publication, at date: Date) -> PresentationSet? {
+    private func resolvedContent(
+        of publication: Publication,
+        at date       : Date
+    ) -> PresentationSet? {
         if let content = publication.content { return content }
 
         return publication.timeline?.last { $0.date <= date }?.content
@@ -242,7 +248,10 @@ public final class AddonPresentationBridge {
         "addon:\(id.addonID.rawValue):\(id.sessionID.uuidString):\(id.instanceID.uuidString)"
     }
 
-    private func stableOrder(_ lhs: Publication, _ rhs: Publication) -> Bool {
+    private func stableOrder(
+        _ lhs: Publication,
+        _ rhs: Publication
+    ) -> Bool {
         namespacedID(lhs.id) < namespacedID(rhs.id)
     }
 }

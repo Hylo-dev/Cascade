@@ -69,7 +69,10 @@ nonisolated struct NotchLayoutResolver {
         }
 
         // Row 0 only offers the trailing cells; rows 1–2 are fully available.
-        func isAvailable(column: Int, row: Int) -> Bool {
+        func isAvailable(
+            column: Int,
+            row   : Int
+        ) -> Bool {
             guard column >= 0, column < columns, row >= 0, row <= 2 else { return false }
 
             if row == 0 {
