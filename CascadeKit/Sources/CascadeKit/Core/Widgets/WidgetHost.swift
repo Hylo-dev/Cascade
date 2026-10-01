@@ -194,6 +194,28 @@ final class WidgetHost {
         return true
     }
 
+    /// resizeToNextSize is the tile's resize control: it steps through the
+    /// widget's sizes after the current one, wrapping around, and takes the first
+    /// that `resize` accepts, so a size that fits nowhere is skipped.
+    @discardableResult
+    func resizeToNextSize(
+        _ id   : WidgetIdentifier,
+        on grid: NotchGrid
+    ) -> Bool {
+        guard let sizes = widgets[id]?.sizes,
+              !sizes.isEmpty,
+              let current = arrangement[id]
+        else { return false }
+
+        let start = sizes.firstIndex(of: current.span) ?? sizes.count - 1
+        for step in 1 ... sizes.count {
+            let next = sizes[(start + step) % sizes.count]
+            if next != current.span, resize(id, to: next, on: grid) { return true }
+        }
+
+        return false
+    }
+
     /// add puts a gallery widget on the grid at the first free fit of the chosen
     /// size, and is refused when the size fits nowhere.
     @discardableResult
@@ -263,15 +285,20 @@ final class WidgetHost {
 
     // MARK: - Rendering
 
-    /// makeContentView builds the open display's content: it resolves every
-    /// placement to a frame and drops each widget's view into a `ZStack` at that
-    /// frame. Frames come back in the host view's (y-up) coordinates, so we flip
-    /// y for SwiftUI.
+    /// makeContentView builds the open display's board: it resolves every
+    /// placement to a frame and hands the board each widget's view at that
+    /// frame. Frames come back in the host view's (y-up) coordinates and are
+    /// flipped to SwiftUI's here, once. While editing it adds the grid's cells,
+    /// the Done button's place in the band's leading side, the gallery and the
+    /// edits, all bound to this layout's grid.
     func makeContentView(
         interior     : CGRect,
         notchWidth   : CGFloat,
         topBandHeight: CGFloat,
-        hostHeight   : CGFloat
+        hostHeight   : CGFloat,
+        isEditing    : Bool = false,
+        galleryFrame : CGRect = .zero,
+        setEditing   : @escaping (Bool) -> Void = { _ in }
     ) -> AnyView {
         let layout = resolver.resolve(
             interior     : interior,
@@ -280,28 +307,96 @@ final class WidgetHost {
             placements   : arrangement
         )
 
-        let placed = layout.frames.compactMap { id, rect -> PositionedWidget? in
+        func flipped(_ rect: CGRect) -> CGRect {
+            CGRect(x: rect.minX, y: hostHeight - rect.maxY, width: rect.width, height: rect.height)
+        }
+
+        let tiles = layout.frames.compactMap { id, rect -> WidgetBoardView.Tile? in
             guard let widget = widgets[id] else { return nil }
 
             let view = cachedViews[id] ?? widget.makeContentView()
             cachedViews[id] = view
-            return PositionedWidget(
-                id  : id,
-                view: view,
-                rect: rect
+            return WidgetBoardView.Tile(
+                id       : id,
+                view     : view,
+                frame    : flipped(rect),
+                canResize: widget.sizes.count > 1
             )
         }
 
-        return AnyView(
-            ZStack(alignment: .topLeading) {
-
-                ForEach(placed) { item in
-                    item.view
-                        .frame(width: item.rect.width, height: item.rect.height)
-                        .position(x: item.rect.midX, y: hostHeight - item.rect.midY)
+        // Only an editing board offers the gallery, which builds a preview of
+        // every widget it lists.
+        let gallery = !isEditing ? [] : self.gallery.map { widget in
+            WidgetBoardView.GalleryEntry(
+                id     : widget.id,
+                view   : widget.makeContentView(),
+                options: widget.sizes.enumerated().map { index, span in
+                    WidgetBoardView.GalleryOption(
+                        index      : index,
+                        span       : span,
+                        size       : size(of: span, in: layout),
+                        isAvailable: canAdd(span, on: layout.grid)
+                    )
                 }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            )
+        }
+
+        // The band's leading side, left of the physical notch, is free while
+        // editing: the Done button sits there.
+        let doneFrame = CGRect(
+            x     : interior.minX,
+            y     : interior.maxY - topBandHeight,
+            width : max(0, interior.midX - notchWidth / 2 - interior.minX - 4),
+            height: topBandHeight
+        )
+
+        return AnyView(WidgetBoardView(
+            tiles       : tiles,
+            cells       : isEditing ? layout.cells.values.map(flipped) : [],
+            isEditing   : isEditing,
+            doneFrame   : flipped(doneFrame),
+            galleryFrame: flipped(galleryFrame),
+            gallery     : gallery,
+            actions     : actions(for: layout, setEditing: setEditing)
+        ))
+    }
+
+    /// actions binds the board's edits to `layout`: a drop snaps the tile's
+    /// dragged top-leading corner to the nearest cell before asking the grid.
+    func actions(
+        for layout: NotchLayout,
+        setEditing: @escaping (Bool) -> Void
+    ) -> WidgetBoardView.Actions {
+        WidgetBoardView.Actions(
+            setEditing: setEditing,
+            drop      : { [weak self] id, translation in
+                guard let self, let frame = layout.frames[id] else { return false }
+
+                let corner = CGPoint(x: frame.minX + translation.width, y: frame.maxY - translation.height)
+                guard let cell = layout.cell(nearestTopLeading: corner) else { return false }
+
+                return self.move(id, to: cell, on: layout.grid)
+            },
+            remove    : { [weak self] id in self?.remove(id) },
+            resize    : { [weak self] id in self?.resizeToNextSize(id, on: layout.grid) },
+            add       : { [weak self] id, span in self?.add(id, size: span, on: layout.grid) }
+        )
+    }
+
+    /// size is how large a block of `span` is drawn on this layout, for the
+    /// gallery's previews: the main rows' cells and the gutters between them.
+    private func size(
+        of span  : GridSpan,
+        in layout: NotchLayout
+    ) -> CGSize {
+        guard let cell = layout.cells[GridPosition(column: 0, row: 1)] else { return .zero }
+
+        let gutter  = resolver.metrics.cellGutter
+        let columns = CGFloat(span.columns)
+        let rows    = CGFloat(span.rows)
+        return CGSize(
+            width : cell.width * columns + gutter * (columns - 1),
+            height: cell.height * rows + gutter * (rows - 1)
         )
     }
 
@@ -319,15 +414,6 @@ final class WidgetHost {
         cachedViews.removeValue(forKey: id)
 
         if activeWidgets.remove(id) != nil { widgets[id]?.suspend() }
-    }
-
-    /// PositionedWidget pairs a widget's resolved view with its frame, ready to
-    /// position in the `ZStack`.
-    private struct PositionedWidget: Identifiable {
-
-        let id  : WidgetIdentifier
-        let view: AnyView
-        let rect: CGRect
     }
 
     /// autoPlacement finds the first-fit placement in the main rows (1 and 2),

@@ -3,6 +3,7 @@
 //  CascadeKit
 //
 
+import CoreGraphics
 import Foundation
 import Testing
 @testable import CascadeKit
@@ -62,6 +63,28 @@ struct WidgetHostEditingTests {
     }
 
     @Test
+    func aDropSnapsTheDraggedCornerToTheNearestCellOrIsRefused() throws {
+        let (host, clock, battery) = host()
+        let layout  = NotchLayoutResolver().resolve(
+            interior     : CGRect(x: 0, y: 0, width: 640, height: 180),
+            notchWidth   : 200,
+            topBandHeight: 36,
+            placements   : host.arrangement
+        )
+        let actions = host.actions(for: layout, setEditing: { _ in })
+        let origin  = try #require(layout.cells[GridPosition(column: 0, row: 1)])
+        let right   = try #require(layout.cells[GridPosition(column: 1, row: 1)]).minX - origin.minX
+        let down    = origin.maxY - (try #require(layout.cells[GridPosition(column: 0, row: 2)])).maxY
+
+        let lowered = actions.drop(battery.id, CGSize(width: 4, height: down - 5))
+        let blocked = actions.drop(clock.id, CGSize(width: right * 1.2, height: 0))
+        let moved   = actions.drop(clock.id, CGSize(width: right * 10.4, height: 3))
+
+        #expect(lowered && !blocked && moved)
+        #expect(host.arrangement == [clock.id: placement(10, 1, tall), battery.id: placement(4, 2, wide)])
+    }
+
+    @Test
     func removingSuspendsTheWidgetAndOffersItInTheGallery() {
         let (host, clock, battery) = host()
         var changes           = 0
@@ -102,6 +125,26 @@ struct WidgetHostEditingTests {
 
         #expect(grown)
         #expect(host.arrangement[clock.id] == placement(4, 1, tall))
+    }
+
+    @Test
+    func theResizeControlStepsToTheNextSizeThatFits() {
+        let host  = WidgetHost()
+        let clock = EditableWidgetFixture("clock", sizes: [wide, tall, GridSpan(columns: 14, rows: 2)])
+        let other = EditableWidgetFixture("other", sizes: [wide])
+        host.register(clock)
+        host.register(other)
+        host.update(state: .open, display: builtIn)
+        _ = host.move(other.id, to: GridPosition(column: 10, row: 0), on: grid)
+
+        #expect(host.resizeToNextSize(clock.id, on: grid))
+        #expect(host.arrangement[clock.id]?.span == tall)
+
+        #expect(host.resizeToNextSize(clock.id, on: grid))
+        #expect(host.arrangement[clock.id]?.span == GridSpan(columns: 14, rows: 2))
+
+        #expect(host.resizeToNextSize(clock.id, on: grid))
+        #expect(host.arrangement[clock.id]?.span == wide)
     }
 
     @Test
