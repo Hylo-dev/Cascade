@@ -30,9 +30,10 @@ import os
 /// device of that event, whose own read revises it. It never wakes to read, and a battery is
 /// never older than the last Bluetooth event. A read that changes a level emits the last state
 /// again with the new list: the same event at the same number and revision, which the alerts
-/// plugin has already shown, or the baseline when that was the last state. A start always emits
-/// a baseline; a wake emits one only when a device came or went while the Mac slept, and a wake
-/// whose reads find no new level emits nothing else.
+/// plugin has already shown and Cascade's banner suppressor arms for only once, or the baseline
+/// when no event came since the last start or wake. A start always emits a baseline; a wake
+/// emits one when a device came or went while the Mac slept or when its reads find a new level,
+/// and nothing otherwise.
 ///
 /// IOBluetooth delivers connection notifications through the run loop of the thread that
 /// registered, so the observer is started and stopped on the main queue, which PluginHost's main
@@ -252,7 +253,7 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
     /// rebuildBaseline reads the devices connected now as silent state, and emits them as a
     /// baseline when they are not the list last emitted: always at start, after a wake only if
     /// a device came or went while the Mac slept. Then it reads the battery of each device it
-    /// lists. Callbacks queued before it belong to the old baseline and are rejected; those that
+    /// lists, and a changed level re-sends the baseline, never an event from before the wake. Callbacks queued before it belong to the old baseline and are rejected; those that
     /// race it are held by the observer and replayed after the baseline, preserving their order.
     private func rebuildBaseline() {
         guard let observer else { return }
@@ -269,6 +270,9 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
         if baseline.connectedDevices != publishedDevices {
             publish(baseline)
         }
+        // The event last sent belongs to the old baseline, and nothing can revise it now, so a
+        // battery this rebuild reads re-sends the baseline instead of an event hours old.
+        publishedEvent = nil
         readListedBatteries()
 
         for callback in observer.finishBaselineReplacement() {
@@ -302,8 +306,8 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
     /// republish emits the last state again with the devices listed now. After an event it is
     /// that event at its own number and revision, which the alerts plugin has shown already and
     /// ignores, where a baseline would make it forget the event and show the event's next
-    /// revision a second time; with no event since the last baseline it is that baseline. Only
-    /// the list is new, and the list is state, not news.
+    /// revision a second time; with no event since the last start or wake it is the baseline.
+    /// Only the list is new, and the list is state, not news.
     private func republish() {
         if let publishedEvent {
             publish(publishedEvent)

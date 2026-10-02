@@ -172,6 +172,8 @@ final class CascadeServices {
     @ObservationIgnored
     private let suppressor    = AccessibilityBluetoothNoticeSuppressor()
     @ObservationIgnored
+    private var suppressorArming = BluetoothSuppressorArming()
+    @ObservationIgnored
     private let volumeSource = VolumePluginSource(monitor: CoreAudioVolumeMonitor())
     @ObservationIgnored
     private let network      : any NetworkMonitoring = NetworkConnectionMonitor()
@@ -658,8 +660,9 @@ final class CascadeServices {
 
     /// receiveBluetooth follows the Bluetooth source's states. Its availability is the menu's
     /// status, and a new connection, the moment macOS raises its own banner, arms the native
-    /// banner's suppressor for that device. A battery or model reading of the same event never
-    /// arms it again.
+    /// banner's suppressor for that device. A battery or model reading of the same event, or the
+    /// same state sent again with a new list of devices, never arms it again
+    /// (`BluetoothSuppressorArming`).
     private func receiveBluetooth(_ state: PluginBluetoothState) {
         guard isRunning, bluetoothEnabled else { return }
 
@@ -671,7 +674,7 @@ final class CascadeServices {
             updateNativeReplacement()
         }
 
-        guard state.isNewConnection, nativeReplacementEnabled else { return }
+        guard suppressorArming.arms(for: state), nativeReplacementEnabled else { return }
 
         // A real route or connection also refreshes AX trust and banner-host identity without
         // depending on the menu being open.

@@ -154,6 +154,29 @@ struct BluetoothSourceTests {
     }
 
     @Test
+    func aReadAfterAWakeThatChangedNoDeviceSendsTheBaselineAgainNotTheLastConnection() async throws {
+        let system           = FakeBluetoothSystem()
+        let reader           = FakeMetadataReader(metadata: BluetoothDeviceMetadata(battery: BluetoothBatterySnapshot(level: 64)))
+        let (source, states) = source(system, reader: reader)
+        #expect(try await eventually { states.values.count == 1 })
+
+        let charged = BluetoothConnectedDevice(deviceID: airPods.deviceID, name: "AirPods", symbolName: "airpods", battery: BluetoothBatterySnapshot(level: 64))
+        system.connect(charged)
+        system.latest?.connect(charged)
+        #expect(try await eventually { states.values.count == 2 && reader.reads == 1 })
+        try await Task.sleep(for: .milliseconds(30))
+
+        reader.answer(with: BluetoothDeviceMetadata(battery: BluetoothBatterySnapshot(level: 50)))
+        source.simulate(.didWake)
+        #expect(try await eventually { states.values.count == 3 })
+        try await Task.sleep(for: .milliseconds(30))
+        source.stop()
+
+        #expect(states.values[1].isNewConnection)
+        #expect(states.values.last == .baseline(isAvailable: true, connectedDevices: [listed(airPods, battery: 50)]), "Hours later, the connection is no news")
+    }
+
+    @Test
     func everyStateListsTheDevicesConnectedThenInTheOrderTheyConnected() async throws {
         let system           = FakeBluetoothSystem()
         let (source, states) = source(system, metadata: BluetoothDeviceMetadata(battery: BluetoothBatterySnapshot(level: 64)))
