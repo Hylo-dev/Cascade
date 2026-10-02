@@ -10,7 +10,9 @@ import Foundation
 /// ProgressFace is the progress widget's document: how far today and this week have gone on the
 /// short 2x1 tile, and this month and this year below them on the tall 2x2 tile, each a dimmed
 /// label above a bar. The bars are the kernel's, drawn from a period's start and end, so they
-/// fill on their own and the plugin runs only when a period ends, at a midnight.
+/// fill on their own and the plugin runs only when a period ends, at a midnight. The publication
+/// goes stale after an hour, as the calendar's does, so a move to a zone ahead is caught the
+/// first time the notch shows the widget an hour later rather than at the old zone's midnight.
 ///
 /// Each bar is held to 5 points: the system bar is drawn that thin, but lays itself out 18
 /// points tall, which would push two rows out of a 34-point tile. The large face is 66 points
@@ -29,9 +31,9 @@ enum ProgressFace {
         let year  = row(String(localized: "This year", table: "Plugins", bundle: .module), periods.year)
 
         return try PluginPublication(
-            feature : ProgressPlugin.feature,
-            surface : .widget,
-            document: PluginDocument(
+            feature   : ProgressPlugin.feature,
+            surface   : .widget,
+            document  : PluginDocument(
                 root: ViewThatFits(in: .vertical) {
 
                     VStack(alignment: .leading, spacing: 1) {
@@ -65,7 +67,8 @@ enum ProgressFace {
                         alignment: .leading
                     )
                 }
-            )
+            ),
+            staleAfter: 3_600
         )
     }
 

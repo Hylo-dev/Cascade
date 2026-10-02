@@ -13,6 +13,11 @@ import Foundation
 /// circled in red and the days of the months around it faded. The small 1x1 tile is the page
 /// of a desk calendar: the weekday in red above the day. VoiceOver reads the whole date.
 ///
+/// The publication goes stale after an hour. The midnight wake is reckoned in the zone the Mac
+/// was in, and a move to a zone ahead, Rome to Tokyo, starts the new day hours before it; the
+/// first time the notch shows the widget an hour or more after its last publication, the
+/// kernel asks for a refresh, which costs one run when nothing changed.
+///
 /// The large face is 66 points tall, which a 2x2 tile holds below a notch up to 38 points, and every
 /// week takes an equal share of what the title and the initials leave, with digits sized to it
 /// up to 8.5 points, so a month of 6 weeks fits as well as one of 4 and two-digit days never
@@ -35,9 +40,9 @@ enum CalendarFace {
         let style = CalendarMonth.style(in: calendar)
 
         return try PluginPublication(
-            feature : CalendarPlugin.feature,
-            surface : .widget,
-            document: PluginDocument(
+            feature   : CalendarPlugin.feature,
+            surface   : .widget,
+            document  : PluginDocument(
                 root: ViewThatFits(in: .vertical) {
 
                     month(CalendarMonth(containing: date, calendar: calendar))
@@ -48,7 +53,8 @@ enum CalendarFace {
                     )
                 }
                 .accessibilityLabel(date.formatted(style.weekday(.wide).day().month(.wide).year()))
-            )
+            ),
+            staleAfter: 3_600
         )
     }
 

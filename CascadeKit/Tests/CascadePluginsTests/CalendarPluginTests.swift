@@ -182,6 +182,17 @@ struct CalendarPluginTests {
         #expect(output.wake == (try TestCalendar.date(2026, 10, 3, in: rome)))
     }
 
+    /// A move to a zone ahead of this one starts the new day before the midnight the plugin waits
+    /// for, so the publication goes stale after an hour and the first look after that refreshes it.
+    @Test
+    func thePublicationGoesStaleAfterAnHour() throws {
+        let rome = try TestCalendar.rome()
+
+        let publication = try CalendarFace.publication(at: try TestCalendar.date(2026, 10, 2, 9, in: rome), in: rome)
+
+        #expect(publication.staleAfter == 3_600)
+    }
+
     @Test
     func theMidnightWakeTurnsThePageAndAsksForTheNextOne() throws {
         let rome   = try TestCalendar.rome()
