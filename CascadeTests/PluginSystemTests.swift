@@ -176,12 +176,15 @@ extension PluginHostTests {
             #expect(notice.accessibilityLabel.hasPrefix(sample + ", "))
         }
 
+        /// The Bluetooth alerts and the devices widget share the source, which runs while either
+        /// of them is switched on.
         @Test
-        func aSwitchedOffBluetoothPluginNeverStartsItsSource() async throws {
+        func aSourceWhosePluginsAreAllSwitchedOffNeverStarts() async throws {
             let grid      = Grid()
             let bluetooth = FakeBluetoothSource()
             let plugins   = PluginSystem(host: grid, sources: [PluginBluetoothState.source: bluetooth])
             plugins.setEnabled(false, for: BluetoothPlugin.id)
+            plugins.setEnabled(false, for: PluginID(rawValue: "com.cascade.devices")!)
             plugins.start()
             let deadline = ContinuousClock.now.advanced(by: .seconds(30))
             while grid.widgets.isEmpty, ContinuousClock.now < deadline {
@@ -190,6 +193,38 @@ extension PluginHostTests {
             try await Task.sleep(for: .milliseconds(500))
 
             #expect(bluetooth.starts == 0)
+        }
+
+        /// The volume widget leases Cascade's own volume source as the volume alerts do, so the
+        /// source starts with the alerts switched off and the level it observes reaches the widget
+        /// through PluginHost.
+        @Test
+        func theVolumeWidgetDrawsTheLevelWhileTheVolumeAlertsAreOff() async throws {
+            let grid    = Grid()
+            let monitor = FakeVolumeMonitor()
+            let plugins = PluginSystem(
+                host   : grid,
+                sources: [
+                    PluginVolumeState.source   : VolumePluginSource(monitor: monitor),
+                    PluginBluetoothState.source: FakeBluetoothSource(),
+                ]
+            )
+            plugins.setEnabled(false, for: VolumePlugin.id)
+            plugins.start()
+            let deadline = ContinuousClock.now.advanced(by: .seconds(30))
+            while monitor.starts == 0 || grid.widgets.isEmpty, ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+
+            let sound = WidgetIdentifier("plugin:com.cascade.sound/sound")
+            monitor.send(.level(percentage: 40, isMuted: false))
+            while grid.widgets[sound] == nil, ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+
+            let widget = try #require(grid.widgets[sound])
+            #expect(widget.size == GridSpan(columns: 2, rows: 1))
+            #expect(grid.notices.isEmpty)
         }
 
         @Test

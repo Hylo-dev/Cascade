@@ -144,6 +144,96 @@ struct FirstPartyWidgetFitTests {
         #expect(slotted == 10)
     }
 
+    /// Every state of the devices widget, with four devices whose names outrun their rows and
+    /// whose charges are full: a name is cut short on its one line, never the row.
+    @Test
+    func everyDevicesFaceFitsItsTile() throws {
+        let long    = "Someone’s Very Long Headphones Name"
+        let devices = (0..<4).map { index in
+            PluginBluetoothDevice(name: long, symbolName: "headphones", batteryLevel: index == 3 ? nil : 100)
+        }
+        let states: [PluginBluetoothState] = [
+            .baseline(isAvailable: true),
+            .baseline(isAvailable: false),
+            .baseline(isAvailable: true, connectedDevices: devices),
+        ]
+
+        for state in states {
+            let faces = try faces(of: DevicesFace.publication(for: state))
+
+            #expect(try fits(faces[0], in: Self.large))
+            #expect(try fits(faces[1], in: Self.short))
+        }
+    }
+
+    @Test
+    func everySoundFaceFitsItsTile() throws {
+        let states: [PluginVolumeState] = [
+            PluginVolumeState(percentage: 100, isMuted: false, announcement: 0),
+            PluginVolumeState(percentage: 5, isMuted: false, announcement: 0),
+            PluginVolumeState(percentage: 0, isMuted: true, announcement: 0),
+        ]
+
+        for state in states {
+            let faces = try faces(of: SoundFace.publication(for: state))
+
+            #expect(try fits(faces[0], in: Self.short))
+            #expect(try fits(faces[1], in: Self.small))
+        }
+    }
+
+    @Test
+    func everyNetworkFaceFitsItsTile() throws {
+        let interfaces: [PluginNetworkInterface] = [.wifi, .ethernet, .cellular, .other, .none]
+        let states = interfaces.flatMap { interface in
+            [
+                PluginNetworkState(isConnected: interface != .none, interface: interface, isExpensive: false, isConstrained: false),
+                PluginNetworkState(isConnected: true, interface: interface, isExpensive: true, isConstrained: false),
+                PluginNetworkState(isConnected: true, interface: interface, isExpensive: true, isConstrained: true),
+            ]
+        }
+
+        for state in states {
+            let faces = try faces(of: NetworkFace.publication(for: state))
+
+            #expect(try fits(faces[0], in: Self.short))
+            #expect(try fits(faces[1], in: Self.small))
+        }
+    }
+
+    /// A percentage has a slot of its own and is never cut short or shrunk: its widest value,
+    /// 100%, fits the slot whole in the font the face gives it.
+    @Test
+    func everyPercentageFitsItsSlotWhole() throws {
+        let full      = PluginBluetoothDevice(name: "AirPods Pro", symbolName: "airpodspro", batteryLevel: 100)
+        let documents = try [
+            DevicesFace.publication(for: .baseline(isAvailable: true, connectedDevices: [full])),
+            SoundFace.publication(for: PluginVolumeState(percentage: 100, isMuted: false, announcement: 0)),
+        ].map { try #require($0.document) }
+        var slotted = 0
+
+        for document in documents {
+            for node in walk(document.root) {
+                guard case .text("100%") = node.kind else { continue }
+
+                var font: PluginFont?
+                var slot: Double?
+                for modifier in node.modifiers {
+                    switch modifier {
+                        case .font(let value)              : font = value
+                        case .frame(let width?, _, _, _, _): slot = width
+                        default                            : break
+                    }
+                }
+                let widest = try size(of: PluginNode(.text("100%"), modifiers: [.font(try #require(font))])).width
+                slotted += 1
+
+                #expect(Double(widest) <= (try #require(slot)))
+            }
+        }
+        #expect(slotted == 4)
+    }
+
     private func walk(_ node: PluginNode) -> [PluginNode] {
         [node] + (node.children + node.layers).flatMap(walk)
     }

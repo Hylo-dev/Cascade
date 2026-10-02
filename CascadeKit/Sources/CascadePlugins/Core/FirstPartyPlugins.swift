@@ -19,7 +19,10 @@ public enum FirstPartyPlugins {
         "CalendarPlugin" : CalendarPlugin(),
         "ChargingPlugin" : ChargingPlugin(),
         "ClockPlugin"    : ClockPlugin(),
+        "DevicesPlugin"  : DevicesPlugin(),
+        "NetworkPlugin"  : NetworkPlugin(),
         "ProgressPlugin" : ProgressPlugin(),
+        "SoundPlugin"    : SoundPlugin(),
         "StopwatchPlugin": StopwatchPlugin(),
         "TimerPlugin"    : TimerPlugin(),
         "VolumePlugin"   : VolumePlugin(),
@@ -39,8 +42,11 @@ public enum FirstPartyPlugins {
             case "com.cascade.bluetooth": String(localized: "Bluetooth alerts", table: "Plugins", bundle: .module)
             case "com.cascade.calendar" : String(localized: "Calendar", table: "Plugins", bundle: .module)
             case "com.cascade.clock"    : String(localized: "Clock", table: "Plugins", bundle: .module)
+            case "com.cascade.devices"  : String(localized: "Devices", table: "Plugins", bundle: .module)
+            case "com.cascade.network"  : String(localized: "Network", table: "Plugins", bundle: .module)
             case "com.cascade.power"    : String(localized: "Charging alerts", table: "Plugins", bundle: .module)
             case "com.cascade.progress" : String(localized: "Progress", table: "Plugins", bundle: .module)
+            case "com.cascade.sound"    : String(localized: "Volume", table: "Plugins", bundle: .module)
             case "com.cascade.stopwatch": String(localized: "Stopwatch", table: "Plugins", bundle: .module)
             case "com.cascade.timer"    : String(localized: "Timer", table: "Plugins", bundle: .module)
             case "com.cascade.volume"   : String(localized: "Volume alerts", table: "Plugins", bundle: .module)

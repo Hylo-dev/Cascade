@@ -1,0 +1,16 @@
+{
+  "manifestVersion": 2,
+  "id": "com.cascade.sound",
+  "version": "1.0.0",
+  "compatibility": { "macOS": "15.0", "cascadeProtocol": { "major": 2, "minimumMinor": 0 } },
+  "execution": { "entryPoint": "SoundPlugin" },
+  "features": [
+    {
+      "id": "sound",
+      "surfaces": { "widget": { "sizes": ["1x1", "2x1"] } },
+      "sources": ["volume"],
+      "components": [{ "id": "volume.level", "version": 1 }]
+    }
+  ],
+  "resources": { "profile": "eventDriven" }
+}

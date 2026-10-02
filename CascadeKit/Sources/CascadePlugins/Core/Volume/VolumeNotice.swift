@@ -65,7 +65,9 @@ enum VolumeNotice {
         )
     }
 
-    private static func symbol(
+    /// symbol is the speaker for a level: struck through when muted or silent, and with one,
+    /// two or three waves by thirds otherwise. The volume widget draws the same speaker.
+    static func symbol(
         _ percentage: Int,
         isMuted     : Bool
     ) -> String {
