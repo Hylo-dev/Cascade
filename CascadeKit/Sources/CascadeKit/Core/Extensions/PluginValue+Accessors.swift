@@ -18,4 +18,10 @@ extension PluginValue {
 
         return value
     }
+
+    var string: String? {
+        guard case .string(let value) = self else { return nil }
+
+        return value
+    }
 }
