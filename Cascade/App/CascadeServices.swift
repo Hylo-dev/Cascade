@@ -75,7 +75,11 @@ final class CascadeServices {
     var bluetoothEnabled: Bool {
         didSet {
             preferences.set(bluetoothEnabled, forKey: "bluetoothEnabled")
-            if isRunning { updateBluetoothMonitoring() }
+            plugins.setEnabled(bluetoothEnabled, for: BluetoothPlugin.id)
+            guard !bluetoothEnabled else { return }
+
+            bluetoothStatus = .stopped
+            suppressor.stop()
         }
     }
 
@@ -140,7 +144,11 @@ final class CascadeServices {
     }
 
     var suppressionStatus: BluetoothNoticeSuppressionStatus { suppressor.status }
-    var bluetoothStatus  : BluetoothMonitoringStatus { bluetooth.status }
+
+    /// bluetoothStatus is what the Bluetooth plugin's source last said about monitoring, as its
+    /// states reach the engine: monitoring once its baseline arrives, unavailable when IOBluetooth
+    /// refused it, stopped while the alerts are off or Cascade is not running.
+    private(set) var bluetoothStatus: BluetoothMonitoringStatus = .stopped
 
     @ObservationIgnored
     private let notch              : NotchEngine
@@ -155,8 +163,6 @@ final class CascadeServices {
     @ObservationIgnored
     private let spotlight          : SpotlightCoordinator
 
-    @ObservationIgnored
-    private let bluetooth    : any BluetoothMonitoring = IOBluetoothConnectionMonitor()
     @ObservationIgnored
     private let suppressor    = AccessibilityBluetoothNoticeSuppressor()
     @ObservationIgnored
@@ -177,10 +183,6 @@ final class CascadeServices {
 
     private var displayPreferencesRevision: UInt64 = 0
 
-    @ObservationIgnored
-    private var bluetoothTask          : Task<Void, Never>?
-    @ObservationIgnored
-    private var bluetoothEventIDs      : [String: UInt64] = [:]
     @ObservationIgnored
     private var mediaTask              : Task<Void, Never>?
     @ObservationIgnored
@@ -279,6 +281,16 @@ final class CascadeServices {
             self?.volumeStatus = status
         }
 
+        // Every Bluetooth state reaches the suppressor as it reaches the engine, before the
+        // engine keeps only the latest for the plugin, so no new connection is missed.
+        plugins.observe(PluginBluetoothState.source) { @Sendable [weak self] event in
+            guard let state = PluginBluetoothState(event) else { return }
+
+            DispatchQueue.main.async { [weak self] in
+                MainActor.assumeIsolated { self?.receiveBluetooth(state) }
+            }
+        }
+
         notch.onSettingsRequested = { [weak self] in
             self?.showSettings(reanchorToCurrentOwner: false)
         }
@@ -362,6 +374,7 @@ final class CascadeServices {
         guard !isRunning else { return }
 
         isRunning = true
+        plugins.setEnabled(bluetoothEnabled, for: BluetoothPlugin.id)
         plugins.setEnabled(chargingEnabled, for: ChargingPlugin.id)
         plugins.setEnabled(volumeEnabled, for: VolumePlugin.id)
         plugins.start()
@@ -374,7 +387,6 @@ final class CascadeServices {
         notch.start()
         updateSpotlight()
         startNetworkMonitoring()
-        updateBluetoothMonitoring()
         updateMusicMonitoring()
         requestStartupPermissions()
 
@@ -449,10 +461,7 @@ final class CascadeServices {
 
         notch.setBorderAppearance(.neutral)
 
-        bluetoothTask?.cancel()
-        bluetoothTask = nil
-        bluetoothEventIDs.removeAll()
-        bluetooth.stop()
+        bluetoothStatus = .stopped
         suppressor.stop()
 
         mediaTask?.cancel()
@@ -488,10 +497,15 @@ final class CascadeServices {
     func refreshNativeReplacement() {
         if spotlightEnabled { spotlight.refresh() }
         refreshVolumePermissions()
+        updateNativeReplacement()
+    }
 
+    /// updateNativeReplacement watches for macOS's own Bluetooth banner only while Cascade shows
+    /// its Bluetooth notices in its place.
+    private func updateNativeReplacement() {
         guard isRunning,
               bluetoothEnabled,
-              bluetooth.status == .monitoring,
+              bluetoothStatus == .monitoring,
               nativeReplacementEnabled
         else {
             suppressor.stop()
@@ -588,24 +602,11 @@ final class CascadeServices {
         plugins.invoke(VolumePlugin.preview, feature: VolumePlugin.feature, of: VolumePlugin.id)
     }
 
-    /// previewBluetooth is explicitly synthetic and never arms the native
-    /// suppressor: a demo must not dismiss any real system notification.
+    /// previewBluetooth is explicitly synthetic and never arms the native suppressor: a demo must
+    /// not dismiss any real system notification. The Bluetooth plugin draws the preview through
+    /// its own preview action, which never passes through the source.
     func previewBluetooth() {
-        let event = BluetoothConnectionEvent(
-            deviceID   : "demo-headphones",
-            name       : String(localized: "AirPods · Preview"),
-            symbolName : "airpodspro",
-            isConnected: true,
-            battery    : BluetoothBatterySnapshot(
-                left     : 72,
-                right    : 68,
-                caseLevel: 81
-            ),
-            model      : .airPodsPro,
-            productID  : 0x200E
-        )
-        let activity = BluetoothConnectionActivity(event: event)
-        notch.showNotice(activity)
+        plugins.invoke(BluetoothPlugin.preview, feature: BluetoothPlugin.feature, of: BluetoothPlugin.id)
     }
 
     /// previewCharging changes presentation only; it never changes macOS energy settings. The
@@ -614,40 +615,27 @@ final class CascadeServices {
         plugins.invoke(ChargingPlugin.preview, value: .bool(lowPower), feature: ChargingPlugin.feature, of: ChargingPlugin.id)
     }
 
-    private func updateBluetoothMonitoring() {
-        bluetoothTask?.cancel()
-        bluetoothTask = nil
-        bluetoothEventIDs.removeAll()
-        bluetooth.stop()
-        notch.dismissActivities(from: "cascade.bluetooth")
-        guard bluetoothEnabled else {
-            suppressor.stop()
-            return
+    /// receiveBluetooth follows the Bluetooth source's states. Its availability is the menu's
+    /// status, and a new connection, the moment macOS raises its own banner, arms the native
+    /// banner's suppressor for that device. A battery or model reading of the same event never
+    /// arms it again.
+    private func receiveBluetooth(_ state: PluginBluetoothState) {
+        guard isRunning, bluetoothEnabled else { return }
+
+        let status: BluetoothMonitoringStatus = state.isAvailable
+            ? .monitoring
+            : .unavailable("IOBluetooth connection notifications are unavailable.")
+        if status != bluetoothStatus {
+            bluetoothStatus = status
+            updateNativeReplacement()
         }
 
-        let stream = bluetooth.start()
-        refreshNativeReplacement()
-        bluetoothTask = Task { [weak self] in
-            for await event in stream {
-                guard !Task.isCancelled, let self, self.isRunning else { return }
+        guard state.isNewConnection, nativeReplacementEnabled else { return }
 
-                let activity = BluetoothConnectionActivity(event: event)
-                if event.revision == 0 {
-                    self.bluetoothEventIDs[event.deviceID] = event.eventID
-                    if event.isConnected, self.nativeReplacementEnabled {
-                        // A real route/connection also refreshes AX trust and
-                        // banner-host identity without depending on menu mount.
-                        self.suppressor.start()
-                        self.suppressor.expectConnection(deviceName: event.name)
-                    }
-                    self.notch.showNotice(activity)
-                } else if self.bluetoothEventIDs[event.deviceID] == event.eventID {
-                    // Battery/model enrichment cannot replay an old connection,
-                    // extend its deadline or rearm native-banner suppression.
-                    self.notch.updateNotice(activity)
-                }
-            }
-        }
+        // A real route or connection also refreshes AX trust and banner-host identity without
+        // depending on the menu being open.
+        suppressor.start()
+        suppressor.expectConnection(deviceName: state.name)
     }
 
     /// startNetworkMonitoring keeps the ordinary rim neutral. An actual new

@@ -16,7 +16,8 @@ import Foundation
 /// permission their manifests declare; the approver is the only thing that will differ for an
 /// external plugin. Cascade's own settings reach plugins through it: a switch per plugin and the
 /// actions the menu invokes, such as previews. Cascade's own sources, such as volume beside its
-/// key tap, are offered next to PluginHost's.
+/// key tap, are offered next to PluginHost's, and Cascade may observe any source's states as they
+/// reach the engine, as the native Bluetooth banner's suppressor does.
 final class PluginSystem {
 
     private let host         : any PluginSurfaceHosting
@@ -25,6 +26,7 @@ final class PluginSystem {
     private var surfaces     : PluginSurfaceRouter?
     private var isStarting   = false
     private var disabled     = Set<PluginID>()
+    private var observers    : [String: @Sendable (PluginSourceEvent) -> Void] = [:]
 
     init(
         host   : any PluginSurfaceHosting,
@@ -69,6 +71,16 @@ final class PluginSystem {
         engine?.setEnabled(isEnabled, for: plugin)
     }
 
+    /// observe hands every state of a source to `observer` as it reaches the engine, on the thread
+    /// that delivers it. Observers join the sources when the engine is composed, so they are set
+    /// before `start`.
+    func observe(
+        _ source     : String,
+        with observer: @escaping @Sendable (PluginSourceEvent) -> Void
+    ) {
+        observers[source] = observer
+    }
+
     /// invoke asks a plugin to run one of its declared actions; before the engine is composed it
     /// does nothing.
     func invoke(
@@ -97,7 +109,12 @@ final class PluginSystem {
                 (name, HostedPluginSource(name: name, host: executor) as any PluginEventSource)
             }
         )
-        let sources  = kernelSources.merging(hosted) { kernel, _ in kernel }
+        var sources  = kernelSources.merging(hosted) { kernel, _ in kernel }
+        for (name, observer) in observers {
+            if let source = sources[name] {
+                sources[name] = ObservedPluginSource(source: source, observer: observer)
+            }
+        }
         let engine = PluginEngine(
             executor  : executor,
             sources   : sources,

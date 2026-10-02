@@ -269,17 +269,6 @@
         }
       }
     },
-    "AirPods · Preview": {
-      "comment": "Device name shown by the AirPods notice preview.",
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AirPods · Anteprima"
-          }
-        }
-      }
-    },
     "Alert replacement is off": {
       "comment": "Menu bar menu, status line (disabled item)",
       "localizations": {
