@@ -4,6 +4,7 @@
 //
 
 import CascadeContracts
+import CascadePluginSDK
 import Foundation
 
 /// BatteryFace is the battery widget's document, in a face for each size the widget comes in;
@@ -29,80 +30,79 @@ enum BatteryFace {
             feature : BatteryPlugin.feature,
             surface : .widget,
             document: PluginDocument(
-                root: PluginNode(
-                    .viewThatFits(axes: .vertical),
-                    modifiers: [.accessibilityLabel(label(of: state))],
-                    children : [
-                        large(state),
-                        PluginNode(.viewThatFits(axes: .horizontal), children: [medium(state), small(state)]),
-                    ]
-                )
+                root: ViewThatFits(in: .vertical) {
+
+                    large(state)
+
+                    ViewThatFits(in: .horizontal) {
+
+                        medium(state)
+
+                        small(state)
+                    }
+                }
+                .accessibilityLabel(label(of: state))
             )
         )
     }
 
     /// large is the 2x2 face: the battery and the status above the charge.
     private static func large(_ state: PluginPowerState) -> PluginNode {
-        PluginNode(
-            .vStack(alignment: .leading, spacing: 1),
-            modifiers: [
-                .padding(.horizontal, length: 12),
-                .frame(width: nil, height: largeHeight, maxWidth: .infinity, maxHeight: .infinity, alignment: .leading),
-            ],
-            children: [
-                PluginNode(
-                    .hStack(alignment: .center, spacing: 5),
-                    children: [
-                        battery(state, height: 12),
-                        PluginNode(
-                            .text(status(of: state)),
-                            modifiers: [
-                                .font(PluginFont(size: 12, weight: .semibold, design: .rounded)),
-                                .foregroundStyle(.color(tint(of: state))),
-                                .lineLimit(1),
-                                .minimumScaleFactor(0.7),
-                            ]
-                        ),
-                    ]
-                ),
-                charge(state, size: 34),
-            ]
+        VStack(alignment: .leading, spacing: 1) {
+
+            HStack(spacing: 5) {
+
+                battery(state, height: 12)
+
+                Text(status(of: state))
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(tint(of: state))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+
+            charge(state, size: 34)
+        }
+        .padding(.horizontal, 12)
+        .frame(
+            height   : largeHeight,
+            maxWidth : .infinity,
+            maxHeight: .infinity,
+            alignment: .leading
         )
     }
 
     /// medium is the 2x1 face: the battery and the charge on one row.
     private static func medium(_ state: PluginPowerState) -> PluginNode {
-        PluginNode(
-            .hStack(alignment: .center, spacing: 6),
-            modifiers: [
-                .padding(.horizontal, length: 8),
-                .frame(width: mediumWidth, height: nil, maxWidth: .infinity, maxHeight: .infinity, alignment: .leading),
-            ],
-            children: [battery(state, height: 13), charge(state, size: 22)]
+        HStack(spacing: 6) {
+
+            battery(state, height: 13)
+
+            charge(state, size: 22)
+        }
+        .padding(.horizontal, 8)
+        .frame(
+            width    : mediumWidth,
+            maxWidth : .infinity,
+            maxHeight: .infinity,
+            alignment: .leading
         )
     }
 
     /// small is the 1x1 face: the battery with its charge inside, and a bolt beside it while
     /// charging.
     private static func small(_ state: PluginPowerState) -> PluginNode {
-        var children = [battery(state, height: 18, showsPercentage: true)]
-        if state.isCharging {
-            children.append(
-                PluginNode(
-                    .symbol(name: "bolt.fill"),
-                    modifiers: [
-                        .font(PluginFont(size: 10, weight: .bold)),
-                        .foregroundStyle(.color(tint(of: state))),
-                    ]
-                )
-            )
-        }
+        HStack(spacing: 2) {
 
-        return PluginNode(
-            .hStack(alignment: .center, spacing: 2),
-            modifiers: [.frame(width: nil, height: nil, maxWidth: .infinity, maxHeight: .infinity, alignment: .center)],
-            children : children
-        )
+            battery(state, height: 18, showsPercentage: true)
+
+            if state.isCharging {
+                Image(systemName: "bolt.fill")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(tint(of: state))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     /// charge is the percentage in white rounded digits that keep their width.
@@ -110,15 +110,11 @@ enum BatteryFace {
         _ state: PluginPowerState,
         size   : Double
     ) -> PluginNode {
-        PluginNode(
-            .text(state.percentage.map { "\($0)%" } ?? "—"),
-            modifiers: [
-                .font(PluginFont(size: size, weight: .semibold, design: .rounded, monospacedDigit: true)),
-                .foregroundStyle(.color(.white)),
-                .lineLimit(1),
-                .minimumScaleFactor(0.5),
-            ]
-        )
+        Text(state.percentage.map { "\($0)%" } ?? "—")
+            .font(.system(size: size, weight: .semibold, design: .rounded).monospacedDigit())
+            .foregroundStyle(.white)
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
     }
 
     /// battery is the kernel-drawn battery with the charging notice's proportions, at `height`,
@@ -128,19 +124,17 @@ enum BatteryFace {
         height         : Double,
         showsPercentage: Bool = false
     ) -> PluginNode {
-        var parameters: [String: PluginValue] = [
-            "isLowPowerMode" : .bool(state.isLowPowerMode),
-            "isCharging"     : .bool(state.isCharging && !showsPercentage),
-            "showsPercentage": .bool(showsPercentage),
-        ]
-        if let percentage = state.percentage {
-            parameters["percentage"] = .number(Double(percentage))
-        }
-
-        return PluginNode(
-            .component(id: "power.battery", version: 1, parameters: parameters),
-            modifiers: [.frame(width: height * 2.14, height: height, maxWidth: nil, maxHeight: nil, alignment: .center)]
+        Component(
+            id        : "power.battery",
+            version   : 1,
+            parameters: [
+                "isLowPowerMode" : .bool(state.isLowPowerMode),
+                "isCharging"     : .bool(state.isCharging && !showsPercentage),
+                "showsPercentage": .bool(showsPercentage),
+                "percentage"     : state.percentage.map { .number(Double($0)) },
+            ]
         )
+        .frame(width: height * 2.14, height: height)
     }
 
     private static func tint(of state: PluginPowerState) -> PluginColor {

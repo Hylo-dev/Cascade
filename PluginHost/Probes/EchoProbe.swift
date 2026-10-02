@@ -17,7 +17,7 @@ struct EchoProbe: PluginProvider {
     ) throws -> PluginOutput {
         try PluginOutput(
             publications: [
-                PluginPublication(feature: "probe", surface: .widget, document: PluginDocument(root: PluginNode(.text(String(getpid()))))),
+                PluginPublication(feature: "probe", surface: .widget, document: PluginDocument(root: Text(String(getpid())))),
             ]
         )
     }

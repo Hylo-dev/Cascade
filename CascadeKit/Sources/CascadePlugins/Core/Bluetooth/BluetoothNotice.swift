@@ -4,6 +4,7 @@
 //
 
 import CascadeContracts
+import CascadePluginSDK
 import Foundation
 
 /// BluetoothNotice is the Bluetooth plugin's notice: the device on the leading side, Apple's own
@@ -19,7 +20,16 @@ enum BluetoothNotice {
         try PluginPublication(
             feature : BluetoothPlugin.feature,
             surface : .notice,
-            document: PluginDocument(root: PluginNode(.regions, children: [device(state), battery(state), battery(state)])),
+            document: PluginDocument(
+                root: Regions {
+
+                    device(state)
+
+                    battery(state)
+
+                    battery(state)
+                }
+            ),
             notice  : PluginNoticeAttributes(
                 duration          : 4,
                 border            : .neutral,
@@ -48,51 +58,43 @@ enum BluetoothNotice {
         )
     }
 
-    private static let centred = PluginModifier.frame(width: nil, height: nil, maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-
     /// device is the kernel-drawn artwork, 20 points square, for a model the system verified, or
     /// the device's class symbol at 14 points for anything it cannot identify.
     private static func device(_ state: PluginBluetoothState) -> PluginNode {
         guard state.model != .generic || state.productID != nil else {
-            return PluginNode(
-                .symbol(name: state.symbolName),
-                modifiers: [
-                    .font(PluginFont(size: 14, weight: .regular)),
-                    .foregroundStyle(.color(.white)),
-                    .frame(width: 20, height: nil, maxWidth: nil, maxHeight: nil, alignment: .center),
-                    centred,
-                ]
-            )
+            return Image(systemName: state.symbolName)
+                .font(.system(size: 14, weight: .regular))
+                .foregroundStyle(.white)
+                .frame(width: 20)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
 
-        var parameters: [String: PluginValue] = [
-            "model"         : .string(state.model.rawValue),
-            "fallbackSymbol": .string(state.symbolName),
-        ]
-        if let productID = state.productID {
-            parameters["productID"] = .number(Double(productID))
-        }
-        if let colorID = state.colorID {
-            parameters["colorID"] = .number(Double(colorID))
-        }
-
-        return PluginNode(
-            .component(id: "bluetooth.device", version: 1, parameters: parameters),
-            modifiers: [.frame(width: 20, height: 20, maxWidth: nil, maxHeight: nil, alignment: .center), centred]
+        return Component(
+            id        : "bluetooth.device",
+            version   : 1,
+            parameters: [
+                "model"         : .string(state.model.rawValue),
+                "fallbackSymbol": .string(state.symbolName),
+                "productID"     : state.productID.map { .number(Double($0)) },
+                "colorID"       : state.colorID.map { .number(Double($0)) },
+            ]
         )
+        .frame(width: 20, height: 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     /// battery is the kernel-drawn ring, 18 points across; a disconnected device draws no arc.
     private static func battery(_ state: PluginBluetoothState) -> PluginNode {
-        var parameters: [String: PluginValue] = ["isConnected": .bool(state.isConnected)]
-        if let level = state.battery?.level {
-            parameters["level"] = .number(Double(level))
-        }
-
-        return PluginNode(
-            .component(id: "bluetooth.battery", version: 1, parameters: parameters),
-            modifiers: [.frame(width: 18, height: 18, maxWidth: nil, maxHeight: nil, alignment: .center), centred]
+        Component(
+            id        : "bluetooth.battery",
+            version   : 1,
+            parameters: [
+                "isConnected": .bool(state.isConnected),
+                "level"      : state.battery?.level.map { .number(Double($0)) },
+            ]
         )
+        .frame(width: 18, height: 18)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private static func status(of state: PluginBluetoothState) -> String {

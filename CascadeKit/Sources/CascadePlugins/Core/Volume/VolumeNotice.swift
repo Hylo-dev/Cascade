@@ -4,6 +4,7 @@
 //
 
 import CascadeContracts
+import CascadePluginSDK
 import Foundation
 
 /// VolumeNotice is the volume plugin's notice, the system volume HUD's replacement: the speaker
@@ -14,55 +15,45 @@ enum VolumeNotice {
 
     static func publication(for state: PluginVolumeState) throws -> PluginPublication {
         let percentage = state.isMuted ? 0 : (state.percentage ?? 0)
-        let speaker    = PluginNode(
-            .symbol(name: symbol(percentage, isMuted: state.isMuted)),
-            modifiers: [
-                .font(PluginFont(size: 14, weight: .regular)),
-                .frame(width: 18, height: nil, maxWidth: nil, maxHeight: nil, alignment: .center),
-            ]
-        )
+        let speaker    = Image(systemName: symbol(percentage, isMuted: state.isMuted))
+            .font(.system(size: 14, weight: .regular))
+            .frame(width: 18)
 
         return try PluginPublication(
             feature : VolumePlugin.feature,
             surface : .notice,
             document: PluginDocument(
-                root: PluginNode(
-                    .regions,
-                    children: [
-                        PluginNode(
-                            .hStack(alignment: .center, spacing: 6),
-                            modifiers: [.foregroundStyle(.color(.white))],
-                            children : [
-                                speaker,
-                                PluginNode(
-                                    .text(state.isMuted ? text("Muted") : text("Volume")),
-                                    modifiers: [.font(PluginFont(style: .callout)), .lineLimit(1)]
-                                ),
-                            ]
-                        ),
-                        PluginNode(
-                            .hStack(alignment: .center, spacing: 6),
-                            modifiers: [.foregroundStyle(.color(.white))],
-                            children : [
-                                PluginNode(
-                                    .component(id: "volume.level", version: 1, parameters: ["level": .number(Double(percentage))]),
-                                    modifiers: [.frame(width: nil, height: 4, maxWidth: .infinity, maxHeight: nil, alignment: .center)]
-                                ),
-                                PluginNode(
-                                    .text("\(percentage)%"),
-                                    modifiers: [
-                                        .font(PluginFont(style: .callout, monospacedDigit: true)),
-                                        .frame(width: 36, height: nil, maxWidth: nil, maxHeight: nil, alignment: .trailing),
-                                    ]
-                                ),
-                            ]
-                        ),
-                        PluginNode(
-                            .symbol(name: symbol(percentage, isMuted: state.isMuted)),
-                            modifiers: [.font(PluginFont(size: 14, weight: .regular)), .foregroundStyle(.color(.white))]
-                        ),
-                    ]
-                )
+                root: Regions {
+
+                    HStack(spacing: 6) {
+
+                        speaker
+
+                        Text(state.isMuted ? text("Muted") : text("Volume"))
+                            .font(.callout)
+                            .lineLimit(1)
+                    }
+                    .foregroundStyle(.white)
+
+                    HStack(spacing: 6) {
+
+                        Component(
+                            id        : "volume.level",
+                            version   : 1,
+                            parameters: ["level": .number(Double(percentage))]
+                        )
+                        .frame(height: 4, maxWidth: .infinity)
+
+                        Text("\(percentage)%")
+                            .font(.callout.monospacedDigit())
+                            .frame(width: 36, alignment: .trailing)
+                    }
+                    .foregroundStyle(.white)
+
+                    Image(systemName: symbol(percentage, isMuted: state.isMuted))
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(.white)
+                }
             ),
             notice  : PluginNoticeAttributes(
                 duration          : 1.8,
