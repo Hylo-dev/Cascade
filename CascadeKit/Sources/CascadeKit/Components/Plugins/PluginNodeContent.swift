@@ -10,8 +10,8 @@ import SwiftUI
 /// with children drawn as `PluginNodeView`s. Time is drawn by SwiftUI itself, so a timer or a
 /// relative date costs the plugin nothing, and a clock redraws itself at every minute boundary,
 /// only while it is on screen, in the environment's zone, which the `timeZone` modifier sets.
-/// A timer progress is the bar alone: SwiftUI's would add the running time under it, a second
-/// line the contract never asked for and no widget tile has room for.
+/// A timer progress is the kernel's own bar, `PluginTimerProgressBar`, which steps instead of
+/// redrawing every frame as SwiftUI's does.
 /// Controls read their optimistic value first and hand every change to the store; a toggle with
 /// two children shows the first while off and the second while on. An asset reserves its frame
 /// and draws nothing until the asset pipeline exists; a tier-2 component draws through
@@ -90,11 +90,15 @@ struct PluginNodeContent: View {
                 Text(timerInterval: start...end, countsDown: countsDown)
 
             case .timerProgress(let start, let end):
-                ProgressView(timerInterval: start...end, countsDown: false) {
-                    EmptyView()
-                } currentValueLabel: {
-                    EmptyView()
-                }
+                PluginTimerProgressBar(
+                    start   : start,
+                    end     : end,
+                    isStyled: model.modifiers.contains { modifier in
+                        if case .foregroundStyle = modifier { return true }
+
+                        return false
+                    }
+                )
 
             case .progress(let value, let total, .linear):
                 ProgressView(value: value, total: total)
