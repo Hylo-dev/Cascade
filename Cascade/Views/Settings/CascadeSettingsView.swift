@@ -197,6 +197,7 @@ struct CascadeSettingsView: View {
                     .disabled(!services.chargingEnabled)
             case .bluetoothPreview:
                 actionRow(setting) { services.previewBluetooth() }
+                    .disabled(!services.bluetoothEnabled)
             case .spotlightPreview:
                 actionRow(setting) { services.previewSpotlightDroplet(from: .settings) }
         }

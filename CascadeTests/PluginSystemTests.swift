@@ -7,13 +7,15 @@ import CascadeContracts
 import CascadeKit
 import CascadePlugins
 import Foundation
+import Synchronization
 import Testing
 @testable import Cascade
 
 extension PluginHostTests {
 
     /// PluginSystemTests run Cascade's plugin composition against the PluginHost bundled in the
-    /// test host, with a recording grid in place of the notch.
+    /// test host, with a recording grid in place of the notch. Every system gets a fake Bluetooth
+    /// source in place of PluginHost's, so no test asks macOS for Bluetooth access.
     @MainActor
     struct PluginSystemTests {
 
@@ -43,7 +45,7 @@ extension PluginHostTests {
         @Test
         func theBundledClockReachesTheNotchThroughPluginHost() async throws {
             let grid    = Grid()
-            let plugins = PluginSystem(host: grid)
+            let plugins = PluginSystem(host: grid, sources: [PluginBluetoothState.source: FakeBluetoothSource()])
             plugins.start()
 
             let deadline = ContinuousClock.now.advanced(by: .seconds(30))
@@ -58,7 +60,7 @@ extension PluginHostTests {
         @Test
         func aChargingPreviewReachesTheNoticeHostThroughPluginHost() async throws {
             let grid    = Grid()
-            let plugins = PluginSystem(host: grid)
+            let plugins = PluginSystem(host: grid, sources: [PluginBluetoothState.source: FakeBluetoothSource()])
             plugins.start()
             let deadline = ContinuousClock.now.advanced(by: .seconds(30))
             while grid.widgets.isEmpty, ContinuousClock.now < deadline {
@@ -81,7 +83,7 @@ extension PluginHostTests {
         @Test
         func aSwitchedOffPluginIsNotInvoked() async throws {
             let grid    = Grid()
-            let plugins = PluginSystem(host: grid)
+            let plugins = PluginSystem(host: grid, sources: [PluginBluetoothState.source: FakeBluetoothSource()])
             plugins.setEnabled(false, for: ChargingPlugin.id)
             plugins.start()
             let deadline = ContinuousClock.now.advanced(by: .seconds(30))
@@ -98,7 +100,13 @@ extension PluginHostTests {
         @Test
         func aVolumePreviewReachesTheNoticeHostThroughPluginHost() async throws {
             let grid    = Grid()
-            let plugins = PluginSystem(host: grid, sources: [PluginVolumeState.source: VolumePluginSource(monitor: FakeVolumeMonitor())])
+            let plugins = PluginSystem(
+                host   : grid,
+                sources: [
+                    PluginVolumeState.source   : VolumePluginSource(monitor: FakeVolumeMonitor()),
+                    PluginBluetoothState.source: FakeBluetoothSource(),
+                ]
+            )
             plugins.start()
             let deadline = ContinuousClock.now.advanced(by: .seconds(30))
             while grid.widgets.isEmpty, ContinuousClock.now < deadline {
@@ -114,5 +122,106 @@ extension PluginHostTests {
             #expect(notice.displayDuration == 1.8)
             #expect(notice.borderAppearance == nil)
         }
+        @Test
+        func aBluetoothConnectionReachesTheNoticeHostAndItsObserverThroughPluginHost() async throws {
+            let grid      = Grid()
+            let bluetooth = FakeBluetoothSource()
+            let observed  = ObservedStates()
+            let plugins   = PluginSystem(host: grid, sources: [PluginBluetoothState.source: bluetooth])
+            plugins.observe(PluginBluetoothState.source) { event in observed.record(event) }
+            plugins.start()
+            let deadline = ContinuousClock.now.advanced(by: .seconds(30))
+            while bluetooth.starts == 0, ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+
+            // The plugin's first state is a silent baseline; should the connection reach its
+            // mailbox before it handled the baseline, the two coalesce, so a second one follows.
+            bluetooth.send(Self.airPods(eventID: 1))
+            try await Task.sleep(for: .milliseconds(300))
+            bluetooth.send(Self.airPods(eventID: 2))
+            while grid.notices.count < 1 || observed.eventIDs.count < 3, ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+
+            let notice = try #require(grid.notices.last)
+            #expect(notice.compactPreferredSideWidth == 40)
+            #expect(notice.borderAppearance == .neutral)
+            #expect(notice.displayDuration == 4)
+            #expect(notice.accessibilityLabel.hasPrefix("AirPods Pro, "))
+            #expect(observed.eventIDs == [0, 1, 2], "Cascade sees every state, before the engine coalesces them")
+        }
+
+        @Test
+        func aBluetoothPreviewReachesTheNoticeHostThroughPluginHost() async throws {
+            let grid    = Grid()
+            let plugins = PluginSystem(host: grid, sources: [PluginBluetoothState.source: FakeBluetoothSource()])
+            plugins.start()
+            let deadline = ContinuousClock.now.advanced(by: .seconds(30))
+            while grid.widgets.isEmpty, ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+
+            plugins.invoke(BluetoothPlugin.preview, feature: BluetoothPlugin.feature, of: BluetoothPlugin.id)
+            while grid.notices.isEmpty, ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+
+            let notice  = try #require(grid.notices.first)
+            let strings = try #require(Bundle.main.url(forResource: "CascadeKit_CascadePlugins", withExtension: "bundle").flatMap(Bundle.init(url:)))
+            let sample  = strings.localizedString(forKey: "AirPods · Preview", value: nil, table: "BluetoothNotice")
+            #expect(notice.compactPreferredSideWidth == 40)
+            #expect(notice.borderAppearance == .neutral)
+            #expect(notice.accessibilityLabel.hasPrefix(sample + ", "))
+        }
+
+        @Test
+        func aSwitchedOffBluetoothPluginNeverStartsItsSource() async throws {
+            let grid      = Grid()
+            let bluetooth = FakeBluetoothSource()
+            let plugins   = PluginSystem(host: grid, sources: [PluginBluetoothState.source: bluetooth])
+            plugins.setEnabled(false, for: BluetoothPlugin.id)
+            plugins.start()
+            let deadline = ContinuousClock.now.advanced(by: .seconds(30))
+            while grid.widgets.isEmpty, ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+            try await Task.sleep(for: .milliseconds(500))
+
+            #expect(bluetooth.starts == 0)
+        }
+
+        private static func airPods(eventID: UInt64) -> PluginBluetoothState {
+            PluginBluetoothState(
+                deviceID   : "AA-BB-CC-DD-EE-FF",
+                name       : "AirPods Pro",
+                symbolName : "airpodspro",
+                isConnected: true,
+                battery    : PluginBluetoothBattery(level: 68, left: 72, right: 68, caseLevel: 81),
+                model      : .airPodsPro,
+                productID  : 0x200E,
+                colorID    : nil,
+                eventID    : eventID,
+                revision   : 0,
+                kind       : .connection,
+                isAvailable: true
+            )
+        }
+    }
+}
+
+/// ObservedStates records the event numbers of the Bluetooth states an observer saw.
+private nonisolated final class ObservedStates: Sendable {
+
+    private let states = Mutex<[UInt64]>([])
+
+    var eventIDs: [UInt64] {
+        states.withLock { $0 }
+    }
+
+    func record(_ event: PluginSourceEvent) {
+        guard let state = PluginBluetoothState(event) else { return }
+
+        states.withLock { $0.append(state.eventID) }
     }
 }

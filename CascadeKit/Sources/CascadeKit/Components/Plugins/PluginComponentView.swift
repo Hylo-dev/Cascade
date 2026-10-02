@@ -12,7 +12,7 @@ import SwiftUI
 /// unavailable.
 struct PluginComponentView: View {
 
-    static let identifiers: Set<String> = ["power.battery", "volume.level"]
+    static let identifiers: Set<String> = ["power.battery", "volume.level", "bluetooth.device", "bluetooth.battery"]
 
     let id        : String
     let version   : Int
@@ -31,6 +31,20 @@ struct PluginComponentView: View {
             case ("volume.level", 1):
                 PluginVolumeLevelComponent(level: parameters["level"]?.number.map(Self.percent) ?? 0)
 
+            case ("bluetooth.device", 1):
+                PluginBluetoothDeviceComponent(
+                    model             : parameters["model"]?.string.flatMap(PluginBluetoothDeviceModel.init(rawValue:)) ?? .generic,
+                    productID         : parameters["productID"]?.number.flatMap { UInt16(exactly: $0) },
+                    colorID           : parameters["colorID"]?.number.flatMap { UInt8(exactly: $0) },
+                    fallbackSymbolName: parameters["fallbackSymbol"]?.string
+                )
+
+            case ("bluetooth.battery", 1):
+                PluginBluetoothBatteryComponent(
+                    level      : parameters["level"]?.number.map(Self.percent),
+                    isConnected: parameters["isConnected"]?.bool ?? false
+                )
+
             default:
                 Color.clear
         }
@@ -38,7 +52,8 @@ struct PluginComponentView: View {
 
     /// percent turns a parameter into a percentage. Validation only promises a finite number, so
     /// it is clamped before it becomes an Int, which would trap past Int's range and take the
-    /// notch down with it.
+    /// notch down with it; an identity, such as a product ID, is unknown unless it is an exact
+    /// integer of its range.
     private static func percent(_ value: Double) -> Int {
         Int(min(100, max(0, value)).rounded())
     }

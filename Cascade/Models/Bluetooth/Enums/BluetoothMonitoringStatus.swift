@@ -3,8 +3,9 @@
 //  Cascade
 //
 
-/// BluetoothMonitoringStatus exposes whether the concrete system registration
-/// is active instead of making an empty stream look like successful monitoring.
+/// BluetoothMonitoringStatus exposes whether the Bluetooth source's system
+/// registration is active, as its states say, instead of making silence look
+/// like successful monitoring.
 enum BluetoothMonitoringStatus: Equatable, Sendable {
 
     case stopped

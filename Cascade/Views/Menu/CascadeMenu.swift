@@ -167,6 +167,7 @@ struct CascadeMenu: View {
         }
 
         Button("Test AirPods Alert") { services.previewBluetooth() }
+            .disabled(!services.bluetoothEnabled)
 
         Divider()
 

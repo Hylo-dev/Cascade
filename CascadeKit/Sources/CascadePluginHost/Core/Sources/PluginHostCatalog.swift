@@ -8,10 +8,14 @@
 /// unavailable instead of waiting for states that never come.
 public enum PluginHostCatalog {
 
-    public static let names: Set<String> = ["power"]
+    public static let names: Set<String> = ["bluetooth", "power"]
 
-    /// sources builds the sources, by name, for PluginHost's runtime.
+    /// sources builds the sources, by name, for PluginHost's runtime. Building one touches no
+    /// system service; each starts listening only when the kernel leases it.
     public static func sources() -> [String: any PluginCatalogSource] {
-        ["power": PowerSource()]
+        [
+            "bluetooth": BluetoothSource(),
+            "power"    : PowerSource(),
+        ]
     }
 }

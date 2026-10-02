@@ -25,5 +25,7 @@ public enum PluginCatalog {
         "audio.outputPicker": 1,
         "power.battery"     : 1,
         "volume.level"      : 1,
+        "bluetooth.device"  : 1,
+        "bluetooth.battery" : 1,
     ]
 }
