@@ -11,7 +11,7 @@ import Foundation
 // PluginHost runs Cascade's first-party plugins, each on its own thread, in a process of its
 // own: a plugin that crashes or hangs costs a PluginHost restart, never Cascade. It accepts only
 // the app it is bundled in, signed by its own team when it has one. It also runs the catalog
-// sources the kernel leases, such as power, and sends their states back.
+// sources the kernel leases, such as power and Bluetooth, and sends their states back.
 
 var providers = FirstPartyPlugins.providers
 #if DEBUG
