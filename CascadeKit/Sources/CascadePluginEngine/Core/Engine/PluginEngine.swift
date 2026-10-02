@@ -90,8 +90,19 @@ public final class PluginEngine: Sendable {
         run { kernel, now in kernel.setVisible(isVisible, for: key, at: now) }
     }
 
-    public func submit(_ request: PluginActionRequest) {
-        run { kernel, now in kernel.submit(request, at: now) }
+    /// submit calls onAccepted only after the broker accepted the current control and its
+    /// revision, outside the kernel lock. Native adapters use that same authority for actions
+    /// whose resource stays in Cascade, such as finalizing a ScreenCaptureKit writer.
+    public func submit(
+        _ request : PluginActionRequest,
+        onAccepted: (@Sendable (PluginActionRequest) -> Void)? = nil
+    ) {
+        queue.async { [self] in
+            let effects = execute { kernel, now in kernel.submit(request, at: now) }
+            guard !effects.contains(.reject(request)) else { return }
+
+            onAccepted?(request)
+        }
     }
 
     public func revoke(
@@ -161,7 +172,8 @@ public final class PluginEngine: Sendable {
 
     /// execute runs one kernel operation under the lock, then performs its effects and rearms
     /// the timer with the lock released.
-    private func execute(_ operation: (inout PluginKernel, PluginInstant) -> [PluginEngineEffect]) {
+    @discardableResult
+    private func execute(_ operation: (inout PluginKernel, PluginInstant) -> [PluginEngineEffect]) -> [PluginEngineEffect] {
         let now                      = PluginInstant.now()
         let (effects, delay, isWake) = kernel.withLock { kernel in
             let effects = operation(&kernel, now)
@@ -174,6 +186,7 @@ public final class PluginEngine: Sendable {
         }
         rearm(after: delay, onWallClock: isWake)
         publishStatus()
+        return effects
     }
 
     /// publishStatus sends the status to its observer when it differs from the last one sent.

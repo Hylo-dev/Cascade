@@ -14,6 +14,11 @@ final class RecordingSurfaceHost: PluginSurfaceHosting {
     private(set) var shown        : [(notice: any NotchTransientNotice, revision: UInt64)] = []
     private(set) var dismissed    : [String] = []
     private(set) var updated      : [UInt64] = []
+    private(set) var activities   : [String: any NotchLiveActivity] = [:]
+
+    func present(_ activity: any NotchLiveActivity) {
+        activities[activity.id] = activity
+    }
 
     func register(_ widget: NotchWidget) {
         registrations += 1
@@ -34,5 +39,6 @@ final class RecordingSurfaceHost: PluginSurfaceHosting {
 
     func dismissActivity(id: String) {
         dismissed.append(id)
+        activities[id] = nil
     }
 }

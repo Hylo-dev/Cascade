@@ -13,6 +13,8 @@ public protocol PluginSurfaceHosting: AnyObject {
 
     func unregisterWidget(id: WidgetIdentifier)
 
+    func present(_ activity: any NotchLiveActivity)
+
     func showNotice(_ notice: any NotchTransientNotice)
 
     func updateNotice(_ notice: any NotchTransientNotice)

@@ -34,6 +34,8 @@ extension PluginHostTests {
                 widgets[id] = nil
             }
 
+            func present(_ activity: any NotchLiveActivity) {}
+
             func showNotice(_ notice: any NotchTransientNotice) {
                 notices.append(notice)
             }

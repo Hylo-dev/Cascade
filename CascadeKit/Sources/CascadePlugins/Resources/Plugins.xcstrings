@@ -55,6 +55,26 @@
           }
         }
       }
+    },
+    "Screen Recording": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrazione schermo"
+          }
+        }
+      }
+    },
+    "Stop Screen Recording": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interrompi registrazione"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -10,8 +10,8 @@ import Foundation
 /// Time is drawn by the kernel: `clock` is the current time and `today` the current weekday,
 /// day and month, while `date`, `timer` and `timerProgress` show the dates they are given, so
 /// none of them costs the plugin anything while it ticks, which is how the clock stops waking
-/// anything once a second. A `regions` node is the root of a notice's document, holding its
-/// compact leading, compact trailing and minimal regions in that order. A `viewThatFits` shows the
+/// anything once a second. A `regions` node is the root of a notice or activity document, holding its
+/// compact leading, compact trailing and minimal regions, plus expanded for an activity. A `viewThatFits` shows the
 /// first of its children that fits the space it is given, which is how a widget that comes in
 /// several sizes, and cannot know which one it was given, offers a face for each.
 public enum PluginNodeKind: Codable, Hashable, Sendable {

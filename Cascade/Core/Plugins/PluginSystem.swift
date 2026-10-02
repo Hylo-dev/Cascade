@@ -32,6 +32,10 @@ final class PluginSystem {
     /// plugin's state and PluginHost's, for settings.
     var statusHandler: (PluginEngineStatus) -> Void = { _ in }
 
+    /// actionHandler routes an accepted control to a native resource owner. The engine invokes
+    /// it only after revision, control, manifest and permission checks, then we hop to main.
+    var actionHandler: (PluginActionRequest) -> Void = { _ in }
+
     init(
         host   : any PluginSurfaceHosting,
         sources: [String: any PluginEventSource] = [:]
@@ -114,7 +118,13 @@ final class PluginSystem {
         let surfaces = PluginSurfaceRouter(
             host      : host,
             manifests : manifests,
-            submit    : { [weak self] request in self?.engine?.submit(request) },
+            submit    : { [weak self] request in
+                self?.engine?.submit(request, onAccepted: { [weak self] accepted in
+                    DispatchQueue.main.async {
+                        MainActor.assumeIsolated { self?.actionHandler(accepted) }
+                    }
+                })
+            },
             visibility: { [weak self] isVisible, key in self?.engine?.setVisible(isVisible, for: key) }
         )
         let executor = SharedHostExecutor(transport: XPCPluginTransport(serviceName: serviceName, requirement: requirement))

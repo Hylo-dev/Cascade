@@ -35,6 +35,18 @@ struct CascadeMenu: View {
 
         Divider()
 
+        Toggle("Screenshot Shortcuts in the Notch", isOn: $services.screenshotEnabled)
+
+        if services.screenshotEnabled {
+            Button("Open Screen Capture") { services.openScreenshot() }
+            Text(services.screenshotStatus)
+            if services.screenshotNeedsAccessibility {
+                Button("Allow Accessibility…") { services.requestAccessibility() }
+            }
+        }
+
+        Divider()
+
         Button("Adjust Notch Size…") {
             // Let AppKit finish dismissing the menu before assigning key focus
             // to the calibration panel.

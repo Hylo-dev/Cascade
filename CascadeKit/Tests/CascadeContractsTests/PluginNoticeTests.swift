@@ -30,7 +30,7 @@ struct PluginNoticeTests {
     }
 
     @Test
-    func regionsAreOnlyANoticesRoot() throws {
+    func regionsAreOnlyANoticeOrActivityRoot() throws {
         #expect(throws: AddonFailure.self) {
             try PluginPublication(feature: "time", surface: .widget, document: PluginDocument(root: regions()))
         }
@@ -43,13 +43,18 @@ struct PluginNoticeTests {
     }
 
     @Test
-    func regionsHoldThreeRegions() {
+    func noticesKeepThreeRegionsWhileActivitiesCanExpand() throws {
         #expect(throws: AddonFailure.self) {
             try PluginDocument(root: regions(2))
         }
         #expect(throws: AddonFailure.self) {
-            try PluginDocument(root: regions(4))
+            try PluginPublication(feature: "charging", surface: .notice, document: PluginDocument(root: regions(4)), notice: attributes())
         }
+        #expect(throws: AddonFailure.self) {
+            try PluginPublication(feature: "recording", surface: .activity, document: PluginDocument(root: regions()))
+        }
+        let activity = try PluginPublication(feature: "recording", surface: .activity, document: PluginDocument(root: regions(4)))
+        #expect(try JSONDecoder().decode(PluginPublication.self, from: JSONEncoder().encode(activity)) == activity)
     }
 
     @Test

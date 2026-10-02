@@ -91,7 +91,7 @@ struct BatteryPluginTests {
 
         #expect(texts(in: try large(charging)) == ["Charging", "40%"])
         #expect(texts(in: try large(battery)) == ["On Battery", "82%"])
-        #expect(texts(in: try large(lowPower)) == ["Low Power", "12%"])
+        #expect(texts(in: try large(lowPower)) == ["Low Power Mode", "12%"])
         #expect(texts(in: try large(held)) == ["Plugged In", "80%"])
     }
 

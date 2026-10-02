@@ -105,6 +105,14 @@ public final class NotchEngine {
         coordinator.showOrdinaryPage(on: displayID)
     }
 
+    /// open uses the same ownership and click expansion as a pointer action,
+    /// retaining the current page and the compositor's existing animation.
+    public func open() {
+        guard let displayID = coordinator.auxiliaryDisplayID else { return }
+
+        coordinator.requestExpansion(on: displayID, activityID: nil, trigger: .click)
+    }
+
     public func configureFileDrop(
         onHover      : (@MainActor ([URL]?) -> Void)?,
         onDrop       : (@MainActor ([URL]) -> Bool)?,

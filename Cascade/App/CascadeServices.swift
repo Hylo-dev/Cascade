@@ -49,6 +49,16 @@ final class CascadeServices {
 
     var spotlightStatus: String { spotlight.status }
 
+    var screenshotEnabled: Bool {
+        didSet {
+            preferences.set(screenshotEnabled, forKey: "screenshotEnabled")
+            if isRunning { updateScreenshot() }
+        }
+    }
+
+    var screenshotStatus: String { screenshot.status }
+    var screenshotNeedsAccessibility: Bool { screenshot.needsAccessibility }
+
     func previewSpotlightDroplet(from origin: AuxiliaryInvocationOrigin) {
         guard let anchor = spotlightAnchor(on: invocationDisplayID(for: origin)) else { return }
 
@@ -167,6 +177,17 @@ final class CascadeServices {
     private var settings           : (any CascadeSettingsPresenting)?
     @ObservationIgnored
     private let spotlight          : SpotlightCoordinator
+    @ObservationIgnored
+    private let screenshot         : ScreenshotCoordinator
+    @ObservationIgnored
+    private let screenshotPage      : ScreenshotPage
+
+    @ObservationIgnored
+    private var captureController: ScreenCaptureController?
+    @ObservationIgnored
+    private let recordingSource = ScreenRecordingPluginSource()
+    @ObservationIgnored
+    private var captureTask: Task<Void, Never>?
 
     @ObservationIgnored
     private let suppressor    = AccessibilityBluetoothNoticeSuppressor()
@@ -212,13 +233,20 @@ final class CascadeServices {
     private var isRunning = false
 
     init(preferences: UserDefaults = .standard) {
+        screenshotPage = ScreenshotPage(preferences: preferences)
         let displayPreferencesStore = DisplayPresentationPreferencesStore(defaults: preferences)
         let notch = NotchEngine(
             configuration     : .default,
             displayPreferences: displayPreferencesStore.preferences
         )
         self.notch                   = notch
-        plugins                      = PluginSystem(host: notch, sources: [PluginVolumeState.source: volumeSource])
+        plugins = PluginSystem(
+            host   : notch,
+            sources: [
+                PluginVolumeState.source         : volumeSource,
+                PluginScreenRecordingState.source: recordingSource,
+            ]
+        )
         self.displayPreferencesStore = displayPreferencesStore
 
         let fileShelfGovernor = ResourceGovernor()
@@ -261,8 +289,20 @@ final class CascadeServices {
             }
         )
 
+        let screenshotPage = self.screenshotPage
+        let screenshotShelf = self.fileShelfController
+        screenshot = ScreenshotCoordinator(
+            onShortcut: { [weak screenshotPage, weak screenshotShelf, weak notch] in
+                screenshotShelf?.showHover(nil)
+                screenshotPage?.present()
+                notch?.open()
+            },
+            onCancel: { [weak screenshotPage] in screenshotPage?.dismiss() }
+        )
+
         self.preferences         = preferences
         spotlightEnabled         = preferences.object(forKey: "spotlightEnabled") as? Bool ?? true
+        screenshotEnabled        = preferences.object(forKey: "screenshotEnabled") as? Bool ?? true
         hapticsEnabled           = preferences.object(forKey: "hapticsEnabled") as? Bool ?? true
         sensitiveContentVisible  = preferences.object(forKey: "sensitiveContentVisible") as? Bool ?? false
         bluetoothEnabled         = preferences.object(forKey: "bluetoothEnabled") as? Bool ?? true
@@ -326,15 +366,63 @@ final class CascadeServices {
 
         notch.onScreenLocked = { [weak self] in
             self?.spotlight.screenLocked()
+            self?.screenshot.screenLocked()
+            self?.screenshotPage.dismiss()
+            self?.captureController?.requestStop()
         }
 
         let fileShelfController = self.fileShelfController
-        fileShelfController.setContentChanged { [weak fileShelfController, weak notch] prefersDefault in
-            guard let fileShelfController else { return }
-
-            notch?.setContextualPage(fileShelfController, prefersDefault: prefersDefault)
+        fileShelfController.setContentChanged { [weak self] _ in
+            self?.updateContextualPage()
         }
-        notch.setContextualPage(fileShelfController, prefersDefault: false)
+        screenshotPage.onPresentationChanged = { [weak self] in
+            self?.updateContextualPage()
+        }
+        plugins.actionHandler = { [weak self] request in
+            self?.captureController?.handleAction(request)
+        }
+        recordingSource.onReleased = { [weak self] in
+            self?.captureController?.requestStop()
+        }
+        let recordingSource = self.recordingSource
+        captureController = ScreenCaptureController(
+            capture: NativeScreenCapture(),
+            canRecord: { [weak recordingSource] in recordingSource?.isAvailable == true },
+            publish: { [weak recordingSource] in recordingSource?.update($0) },
+            close  : { [weak screenshotPage] in screenshotPage?.dismiss() },
+            failed : { [weak screenshotPage, weak notch] message in
+                screenshotPage?.present()
+                screenshotPage?.errorMessage = message
+                notch?.open()
+            }
+        )
+        screenshotPage.onAction = { [weak self] mode in
+            guard let self, self.captureTask == nil,
+                  let displayID = self.notch.expandedDisplayID ?? self.notch.auxiliaryDisplayID
+            else { return }
+
+            let options = self.screenshotPage.options
+            self.captureTask = Task { [weak self] in
+                await self?.captureController?.perform(mode, on: displayID, options: options)
+                self?.captureTask = nil
+            }
+        }
+        updateContextualPage()
+    }
+
+    /// updateContextualPage gives the explicit screenshot session precedence
+    /// without discarding shelf updates. Restoring the shelf releases the host's
+    /// persistent expansion, so its existing close animation handles dismissal.
+    private func updateContextualPage() {
+        screenshot.setScreenPresented(screenshotPage.isPresented)
+        if screenshotPage.isPresented {
+            notch.configureFileDrop(onHover: nil, onDrop: nil, onUnsupported: nil)
+            notch.setContextualPage(screenshotPage, prefersDefault: true)
+            return
+        }
+
+        notch.setContextualPage(fileShelfController, prefersDefault: fileShelfController.isOccupied)
+        let fileShelfController = self.fileShelfController
         notch.configureFileDrop(
             onHover      : { [weak fileShelfController] urls in
                 fileShelfController?.showHover(urls)
@@ -356,6 +444,12 @@ final class CascadeServices {
 
     /// openSettings uses the expanded target before presentation, even when
     /// invoked from the menu while the notch is still compact.
+    func openScreenshot() {
+        fileShelfController.showHover(nil)
+        screenshotPage.present()
+        notch.open()
+    }
+
     func openSettings() {
         showSettings(reanchorToCurrentOwner: true)
     }
@@ -395,6 +489,7 @@ final class CascadeServices {
 
         notch.start()
         updateSpotlight()
+        updateScreenshot()
         startNetworkMonitoring()
         updateMusicMonitoring()
         requestStartupPermissions()
@@ -440,6 +535,8 @@ final class CascadeServices {
                 self.volumeSource.monitor.requestAccess()
             } else if self.bluetoothEnabled && self.nativeReplacementEnabled {
                 self.suppressor.requestAccess()
+            } else if self.screenshotEnabled {
+                self.suppressor.requestAccess()
             }
 
             if self.musicEnabled {
@@ -448,12 +545,22 @@ final class CascadeServices {
         }
     }
 
+    var needsCaptureShutdown: Bool { captureTask != nil || captureController?.isRecording == true }
+
+    func finishCaptureBeforeTermination() async {
+        captureTask?.cancel()
+        await captureTask?.value
+        await captureController?.shutdown()
+    }
+
     func stop() {
         guard isRunning else { return }
 
         isRunning = false
         settings?.close()
         spotlight.stop()
+        screenshot.stop()
+        screenshotPage.dismiss()
 
         startupPermissionTask?.cancel()
         startupPermissionTask = nil
@@ -505,6 +612,7 @@ final class CascadeServices {
     /// granted AX permission to take effect without polling or restarting macOS.
     func refreshNativeReplacement() {
         if spotlightEnabled { spotlight.refresh() }
+        if screenshotEnabled { screenshot.refresh() }
         refreshVolumePermissions()
         updateNativeReplacement()
     }
@@ -525,12 +633,21 @@ final class CascadeServices {
     }
 
     func requestAccessibility() {
-        suppressor.requestAccess()
+        if screenshotEnabled { screenshot.requestAccess() }
+        else { suppressor.requestAccess() }
     }
 
     private func updateSpotlight() {
         if spotlightEnabled { spotlight.start() }
         else { spotlight.stop() }
+    }
+
+    private func updateScreenshot() {
+        if screenshotEnabled { screenshot.start() }
+        else {
+            screenshot.stop()
+            screenshotPage.dismiss()
+        }
     }
 
     /// beginSizeCalibration opens the notch's reversible alignment tool.

@@ -166,7 +166,25 @@ struct PluginSurfaceRouterTests {
     }
 
     @Test
-    func activitiesWaitForTheirPlan() throws {
+    func explicitCompactRegionWidthsAvoidTheDefaultEmptyWings() throws {
+        let rig = try rig()
+        let key = PluginPublicationKey(plugin: clock, feature: "time", surface: .activity)
+        let document = try PluginDocument(root: PluginNode(.regions, children: [
+            PluginNode(.symbol(name: "record.circle"), modifiers: [.frame(width: 20, height: nil, maxWidth: nil, maxHeight: nil, alignment: .center)]),
+            PluginNode(.text("00:00"), modifiers: [.frame(width: 36, height: nil, maxWidth: nil, maxHeight: nil, alignment: .center)]),
+            PluginNode(.text("")),
+            PluginNode(.text("Recording")),
+        ]))
+        var publisher = PluginPublicationStore()
+        let applied = publisher.apply(document, staleAfter: nil, for: key, at: Date())
+        let change = try #require(applied)
+        rig.surfaces.apply([change], rejected: [])
+
+        #expect(rig.host.activities.values.first?.compactPreferredSideWidth == 50)
+    }
+
+    @Test
+    func anActivityReachesTheHostAndWithdrawsWhenRecordingEnds() throws {
         let rig       = try rig()
         var publisher = PluginPublicationStore()
         let key       = PluginPublicationKey(plugin: clock, feature: "time", surface: .activity)
@@ -176,5 +194,58 @@ struct PluginSurfaceRouterTests {
         rig.surfaces.apply([change], rejected: [])
 
         #expect(rig.host.widgets.isEmpty)
+        #expect(rig.host.activities.count == 1)
+
+        let withdrawn = publisher.withdraw(key)
+        rig.surfaces.apply([try #require(withdrawn)], rejected: [])
+
+        #expect(rig.host.activities.isEmpty)
+        #expect(rig.host.dismissed == ["plugin:com.cascade.clock/time/activity"])
+    }
+
+    @Test
+    func aNoticeAndActivityOfOneFeatureKeepSeparateIdentities() throws {
+        let rig = try rig()
+        var publisher = PluginPublicationStore()
+        let activityKey = PluginPublicationKey(plugin: clock, feature: "time", surface: .activity)
+        let noticeKey = PluginPublicationKey(plugin: clock, feature: "time", surface: .notice)
+        let activityChange = publisher.apply(try PluginDocument(root: PluginNode(.text("Recording"))), staleAfter: nil, for: activityKey, at: Date())
+        let regions = try PluginDocument(root: PluginNode(.regions, children: [PluginNode(.text("Saved")), PluginNode(.text("")), PluginNode(.text("Saved"))]))
+        let attributes = try PluginNoticeAttributes(duration: 4, accessibilityLabel: "Saved")
+        let noticeChange = publisher.apply(regions, staleAfter: nil, for: noticeKey, at: Date(), notice: attributes)
+        rig.surfaces.apply([try #require(activityChange), try #require(noticeChange)], rejected: [])
+        let activity = try #require(rig.host.activities.values.first)
+        let notice = try #require(rig.host.shown.last?.notice)
+
+        #expect(activity.id != notice.id)
+        let liveHost = LiveActivityHost()
+        liveHost.present(activity)
+        liveHost.showNotice(notice)
+        #expect(liveHost.selection.primary === activity)
+        liveHost.dismiss(id: notice.id)
+        #expect(liveHost.selection.primary === activity)
+        let withdrawn = publisher.withdraw(noticeKey)
+        rig.surfaces.apply([try #require(withdrawn)], rejected: [])
+        #expect(rig.host.activities.values.first === activity)
+    }
+
+    @Test
+    func activityUpdatesKeepTheirLifetimeAndReportVisibility() throws {
+        let rig = try rig()
+        var publisher = PluginPublicationStore()
+        let key = PluginPublicationKey(plugin: clock, feature: "time", surface: .activity)
+        let first = publisher.apply(try PluginDocument(root: PluginNode(.text("Recording"))), staleAfter: nil, for: key, at: Date())
+        rig.surfaces.apply([try #require(first)], rejected: [])
+        let activity = try #require(rig.host.activities.values.first)
+        let lifetime = activity.lifetime
+        let second = publisher.apply(try PluginDocument(root: PluginNode(.text("Stopping"))), staleAfter: nil, for: key, at: Date())
+        rig.surfaces.apply([try #require(second)], rejected: [])
+
+        #expect(rig.host.activities.values.first === activity)
+        #expect(activity.lifetime == lifetime)
+        #expect(activity.contentRevision == 2)
+        activity.activate(in: LiveActivityContext(onInvalidate: {}))
+        activity.suspend()
+        #expect(rig.visibility.map(\.0) == [true, false])
     }
 }

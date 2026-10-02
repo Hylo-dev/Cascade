@@ -1,20 +1,20 @@
 //
-//  MusicTimeLabelView.swift
-//  Cascade
+//  RollingTimeLabelView.swift
+//  CascadeKit
 //
 
 import AppKit
 import QuartzCore
 import SwiftUI
 
-/// MusicTimeLabelView lays one text layer per character side by side.
+/// RollingTimeLabelView lays one text layer per character side by side.
 /// Digits share one width, so a roll never moves its neighbours; a string of a
 /// new length is laid out again without animation.
 @MainActor
-final class MusicTimeLabelView: NSView {
+final class RollingTimeLabelView: NSView {
 
     private let font : NSFont
-    private let color = NSColor.white.withAlphaComponent(0.55).cgColor
+    private let color: CGColor
 
     private var glyphs: [CATextLayer] = []
     private var text   = ""
@@ -22,8 +22,12 @@ final class MusicTimeLabelView: NSView {
 
     private var lineHeight: CGFloat { ceil(font.ascender - font.descender) }
 
-    init(font: NSFont) {
-        self.font = font
+    init(
+        font : NSFont,
+        color: NSColor
+    ) {
+        self.font  = font
+        self.color = color.cgColor
         super.init(frame: .zero)
 
         wantsLayer = true

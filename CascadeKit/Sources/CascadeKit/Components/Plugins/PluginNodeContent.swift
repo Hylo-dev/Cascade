@@ -78,7 +78,11 @@ struct PluginNodeContent: View {
                 }
 
             case .timer(let start, let end, let countsDown):
-                Text(timerInterval: start...end, countsDown: countsDown)
+                if model.modifiers.contains(where: { if case .contentTransition(.numericText) = $0 { return true }; return false }) {
+                    PluginTimerLabel(start: start, end: end, countsDown: countsDown, model: model)
+                } else {
+                    Text(timerInterval: start...end, countsDown: countsDown)
+                }
 
             case .timerProgress(let start, let end):
                 ProgressView(timerInterval: start...end, countsDown: false)

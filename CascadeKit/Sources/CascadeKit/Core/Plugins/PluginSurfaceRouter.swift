@@ -11,8 +11,7 @@ import CascadePluginEngine
 /// grid, registered with its first content and removed with its withdrawal. Later publications
 /// only update the store. A notice gets one store and one `PluginNotice`, shown again for every
 /// publication, or only enriched in place when the publication asks to update, and dismissed with
-/// its withdrawal. Activities are routed by the Music
-/// sub-project; until then their publications are not shown.
+/// its withdrawal. Activities keep their finite lifetime across revisions and end with withdrawal.
 @MainActor
 public final class PluginSurfaceRouter {
 
@@ -25,6 +24,7 @@ public final class PluginSurfaceRouter {
     private let visibility: (Bool, PluginPublicationKey) -> Void
     private var stores    : [PluginPublicationKey: PluginNodeStore] = [:]
     private var notices   : [PluginPublicationKey: PluginNotice] = [:]
+    private var activities: [PluginPublicationKey: PluginActivity] = [:]
 
     public init(
         host      : any PluginSurfaceHosting,
@@ -63,13 +63,39 @@ public final class PluginSurfaceRouter {
             switch change.key.surface {
                 case .widget  : route(widget: change)
                 case .notice  : route(notice: change)
-                case .activity: break
+                case .activity: route(activity: change)
             }
         }
 
         for request in rejected {
             stores[request.key]?.reject(request)
         }
+    }
+
+    /// route keeps one activity and its node store for the whole publication lifetime.
+    /// Updating its revision does not extend its deadline or replace its visible controls.
+    private func route(activity change: PluginPublicationChange) {
+        let key = change.key
+        guard change.content != nil else {
+            stores[key] = nil
+            if activities.removeValue(forKey: key) != nil {
+                host.dismissActivity(id: Self.identifier(of: key).rawValue)
+            }
+            return
+        }
+
+        let store = stores[key] ?? PluginNodeStore(key: key, submit: submit)
+        stores[key] = store
+        store.apply(change)
+
+        let activity = activities[key] ?? PluginActivity(
+            id        : Self.identifier(of: key).rawValue,
+            sourceID  : key.plugin.rawValue,
+            store     : store,
+            visibility: { [visibility] isVisible in visibility(isVisible, key) }
+        )
+        activities[key] = activity
+        host.present(activity)
     }
 
     /// route places a widget with its first content, updates it after, and removes it with its
@@ -136,6 +162,9 @@ public final class PluginSurfaceRouter {
     }
 
     private static func identifier(of key: PluginPublicationKey) -> WidgetIdentifier {
-        WidgetIdentifier("plugin:" + key.plugin.rawValue + "/" + key.feature)
+        let identifier = "plugin:" + key.plugin.rawValue + "/" + key.feature
+        // Widget identities already live in saved arrangements. Only the new activity surface
+        // needs a suffix to avoid colliding with its feature's notices in the live host.
+        return WidgetIdentifier(key.surface == .activity ? identifier + "/activity" : identifier)
     }
 }

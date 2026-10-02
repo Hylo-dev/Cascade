@@ -2419,6 +2419,126 @@
           }
         }
       }
+    },
+    "Allow Accessibility to open screenshot shortcuts in Cascade": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti Accessibilità per aprire Cascade con le scorciatoie screenshot"
+          }
+        }
+      }
+    },
+    "Capture": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cattura"
+          }
+        }
+      }
+    },
+    "Close Screen Capture": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiudi acquisizione schermo"
+          }
+        }
+      }
+    },
+    "Native screenshot shortcuts active · reopen the menu to try again": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scorciatoie screenshot di macOS attive · riapri il menu per riprovare"
+          }
+        }
+      }
+    },
+    "Record": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registra"
+          }
+        }
+      }
+    },
+    "Screen Capture": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acquisizione schermo"
+          }
+        }
+      }
+    },
+    "Screen Recording": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrazione schermo"
+          }
+        }
+      }
+    },
+    "Screenshot shortcuts are off": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scorciatoie screenshot disattivate"
+          }
+        }
+      }
+    },
+    "Screenshot Shortcuts in the Notch": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scorciatoie screenshot nel notch"
+          }
+        }
+      }
+    },
+    "Screenshot shortcuts open the notch": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le scorciatoie screenshot aprono il notch"
+          }
+        }
+      }
+    },
+    "Stop Screen Recording": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interrompi registrazione schermo"
+          }
+        }
+      }
+    },
+    "Recording controls are unavailable. Wait for the plugin or re-enable it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Controlli di registrazione non disponibili. Attendi il plugin o riattivalo."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

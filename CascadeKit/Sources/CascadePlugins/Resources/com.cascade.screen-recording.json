@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 2,
+  "id": "com.cascade.screen-recording",
+  "version": "1.0.0",
+  "compatibility": { "macOS": "15.0", "cascadeProtocol": { "major": 2, "minimumMinor": 0 } },
+  "execution": { "entryPoint": "ScreenRecordingPlugin" },
+  "features": [
+    {
+      "id": "recording",
+      "surfaces": { "activity": {} },
+      "sources": ["screen.recording"],
+      "permissions": ["capture.screenRecording"],
+      "actions": ["recording.stop"]
+    }
+  ],
+  "resources": { "profile": "eventDriven" }
+}

@@ -10,7 +10,8 @@ import Foundation
 /// content may grow before the kernel asks for a fresh one when the surface becomes visible
 /// again. Content the kernel draws itself, such as a clock face, never goes stale, so it leaves
 /// `staleAfter` out. A notice's document is its regions, and its publication carries the notice's
-/// attributes; no other publication carries them.
+/// attributes; no other publication carries them. An activity may supply four regions, including
+/// its expanded presentation, while a notice supplies exactly three.
 public struct PluginPublication: Codable, Equatable, Sendable {
 
     public static let maximumStaleAfter = 86_400.0
@@ -63,9 +64,15 @@ public struct PluginPublication: Codable, Equatable, Sendable {
                 "A notice carries its attributes, and only a notice does"
             )
             try ContractValidation.require(
-                (surface == .notice) == (document.root.kind == .regions),
-                "A notice's document is its regions, and only a notice's"
+                surface != .notice || document.root.kind == .regions && document.root.children.count == 3,
+                "A notice's document has three regions"
             )
+            if document.root.kind == .regions {
+                try ContractValidation.require(
+                    surface == .notice || surface == .activity && document.root.children.count == 4,
+                    "Only notices and activities publish regions"
+                )
+            }
         } else {
             try ContractValidation.require(notice == nil, "A withdrawal carries no attributes")
         }

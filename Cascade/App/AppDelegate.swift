@@ -45,9 +45,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if CommandLine.arguments.contains("--open-spotlight") {
             services.openSpotlight()
         }
+
+        if CommandLine.arguments.contains("--open-screenshot") {
+            services.openScreenshot()
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         services.stop()
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard services.needsCaptureShutdown else { return .terminateNow }
+
+        Task { @MainActor in
+            await services.finishCaptureBeforeTermination()
+            sender.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
     }
 }

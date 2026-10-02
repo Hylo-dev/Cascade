@@ -14,6 +14,7 @@ public enum PluginCatalog {
         "bluetooth",
         "power",
         "volume",
+        "screen.recording",
         "network",
         "net.webSocket",
         "net.sse",
