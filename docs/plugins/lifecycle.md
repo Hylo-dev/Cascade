@@ -35,7 +35,7 @@ The notch opens on hover, often, and the kernel never tells a plugin that it ope
 
 ## Wakes
 
-A plugin that needs a cadence asks for it: `PluginOutput.wake` is the date it wants to run again. Each output's `wake` replaces the previous one and an output without one cancels it. The kernel waits at least one second and at most a day, on the wall clock, so a wake asked for midnight comes at midnight even across sleep. One `DispatchSourceTimer` serves every plugin's wake, watchdog and retry, and it is disarmed when nothing is due. Most plugins need no wake at all: a clock face or a countdown is drawn by the kernel.
+A plugin that needs a cadence asks for it: `PluginOutput.wake` is the date it wants to run again. Each output's `wake` replaces the previous one and an output without one cancels it. A wake asked for sooner than a second away comes a second away. The kernel waits for it on the wall clock, so a wake asked for midnight comes at midnight even across sleep. One `DispatchSourceTimer` serves every plugin's wake, watchdog and retry, and it is disarmed when nothing is due. Most plugins need no wake at all: a clock face or a countdown is drawn by the kernel.
 
 ## Publications
 
@@ -49,7 +49,7 @@ The user's switches in Settings (the Alerts section of the Widget page) call `se
 
 Whenever a plugin may have lost its memory, after a retry, a PluginHost restart or a re-enable, the kernel primes it: the latest state of every source it holds, then a `refresh`. That is all a plugin needs to rebuild what it shows, so a plugin persists nothing.
 
-**A lost result does not repeat an action.** A retry clears the plugin's mailbox and primes it; the action that was in flight is not delivered again, because it may already have taken effect. An answer that arrives from a dispatch the watchdog gave up on is ignored.
+**A lost result does not repeat an action.** Whatever ends a dispatch early, a throw, a crash or a kill, the kernel primes the plugin instead of sending the event again, so an action that was in flight is never delivered twice: its effect may already have happened. A retry also clears whatever was waiting in the mailbox. An answer that arrives from a dispatch the watchdog gave up on is ignored.
 
 ## Failures
 
@@ -60,7 +60,7 @@ Whenever a plugin may have lost its memory, after a retry, a PluginHost restart 
 | `handle()` throws | Retry after 1, 5 and then 30 s. The fourth incident of any kind but a hang within five minutes quarantines. |
 | PluginHost dies with a plugin inside `handle()` | Counts against that plugin like a throw. |
 | Invalid publication, CPU debt | Counts as an incident; the plugin returned, so there is nothing to retry. An invalid publication is rejected and the previous one stays. A plugin in debt is held until it has rested. |
-| Hang: `handle()` past 250 ms | The watchdog kills the PluginHost incarnation of the handshake with SIGKILL and PluginHost comes back for the others at once. The hung plugin stays `disabledAfterHang` until the user re-enables it; a second hang since Cascade started quarantines it. |
+| Hang: `handle()` past 250 ms | The watchdog kills the PluginHost incarnation of the handshake with SIGKILL and PluginHost comes back for the others at once. The hung plugin stays `disabledAfterHang` until the user re-enables it or Cascade restarts; a second hang since Cascade started quarantines it. |
 | PluginHost crashes with nothing in flight | Blamed on PluginHost. It comes back after 1, 5 and then 30 s. |
 | PluginHost past 96 MiB | Checked after each answer, so nothing polls. PluginHost is killed blaming no plugin, and comes back like after a crash. |
 | Three idle crashes or memory kills within five minutes | PluginHost is given up on. Settings show it stopped, with a Restart button. |

@@ -48,7 +48,7 @@ The user places widgets on the notch grid: a long press starts editing, where a 
 
 - **Music as a plugin**, with the media and spectrum services and the `audio.spectrum`, `media.scrubber` and `audio.outputPicker` components (the services and Music sub-project). Until then Music is native (`MediaLiveActivity` and the expanded fallback), and plugin activities are accepted but not shown.
 - **The layout sub-project**: slot pages and the arbitration of compact and expanded space. Plugin widgets meanwhile use today's grid and its editing.
-- **External plugins**: discovery, installation, a process per plugin (`IsolatedProcessExecutor`) and user approval of permissions.
+- **External plugins**: discovery, installation, a process per plugin behind the same `PluginExecutor` protocol, and user approval of permissions.
 - **Services, storage and assets**: see [the planned page](services.md).
 
 The file shelf and its unsupported-file notice are not pending: they are a system surface, which stays native by rule (spec §6, §7).

@@ -75,7 +75,7 @@ The morph is one interpolation between two geometries, driven by a normalized pr
 
 ### Plugin layer (the modular surface)
 
-- A plugin conforms to **`PluginProvider`** (`CascadePluginSDK`): one synchronous `handle(_:context:)` that answers a `PluginEvent` with a `PluginOutput` of publications. It knows *nothing* about Cascade's internals and imports only `CascadePluginSDK` and `CascadeContracts`.
+- A plugin conforms to **`PluginProvider`** (`CascadePluginSDK`): one synchronous `handle(_:context:)` that answers a `PluginEvent` with a `PluginOutput` of publications. It knows *nothing* about Cascade's internals and, of Cascade's modules, imports only `CascadePluginSDK` and `CascadeContracts`.
 - Every plugin is declared by a **manifest v2** (`PluginManifest`): its features, the surfaces each one fills (widget, activity, notice), the catalog sources that wake it, the tier-2 components it shows, its permissions and its actions. The first-party plugins are listed in `FirstPartyPlugins` (`CascadePlugins`), their manifests bundled beside them as JSON: Battery and Clock (widgets), and the Bluetooth, Charging and Volume alerts (notices).
 - `NotchWidget`, `NotchLiveActivity`, `NotchTransientNotice` and `NotchContextualPage` are CascadeKit's internal host seams, not the plugin contract. Only kernel adapters (`PluginWidget`, `PluginNotice`) and system surfaces implement them.
 - Still pending: Music as a plugin with its media and spectrum services (the services and Music sub-project), slot pages and arbitration (the layout sub-project), external plugins, and the storage, assets and services pipelines.
@@ -92,7 +92,7 @@ The morph is one interpolation between two geometries, driven by a normalized pr
 Mixing these causes hangs, dropped frames or battery drain. They are non-negotiable:
 
 1. **Compositor / WindowServer (system-owned, *sacred*).** We hand it layer changes inside a `CATransaction`; we **never** stall the commit with heavy work. This is Cascade's analog of an audio render thread: owned by the system, never blocked by us.
-2. **Main thread / main actor (interactive, 120 Hz).** Owns the `NSPanel`, positioning, event monitoring, the `CADisplayLink` morph callback and the SwiftUI content. It must stay responsive: **no disk IO, no heavy compute, no blocking** here, ever. A hang here freezes the whole overlay. For plugins it only applies one coalesced hop: `PluginSurfaceRelay` queues a hop only when none is pending, so a burst of publications costs one hop, and it never waits on a contended lock.
+2. **Main thread / main actor (interactive, 120 Hz).** Owns the `NSPanel`, positioning, event monitoring, the `CADisplayLink` morph callback and the SwiftUI content. It must stay responsive: **no disk IO, no heavy compute, no blocking** here, ever. A hang here freezes the whole overlay. Its only plugin work is applying the kernel's diffs: `PluginSurfaceRelay` queues a hop to main only when none is pending, so a burst of publications costs one hop, and main never waits on a contended lock.
 3. **Background worker (utility / background QoS).** `Task.detached` or a dedicated `DispatchQueue`: loading data, decoding images, building geometry / persistence caches. Results cross back to the main actor explicitly.
 
 The plugin engine adds three contexts of its own (spec §3):
@@ -101,7 +101,7 @@ The plugin engine adds three contexts of its own (spec §3):
 5. **XPC.** Receives PluginHost's answers and source states and hands them to the engine queue.
 6. **PluginHost, one thread per plugin.** `PluginRunner` gives each plugin its own serial queue, so `handle()` runs on one thread at a time and that thread's CPU time is the plugin's CPU time.
 
-Plugin code never runs on Cascade's main thread, nor in Cascade at all except through `InProcessExecutor`, the test and development double. `handle()` must return within 250 ms, or the kernel's watchdog counts a hang and kills PluginHost; its CPU time is charged to `PluginCPUBudget`, so a plugin that spins is held back and then quarantined instead of being felt by the notch.
+Plugin code never runs on Cascade's main thread, nor in Cascade at all except through `InProcessExecutor`, the test and development double. `handle()` must return within 250 ms, or the kernel's watchdog counts a hang and kills PluginHost; its CPU time is charged to `PluginCPUBudget`, so a plugin that runs too often or too long is held back and then quarantined instead of being felt by the notch.
 
 ## Execution pipeline (the data flow)
 
@@ -152,7 +152,7 @@ A plugin is a guest in an always-on overlay, so the contract is deliberately str
 - **Nothing on open or close.** Work, presentation and visibility are separate lives (spec §5). PluginHost stays alive and idle while nothing changes; publications live in the kernel and stay on screen across a PluginHost restart; visibility is decided per surface, so the compact activity stays visible while the notch is closed. The kernel never tells a plugin that the notch opened or closed: when a surface becomes visible with content older than its `staleAfter`, the plugin gets one `refresh`.
 - **The kernel draws time.** Clocks, timers and time-driven progress (`Clock()`, `Today()`, `Text(_:style:)`, `Text(timerInterval:)`, `ProgressView(timerInterval:)`) are drawn and kept current by the kernel and cost the plugin nothing while they tick.
 - **Budgets.** Publications: a burst of eight, then one every 250 ms (33 ms for notices); the excess is held and coalesced, not dropped. CPU: a 100 ms burst refilled at 5 ms per second. Memory: PluginHost is measured as a whole and restarted past 96 MiB, blaming no plugin.
-- **Failures stay contained.** A throw retries after 1, 5 and 30 s, and the fourth incident in five minutes quarantines. A hang kills PluginHost and leaves the plugin disabled until the user re-enables it; a second hang quarantines it. PluginHost is given up on after three crashes with nothing in flight, or three memory kills, in five minutes. Settings (Widget page, Plugins section) show each plugin's state with Re-enable, and PluginHost's with Restart.
+- **Failures stay contained.** A throw retries after 1, 5 and 30 s, and the fourth incident in five minutes quarantines. A hang kills PluginHost and leaves the plugin disabled until the user re-enables it or Cascade restarts; a second hang quarantines it. PluginHost is given up on after three crashes with nothing in flight, or three memory kills, in five minutes. Settings (Widget page, Plugins section) show each plugin's state with Re-enable, and PluginHost's with Restart.
 - **Declared means required, undeclared is denied.** Every manifest declares everything, first-party included. Parity means no private code path: only the default approver differs between bundled and external plugins.
 
 ## Code style (see CODE_STYLE.md for the full rules)
@@ -172,7 +172,7 @@ A plugin is a guest in an always-on overlay, so the contract is deliberately str
 - **The compositor is sacred.** Never stall the `CATransaction` commit; never do per-frame heavy work or allocation in the `CADisplayLink` callback.
 - **The fast path is a small, audited blast radius.** `@frozen`, contiguous storage and `UnsafePointer` are allowed there *on purpose*, wrapped behind safe APIs and documented. Everywhere else the normal safety rules hold.
 - **Renderer:** update `CAShapeLayer.path`, not `draw(_:)`. The morph runs on its own layer; opening a side must not recompute unrelated layers. Target 120 Hz or better.
-- **Plugins pay rent.** Hold every plugin to the plugin contract above; reject a plugin design that polls, blocks, re-renders without cause or needs something its manifest does not declare. Native system surfaces are held to the same budget.
+- **Plugins pay rent.** Hold every plugin to the plugin contract above; reject a plugin design that polls, blocks, re-renders without cause or needs something its manifest does not declare. Native system surfaces follow the same resource rules.
 - Prefer the system frameworks (AppKit, Core Animation, Core Graphics) before reaching for a dependency; justify any dependency you do add.
 
 ## How to respond
