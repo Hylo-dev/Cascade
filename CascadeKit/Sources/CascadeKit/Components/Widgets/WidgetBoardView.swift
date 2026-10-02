@@ -11,9 +11,10 @@ import SwiftUI
 /// Every frame arrives already resolved and flipped to SwiftUI's y-down space, so the view
 /// does no layout math of its own. Editing is a discrete mode: entering or leaving it, and every
 /// accepted edit, rebuilds the board once through the host, while a drag only moves the one
-/// tile being dragged. Nothing here animates on its own, so an editing board costs nothing
-/// until the pointer does something. A tap on empty notch area ends editing, and a zero-size
-/// keyboard target takes focus while editing so that Escape ends it too.
+/// tile being dragged and lights the cells it would land on, in white where it fits and in red
+/// where it would be refused. A tile that moves or changes size on the grid springs to its new
+/// frame. A tap on empty notch area ends editing, and a zero-size keyboard target takes focus
+/// while editing so that Escape ends it too.
 struct WidgetBoardView: View {
 
     /// Tile is one placed widget: its view, its frame and whether it can change size.
@@ -46,15 +47,29 @@ struct WidgetBoardView: View {
         var id: Int { index }
     }
 
+    /// Target is where a dragged or resized tile would land: its placement, the cells it would
+    /// cover and whether the grid accepts it there.
+    struct Target: Equatable {
+
+        let placement: WidgetPlacement
+        let cells    : [CGRect]
+        let fits     : Bool
+    }
+
     /// Actions are the edits the board asks the host for. `drop` takes the translation a tile
-    /// was dragged by and answers whether the widget moved.
+    /// was dragged by and answers whether the widget moved; `target` says where that drop would
+    /// land. `resizeTarget` takes how far a tile's corner was dragged and picks the declared size
+    /// nearest to it, keeping the tile's corner, and `commitResize` applies it in place.
     struct Actions {
 
-        let setEditing: (Bool) -> Void
-        let drop      : (WidgetIdentifier, CGSize) -> Bool
-        let remove    : (WidgetIdentifier) -> Void
-        let resize    : (WidgetIdentifier) -> Void
-        let add       : (WidgetIdentifier, GridSpan) -> Void
+        let setEditing  : (Bool) -> Void
+        let drop        : (WidgetIdentifier, CGSize) -> Bool
+        let target      : (WidgetIdentifier, CGSize) -> Target?
+        let remove      : (WidgetIdentifier) -> Void
+        let resize      : (WidgetIdentifier) -> Void
+        let resizeTarget: (WidgetIdentifier, CGSize) -> Target?
+        let commitResize: (WidgetIdentifier, GridSpan) -> Bool
+        let add         : (WidgetIdentifier, GridSpan) -> Void
     }
 
     let tiles       : [Tile]
@@ -64,6 +79,27 @@ struct WidgetBoardView: View {
     let galleryFrame: CGRect
     let gallery     : [GalleryEntry]
     let actions     : Actions
+
+    @State
+    private var highlight: Target?
+
+    init(
+        tiles       : [Tile],
+        cells       : [CGRect],
+        isEditing   : Bool,
+        doneFrame   : CGRect,
+        galleryFrame: CGRect,
+        gallery     : [GalleryEntry],
+        actions     : Actions
+    ) {
+        self.tiles        = tiles
+        self.cells        = cells
+        self.isEditing    = isEditing
+        self.doneFrame    = doneFrame
+        self.galleryFrame = galleryFrame
+        self.gallery      = gallery
+        self.actions      = actions
+    }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -89,6 +125,18 @@ struct WidgetBoardView: View {
                 }
                 .allowsHitTesting(false)
 
+                if let highlight {
+                    let color = highlight.fits ? Color.white : Color(red: 1, green: 0.3, blue: 0.3)
+                    Path { path in
+                        for cell in highlight.cells {
+                            path.addRoundedRect(in: cell.insetBy(dx: 0.5, dy: 0.5), cornerSize: CGSize(width: 6, height: 6), style: .continuous)
+                        }
+                    }
+                    .fill(color.opacity(0.22))
+                    .stroke(color.opacity(0.7), lineWidth: 1)
+                    .allowsHitTesting(false)
+                }
+
                 WidgetEditingKeyboardTarget { actions.setEditing(false) }
                     .frame(width: 0, height: 0)
             }
@@ -97,10 +145,16 @@ struct WidgetBoardView: View {
                 WidgetTileView(
                     tile     : tile,
                     isEditing: isEditing,
-                    actions  : actions
+                    actions  : actions,
+                    onTarget : { target in
+                        if highlight != target {
+                            highlight = target
+                        }
+                    }
                 )
                 .frame(width: tile.frame.width, height: tile.frame.height)
                 .position(x: tile.frame.midX, y: tile.frame.midY)
+                .animation(.snappy, value: tile.frame)
             }
 
             if isEditing {

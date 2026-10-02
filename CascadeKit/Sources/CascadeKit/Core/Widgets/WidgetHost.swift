@@ -194,6 +194,25 @@ final class WidgetHost {
         return true
     }
 
+    /// resizeInPlace switches a widget to another of its sizes without moving its corner, and
+    /// is refused when the size does not fit there: dragging a tile's corner never sends it
+    /// elsewhere.
+    @discardableResult
+    func resizeInPlace(
+        _ id   : WidgetIdentifier,
+        to span: GridSpan,
+        on grid: NotchGrid
+    ) -> Bool {
+        guard let current = arrangement[id], widgets[id]?.sizes.contains(span) == true else { return false }
+
+        let resized = WidgetPlacement(position: current.position, span: span)
+        guard resized != current else { return true }
+        guard grid.fits(resized, among: placements(besides: id)) else { return false }
+
+        commit(resized, for: id)
+        return true
+    }
+
     /// resizeToNextSize is the tile's resize control: it steps through the
     /// widget's sizes after the current one, wrapping around, and takes the first
     /// that `resize` accepts, so a size that fits nowhere is skipped.
@@ -357,29 +376,97 @@ final class WidgetHost {
             doneFrame   : flipped(doneFrame),
             galleryFrame: flipped(galleryFrame),
             gallery     : gallery,
-            actions     : actions(for: layout, setEditing: setEditing)
+            actions     : actions(for: layout, flip: flipped, setEditing: setEditing)
         ))
     }
 
     /// actions binds the board's edits to `layout`: a drop snaps the tile's
-    /// dragged top-leading corner to the nearest cell before asking the grid.
+    /// dragged top-leading corner to the nearest cell before asking the grid, and
+    /// a target is that same snap, asked without committing, with its cells in the
+    /// board's space through `flip`.
     func actions(
         for layout: NotchLayout,
+        flip      : @escaping (CGRect) -> CGRect = { $0 },
         setEditing: @escaping (Bool) -> Void
     ) -> WidgetBoardView.Actions {
         WidgetBoardView.Actions(
-            setEditing: setEditing,
-            drop      : { [weak self] id, translation in
-                guard let self, let frame = layout.frames[id] else { return false }
+            setEditing  : setEditing,
+            drop        : { [weak self] id, translation in
+                guard let self, let placement = self.dropPlacement(id, translation: translation, in: layout) else { return false }
 
-                let corner = CGPoint(x: frame.minX + translation.width, y: frame.maxY - translation.height)
-                guard let cell = layout.cell(nearestTopLeading: corner) else { return false }
-
-                return self.move(id, to: cell, on: layout.grid)
+                return self.move(id, to: placement.position, on: layout.grid)
             },
-            remove    : { [weak self] id in self?.remove(id) },
-            resize    : { [weak self] id in self?.resizeToNextSize(id, on: layout.grid) },
-            add       : { [weak self] id, span in self?.add(id, size: span, on: layout.grid) }
+            target      : { [weak self] id, translation in
+                guard let self, let placement = self.dropPlacement(id, translation: translation, in: layout) else { return nil }
+
+                return self.target(placement, of: id, in: layout, flip: flip)
+            },
+            remove      : { [weak self] id in self?.remove(id) },
+            resize      : { [weak self] id in self?.resizeToNextSize(id, on: layout.grid) },
+            resizeTarget: { [weak self] id, translation in
+                guard let self, let placement = self.resizePlacement(id, translation: translation, in: layout) else { return nil }
+
+                return self.target(placement, of: id, in: layout, flip: flip)
+            },
+            commitResize: { [weak self] id, span in self?.resizeInPlace(id, to: span, on: layout.grid) ?? false },
+            add         : { [weak self] id, span in self?.add(id, size: span, on: layout.grid) }
+        )
+    }
+
+    /// dropPlacement is where a tile dragged by `translation` would land: its block with the
+    /// top-leading cell nearest to the dragged corner.
+    private func dropPlacement(
+        _ id       : WidgetIdentifier,
+        translation: CGSize,
+        in layout  : NotchLayout
+    ) -> WidgetPlacement? {
+        guard let frame = layout.frames[id], let current = arrangement[id] else { return nil }
+
+        let corner = CGPoint(x: frame.minX + translation.width, y: frame.maxY - translation.height)
+        guard let cell = layout.cell(nearestTopLeading: corner) else { return nil }
+
+        return WidgetPlacement(position: cell, span: current.span)
+    }
+
+    /// resizePlacement is the declared size nearest to a tile whose bottom-trailing corner was
+    /// dragged by `translation`, at the tile's own corner.
+    private func resizePlacement(
+        _ id       : WidgetIdentifier,
+        translation: CGSize,
+        in layout  : NotchLayout
+    ) -> WidgetPlacement? {
+        guard let frame = layout.frames[id], let current = arrangement[id], let sizes = widgets[id]?.sizes else { return nil }
+
+        let wanted = CGSize(width: frame.width + translation.width, height: frame.height + translation.height)
+        func distance(_ span: GridSpan) -> CGFloat {
+            let size = size(of: span, in: layout)
+            return hypot(size.width - wanted.width, size.height - wanted.height)
+        }
+        guard let span = sizes.min(by: { distance($0) < distance($1) }) else { return nil }
+
+        return WidgetPlacement(position: current.position, span: span)
+    }
+
+    /// target describes `placement` for the board: the cells it covers and whether it fits.
+    private func target(
+        _ placement: WidgetPlacement,
+        of id      : WidgetIdentifier,
+        in layout  : NotchLayout,
+        flip       : (CGRect) -> CGRect
+    ) -> WidgetBoardView.Target {
+        var cells: [CGRect] = []
+        for column in placement.position.column ..< placement.position.column + placement.span.columns {
+            for row in placement.position.row ..< placement.position.row + placement.span.rows {
+                if let cell = layout.cells[GridPosition(column: column, row: row)] {
+                    cells.append(flip(cell))
+                }
+            }
+        }
+
+        return WidgetBoardView.Target(
+            placement: placement,
+            cells    : cells,
+            fits     : layout.grid.fits(placement, among: placements(besides: id))
         )
     }
 

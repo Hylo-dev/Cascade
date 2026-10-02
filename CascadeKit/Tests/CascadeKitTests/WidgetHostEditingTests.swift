@@ -208,4 +208,50 @@ struct WidgetHostEditingTests {
         #expect(host.arrangement[battery.id] == nil)
         #expect(host.gallery.map(\.id) == [battery.id])
     }
+
+    /// editingLayout is the built-in page's layout with the board's actions bound to it.
+    private func editing(_ host: WidgetHost) -> (NotchLayout, WidgetBoardView.Actions) {
+        let layout = NotchLayoutResolver().resolve(
+            interior     : CGRect(x: 0, y: 0, width: 640, height: 180),
+            notchWidth   : 200,
+            topBandHeight: 36,
+            placements   : host.arrangement
+        )
+
+        return (layout, host.actions(for: layout, setEditing: { _ in }))
+    }
+
+    @Test
+    func aDragHighlightsTheCellsItWouldLandOnAndWhetherTheyFit() throws {
+        let (host, clock, battery) = host()
+        let (layout, actions)      = editing(host)
+        let origin = try #require(layout.cells[GridPosition(column: 0, row: 1)])
+        let right  = try #require(layout.cells[GridPosition(column: 1, row: 1)]).minX - origin.minX
+        let down   = origin.maxY - (try #require(layout.cells[GridPosition(column: 0, row: 2)])).maxY
+
+        let lowered = try #require(actions.target(battery.id, CGSize(width: 4, height: down - 5)))
+        let blocked = try #require(actions.target(clock.id, CGSize(width: right * 1.2, height: 0)))
+
+        #expect(lowered.placement == placement(4, 2, wide))
+        #expect(lowered.fits)
+        #expect(lowered.cells.count == 4)
+        #expect(!blocked.fits)
+        #expect(host.arrangement[battery.id] == placement(4, 1, wide))
+    }
+
+    @Test
+    func aResizeDragPicksTheNearestDeclaredSizeAndKeepsItsCorner() throws {
+        let (host, clock, _)  = host()
+        let (layout, actions) = editing(host)
+        let frame = try #require(layout.frames[clock.id])
+
+        let shorter = try #require(actions.resizeTarget(clock.id, CGSize(width: 0, height: -frame.height * 0.45)))
+        let same    = try #require(actions.resizeTarget(clock.id, CGSize(width: 6, height: 4)))
+
+        #expect(shorter.placement == placement(0, 1, wide))
+        #expect(shorter.fits)
+        #expect(same.placement == placement(0, 1, tall))
+        #expect(actions.commitResize(clock.id, wide))
+        #expect(host.arrangement[clock.id] == placement(0, 1, wide))
+    }
 }
