@@ -30,10 +30,9 @@ nonisolated final class VolumeMonitorWorker: @unchecked Sendable {
     private var tapGeneration: UInt64 = 0
     private var routesKeys   : Bool
 
-    private var reducer      = VolumeChangeReducer()
-    private var router       = VolumeKeyRouter()
-    private var lastStatus   : VolumeMonitoringStatus?
-    private var reportedLevel: (percentage: Int, isMuted: Bool)?
+    private var reducer   = VolumeChangeReducer()
+    private var router    = VolumeKeyRouter()
+    private var lastStatus: VolumeMonitoringStatus?
 
     private let logger = Logger(subsystem: "hylo.Cascade", category: "VolumeMonitor")
 
@@ -92,12 +91,15 @@ nonisolated final class VolumeMonitorWorker: @unchecked Sendable {
     }
 
     /// setRoutesKeys installs the tap or removes it as key routing is allowed
-    /// or not; a suspended worker installs it on resume.
+    /// or not; a suspended worker installs it on resume. Without routing the
+    /// sleep and session observers stop, so no resume would come: the
+    /// suspension, which only holds the tap off, ends with the tap.
     func setRoutesKeys(_ routesKeys: Bool) {
         queue.async { [weak self] in
             guard let self, self.routesKeys != routesKeys else { return }
 
             self.routesKeys = routesKeys
+            if !routesKeys { isSuspended = false }
             guard isRunning, !isSuspended else { return }
 
             installTap()
@@ -201,19 +203,14 @@ nonisolated final class VolumeMonitorWorker: @unchecked Sendable {
         guard isRunning, let audio else { return }
 
         audio.refreshOutput()
-        if let snapshot = audio.snapshot(), snapshot.scalar.isFinite {
-            let level = (percentage: VolumeChangeReducer.percentage(for: snapshot), isMuted: snapshot.isMuted)
-            if let event = reducer.receive(
-                snapshot,
-                sessionID     : sessionID,
-                allowsNotice  : tapIsActive && router.allowsObservedNotice,
-                forcesFeedback: forcesFeedback
-            ) {
-                continuation.yield(.changed(event))
-            } else if reportedLevel.map({ $0 != level }) ?? true {
-                continuation.yield(.level(percentage: level.percentage, isMuted: level.isMuted))
-            }
-            reportedLevel = level
+        if let snapshot = audio.snapshot(),
+           let update = reducer.update(
+               for           : snapshot,
+               sessionID     : sessionID,
+               allowsNotice  : tapIsActive && router.allowsObservedNotice,
+               forcesFeedback: forcesFeedback
+           ) {
+            continuation.yield(update)
         }
 
         publishCurrentStatus()

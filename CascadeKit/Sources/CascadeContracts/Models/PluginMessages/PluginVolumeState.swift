@@ -6,8 +6,10 @@
 /// PluginVolumeState is the `volume` catalog source's state, typed: the output level, whether it
 /// is muted, and an announcement counter. The kernel's volume source decides, beside its key tap,
 /// which changes are worth a notice; each one moves the counter, so a plugin shows a notice when
-/// the counter moves and never has to second-guess the tap. Counter zero is a baseline, emitted
-/// when the source starts, with no level yet.
+/// the counter moves and never has to second-guess the tap. Every other change of the level, the
+/// first of a session included, comes with the counter as it stands, zero before the first
+/// announcement, so a plugin that only shows the level reads every state and one that announces
+/// sees nothing new. The source starts with a baseline at counter zero and no level yet.
 public struct PluginVolumeState: Equatable, Sendable {
 
     public static let source = "volume"

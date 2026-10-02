@@ -5,10 +5,13 @@
 
 @testable import Cascade
 
-/// FakeVolumeMonitor is a volume monitor the test plays: it hands out one stream and records
-/// starts, stops and permission requests.
+/// FakeVolumeMonitor is a volume monitor the test plays: it hands out one stream, which keeps
+/// only its newest updates as the real monitor's does, and records starts, stops and permission
+/// requests.
 @MainActor
 final class FakeVolumeMonitor: VolumeMonitoring {
+
+    static let bufferedUpdates = 8
 
     var routesKeys = true
 
@@ -19,7 +22,9 @@ final class FakeVolumeMonitor: VolumeMonitoring {
 
     func start() -> AsyncStream<VolumeMonitorUpdate> {
         starts += 1
-        let (stream, continuation) = AsyncStream<VolumeMonitorUpdate>.makeStream()
+        let (stream, continuation) = AsyncStream<VolumeMonitorUpdate>.makeStream(
+            bufferingPolicy: .bufferingNewest(Self.bufferedUpdates)
+        )
         self.continuation = continuation
         return stream
     }

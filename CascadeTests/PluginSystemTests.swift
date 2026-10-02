@@ -217,7 +217,7 @@ extension PluginHostTests {
             }
 
             let sound = WidgetIdentifier("plugin:com.cascade.sound/sound")
-            monitor.send(.level(percentage: 40, isMuted: false))
+            monitor.send(.level(VolumeChangeEvent(percentage: 40, isMuted: false, revision: 0)))
             while grid.widgets[sound] == nil, ContinuousClock.now < deadline {
                 try await Task.sleep(for: .milliseconds(20))
             }
