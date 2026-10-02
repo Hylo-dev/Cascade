@@ -20,6 +20,7 @@ final class FakeHostLink: PluginHostLink {
         var killed  = false
         var sourceStarts: [String] = []
         var sourceStops : [String] = []
+        var footprint   : UInt64?
     }
 
     private let state       = Mutex(State())
@@ -49,6 +50,16 @@ final class FakeHostLink: PluginHostLink {
 
     var wasKilled: Bool {
         state.withLock { $0.killed }
+    }
+
+    /// memoryFootprint is the memory the test says this host uses.
+    var memoryFootprint: UInt64? {
+        get { state.withLock { $0.footprint } }
+        set { state.withLock { $0.footprint = newValue } }
+    }
+
+    func footprint() -> UInt64? {
+        memoryFootprint
     }
 
     var sourceStarts: [String] {

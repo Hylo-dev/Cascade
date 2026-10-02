@@ -86,6 +86,10 @@ final class XPCPluginHostLink: PluginHostLink {
         proxy {}?.stopSource(name: name)
     }
 
+    func footprint() -> UInt64? {
+        incarnation.withLock { $0 }?.footprint()
+    }
+
     func kill() {
         _ = incarnation.withLock { $0 }?.kill()
     }

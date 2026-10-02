@@ -30,6 +30,10 @@ public protocol PluginHostLink: AnyObject, Sendable {
 
     func stopSource(_ name: String)
 
+    /// footprint is the memory the incarnation of the handshake uses, in bytes, or nil before the
+    /// handshake or once it is gone.
+    func footprint() -> UInt64?
+
     /// kill sends SIGKILL to the incarnation of the handshake, and only to it.
     func kill()
 

@@ -171,4 +171,17 @@ struct XPCPluginTransportTests {
 
         #expect(try await eventually { source.stops == 1 })
     }
+
+    @Test
+    func aLiveHostReportsTheMemoryItUses() async throws {
+        let host = Host([:])
+        let link = host.transport.connect(onLoss: {}, onSourceEvent: { _ in })
+        defer { link.invalidate() }
+
+        _ = await withCheckedContinuation { continuation in
+            link.hello { continuation.resume(returning: $0) }
+        }
+
+        #expect((link.footprint() ?? 0) > 0)
+    }
 }

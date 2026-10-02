@@ -64,6 +64,10 @@ public final class SharedHostExecutor: PluginExecutor {
     /// stays silent longer is lost like one that crashed with nothing in flight.
     static let handshakeTimeout = Duration.seconds(30)
 
+    /// memoryLimit is the spec's stop threshold for PluginHost's memory, 96 MiB. It is checked
+    /// after each answer, when the host just did something, so nothing polls.
+    static let memoryLimit: UInt64 = 96 * 1_024 * 1_024
+
     private let state    = Mutex(State())
     private let transport: any PluginTransport
     private let clock    : @Sendable () -> Duration
@@ -219,6 +223,25 @@ public final class SharedHostExecutor: PluginExecutor {
             if let dispatch = state.inFlight.removeValue(forKey: id) {
                 state.outbox.append { dispatch.completion(result) }
             }
+        }
+        drain()
+        checkMemory(generation)
+    }
+
+    /// checkMemory restarts a host past `memoryLimit`. A shared process cannot say which plugin
+    /// holds the memory, so the kill blames no one: the dispatches it ends are lost, not failed,
+    /// and the host comes back at once.
+    private func checkMemory(_ generation: UInt64) {
+        let link = state.withLock { state in
+            state.generation == generation && state.phase == .ready && !state.isKilling ? state.link : nil
+        }
+        guard let link, let footprint = link.footprint(), footprint > Self.memoryLimit else { return }
+
+        state.withLock { state in
+            guard state.generation == generation, state.phase == .ready, !state.isKilling, let link = state.link else { return }
+
+            state.isKilling = true
+            state.outbox.append { link.kill() }
         }
         drain()
     }

@@ -59,6 +59,19 @@ public struct PluginHostIncarnation: Equatable, Sendable {
         isKillable && Darwin.kill(pid, SIGKILL) == 0
     }
 
+    /// footprint is this incarnation's physical footprint in bytes, the figure Activity Monitor
+    /// shows as memory, or nil when the PID is gone or now names another process.
+    func footprint() -> UInt64? {
+        guard isLive else { return nil }
+
+        var info   = rusage_info_v4()
+        let result = withUnsafeMutablePointer(to: &info) { pointer in
+            pointer.withMemoryRebound(to: rusage_info_t?.self, capacity: 1) { proc_pid_rusage(pid, RUSAGE_INFO_V4, $0) }
+        }
+
+        return result == 0 ? info.ri_phys_footprint : nil
+    }
+
     private static func start(of pid: pid_t) -> (seconds: UInt64, microseconds: UInt64)? {
         var info = proc_bsdinfo()
         let size = Int32(MemoryLayout<proc_bsdinfo>.size)
