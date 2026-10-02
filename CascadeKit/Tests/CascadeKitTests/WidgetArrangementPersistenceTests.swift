@@ -9,7 +9,8 @@ import Testing
 
 /// WidgetArrangementPersistenceTests covers what survives a launch: the store writes and reads
 /// the edited arrangements by display, a damaged payload reads as nothing, the host saves every
-/// edit and restores what was saved without overwriting an edit made in the meantime.
+/// edit and restores what was saved without overwriting an edit made in the meantime, and a
+/// widget saved beside the notch, where the grid no longer offers cells, comes back below it.
 @MainActor
 struct WidgetArrangementPersistenceTests {
 
@@ -72,7 +73,7 @@ struct WidgetArrangementPersistenceTests {
     func aSavedArrangementIsRestoredWithoutOverwritingANewerEdit() async {
         let external = DisplayIdentity(rawValue: "external")
         let store    = RecordingArrangementStore(seeded: [
-            builtIn : [WidgetIdentifier("clock"): placement(10, 0, wide)],
+            builtIn : [WidgetIdentifier("clock"): placement(6, 1, wide)],
             external: [WidgetIdentifier("clock"): placement(0, 2, wide)],
         ])
         let host  = WidgetHost(store: store)
@@ -90,6 +91,26 @@ struct WidgetArrangementPersistenceTests {
 
         host.update(state: .closed)
         host.update(state: .open, display: builtIn)
-        #expect(host.arrangement == [clock.id: placement(10, 0, wide)])
+        #expect(host.arrangement == [clock.id: placement(6, 1, wide)])
+    }
+
+    @Test
+    func aWidgetSavedBesideTheNotchMovesToTheFirstFreeBlockOfTheMainRows() async {
+        let small = GridSpan(columns: 1, rows: 1)
+        let store = RecordingArrangementStore(seeded: [
+            builtIn: [
+                WidgetIdentifier("battery"): placement(0, 1, wide),
+                WidgetIdentifier("clock")  : placement(10, 0, small),
+            ],
+        ])
+        let host = WidgetHost(store: store)
+
+        await host.restoreArrangements()
+        host.update(state: .open, display: builtIn)
+
+        #expect(host.arrangement == [
+            WidgetIdentifier("battery"): placement(0, 1, wide),
+            WidgetIdentifier("clock")  : placement(4, 1, small),
+        ])
     }
 }

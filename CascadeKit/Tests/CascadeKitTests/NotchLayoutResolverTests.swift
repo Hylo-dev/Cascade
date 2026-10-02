@@ -8,18 +8,23 @@ import CoreGraphics
 @testable import CascadeKit
 
 /// NotchLayoutResolverTests pins the resolver down hard, since it is pure math:
-/// cells map to the right rects, row 0 only offers the trailing side of the
-/// notch, the two main rows are fully usable, oversized placements are dropped,
-/// and a narrow notch degrades the trailing-cell count (the "does it fit" answer).
+/// cells map to the right rects, the default grid offers nothing beside the
+/// notch, a band configured with trailing cells offers only that side, the two
+/// main rows are fully usable, oversized placements are dropped, and a narrow
+/// notch degrades the trailing-cell count (the "does it fit" answer).
 struct NotchLayoutResolverTests {
 
-    private let resolver      = NotchLayoutResolver() // .default metrics: 14 cols, gutter 6, ≤4 trailing
+    private let resolver      = NotchLayoutResolver() // .default metrics: 14 cols, gutter 6, no band cells
+    private let bandResolver  = NotchLayoutResolver(metrics: NotchLayoutMetrics(columns: 14, cellGutter: 6, maxTrailingCells: 4))
     private let interior      = CGRect(x: 0, y: 0, width: 640, height: 180)
     private let notchWidth   : CGFloat = 200
     private let topBandHeight: CGFloat = 36
 
-    private func resolve(_ placements: [WidgetIdentifier: WidgetPlacement]) -> NotchLayout {
-        resolver.resolve(
+    private func resolve(
+        _ placements: [WidgetIdentifier: WidgetPlacement],
+        with resolver: NotchLayoutResolver? = nil
+    ) -> NotchLayout {
+        (resolver ?? self.resolver).resolve(
             interior     : interior,
             notchWidth   : notchWidth,
             topBandHeight: topBandHeight,
@@ -28,8 +33,21 @@ struct NotchLayoutResolverTests {
     }
 
     @Test
+    func theDefaultGridOffersNoCellBesideTheNotch() {
+        let beside = WidgetIdentifier("beside")
+        let layout = resolve([
+            beside: WidgetPlacement(position: GridPosition(column: 9, row: 0), span: .small)
+        ])
+
+        #expect(layout.trailingCellCount == 0)
+        #expect(layout.cells.count == 14 * 2)
+        #expect(layout.cells.keys.allSatisfy { $0.row != 0 })
+        #expect(layout.frames[beside] == nil)
+    }
+
+    @Test
     func computesNotchColumnsAndTrailingFit() {
-        let layout = resolve([:])
+        let layout = resolve([:], with: bandResolver)
         #expect(layout.notchColumns == 5)       // 200pt over ~46pt columns
         #expect(layout.trailingCellCount == 4)  // fits the configured maximum
     }
@@ -71,7 +89,7 @@ struct NotchLayoutResolverTests {
         let layout = resolve([
             trailing: WidgetPlacement(position: GridPosition(column: 9, row: 0), span: .small),
             slider  : WidgetPlacement(position: GridPosition(column: 0, row: 0), span: .small),
-        ])
+        ], with: bandResolver)
 
         #expect(layout.frames[trailing] != nil) // trailing side of the notch
         #expect(layout.frames[slider]   == nil) // slider / notch area is reserved
@@ -92,7 +110,7 @@ struct NotchLayoutResolverTests {
 
     @Test
     func everyAvailableCellHasAFrameAndTheGridKnowsTheBand() throws {
-        let layout = resolve([:])
+        let layout = resolve([:], with: bandResolver)
 
         #expect(layout.cells.count == 14 * 2 + 4)
         #expect(layout.grid == NotchGrid(columns: 14, bandColumns: 9 ..< 13)) // the 5-column notch starts at column 4
@@ -127,7 +145,7 @@ struct NotchLayoutResolverTests {
 
     @Test
     func narrowNotchDegradesTrailingCells() {
-        let layout = NotchLayoutResolver().resolve(
+        let layout = bandResolver.resolve(
             interior     : CGRect(x: 0, y: 0, width: 300, height: 160),
             notchWidth   : 250,
             topBandHeight: 36,

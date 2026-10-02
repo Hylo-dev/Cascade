@@ -68,7 +68,7 @@ final class WidgetHost {
 
         let saved = await store.load()
         for (display, saved) in saved where editedArrangements[display] == nil {
-            editedArrangements[display] = saved
+            editedArrangements[display] = outsideTheBand(saved)
         }
 
         if let openState { update(state: openState, display: currentDisplay) }
@@ -522,6 +522,28 @@ final class WidgetHost {
         cachedViews.removeValue(forKey: id)
 
         if activeWidgets.remove(id) != nil { widgets[id]?.suspend() }
+    }
+
+    /// outsideTheBand moves every widget saved in the notch band to the first free block of the
+    /// main rows, in the band's leading-to-trailing order, when the grid no longer offers band
+    /// cells; one that fits nowhere is dropped rather than kept as a widget nobody can see.
+    /// The move is not saved: it comes out the same at every launch, and the next edit saves it.
+    private func outsideTheBand(
+        _ saved: [WidgetIdentifier: WidgetPlacement]
+    ) -> [WidgetIdentifier: WidgetPlacement] {
+        guard resolver.metrics.maxTrailingCells == 0 else { return saved }
+
+        let grid  = NotchGrid(columns: resolver.metrics.columns, bandColumns: 0 ..< 0)
+        let band  = saved
+            .filter { $0.value.position.row == 0 }
+            .sorted { $0.value.position.column < $1.value.position.column }
+        var moved = saved.filter { $0.value.position.row != 0 }
+
+        for (id, placement) in band {
+            moved[id] = grid.firstFit(for: placement.span, among: Array(moved.values))
+        }
+
+        return moved
     }
 
     /// autoPlacement finds the first-fit placement in the main rows (1 and 2),

@@ -19,11 +19,13 @@ nonisolated struct NotchLayoutMetrics: Sendable {
 
     /// Most cells the top band offers to the trailing side of the notch. The
     /// resolver uses fewer when the gap beside the notch can't hold this many.
+    /// The default offers none: a widget squeezed beside the physical notch read
+    /// as clutter, so the band stays empty and widgets live in the two main rows.
     let maxTrailingCells: Int
 
     static let `default` = NotchLayoutMetrics(
         columns         : 14,
         cellGutter      : 6,
-        maxTrailingCells: 4
+        maxTrailingCells: 0
     )
 }
