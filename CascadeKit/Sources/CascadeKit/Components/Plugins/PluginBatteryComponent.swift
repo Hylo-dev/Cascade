@@ -9,12 +9,15 @@ import SwiftUI
 /// battery with a separate terminal and a straight charge boundary, drawn from the charge and Low
 /// Power Mode its publication carries. It keeps that silhouette at every percentage, including
 /// empty and full. A publication that says the Mac is charging gets a white bolt over the body,
-/// as the battery widget asks; the charging notice says so in words and leaves it out.
+/// as the battery widget asks; the charging notice says so in words and leaves it out. A
+/// publication can also ask for the charge inside the body instead, cut out of it as the iPhone
+/// draws it, so the number shows the dark notch through the fill and needs no colour of its own.
 struct PluginBatteryComponent: View {
 
-    let percentage    : Int?
-    let isLowPowerMode: Bool
-    let isCharging    : Bool
+    let percentage     : Int?
+    let isLowPowerMode : Bool
+    let isCharging     : Bool
+    let showsPercentage: Bool
 
     var body: some View {
         GeometryReader { geometry in
@@ -39,7 +42,19 @@ struct PluginBatteryComponent: View {
                 .frame(width: bodyWidth, height: height)
                 .clipShape(silhouette)
                 .overlay {
-                    if isCharging {
+                    if showsPercentage, let percentage {
+                        Text(verbatim: "\(min(100, max(0, percentage)))")
+                            .font(.system(size: height * 0.66, weight: .bold, design: .rounded))
+                            .monospacedDigit()
+                            .minimumScaleFactor(0.5)
+                            .lineLimit(1)
+                            .padding(.horizontal, height * 0.12)
+                            .blendMode(.destinationOut)
+                    }
+                }
+                .compositingGroup()
+                .overlay {
+                    if isCharging, !showsPercentage {
                         Image(systemName: "bolt.fill")
                             .resizable()
                             .scaledToFit()

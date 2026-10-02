@@ -149,8 +149,8 @@ struct BatteryPluginTests {
         #expect(face.children.count == 2)
         #expect(short.kind == .viewThatFits(axes: .horizontal))
         #expect(short.children.count == 2)
-        #expect(short.children.allSatisfy { texts(in: $0) == ["100%"] })
-        #expect(short.children.allSatisfy { battery(in: $0)?["isCharging"] == .bool(true) })
+        #expect(texts(in: try #require(short.children.first)) == ["100%"])
+        #expect(battery(in: try #require(short.children.first))?["isCharging"] == .bool(true))
     }
 
     /// ViewThatFits measures a face with the tile's other side already given, so shrinking text
@@ -163,5 +163,18 @@ struct BatteryPluginTests {
 
         #expect(large.modifiers.contains(.frame(width: nil, height: BatteryFace.largeHeight, maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)))
         #expect(medium.modifiers.contains(.frame(width: BatteryFace.mediumWidth, height: nil, maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)))
+    }
+
+    @Test
+    func theSmallFaceIsTheBatteryWithItsChargeInsideAndABoltWhileCharging() throws {
+        let charging = try #require(try BatteryFace.publication(for: PluginPowerState(percentage: 64, isExternalPower: true, isCharging: true, isLowPowerMode: false)).document).root
+        let onBattery = try #require(try BatteryFace.publication(for: PluginPowerState(percentage: 64, isExternalPower: false, isCharging: false, isLowPowerMode: false)).document).root
+        let small    = try #require(charging.children.last?.children.last)
+        let quiet    = try #require(onBattery.children.last?.children.last)
+
+        #expect(battery(in: small)?["showsPercentage"] == .bool(true))
+        #expect(texts(in: small).isEmpty)
+        #expect(small.children.contains { $0.kind == .symbol(name: "bolt.fill") })
+        #expect(!quiet.children.contains { $0.kind == .symbol(name: "bolt.fill") })
     }
 }

@@ -22,9 +22,10 @@ struct PluginComponentView: View {
         switch (id, version) {
             case ("power.battery", 1):
                 PluginBatteryComponent(
-                    percentage    : parameters["percentage"]?.number.map(Self.percent),
-                    isLowPowerMode: parameters["isLowPowerMode"]?.bool ?? false,
-                    isCharging    : parameters["isCharging"]?.bool ?? false
+                    percentage     : parameters["percentage"]?.number.map(Self.percent),
+                    isLowPowerMode : parameters["isLowPowerMode"]?.bool ?? false,
+                    isCharging     : parameters["isCharging"]?.bool ?? false,
+                    showsPercentage: parameters["showsPercentage"]?.bool ?? false
                 )
 
             case ("volume.level", 1):

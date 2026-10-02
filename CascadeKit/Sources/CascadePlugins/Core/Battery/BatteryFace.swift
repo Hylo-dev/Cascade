@@ -11,8 +11,8 @@ import Foundation
 /// and the kernel shows the first that fits. The tall 2x2 tile sets a small line above a large
 /// charge, as the clock does: the kernel-drawn battery, with a bolt while charging, and the
 /// status beside it, and the charge with a whole row of its own, so even "100%" keeps its size.
-/// The short 2x1 tile puts the battery and the charge on one row, and the small 1x1 tile stacks a
-/// smaller battery over the charge. The status takes the colour of the battery's fill, green
+/// The short 2x1 tile puts the battery and the charge on one row, and the small 1x1 tile is the
+/// battery alone with its charge inside it, and a bolt beside it while charging. The status takes the colour of the battery's fill, green
 /// while charging and yellow in Low Power Mode, and VoiceOver reads the charge and the status.
 ///
 /// The large face is 56 points tall and the medium one 100 points wide. ViewThatFits measures a
@@ -82,12 +82,26 @@ enum BatteryFace {
         )
     }
 
-    /// small is the 1x1 face: a smaller battery over the charge.
+    /// small is the 1x1 face: the battery with its charge inside, and a bolt beside it while
+    /// charging.
     private static func small(_ state: PluginPowerState) -> PluginNode {
-        PluginNode(
-            .vStack(alignment: .center, spacing: 2),
+        var children = [battery(state, height: 18, showsPercentage: true)]
+        if state.isCharging {
+            children.append(
+                PluginNode(
+                    .symbol(name: "bolt.fill"),
+                    modifiers: [
+                        .font(PluginFont(size: 10, weight: .bold)),
+                        .foregroundStyle(.color(tint(of: state))),
+                    ]
+                )
+            )
+        }
+
+        return PluginNode(
+            .hStack(alignment: .center, spacing: 2),
             modifiers: [.frame(width: nil, height: nil, maxWidth: .infinity, maxHeight: .infinity, alignment: .center)],
-            children : [battery(state, height: 9), charge(state, size: 13)]
+            children : children
         )
     }
 
@@ -108,14 +122,16 @@ enum BatteryFace {
     }
 
     /// battery is the kernel-drawn battery with the charging notice's proportions, at `height`,
-    /// and with its bolt while charging.
+    /// with its bolt while charging, or with its charge inside when it stands alone.
     private static func battery(
-        _ state: PluginPowerState,
-        height : Double
+        _ state        : PluginPowerState,
+        height         : Double,
+        showsPercentage: Bool = false
     ) -> PluginNode {
         var parameters: [String: PluginValue] = [
-            "isLowPowerMode": .bool(state.isLowPowerMode),
-            "isCharging"    : .bool(state.isCharging),
+            "isLowPowerMode" : .bool(state.isLowPowerMode),
+            "isCharging"     : .bool(state.isCharging && !showsPercentage),
+            "showsPercentage": .bool(showsPercentage),
         ]
         if let percentage = state.percentage {
             parameters["percentage"] = .number(Double(percentage))

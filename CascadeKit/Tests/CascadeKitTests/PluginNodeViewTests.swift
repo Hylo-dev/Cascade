@@ -216,4 +216,25 @@ struct PluginNodeViewTests {
         #expect(try document(width: 30) == (try image(Text(verbatim: "W"), width: 30)))
         #expect(try document(width: 400) == (try image(Text(verbatim: "WWWWWWWWWWWW"), width: 400)))
     }
+
+    @Test
+    func aBatteryCanShowItsChargeKnockedOutOfItsBody() throws {
+        /// opaque counts the pixels a full battery covers; digits cut out of it cover fewer.
+        func opaque(showsPercentage: Bool) throws -> Int {
+            let frame: PluginModifier = .frame(width: 40, height: 18, maxWidth: nil, maxHeight: nil, alignment: .center)
+            var publisher = PluginRenderFixtures.Publisher()
+            let store     = PluginNodeStore(key: PluginRenderFixtures.key, submit: { _ in })
+            let battery   = PluginNode(.component(id: "power.battery", version: 1, parameters: ["percentage": .number(100), "showsPercentage": .bool(showsPercentage)]), modifiers: [frame])
+            store.apply(publisher.publish(try PluginDocument(root: battery)))
+            let renderer = ImageRenderer(content: PluginDocumentView(store: store))
+            renderer.scale = 3
+            let bitmap = NSBitmapImageRep(cgImage: try #require(renderer.cgImage))
+
+            return (0..<bitmap.pixelsWide).reduce(0) { count, x in
+                count + (0..<bitmap.pixelsHigh).count { y in (bitmap.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.5 }
+            }
+        }
+
+        #expect(try opaque(showsPercentage: true) < (try opaque(showsPercentage: false)))
+    }
 }
