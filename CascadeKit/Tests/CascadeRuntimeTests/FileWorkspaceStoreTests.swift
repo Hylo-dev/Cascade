@@ -463,7 +463,7 @@ struct FileWorkspaceStoreTests {
         ))
         #expect(await governor.usage(.admittedMemoryBytes, owner: owner) == 40)
 
-        _          = try await governor.admit(.provider, owner: owner)
+        _          = try await governor.admit(.temporaryMemory(bytes: 64 * 1_024 * 1_024), owner: owner)
         let before = await governor.usage(.admittedMemoryBytes, owner: owner)
         await #expect(throws: AddonFailure.self) {
             try await governor.resizeMemoryReservation(

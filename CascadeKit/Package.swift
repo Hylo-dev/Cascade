@@ -100,8 +100,7 @@ let package = Package(
         ),
         .testTarget(
             name: "CascadeRuntimeTests",
-            dependencies: ["CascadeRuntime", "CascadeContracts", "CascadeAddonSDK"],
-            resources: [.process("Fixtures")],
+            dependencies: ["CascadeRuntime", "CascadeContracts"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .target(
@@ -145,7 +144,7 @@ let package = Package(
         ),
         .testTarget(
             name: "CascadeKitTests",
-            dependencies: ["CascadeKit", "CascadeContracts", "CascadePresentation", "CascadeRuntime", "CascadePluginEngine"]
+            dependencies: ["CascadeKit", "CascadeContracts", "CascadePresentation", "CascadePluginEngine"]
         ),
     ],
     swiftLanguageModes: [.v5]
