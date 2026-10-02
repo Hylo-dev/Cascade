@@ -1,0 +1,105 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "AirPods · Preview": {
+      "comment": "Device name of the Bluetooth notice's preview.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPods · Anteprima"
+          }
+        }
+      }
+    },
+    "Audio on Mac": {
+      "comment": "Accessibility status when AirPods become the Mac audio output.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio sul Mac"
+          }
+        }
+      }
+    },
+    "Battery unavailable": {
+      "comment": "Accessibility status for an unknown battery charge.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Batteria non disponibile"
+          }
+        }
+      }
+    },
+    "Battery, %lld percent": {
+      "comment": "Accessibility description of the device battery percentage.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Batteria, %lld percento"
+          }
+        }
+      }
+    },
+    "Case, %lld percent": {
+      "comment": "Accessibility description of the charging case percentage.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custodia, %lld percento"
+          }
+        }
+      }
+    },
+    "Connected": {
+      "comment": "Accessibility status after the Bluetooth connection completes.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connesso"
+          }
+        }
+      }
+    },
+    "Disconnected": {
+      "comment": "Accessibility status after the Bluetooth connection ends.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disconnesso"
+          }
+        }
+      }
+    },
+    "Left, %lld percent": {
+      "comment": "Accessibility description of the left earbud battery percentage.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sinistro, %lld percento"
+          }
+        }
+      }
+    },
+    "Right, %lld percent": {
+      "comment": "Accessibility description of the right earbud battery percentage.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Destro, %lld percento"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
