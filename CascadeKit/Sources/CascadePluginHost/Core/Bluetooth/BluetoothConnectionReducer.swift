@@ -15,12 +15,22 @@ import Foundation
 struct BluetoothConnectionReducer {
 
     private var connectedDevicesByID     : [String: BluetoothConnectedDevice] = [:]
+    private var connectionOrder          : [String]                           = []
     private var connectionEventsByID     : [String: BluetoothConnectionEvent] = [:]
     private var pendingInitialAudioRoutes: [String: TimeInterval]             = [:]
 
+    /// connectedDevices lists the devices connected now, in the order they
+    /// connected. A handful at most, so the order is a plain array of
+    /// addresses beside the snapshots.
+    var connectedDevices: [BluetoothConnectedDevice] {
+        connectionOrder.compactMap { connectedDevicesByID[$0] }
+    }
+
     /// replaceBaseline records the devices already connected at startup or
     /// wake. Its lack of a return value is deliberate: baseline devices are
-    /// state, not new user-visible connections.
+    /// state, not new user-visible connections. A device still connected
+    /// keeps its place in the order, since the framework reads the connected
+    /// devices in no particular order; the others follow as it read them.
     mutating func replaceBaseline(with devices: [BluetoothConnectedDevice]) {
         connectedDevicesByID.removeAll(keepingCapacity: true)
         connectionEventsByID.removeAll(keepingCapacity: true)
@@ -28,6 +38,11 @@ struct BluetoothConnectionReducer {
 
         for device in devices {
             connectedDevicesByID[device.deviceID] = device
+        }
+
+        connectionOrder.removeAll { connectedDevicesByID[$0] == nil }
+        for device in devices where !connectionOrder.contains(device.deviceID) {
+            connectionOrder.append(device.deviceID)
         }
     }
 
@@ -50,6 +65,7 @@ struct BluetoothConnectionReducer {
         }
 
         connectedDevicesByID[device.deviceID] = device
+        connectionOrder.append(device.deviceID)
         let event = BluetoothConnectionEvent(
             deviceID   : device.deviceID,
             name       : device.name,
@@ -91,6 +107,9 @@ struct BluetoothConnectionReducer {
             colorID  : device.colorID ?? previous?.colorID
         ))
         connectedDevicesByID[device.deviceID] = routed
+        if previous == nil {
+            connectionOrder.append(device.deviceID)
+        }
         if coalescesFreshConnection {
             return nil
         }
@@ -158,6 +177,7 @@ struct BluetoothConnectionReducer {
     ) -> BluetoothConnectionEvent? {
         guard let device = connectedDevicesByID.removeValue(forKey: deviceID) else { return nil }
 
+        connectionOrder.removeAll { $0 == deviceID }
         connectionEventsByID[deviceID]      = nil
         pendingInitialAudioRoutes[deviceID] = nil
 

@@ -22,6 +22,14 @@ struct BluetoothSourceTests {
     private let output   = BluetoothAudioRouteSnapshot(uid: "AA-BB-CC-DD-EE-FF:output", name: "AirPods", transportType: kAudioDeviceTransportTypeBluetooth)
     private let speakers = BluetoothAudioRouteSnapshot(uid: "BuiltInSpeakerDevice", name: "Mac speakers", transportType: kAudioDeviceTransportTypeBuiltIn)
 
+    /// listed is a device as a state lists it.
+    private func listed(
+        _ device: BluetoothConnectedDevice,
+        battery : Int? = nil
+    ) -> PluginBluetoothDevice {
+        PluginBluetoothDevice(name: device.name, symbolName: device.symbolName, batteryLevel: battery)
+    }
+
     private func source(
         _ system : FakeBluetoothSystem,
         metadata : BluetoothDeviceMetadata = BluetoothDeviceMetadata(battery: BluetoothBatterySnapshot(level: 64), model: .airPods),
@@ -54,7 +62,51 @@ struct BluetoothSourceTests {
         try await Task.sleep(for: .milliseconds(30))
         source.stop()
 
-        #expect(states.values == [.baseline(isAvailable: true)])
+        #expect(states.values == [.baseline(isAvailable: true, connectedDevices: [listed(airPods)])])
+    }
+
+    @Test
+    func everyStateListsTheDevicesConnectedThenInTheOrderTheyConnected() async throws {
+        let system           = FakeBluetoothSystem()
+        let (source, states) = source(system)
+        #expect(try await eventually { states.values.count == 1 })
+
+        system.latest?.connect(airPods)
+        #expect(try await eventually { states.values.count == 3 })
+        system.latest?.connect(keyboard)
+        #expect(try await eventually { states.values.count == 5 })
+        system.latest?.connect(BluetoothConnectedDevice(deviceID: keyboard.deviceID, name: "Keyboard", symbolName: "keyboard", battery: BluetoothBatterySnapshot(level: 30)))
+        system.latest?.disconnect(airPods.deviceID)
+        #expect(try await eventually { states.values.count == 6 })
+        source.stop()
+
+        #expect(states.values.map(\.connectedDevices) == [
+            [],
+            [listed(airPods)],
+            [listed(airPods, battery: 64)],
+            [listed(airPods, battery: 64), listed(keyboard)],
+            [listed(airPods, battery: 64), listed(keyboard, battery: 64)],
+            [listed(keyboard, battery: 30)],
+        ])
+        #expect(states.values.map(\.eventID) == [0, 1, 1, 2, 2, 3])
+    }
+
+    @Test
+    func aWakeListsTheDevicesStillConnectedOnlyWhenTheListChanged() async throws {
+        let system           = FakeBluetoothSystem(connected: [airPods, keyboard])
+        let (source, states) = source(system)
+        #expect(try await eventually { states.values.count == 1 })
+
+        system.replaceConnected(with: [keyboard, airPods])
+        source.simulate(.didWake)
+        system.replaceConnected(with: [keyboard])
+        source.simulate(.didWake)
+        source.stop()
+
+        #expect(states.values == [
+            .baseline(isAvailable: true, connectedDevices: [listed(airPods), listed(keyboard)]),
+            .baseline(isAvailable: true, connectedDevices: [listed(keyboard)]),
+        ])
     }
 
     @Test
@@ -142,14 +194,15 @@ struct BluetoothSourceTests {
         await second.waitForRegistration()
         await second.change(to: speakers)
         await second.change(to: output)
-        #expect(try await eventually { states.values.count == 3 })
+        #expect(try await eventually { states.values.count == 4 })
         try await Task.sleep(for: .milliseconds(30))
         source.stop()
 
-        let events = states.values.dropFirst()
+        let events = states.values.filter { $0.eventID != 0 }
         #expect(events.map(\.kind) == [.audioRoute, .audioRoute])
         #expect(events.map(\.eventID) == [1, 2])
         #expect(events.allSatisfy { $0.deviceID == "AA-BB-CC-DD-EE-FF" && $0.isConnected })
+        #expect(states.values[2] == .baseline(isAvailable: true, connectedDevices: [listed(keyboard)]))
     }
 
     @Test
@@ -231,6 +284,11 @@ final class FakeBluetoothSystem: Sendable {
     /// connect marks a device as connected for the next baseline, as if it connected in sleep.
     func connect(_ device: BluetoothConnectedDevice) {
         state.withLock { $0.connected.append(device) }
+    }
+
+    /// replaceConnected sets the devices the next baseline reads, in the order it reads them.
+    func replaceConnected(with devices: [BluetoothConnectedDevice]) {
+        state.withLock { $0.connected = devices }
     }
 
     var makeObserver: BluetoothSource.ObserverFactory {

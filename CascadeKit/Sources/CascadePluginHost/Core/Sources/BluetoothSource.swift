@@ -22,6 +22,11 @@ import os
 /// Cascade's old monitor, it does not pause while the user's session is switched out: an inactive
 /// session cannot see the notch, and the notice it might raise there expires on its own.
 ///
+/// Every state lists the devices connected when it is emitted, read from the reducer that
+/// already follows them, so a plugin that starts late still learns what is connected. A wake
+/// that changed the list emits a new baseline, never a connection, and one that did not emits
+/// nothing.
+///
 /// IOBluetooth delivers connection notifications through the run loop of the thread that
 /// registered, so the observer is started and stopped on the main queue, which PluginHost's main
 /// run loop services (`RunLoopType = NSRunLoop`). Everything else lives on the source's serial
@@ -49,6 +54,8 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
     private var routeGeneration = UInt64.zero
     private var nextEventID     = UInt64.zero
     private var isRunning       = false
+
+    private var publishedDevices: [PluginBluetoothDevice]?
 
     public convenience init() {
         self.init(
@@ -136,7 +143,6 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
         power     = SystemPowerNotifications { [weak self] transition in
             self?.queue.async { [weak self] in self?.receive(transition) }
         }
-        publish(.baseline(isAvailable: true))
         rebuildBaseline()
     }
 
@@ -154,8 +160,9 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
         if let observer {
             registrationQueue.async { observer.stop() }
         }
-        observer = nil
-        reducer  = BluetoothConnectionReducer()
+        observer         = nil
+        reducer          = BluetoothConnectionReducer()
+        publishedDevices = nil
     }
 
     private func receive(_ transition: SystemPowerNotifications.Transition) {
@@ -229,9 +236,11 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
         }
     }
 
-    /// rebuildBaseline reads the devices connected now as silent state. Callbacks queued before
-    /// it belong to the old baseline and are rejected; those that race it are held by the
-    /// observer and replayed after it, preserving their order.
+    /// rebuildBaseline reads the devices connected now as silent state, and emits them as a
+    /// baseline when they are not the list last emitted: always at start, after a wake only if
+    /// a device came or went while the Mac slept. Callbacks queued before it belong to the old
+    /// baseline and are rejected; those that race it are held by the observer and replayed after
+    /// the baseline, preserving their order.
     private func rebuildBaseline() {
         guard let observer else { return }
 
@@ -239,6 +248,11 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
         gate.replaceBaseline(epoch: observer.beginBaselineReplacement())
         reducer.replaceBaseline(with: observer.connectedDevices())
         restartRouteMonitoring()
+
+        let baseline = PluginBluetoothState.baseline(isAvailable: true, connectedDevices: connectedDevices)
+        if baseline.connectedDevices != publishedDevices {
+            publish(baseline)
+        }
 
         for callback in observer.finishBaselineReplacement() {
             receive(callback)
@@ -270,27 +284,42 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
     private func publish(_ event: BluetoothConnectionEvent) {
         publish(
             PluginBluetoothState(
-                deviceID   : event.deviceID,
-                name       : event.name,
-                symbolName : event.symbolName,
-                isConnected: event.isConnected,
-                battery    : event.battery.map {
+                deviceID        : event.deviceID,
+                name            : event.name,
+                symbolName      : event.symbolName,
+                isConnected     : event.isConnected,
+                battery         : event.battery.map {
                     PluginBluetoothBattery(level: $0.level, left: $0.left, right: $0.right, caseLevel: $0.caseLevel)
                 },
-                model      : event.model,
-                productID  : event.productID,
-                colorID    : event.colorID,
-                eventID    : event.eventID,
-                revision   : event.revision,
-                kind       : event.kind,
-                isAvailable: true
+                model           : event.model,
+                productID       : event.productID,
+                colorID         : event.colorID,
+                eventID         : event.eventID,
+                revision        : event.revision,
+                kind            : event.kind,
+                isAvailable     : true,
+                connectedDevices: connectedDevices
             )
         )
     }
 
+    /// publish emits a state and remembers the devices it listed.
     private func publish(_ state: PluginBluetoothState) {
+        // ponytail: a state that does not encode is dropped, as it always was. Four devices with
+        // the longest names Bluetooth allows still fit (PluginBluetoothStateTests); only names
+        // made of characters JSON escapes could pass 4096 bytes, and retrying without the list
+        // is the upgrade if one is ever seen.
         guard let emit, let event = try? state.event() else { return }
 
+        publishedDevices = state.connectedDevices
         emit(event)
+    }
+
+    /// connectedDevices is the reducer's list as a state carries it; a device's charge is the
+    /// summary its battery already reports, the lower earbud for AirPods.
+    private var connectedDevices: [PluginBluetoothDevice] {
+        reducer.connectedDevices.map { device in
+            PluginBluetoothDevice(name: device.name, symbolName: device.symbolName, batteryLevel: device.battery?.level)
+        }
     }
 }
