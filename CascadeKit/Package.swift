@@ -27,10 +27,6 @@ let package = Package(
             targets: ["CascadePresentation"]
         ),
         .library(
-            name   : "CascadeAddonSDK",
-            targets: ["CascadeAddonSDK"]
-        ),
-        .library(
             name: "CascadeContracts",
             targets: ["CascadeContracts"]
         ),
@@ -73,14 +69,9 @@ let package = Package(
             resources: [.process("Resources")],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
-        .target(
-            name: "CascadeAddonSDK",
-            dependencies: ["CascadeContracts", "CascadePresentation"],
-            swiftSettings: [.swiftLanguageMode(.v6)]
-        ),
         .testTarget(
             name: "CascadePresentationTests",
-            dependencies: ["CascadePresentation", "CascadeAddonSDK"],
+            dependencies: ["CascadePresentation"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .target(

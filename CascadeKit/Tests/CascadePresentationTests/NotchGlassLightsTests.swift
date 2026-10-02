@@ -58,12 +58,6 @@ struct NotchGlassLightsTests {
     }
 
     @MainActor
-    private struct NoAssets: ContentAssetResolving {
-
-        func image(for assetID: String) -> Image? { nil }
-    }
-
-    @MainActor
     private func receivedLights(from view: some View) async throws -> [GlassLight] {
         let received = ReceivedLights()
         let host     = NSHostingView(
@@ -94,44 +88,5 @@ struct NotchGlassLightsTests {
         )
 
         #expect(value == [child] + Array(repeating: parent, count: 7))
-    }
-
-    @Test
-    @MainActor
-    func rendererPublishesDocumentLightsAlongsideNativeContributions() async throws {
-        let documentLight = try light(0.2)
-        let nativeLight   = try light(0.8)
-        let document      = try ContentDocument(
-            schemaVersion     : 2,
-            root              : .text("Music"),
-            privacy           : .publicContent,
-            accessibilityLabel: "Music",
-            glassLights       : [documentLight]
-        )
-        let renderer = try ContentRenderer(
-            document: document,
-            assets  : NoAssets(),
-            dispatch: { _ in }
-        )
-        let value = try await receivedLights(from: renderer.notchGlassLights([nativeLight]))
-
-        #expect(value == [documentLight, nativeLight])
-    }
-
-    @Test
-    @MainActor
-    func legacyRendererContributesNoLights() async throws {
-        let document = try ContentDocument(
-            root              : .text("Music"),
-            privacy           : .publicContent,
-            accessibilityLabel: "Music"
-        )
-        let renderer = try ContentRenderer(
-            document: document,
-            assets  : NoAssets(),
-            dispatch: { _ in }
-        )
-
-        #expect(try await receivedLights(from: renderer).isEmpty)
     }
 }
