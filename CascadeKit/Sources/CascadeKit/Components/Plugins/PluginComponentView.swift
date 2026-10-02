@@ -23,7 +23,8 @@ struct PluginComponentView: View {
             case ("power.battery", 1):
                 PluginBatteryComponent(
                     percentage    : parameters["percentage"]?.number.map(Self.percent),
-                    isLowPowerMode: parameters["isLowPowerMode"]?.bool ?? false
+                    isLowPowerMode: parameters["isLowPowerMode"]?.bool ?? false,
+                    isCharging    : parameters["isCharging"]?.bool ?? false
                 )
 
             case ("volume.level", 1):

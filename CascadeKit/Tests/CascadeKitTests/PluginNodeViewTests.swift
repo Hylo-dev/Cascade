@@ -168,4 +168,30 @@ struct PluginNodeViewTests {
         #expect(try opaquePixels("power.battery", ["percentage": .number(1e300)]) > 0)
         #expect(try opaquePixels("volume.level", ["level": .number(-1e300)]) == 0)
     }
+
+    @Test
+    func aChargingBatteryShowsItsBolt() throws {
+        /// whitePixels counts the near-white pixels of a battery, which only its bolt draws.
+        func whitePixels(isCharging: Bool) throws -> Int {
+            let frame: PluginModifier = .frame(width: 30, height: 14, maxWidth: nil, maxHeight: nil, alignment: .center)
+            var publisher = PluginRenderFixtures.Publisher()
+            let store     = PluginNodeStore(key: PluginRenderFixtures.key, submit: { _ in })
+            let battery   = PluginNode(.component(id: "power.battery", version: 1, parameters: ["percentage": .number(60), "isCharging": .bool(isCharging)]), modifiers: [frame])
+            store.apply(publisher.publish(try PluginDocument(root: battery)))
+            let renderer = ImageRenderer(content: PluginDocumentView(store: store))
+            renderer.scale = 3
+            let bitmap = NSBitmapImageRep(cgImage: try #require(renderer.cgImage))
+
+            return (0..<bitmap.pixelsWide).reduce(0) { count, x in
+                count + (0..<bitmap.pixelsHigh).count { y in
+                    guard let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.sRGB) else { return false }
+
+                    return color.alphaComponent > 0.9 && color.redComponent > 0.9 && color.greenComponent > 0.9 && color.blueComponent > 0.9
+                }
+            }
+        }
+
+        #expect(try whitePixels(isCharging: true) > 0)
+        #expect(try whitePixels(isCharging: false) == 0)
+    }
 }

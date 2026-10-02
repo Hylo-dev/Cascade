@@ -8,11 +8,13 @@ import SwiftUI
 /// PluginBatteryComponent is the tier-2 component power.battery: a solid, continuously rounded
 /// battery with a separate terminal and a straight charge boundary, drawn from the charge and Low
 /// Power Mode its publication carries. It keeps that silhouette at every percentage, including
-/// empty and full, without a lightning bolt.
+/// empty and full. A publication that says the Mac is charging gets a white bolt over the body,
+/// as the battery widget asks; the charging notice says so in words and leaves it out.
 struct PluginBatteryComponent: View {
 
     let percentage    : Int?
     let isLowPowerMode: Bool
+    let isCharging    : Bool
 
     var body: some View {
         GeometryReader { geometry in
@@ -36,6 +38,16 @@ struct PluginBatteryComponent: View {
                 }
                 .frame(width: bodyWidth, height: height)
                 .clipShape(silhouette)
+                .overlay {
+                    if isCharging {
+                        Image(systemName: "bolt.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: height * 0.72)
+                            .foregroundStyle(.white)
+                            .shadow(color: .black.opacity(0.45), radius: height * 0.05)
+                    }
+                }
 
                 Capsule()
                     .fill(PluginBatteryPalette.remainder(isLowPowerMode))

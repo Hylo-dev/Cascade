@@ -1,70 +1,19 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "Charging": {
+    "Battery unavailable": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Charging"
+            "value": "Battery unavailable"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "In carica"
-          }
-        }
-      }
-    },
-    "Plugged In": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plugged In"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Collegato"
-          }
-        }
-      }
-    },
-    "Low Power Mode": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Low Power Mode"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Risparmio energetico"
-          }
-        }
-      }
-    },
-    "On Battery": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "On Battery"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A batteria"
+            "value": "Batteria non disponibile"
           }
         }
       }
@@ -86,19 +35,70 @@
         }
       }
     },
-    "Battery unavailable": {
+    "Charging": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Battery unavailable"
+            "value": "Charging"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Batteria non disponibile"
+            "value": "In carica"
+          }
+        }
+      }
+    },
+    "Low Power": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Low Power Mode"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Risparmio"
+          }
+        }
+      }
+    },
+    "On Battery": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On Battery"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A batteria"
+          }
+        }
+      }
+    },
+    "Plugged In": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plugged In"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collegato"
           }
         }
       }

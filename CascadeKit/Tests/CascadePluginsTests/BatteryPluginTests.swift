@@ -84,7 +84,7 @@ struct BatteryPluginTests {
 
         #expect(texts(in: try #require(charging.document).root) == ["Charging", "40%"])
         #expect(texts(in: try #require(battery.document).root) == ["On Battery", "82%"])
-        #expect(texts(in: try #require(lowPower.document).root) == ["Low Power Mode", "12%"])
+        #expect(texts(in: try #require(lowPower.document).root) == ["Low Power", "12%"])
         #expect(texts(in: try #require(held.document).root) == ["Plugged In", "80%"])
     }
 
@@ -105,5 +105,31 @@ struct BatteryPluginTests {
         #expect(feature.surfaces.widget?.sizes == [try PluginWidgetSize(columns: 2, rows: 1), try PluginWidgetSize(columns: 2, rows: 2)])
         #expect(feature.sources == [PluginPowerState.source])
         #expect(feature.components == [try PluginComponentReference(id: "power.battery", version: 1)])
+    }
+
+    /// battery finds the kernel-drawn battery's parameters in a face.
+    private func battery(in node: PluginNode) -> [String: PluginValue]? {
+        if case .component("power.battery", _, let parameters) = node.kind { return parameters }
+
+        return node.children.lazy.compactMap { battery(in: $0) }.first
+    }
+
+    @Test
+    func theChargeHasAWholeRowSoAFullBatteryFits() throws {
+        let full   = try BatteryFace.publication(for: PluginPowerState(percentage: 100, isExternalPower: true, isCharging: true, isLowPowerMode: false))
+        let root   = try #require(full.document).root
+        let charge = try #require(root.children.last)
+
+        #expect(charge.kind == .text("100%"))
+        #expect(!root.children.contains { row in row.children.contains { $0.kind == .spacer(minLength: 0) } })
+    }
+
+    @Test
+    func aChargingBatteryCarriesItsBolt() throws {
+        let charging = try BatteryFace.publication(for: PluginPowerState(percentage: 40, isExternalPower: true, isCharging: true, isLowPowerMode: false))
+        let held     = try BatteryFace.publication(for: PluginPowerState(percentage: 80, isExternalPower: true, isCharging: false, isLowPowerMode: false))
+
+        #expect(battery(in: try #require(charging.document).root)?["isCharging"] == .bool(true))
+        #expect(battery(in: try #require(held.document).root)?["isCharging"] == .bool(false))
     }
 }
