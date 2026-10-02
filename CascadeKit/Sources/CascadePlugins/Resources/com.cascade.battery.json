@@ -7,7 +7,7 @@
   "features": [
     {
       "id": "battery",
-      "surfaces": { "widget": { "sizes": ["2x1", "2x2"] } },
+      "surfaces": { "widget": { "sizes": ["2x1", "2x2", "1x1"] } },
       "sources": ["power"],
       "components": [{ "id": "power.battery", "version": 1 }]
     }

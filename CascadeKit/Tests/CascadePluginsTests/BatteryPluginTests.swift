@@ -25,6 +25,13 @@ struct BatteryPluginTests {
     }
 
     /// texts collects every text node of a face, depth first, so a test can read what it says.
+    /// large is a face's largest variant, the one a 2x2 tile shows.
+    private func large(_ publication: PluginPublication) throws -> PluginNode {
+        let document = try #require(publication.document)
+
+        return try #require(document.root.children.first)
+    }
+
     private func texts(in node: PluginNode) -> [String] {
         var found: [String] = []
         if case .text(let text) = node.kind {
@@ -82,17 +89,17 @@ struct BatteryPluginTests {
         let lowPower = try BatteryFace.publication(for: PluginPowerState(percentage: 12, isExternalPower: false, isCharging: false, isLowPowerMode: true))
         let held     = try BatteryFace.publication(for: PluginPowerState(percentage: 80, isExternalPower: true, isCharging: false, isLowPowerMode: false))
 
-        #expect(texts(in: try #require(charging.document).root) == ["Charging", "40%"])
-        #expect(texts(in: try #require(battery.document).root) == ["On Battery", "82%"])
-        #expect(texts(in: try #require(lowPower.document).root) == ["Low Power", "12%"])
-        #expect(texts(in: try #require(held.document).root) == ["Plugged In", "80%"])
+        #expect(texts(in: try large(charging)) == ["Charging", "40%"])
+        #expect(texts(in: try large(battery)) == ["On Battery", "82%"])
+        #expect(texts(in: try large(lowPower)) == ["Low Power", "12%"])
+        #expect(texts(in: try large(held)) == ["Plugged In", "80%"])
     }
 
     @Test
     func anUnknownChargeReadsAsADash() throws {
         let unknown = try BatteryFace.publication(for: PluginPowerState(percentage: nil, isExternalPower: false, isCharging: false, isLowPowerMode: false))
 
-        #expect(texts(in: try #require(unknown.document).root).last == "—")
+        #expect(texts(in: try large(unknown)).last == "—")
     }
 
     @Test
@@ -102,7 +109,7 @@ struct BatteryPluginTests {
 
         #expect(manifest.execution.entryPoint == "BatteryPlugin")
         #expect(feature.id == BatteryPlugin.feature)
-        #expect(feature.surfaces.widget?.sizes == [try PluginWidgetSize(columns: 2, rows: 1), try PluginWidgetSize(columns: 2, rows: 2)])
+        #expect(feature.surfaces.widget?.sizes == [try PluginWidgetSize(columns: 2, rows: 1), try PluginWidgetSize(columns: 2, rows: 2), try PluginWidgetSize(columns: 1, rows: 1)])
         #expect(feature.sources == [PluginPowerState.source])
         #expect(feature.components == [try PluginComponentReference(id: "power.battery", version: 1)])
     }
@@ -117,7 +124,7 @@ struct BatteryPluginTests {
     @Test
     func theChargeHasAWholeRowSoAFullBatteryFits() throws {
         let full   = try BatteryFace.publication(for: PluginPowerState(percentage: 100, isExternalPower: true, isCharging: true, isLowPowerMode: false))
-        let root   = try #require(full.document).root
+        let root   = try large(full)
         let charge = try #require(root.children.last)
 
         #expect(charge.kind == .text("100%"))
@@ -131,5 +138,30 @@ struct BatteryPluginTests {
 
         #expect(battery(in: try #require(charging.document).root)?["isCharging"] == .bool(true))
         #expect(battery(in: try #require(held.document).root)?["isCharging"] == .bool(false))
+    }
+
+    @Test
+    func theFaceComesInALargeAMediumAndASmallVariant() throws {
+        let face  = try #require(try BatteryFace.publication(for: PluginPowerState(percentage: 100, isExternalPower: true, isCharging: true, isLowPowerMode: false)).document).root
+        let short = try #require(face.children.last)
+
+        #expect(face.kind == .viewThatFits(axes: .vertical))
+        #expect(face.children.count == 2)
+        #expect(short.kind == .viewThatFits(axes: .horizontal))
+        #expect(short.children.count == 2)
+        #expect(short.children.allSatisfy { texts(in: $0) == ["100%"] })
+        #expect(short.children.allSatisfy { battery(in: $0)?["isCharging"] == .bool(true) })
+    }
+
+    /// ViewThatFits measures a face with the tile's other side already given, so shrinking text
+    /// would let the large face pass for a small tile; fixed thresholds keep the choice on the tile.
+    @Test
+    func eachFaceIsChosenByItsTileNotByHowFarItsTextShrinks() throws {
+        let face   = try #require(try BatteryFace.publication(for: PluginPowerState(percentage: 50, isExternalPower: false, isCharging: false, isLowPowerMode: false)).document).root
+        let large  = try #require(face.children.first)
+        let medium = try #require(face.children.last?.children.first)
+
+        #expect(large.modifiers.contains(.frame(width: nil, height: BatteryFace.largeHeight, maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)))
+        #expect(medium.modifiers.contains(.frame(width: BatteryFace.mediumWidth, height: nil, maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)))
     }
 }

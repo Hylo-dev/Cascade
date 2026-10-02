@@ -5,7 +5,7 @@
   "compatibility": { "macOS": "15.0", "cascadeProtocol": { "major": 2, "minimumMinor": 0 } },
   "execution": { "entryPoint": "ClockPlugin" },
   "features": [
-    { "id": "time", "surfaces": { "widget": { "sizes": ["2x2", "2x1"] } } }
+    { "id": "time", "surfaces": { "widget": { "sizes": ["2x2", "2x1", "1x1"] } } }
   ],
   "resources": { "profile": "eventDriven" }
 }

@@ -52,11 +52,16 @@ struct FirstPartyPluginsTests {
     func theClockFaceIsTheKernelDrawnDateAboveTheTime() throws {
         let manifest = try #require(FirstPartyPlugins.manifests().first { $0.id.rawValue == "com.cascade.clock" })
         let face     = try ClockPlugin.face()
-        let time     = try #require(face.root.children.last)
+        let large    = try #require(face.root.children.first)
+        let short    = try #require(face.root.children.last)
+        let time     = try #require(large.children.last)
 
-        #expect(face.root.children.map(\.kind) == [.today, .clock])
+        #expect(face.root.kind == .viewThatFits(axes: .vertical))
+        #expect(large.children.map(\.kind) == [.today, .clock])
+        #expect(short.kind == .viewThatFits(axes: .horizontal))
+        #expect(short.children.count == 2)
         #expect(time.modifiers.contains(.contentTransition(.numericText(countsDown: false))))
-        #expect(manifest.features.first?.surfaces.widget?.sizes == [try PluginWidgetSize(columns: 2, rows: 2), try PluginWidgetSize(columns: 2, rows: 1)])
+        #expect(manifest.features.first?.surfaces.widget?.sizes == [try PluginWidgetSize(columns: 2, rows: 2), try PluginWidgetSize(columns: 2, rows: 1), try PluginWidgetSize(columns: 1, rows: 1)])
         #expect(face.componentReferences.isEmpty)
     }
 }
