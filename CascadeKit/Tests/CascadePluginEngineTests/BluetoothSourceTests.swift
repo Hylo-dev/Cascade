@@ -153,6 +153,37 @@ struct BluetoothSourceTests {
     }
 
     @Test
+    func theBaselineComesBeforeAConnectionThatRacedIt() async throws {
+        let system           = FakeBluetoothSystem(racing: [airPods])
+        let (source, states) = source(system)
+
+        #expect(try await eventually { states.values.count >= 2 })
+        #expect(states.values.first?.eventID == 0)
+        #expect(states.values.dropFirst().first?.isNewConnection == true)
+        source.stop()
+    }
+
+    @Test
+    func stoppingDoesNotWaitForASlowBaseline() async throws {
+        let system      = FakeBluetoothSystem(baselineDelay: 0.6)
+        let (source, _) = source(system)
+        #expect(try await eventually { system.isReadingBaseline })
+
+        let started = ContinuousClock.now
+        source.stop()
+
+        #expect(ContinuousClock.now - started < .milliseconds(200))
+    }
+
+    @Test
+    func powerMessagesAreAllowedAtOnceAndReportedAsTransitions() {
+        #expect(SystemPowerNotifications.response(to: 0xE000_0270) == SystemPowerNotifications.Response(allowsChange: true, transition: nil))
+        #expect(SystemPowerNotifications.response(to: 0xE000_0280) == SystemPowerNotifications.Response(allowsChange: true, transition: .willSleep))
+        #expect(SystemPowerNotifications.response(to: 0xE000_0300) == SystemPowerNotifications.Response(allowsChange: false, transition: .didWake))
+        #expect(SystemPowerNotifications.response(to: 0xE000_0320) == SystemPowerNotifications.Response(allowsChange: false, transition: nil))
+    }
+
+    @Test
     func pluginHostOffersBluetooth() {
         #expect(PluginHostCatalog.names.contains(PluginBluetoothState.source))
     }
@@ -162,15 +193,31 @@ struct BluetoothSourceTests {
 /// says whether registering works and which devices are connected when a baseline is read.
 final class FakeBluetoothSystem: Sendable {
 
-    private let registers: Bool
-    private let state    : Mutex<(observers: [FakeConnectionObserver], connected: [BluetoothConnectedDevice])>
+    private let registers    : Bool
+    private let state        : Mutex<(observers: [FakeConnectionObserver], connected: [BluetoothConnectedDevice])>
+    private let reading      = Mutex(false)
+    let racing               : [BluetoothConnectedDevice]
+    let baselineDelay        : TimeInterval
 
+    /// init makes a system; `racing` devices connect while a baseline is read, so the observer
+    /// holds their callbacks and replays them after it, and `baselineDelay` makes reading the
+    /// baseline as slow as a stuck bluetoothd.
     init(
-        registers: Bool = true,
-        connected: [BluetoothConnectedDevice] = []
+        registers    : Bool = true,
+        connected    : [BluetoothConnectedDevice] = [],
+        racing       : [BluetoothConnectedDevice] = [],
+        baselineDelay: TimeInterval = 0
     ) {
-        self.registers = registers
-        self.state     = Mutex((observers: [], connected: connected))
+        self.registers     = registers
+        self.state         = Mutex((observers: [], connected: connected))
+        self.racing        = racing
+        self.baselineDelay = baselineDelay
+    }
+
+    /// isReadingBaseline is true once a baseline read has begun.
+    var isReadingBaseline: Bool {
+        get { reading.withLock { $0 } }
+        set { reading.withLock { $0 = newValue } }
     }
 
     var latest: FakeConnectionObserver? {
@@ -237,11 +284,16 @@ final class FakeConnectionObserver: BluetoothConnectionObserving {
     }
 
     func connectedDevices() -> [BluetoothConnectedDevice] {
-        system.connectedDevices
+        system.isReadingBaseline = true
+        if system.baselineDelay > 0 {
+            Thread.sleep(forTimeInterval: system.baselineDelay)
+        }
+
+        return system.connectedDevices
     }
 
     func finishBaselineReplacement() -> [IOBluetoothConnectionCallback] {
-        []
+        system.racing.map { .connected(identity: identity, device: $0) }
     }
 
     func connect(_ device: BluetoothConnectedDevice) {

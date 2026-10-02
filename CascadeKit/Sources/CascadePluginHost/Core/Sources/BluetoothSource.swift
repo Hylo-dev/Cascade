@@ -26,7 +26,8 @@ import os
 /// registered, so the observer is started and stopped on the main queue, which PluginHost's main
 /// run loop services (`RunLoopType = NSRunLoop`). Everything else lives on the source's serial
 /// queue: every stored property below is read and written only there, which is what makes the
-/// type safe to share; `start` and `stop` reach it with `queue.sync` from the XPC threads.
+/// type safe to share; `start` and `stop` reach it with `queue.async` from the XPC threads, so a
+/// slow read of bluetoothd on this queue never holds up PluginHost's connection.
 public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
 
     typealias ObserverFactory = @Sendable (UInt64, @escaping @Sendable (IOBluetoothConnectionCallback) -> Void) -> any BluetoothConnectionObserving
@@ -79,7 +80,7 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
     }
 
     public func start(_ emit: @escaping @Sendable (PluginSourceEvent) -> Void) {
-        queue.sync {
+        queue.async { [self] in
             tearDown()
 
             sessionID &+= 1
@@ -103,7 +104,7 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
     }
 
     public func stop() {
-        queue.sync {
+        queue.async { [self] in
             tearDown()
         }
     }
@@ -132,11 +133,11 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
         }
 
         isRunning = true
-        power     = SystemPowerNotifications(queue: queue) { [weak self] transition in
-            self?.receive(transition)
+        power     = SystemPowerNotifications { [weak self] transition in
+            self?.queue.async { [weak self] in self?.receive(transition) }
         }
-        rebuildBaseline()
         publish(.baseline(isAvailable: true))
+        rebuildBaseline()
     }
 
     private func tearDown() {
