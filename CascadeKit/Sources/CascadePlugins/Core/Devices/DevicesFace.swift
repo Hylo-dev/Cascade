@@ -18,10 +18,11 @@ import Foundation
 /// Under a 38-point notch a 2x2 tile is 110 by 68 points and a 2x1 tile 110 by 31. A row is
 /// about 12 points tall, so four fit the 66 points of the tall face and two the short tile. Every
 /// part of a row has a fixed width that adds up to 102 points, so a long name is cut short on its
-/// one line instead of pushing the charge off the tile, and the charge has a slot that holds
-/// "100%" whole. A device without a charge gives its name the room the charge would take. The
-/// tall face is 66 points tall: ViewThatFits measures a face with the tile's width already given,
-/// and a fixed height keeps the choice on the tile.
+/// one line instead of pushing the charge off the tile. The charge has a slot that holds "100%"
+/// whole, and the symbol one that holds the widest symbol the Bluetooth source names. A device
+/// without a charge gives its name the room the charge would take. The tall face is 66 points
+/// tall: ViewThatFits measures a face with the tile's width already given, and a fixed height
+/// keeps the choice on the tile.
 enum DevicesFace {
 
     static let largeHeight = 66.0
@@ -29,7 +30,7 @@ enum DevicesFace {
     private static let padding     = 4.0
     private static let rowWidth    = 102.0
     private static let gap         = 2.0
-    private static let symbolWidth = 11.0
+    private static let symbolWidth = 15.0
     private static let chargeWidth = 25.0
     private static let ringSize    = 9.0
 

@@ -150,7 +150,7 @@ struct FirstPartyWidgetFitTests {
     func everyDevicesFaceFitsItsTile() throws {
         let long    = "Someone’s Very Long Headphones Name"
         let devices = (0..<4).map { index in
-            PluginBluetoothDevice(name: long, symbolName: "headphones", batteryLevel: index == 3 ? nil : 100)
+            PluginBluetoothDevice(name: long, symbolName: "antenna.radiowaves.left.and.right", batteryLevel: index == 3 ? nil : 100)
         }
         let states: [PluginBluetoothState] = [
             .baseline(isAvailable: true),
@@ -232,6 +232,56 @@ struct FirstPartyWidgetFitTests {
             }
         }
         #expect(slotted == 4)
+    }
+
+    /// A symbol with a slot of its own fits it whole, for every symbol a face may show: each the
+    /// Bluetooth source names a device with, each speaker, and each link. A slot narrower than
+    /// its symbol would let the symbol spill over the name or the reading beside it.
+    @Test
+    func everySymbolFitsItsSlot() throws {
+        let symbols = [
+            "antenna.radiowaves.left.and.right", "camera", "computermouse", "desktopcomputer",
+            "gamecontroller", "headphones", "keyboard", "smartphone", "speaker.wave.2",
+        ]
+        let devices = symbols.map { symbol in
+            PluginBluetoothDevice(name: "Device", symbolName: symbol, batteryLevel: 50)
+        }
+        let links: [PluginNetworkInterface] = [.wifi, .ethernet, .cellular, .other]
+        let publications = try stride(from: 0, to: devices.count, by: PluginBluetoothDevice.maximumCount).map { start in
+            try DevicesFace.publication(for: .baseline(isAvailable: true, connectedDevices: Array(devices[start...].prefix(4))))
+        }
+        + [0, 20, 50, 100].map { level in
+            try SoundFace.publication(for: PluginVolumeState(percentage: level, isMuted: false, announcement: 0))
+        }
+        + [try SoundFace.publication(for: PluginVolumeState(percentage: 0, isMuted: true, announcement: 0))]
+        + links.map { link in
+            try NetworkFace.publication(for: PluginNetworkState(isConnected: true, interface: link, isExpensive: false, isConstrained: false))
+        }
+        + [try NetworkFace.publication(for: PluginNetworkState(isConnected: false, interface: .none, isExpensive: false, isConstrained: false))]
+        var slotted = Set<String>()
+
+        for publication in publications {
+            for node in walk(try #require(publication.document).root) {
+                guard case .symbol(let name) = node.kind else { continue }
+
+                var font: PluginFont?
+                var slot: Double?
+                for modifier in node.modifiers {
+                    switch modifier {
+                        case .font(let value)              : font = value
+                        case .frame(let width?, _, _, _, _): slot = width
+                        default                            : break
+                    }
+                }
+                guard let font, let slot else { continue }
+
+                let width = try size(of: PluginNode(.symbol(name: name), modifiers: [.font(font)])).width
+                slotted.insert(name)
+
+                #expect(Double(width) <= slot, "\(name) is \(width) points in a \(slot)-point slot")
+            }
+        }
+        #expect(slotted.isSuperset(of: symbols + ["speaker.wave.3.fill", "wifi", "cable.connector", "network", "wifi.slash"]))
     }
 
     private func walk(_ node: PluginNode) -> [PluginNode] {

@@ -10,21 +10,23 @@ import Foundation
 /// SoundFace is the volume widget's document, a face for the 2x1 tile and one for the 1x1 tile,
 /// the wider first. Both set the speaker, with as many waves as the volume notice draws, beside
 /// the percentage, above the kernel's level bar; muted, the speaker is struck through, the bar
-/// empty and the percentage gives way to "Muted". VoiceOver reads the level or that the audio is
-/// muted, since the bar is hidden from it.
+/// empty and the percentage gives way to "Muted" on the 2x1 face. The 1x1 face has no room for
+/// the word, which would shrink past reading, so there the struck speaker says it alone. VoiceOver
+/// reads the level or that the audio is muted, since the bar is hidden from it.
 ///
 /// Under a 38-point notch a 2x1 tile is 110 by 31 points and a 1x1 tile 52 by 31. The 2x1 face is
 /// 108 points wide, a 13-point reading over a bar as wide as the face; the 1x1 face is a
 /// 10.5-point reading over a 50-point bar, about 20 points tall. In both the reading has a fixed
-/// slot that holds "100%" whole, and only a longer word, such as a translation of "Muted",
-/// shrinks into it. The fixed width is also what chooses the face: ViewThatFits measures a face
-/// with the tile's height already given.
+/// slot that holds "100%" whole, and only the 2x1 face's "Muted", in a longer translation, may
+/// shrink into it; each speaker has a slot that holds its widest form, three waves. The fixed
+/// width is also what chooses the face: ViewThatFits measures a face with the tile's height
+/// already given.
 enum SoundFace {
 
     static let mediumWidth = 108.0
 
     private static let mediumPadding = 8.0
-    private static let mediumSpeaker = 18.0
+    private static let mediumSpeaker = 22.0
     private static let smallSpeaker  = 16.0
     private static let smallReading  = 32.0
     private static let gap           = 4.0
@@ -79,7 +81,8 @@ enum SoundFace {
         )
     }
 
-    /// small is the 1x1 face: the speaker and the reading above a short bar.
+    /// small is the 1x1 face: the speaker and the percentage above a short bar, or the struck
+    /// speaker alone while muted.
     private static func small(
         _ level: Int,
         isMuted: Bool
@@ -91,8 +94,10 @@ enum SoundFace {
                 speaker(level, isMuted: isMuted, size: 10)
                     .frame(width: smallSpeaker)
 
-                reading(level, isMuted: isMuted, size: 10.5)
-                    .frame(width: smallReading, alignment: .leading)
+                if !isMuted {
+                    reading(level, isMuted: false, size: 10.5)
+                        .frame(width: smallReading, alignment: .leading)
+                }
             }
 
             bar(level)

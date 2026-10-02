@@ -58,16 +58,18 @@ struct SoundPluginTests {
         #expect(PluginNodeSearch.accessibilityLabel(of: root) == "Volume, 40 percent")
     }
 
-    /// A muted output draws an empty bar, whatever level it would play at.
+    /// A muted output draws an empty bar, whatever level it would play at. The 1x1 face has no
+    /// room for the word, which would shrink past reading, so its struck speaker says it alone.
     @Test
     func aMutedOutputShowsTheStruckSpeakerAndSaysMuted() throws {
         let root = try root(of: SoundPlugin().handle(try volume(45, muted: true), context: context))
 
         for face in root.children {
-            #expect(PluginNodeSearch.texts(in: face) == ["Muted"])
             #expect(PluginNodeSearch.kinds(in: face).contains(.symbol(name: "speaker.slash.fill")))
             #expect(levels(in: face) == [.number(0)])
         }
+        #expect(PluginNodeSearch.texts(in: root.children[0]) == ["Muted"])
+        #expect(PluginNodeSearch.texts(in: root.children[1]).isEmpty)
         #expect(PluginNodeSearch.accessibilityLabel(of: root) == "Audio muted")
         #expect(try ItalianStrings.value(of: "Muted") == "Silenzioso")
     }
