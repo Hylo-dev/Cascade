@@ -25,8 +25,12 @@ public protocol NotchWidget: AnyObject {
     /// widget from it on load (many instances may share one kind).
     static var kind: WidgetKind { get }
 
-    /// Footprint on the grid (`1×1`, `1×n`, `2×n`).
+    /// Footprint on the grid (`1×1`, `1×n`, `2×n`), the one a new placement takes.
     var size: GridSpan { get }
+
+    /// Every footprint the widget can be resized to while editing, `size` first. A native
+    /// widget usually has one; a plugin widget offers the sizes its manifest declares.
+    var sizes: [GridSpan] { get }
 
     /// Build the SwiftUI content shown in the widget's cell.
     func makeContentView() -> AnyView
@@ -41,6 +45,8 @@ public protocol NotchWidget: AnyObject {
 }
 
 public extension NotchWidget {
+
+    var sizes: [GridSpan] { [size] }
 
     // Most widgets hold no resources beyond their view, so the lifecycle hooks
     // are optional: the default pair does nothing.

@@ -69,19 +69,29 @@ nonisolated struct NotchLayoutResolver {
         }
 
         // Row 0 only offers the trailing cells; rows 1–2 are fully available.
-        func isAvailable(
-            column: Int,
-            row   : Int
-        ) -> Bool {
-            guard column >= 0, column < columns, row >= 0, row <= 2 else { return false }
+        let grid = NotchGrid(
+            columns    : columns,
+            bandColumns: trailingStart ..< trailingStart + trailingCells
+        )
 
-            if row == 0 {
-                return column >= trailingStart && column < trailingStart + trailingCells
+        var cells: [GridPosition: CGRect] = [:]
+
+        for row in 0 ... 2 {
+            for column in 0 ..< columns {
+                let cell = GridPosition(column: column, row: row)
+                guard grid.isAvailable(cell) else { continue }
+
+                cells[cell] = CGRect(
+                    x     : cellOriginX(column),
+                    y     : rowOriginY(row),
+                    width : cellWidth,
+                    height: rowHeight(row)
+                )
             }
-
-            return true
         }
 
+        // A placement spans from its first cell to its last; if any covered cell
+        // is missing, the placement is dropped.
         var frames: [WidgetIdentifier: CGRect] = [:]
 
         for (id, placement) in placements {
@@ -90,29 +100,24 @@ nonisolated struct NotchLayoutResolver {
             let lastColumn  = firstColumn + placement.span.columns - 1
             let lastRow     = firstRow + placement.span.rows - 1
 
-            // Every covered cell must be available, or the placement is dropped.
-            var fits = true
-
-            for column in firstColumn ... lastColumn {
-                for row in firstRow ... lastRow where !isAvailable(column: column, row: row) {
-                    fits = false
+            let covered = (firstColumn ... lastColumn).allSatisfy { column in
+                (firstRow ... lastRow).allSatisfy { row in
+                    cells[GridPosition(column: column, row: row)] != nil
                 }
             }
 
-            guard fits else { continue }
+            guard covered,
+                  let first = cells[GridPosition(column: firstColumn, row: firstRow)],
+                  let last  = cells[GridPosition(column: lastColumn, row: lastRow)]
+            else { continue }
 
-            let originX = cellOriginX(firstColumn)
-            let width   = cellWidth * CGFloat(placement.span.columns)
-                        + gutter * CGFloat(placement.span.columns - 1)
-
-            let top    = rowOriginY(firstRow) + rowHeight(firstRow)
-            let bottom = rowOriginY(lastRow)
-
-            frames[id] = CGRect(x: originX, y: bottom, width: width, height: top - bottom)
+            frames[id] = first.union(last)
         }
 
         return NotchLayout(
             frames           : frames,
+            cells            : cells,
+            grid             : grid,
             notchColumns     : notchColumns,
             trailingCellCount: trailingCells
         )

@@ -91,6 +91,41 @@ struct NotchLayoutResolverTests {
     }
 
     @Test
+    func everyAvailableCellHasAFrameAndTheGridKnowsTheBand() throws {
+        let layout = resolve([:])
+
+        #expect(layout.cells.count == 14 * 2 + 4)
+        #expect(layout.grid == NotchGrid(columns: 14, bandColumns: 9 ..< 13)) // the 5-column notch starts at column 4
+        #expect(layout.cells[GridPosition(column: 2, row: 0)] == nil)
+
+        let band = try #require(layout.cells[GridPosition(column: 10, row: 0)])
+        #expect(abs(band.maxY - 180) < 0.1)
+        #expect(abs(band.height - 36) < 0.1)
+    }
+
+    @Test
+    func aPlacementFrameSpansItsFirstAndLastCells() throws {
+        let id     = WidgetIdentifier("large")
+        let layout = resolve([
+            id: WidgetPlacement(position: GridPosition(column: 2, row: 1), span: GridSpan(columns: 3, rows: 2))
+        ])
+
+        let first = try #require(layout.cells[GridPosition(column: 2, row: 1)])
+        let last  = try #require(layout.cells[GridPosition(column: 4, row: 2)])
+        #expect(layout.frames[id] == first.union(last))
+    }
+
+    @Test
+    func theNearestCellIsTheOneWhoseTopLeadingCornerIsClosest() throws {
+        let layout = resolve([:])
+        let target = try #require(layout.cells[GridPosition(column: 5, row: 2)])
+
+        let nearest = layout.cell(nearestTopLeading: CGPoint(x: target.minX + 8, y: target.maxY - 10))
+
+        #expect(nearest == GridPosition(column: 5, row: 2))
+    }
+
+    @Test
     func narrowNotchDegradesTrailingCells() {
         let layout = NotchLayoutResolver().resolve(
             interior     : CGRect(x: 0, y: 0, width: 300, height: 160),
