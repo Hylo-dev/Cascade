@@ -89,4 +89,25 @@ struct GlassLightTests {
             intensity: 0
         )
     }
+
+    @Test
+    func rejectsAnUnknownWireField() throws {
+        let valid = try GlassLight(
+            x        : 0.25,
+            y        : 0.6,
+            radius   : 0.4,
+            red      : 1,
+            green    : 0.2,
+            blue     : 0,
+            intensity: 0.7
+        )
+        var object = try #require(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(valid)) as? [String: Any]
+        )
+        #expect(try JSONDecoder().decode(GlassLight.self, from: JSONSerialization.data(withJSONObject: object)) == valid)
+
+        object["glow"] = 0.5
+        let data = try JSONSerialization.data(withJSONObject: object)
+        #expect(throws: (any Error).self) { try JSONDecoder().decode(GlassLight.self, from: data) }
+    }
 }

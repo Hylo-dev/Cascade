@@ -33,7 +33,7 @@ Cover what the kernel will do to the plugin:
 
 ## Imports
 
-A plugin imports only `CascadePluginSDK` and `CascadeContracts`, plus Foundation and Synchronization; its tests may also `@testable import` the plugin's own target. A plugin that imported CascadeKit, the engine, AppKit or SwiftUI would no longer be data only, and could not move to its own process unchanged. `CascadePlugins` depends on nothing else in `Package.swift`, so the package refuses any other Cascade module. `scripts/check-plugin-host-imports.sh` checks the sources of `PluginHost/` and of `CascadePluginSDK`; it does not read the plugins' own sources, so a system framework such as AppKit in a plugin is caught only in review.
+A plugin imports only `CascadePluginSDK` and `CascadeContracts`, plus Foundation and Synchronization; its tests may also `@testable import` the plugin's own target. A plugin that imported CascadeKit, the engine, AppKit or SwiftUI would no longer be data only, and could not move to its own process unchanged. `CascadePlugins` depends on nothing else in `Package.swift`, so the package refuses any other Cascade module. `scripts/build-development.sh` runs `scripts/check-plugin-host-imports.sh` on the sources of `PluginHost/`, of `CascadePluginSDK` and of `CascadePlugins`, so an import the plugins may not use, AppKit among them, stops the build.
 
 ## The engine's tests
 

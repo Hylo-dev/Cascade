@@ -112,7 +112,7 @@ When alignment would fight the compiler or hurt readability (very long lines, ge
 
 - Value `struct`, immutable (`let`). `Equatable` (and `Hashable` / `Identifiable` where it makes sense) is the norm.
 - `NotchState` is an `@frozen OptionSet` (see CLAUDE.md): the sides open independently, so the state is the union of which sides are expanded — not a linear enum.
-- **Framework-agnostic at the data level**: a model that only describes data imports nothing from SwiftUI or Combine. Colors that need to be stored are packed ARGB `UInt32`, not `Color`.
+- **Framework-agnostic at the data level**: a model that only describes data imports nothing from SwiftUI or Combine. A model does not hold a `Color`: contract values such as `PluginColor` carry a color as four sRGB `Double` components, each from 0 to 1. Nothing in the app persists a color today; if a setting ever must, it is stored as a packed ARGB `UInt32` (`0xAARRGGBB`), the layout `Color(argb:)` reads. `NotchConfiguration.chromeColor` is the exception, a `Color` in host configuration written in code with `Color(hex:)` or `Color(argb:)` and never persisted.
 - No presentation state (hover, focus, animation progress) in pure data models: that belongs to the UI / state layer.
 - The geometry control-point buffers are **not** `Codable` models — they are performance-critical storage (see **Performance-critical code**). Keep the two concepts apart: descriptive models are immutable value types; geometry buffers are compact, contiguous storage.
 
@@ -203,7 +203,7 @@ HStack(spacing: 8) {
 
 `FirstPartyPlugins` (`CascadePlugins`) lists the plugins Cascade ships: Battery and Clock as widgets, and the Bluetooth, Charging (`com.cascade.power`) and Volume alerts as notices. Music is still native (`MediaLiveActivity` and the expanded fallback) until the services and Music sub-project makes it a tier-2 plugin.
 
-`scripts/build-development.sh` runs `cascade-plugin validate` on every bundled manifest and `scripts/check-plugin-host-imports.sh` on `PluginHost/` and on `CascadePluginSDK` before Xcode compiles anything, so a broken manifest or a forbidden import stops the build. PluginHost may import only `CascadePlugins`, `CascadePluginHost`, `CascadePluginSDK`, `CascadeContracts` and system modules (Foundation, Darwin, Dispatch, Synchronization, Security): it runs data, never UI.
+`scripts/build-development.sh` runs `cascade-plugin validate` on every bundled manifest and `scripts/check-plugin-host-imports.sh` on `PluginHost/`, on `CascadePluginSDK` and on `CascadePlugins` (which is compiled into PluginHost) before Xcode compiles anything, so a broken manifest or a forbidden import stops the build. PluginHost may import only `CascadePlugins`, `CascadePluginHost`, `CascadePluginSDK`, `CascadeContracts` and system modules (Foundation, Darwin, Dispatch, Synchronization, Security): it runs data, never UI.
 
 **System surfaces** stay native by rule. The file shelf touches frames, input and the notch window, so it lives in the kernel (spec §6, §7) and is drawn through `NotchContextualPage`. Music is direct only until its sub-project.
 
@@ -344,7 +344,7 @@ final class SpotlightKeyTap: SpotlightKeyTapping {
 
 - One type per file; file name = type name (see **Types per file**). The file opens with the header banner (see **File header**).
 - `private` / `fileprivate` for everything that is not part of the public contract.
-- The **plugin SDK surface** is `CascadePluginSDK` plus `CascadeContracts`: the provider protocol, its context, the builder and the contract values. Keep the engine, windows, monitors, AppKit and SwiftUI out of them; `scripts/check-plugin-host-imports.sh` enforces what PluginHost and the SDK may import. The `Notch*` protocols are host seams, not an API for plugins.
+- The **plugin SDK surface** is `CascadePluginSDK` plus `CascadeContracts`: the provider protocol, its context, the builder and the contract values. Keep the engine, windows, monitors, AppKit and SwiftUI out of them; `scripts/check-plugin-host-imports.sh` enforces what PluginHost, the SDK and the first-party plugins may import. The `Notch*` protocols are host seams, not an API for plugins.
 - `private(set)` for read-only exposed state.
 - Use extensions to separate protocol conformances (`extension Foo: SomeProtocol { … }`) — kept in the type's own file unless the Extensions rule above applies.
 - `// MARK: -` to separate sections of a long file.
