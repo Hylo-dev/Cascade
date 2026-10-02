@@ -177,6 +177,17 @@
         }
       }
     },
+    "London": {
+      "comment": "Name of London in the world clock widget.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Londra"
+          }
+        }
+      }
+    },
     "Metered": {
       "comment": "Network widget mark for an expensive link, such as a personal hotspot.",
       "localizations": {
@@ -206,6 +217,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rete"
+          }
+        }
+      }
+    },
+    "New York": {
+      "comment": "Name of New York in the world clock widget.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New York"
           }
         }
       }
@@ -364,6 +386,28 @@
         }
       }
     },
+    "Tokyo": {
+      "comment": "Name of Tokyo in the world clock widget.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tokyo"
+          }
+        }
+      }
+    },
+    "Tomorrow": {
+      "comment": "Day mark of a world clock city whose day is already the next one.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Domani"
+          }
+        }
+      }
+    },
     "Volume": {
       "comment": "Settings name of the volume widget plugin.",
       "localizations": {
@@ -404,6 +448,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wi-Fi"
+          }
+        }
+      }
+    },
+    "World clock": {
+      "comment": "Settings name of the world clock widget plugin.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orologio mondiale"
+          }
+        }
+      }
+    },
+    "Yesterday": {
+      "comment": "Day mark of a world clock city whose day is still the previous one.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ieri"
           }
         }
       }

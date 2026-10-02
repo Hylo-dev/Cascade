@@ -284,6 +284,92 @@ struct FirstPartyWidgetFitTests {
         #expect(slotted.isSuperset(of: symbols + ["speaker.wave.3.fill", "wifi", "cable.connector", "network", "wifi.slash"]))
     }
 
+    /// Every world clock face with no city marked, with every city a day ahead and with every
+    /// city a day behind: the tall face holds three rows and the short one two columns.
+    @Test(arguments: [("Europe/Rome", 12), ("Pacific/Honolulu", 20), ("Pacific/Kiritimati", 3)])
+    func everyWorldClockFaceFitsItsTile(
+        zone: String,
+        hour: Int
+    ) throws {
+        let (date, calendar) = try worldClockMoment(zone: zone, hour: hour)
+        let faces            = try faces(of: WorldClockFace.publication(at: date, in: calendar))
+
+        #expect(try fits(faces[0], in: Self.large))
+        #expect(try fits(faces[1], in: Self.short))
+    }
+
+    /// Every name, mark and time of the world clock fits its slot rather than being cut short:
+    /// every name and mark whole, in English and in Italian, New York and Yesterday the widest,
+    /// and a 24-hour time whole; a twelve-hour time, the widest a minute can be, at the smallest
+    /// scale the face lets it reach. A slot is the nearest fixed width at or above the text,
+    /// which in these faces no sibling shares.
+    @Test
+    func everyWorldClockWordFitsItsSlot() throws {
+        let names   = ["New York", "London", "Londra", "Tokyo"]
+        let marks   = ["Tomorrow", "Yesterday", "Domani", "Ieri"]
+        var slotted = 0
+
+        for (zone, hour) in [("Pacific/Honolulu", 20), ("Pacific/Kiritimati", 3)] {
+            let (date, calendar) = try worldClockMoment(zone: zone, hour: hour)
+            let document         = try #require(try WorldClockFace.publication(at: date, in: calendar).document)
+
+            for (node, slot) in slots(in: document.root, slot: nil) {
+                var font  : PluginFont?
+                var factor: Double?
+                for modifier in node.modifiers {
+                    switch modifier {
+                        case .font(let value)              : font = value
+                        case .minimumScaleFactor(let value): factor = value
+                        default                            : break
+                    }
+                }
+                guard let font, let factor, let slot else { continue }
+
+                let candidates: [(text: String, scale: Double)]
+                switch node.kind {
+                    case .text(let text): candidates = (names.contains(text) ? names : marks).map { ($0, 1) }
+                    case .clock         : candidates = [("23:59", 1), ("12:59 AM", factor), ("12:59 PM", factor)]
+                    default             : continue
+                }
+
+                for candidate in candidates {
+                    let width = try size(of: PluginNode(.text(candidate.text), modifiers: [.font(font)])).width
+                    slotted += 1
+
+                    #expect(Double(width) * candidate.scale <= slot, "\(candidate.text) is \(width) points in a \(slot)-point slot")
+                }
+            }
+        }
+        #expect(slotted == 2 * (10 * 4 + 5 * 3))
+    }
+
+    /// worldClockMoment is a day at an hour in a zone, Rome's at noon with every city on the same
+    /// day, Honolulu's in the evening with every city a day ahead, Kiritimati's in the small hours
+    /// with every city a day behind.
+    private func worldClockMoment(
+        zone: String,
+        hour: Int
+    ) throws -> (Date, Calendar) {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: zone))
+        let date = try #require(calendar.date(from: DateComponents(year: 2026, month: 10, day: 2, hour: hour)))
+
+        return (date, calendar)
+    }
+
+    /// slots pairs every node with the nearest fixed width at or above it.
+    private func slots(
+        in node: PluginNode,
+        slot   : Double?
+    ) -> [(PluginNode, Double?)] {
+        var own = slot
+        for modifier in node.modifiers {
+            if case .frame(let width?, _, _, _, _) = modifier { own = width }
+        }
+
+        return [(node, own)] + (node.children + node.layers).flatMap { slots(in: $0, slot: own) }
+    }
+
     private func walk(_ node: PluginNode) -> [PluginNode] {
         [node] + (node.children + node.layers).flatMap(walk)
     }
