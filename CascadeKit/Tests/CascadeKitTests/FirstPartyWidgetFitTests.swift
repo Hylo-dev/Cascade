@@ -82,4 +82,26 @@ struct FirstPartyWidgetFitTests {
         #expect(try fits(faces[0], in: Self.large))
         #expect(try fits(faces[1], in: Self.short))
     }
+
+    /// Every state of the timer, with the most buttons or the longest time it can show.
+    @Test
+    func everyTimerFaceFitsItsTile() throws {
+        let longest = TimerState.longestDuration
+        let states: [TimerState] = [
+            .idle(duration: 0),
+            .idle(duration: 300),
+            .idle(duration: longest),
+            .running(end: Date.now.addingTimeInterval(longest), duration: longest),
+            .paused(remaining: longest, duration: longest),
+        ]
+
+        for state in states {
+            let faces   = try faces(of: TimerFace.publication(for: state))
+            let smaller = faces[1].children
+
+            #expect(try fits(faces[0], in: Self.large))
+            #expect(try fits(smaller[0], in: Self.short))
+            #expect(try fits(smaller[1], in: Self.small))
+        }
+    }
 }

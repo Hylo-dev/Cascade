@@ -1,6 +1,28 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Add five minutes": {
+      "comment": "Accessibility label of the timer widget's button that adds five minutes.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi cinque minuti"
+          }
+        }
+      }
+    },
+    "Add one minute": {
+      "comment": "Accessibility label of the timer widget's button that adds one minute.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi un minuto"
+          }
+        }
+      }
+    },
     "Battery": {
       "comment": "Settings name of the battery widget plugin.",
       "localizations": {
@@ -56,6 +78,28 @@
         }
       }
     },
+    "Done": {
+      "comment": "Shown in the notch when the timer widget's countdown reaches zero.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finito"
+          }
+        }
+      }
+    },
+    "Pause": {
+      "comment": "Accessibility label of the timer and stopwatch widgets' pause button.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pausa"
+          }
+        }
+      }
+    },
     "Progress": {
       "comment": "Settings name of the progress widget plugin.",
       "localizations": {
@@ -63,6 +107,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Avanzamento"
+          }
+        }
+      }
+    },
+    "Reset": {
+      "comment": "Accessibility label of the timer and stopwatch widgets' button that clears them.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Azzera"
+          }
+        }
+      }
+    },
+    "Start": {
+      "comment": "Accessibility label of the timer and stopwatch widgets' button that starts or resumes them.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvia"
           }
         }
       }
@@ -96,6 +162,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Quest'anno"
+          }
+        }
+      }
+    },
+    "Timer": {
+      "comment": "Settings name of the timer widget plugin.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer"
+          }
+        }
+      }
+    },
+    "Timer finished": {
+      "comment": "Accessibility label of the notice the timer widget shows when its countdown reaches zero.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer terminato"
           }
         }
       }
