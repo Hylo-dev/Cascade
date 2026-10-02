@@ -8,25 +8,40 @@ import CascadePluginSDK
 import Foundation
 
 /// TimerFace is the timer widget's document, a face for each size, largest first, the kernel
-/// showing the first that fits. Every face shows the time and the buttons the state offers; the
-/// 2x2 and 2x1 faces add the bar. Idle, the time is the length set so far beside the two
-/// additions, and start once there is something to start; running, it is the kernel's countdown
-/// and bar, which tick without the plugin, with pause and one more minute; paused, it is what
-/// was left on a bar that stands still, with resume and reset. An idle bar is an empty track, so
-/// starting the timer fills it rather than moving the face.
+/// showing the first that fits. Every face shows the time and a row of buttons in fixed slots;
+/// the 2x2 and 2x1 faces add the bar. Idle, the time is the length set so far; running, it is
+/// the kernel's countdown and bar, which tick without the plugin; paused, it is what was left on
+/// a bar that stands still. An idle bar is an empty track, so starting the timer fills it rather
+/// than moving the face.
+///
+/// A press changes the face within milliseconds, before a second press can come, so every
+/// control keeps its slot across the presses that change it: start becomes pause and pause
+/// resume in the last slot, +1 and +5 stay put as the length grows, and an empty space holds a
+/// slot with nothing to offer. Reset never takes the slot of start, pause or +1. The 2x2 face has
+/// a slot of its own for it, so a length set by mistake can be cleared while idle; the 2x1 face
+/// shows it in the slot +5 leaves while paused, and the 1x1 face, which has room for only two
+/// buttons, in the one +1 leaves, so a second press there only adds to the idle timer.
 ///
 /// Under a 38-point notch a 2x2 tile is 110 by 68 points, a 2x1 tile 110 by 31 and a 1x1 tile 52
-/// by 31. The 2x2 face is 66 points tall: a 22-point time, the bar and 22-point buttons. The 2x1
-/// face is 100 points wide, 18-point buttons beside the time over the bar, about 26 points tall;
-/// the 1x1 face is the time over 15-point buttons, 31 points. In the two smaller faces the time
-/// has a fixed width, what the buttons leave of the row, and shrinks into it, so three buttons
-/// and an hour-long time still fit. The fixed height and width are also what choose the face:
-/// ViewThatFits measures a face with the tile's other side already given.
+/// by 31, and every button is 20 points. The 2x2 face is 66 points tall: a 22-point time, the bar
+/// and four slots. The 2x1 face is 108 points wide: three slots beside a 13-point time, over the
+/// bar. The 1x1 face is a 9-point time over two slots, 31 points, the most a 1x1 tile holds with
+/// buttons of 20 points. In the two smaller faces the time has a fixed width, what the slots
+/// leave of the row, and shrinks into it, so an hour still fits. The fixed height and width are
+/// also what choose the face: ViewThatFits measures a face with the tile's other side given.
 enum TimerFace {
 
     static let largeHeight = 66.0
-    static let mediumWidth = 100.0
+    static let mediumWidth = 108.0
     static let smallWidth  = 48.0
+
+    private static let largePadding     = 10.0
+    private static let largeSpacing     = 5.0
+    private static let mediumPadding    = 4.0
+    private static let mediumSpacing    = 3.0
+    private static let mediumGap        = 4.0
+    private static let slotSpacing      = 3.0
+    private static let smallSlotSpacing = 4.0
 
     static func publication(for state: TimerState) throws -> PluginPublication {
         try PluginPublication(
@@ -48,17 +63,17 @@ enum TimerFace {
         )
     }
 
-    /// large is the 2x2 face: the time above the bar and the buttons.
+    /// large is the 2x2 face: the time above the bar and four slots, +1, +5, reset and start.
     private static func large(_ state: TimerState) -> PluginNode {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: largeSpacing) {
 
             time(state, size: 22)
 
             bar(state)
 
-            controlRow(controls(for: state), diameter: 22, spacing: 6)
+            controlRow(largeSlots(for: state), spacing: slotSpacing)
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, largePadding)
         .frame(
             height   : largeHeight,
             maxWidth : .infinity,
@@ -67,24 +82,25 @@ enum TimerFace {
         )
     }
 
-    /// medium is the 2x1 face: the time beside the buttons, over the bar.
+    /// medium is the 2x1 face: the time beside three slots, +1, +5 or reset, and start, over the
+    /// bar.
     private static func medium(_ state: TimerState) -> PluginNode {
-        let controls  = controls(for: state)
-        let timeWidth = mediumWidth - 2 * 5 - 4 - controlRowWidth(controls.count, diameter: 18, spacing: 3)
+        let slots     = mediumSlots(for: state)
+        let timeWidth = mediumWidth - 2 * mediumPadding - mediumGap - controlRowWidth(slots.count, spacing: slotSpacing)
 
-        return VStack(alignment: .leading, spacing: 3) {
+        return VStack(alignment: .leading, spacing: mediumSpacing) {
 
-            HStack(spacing: 4) {
+            HStack(spacing: mediumGap) {
 
-                time(state, size: 14)
+                time(state, size: 13)
                     .frame(width: timeWidth, alignment: .leading)
 
-                controlRow(controls, diameter: 18, spacing: 3)
+                controlRow(slots, spacing: slotSpacing)
             }
 
             bar(state)
         }
-        .padding(.horizontal, 5)
+        .padding(.horizontal, mediumPadding)
         .frame(
             width    : mediumWidth,
             maxWidth : .infinity,
@@ -93,29 +109,63 @@ enum TimerFace {
         )
     }
 
-    /// small is the 1x1 face: the time above the buttons.
+    /// small is the 1x1 face: the time above two slots, +1 or reset, and start.
     private static func small(_ state: TimerState) -> PluginNode {
-        VStack(spacing: 1) {
+        VStack(spacing: 0) {
 
-            time(state, size: 12)
+            time(state, size: 9)
                 .frame(width: smallWidth)
 
-            controlRow(controls(for: state), diameter: 15, spacing: 2)
+            controlRow(smallSlots(for: state), spacing: smallSlotSpacing)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// controls are the buttons a state offers, the same on every face.
-    private static func controls(for state: TimerState) -> [WidgetControl] {
+    private static func largeSlots(for state: TimerState) -> [WidgetControl?] {
         switch state {
-            case .idle(let duration):
-                duration > 0 ? [.addOneMinute, .addFiveMinutes, .start] : [.addOneMinute, .addFiveMinutes]
+            case .idle(let duration) where duration > 0:
+                [.addOneMinute, .addFiveMinutes, .reset, .start]
+
+            case .idle:
+                [.addOneMinute, .addFiveMinutes, nil, nil]
 
             case .running:
-                [.pause, .addOneMinute]
+                [.addOneMinute, nil, nil, .pause]
 
             case .paused:
-                [.start, .reset]
+                [nil, nil, .reset, .resume]
+        }
+    }
+
+    private static func mediumSlots(for state: TimerState) -> [WidgetControl?] {
+        switch state {
+            case .idle(let duration) where duration > 0:
+                [.addOneMinute, .addFiveMinutes, .start]
+
+            case .idle:
+                [.addOneMinute, .addFiveMinutes, nil]
+
+            case .running:
+                [.addOneMinute, nil, .pause]
+
+            case .paused:
+                [nil, .reset, .resume]
+        }
+    }
+
+    private static func smallSlots(for state: TimerState) -> [WidgetControl?] {
+        switch state {
+            case .idle(let duration) where duration > 0:
+                [.addOneMinute, .start]
+
+            case .idle:
+                [.addOneMinute, nil]
+
+            case .running:
+                [.addOneMinute, .pause]
+
+            case .paused:
+                [.reset, .resume]
         }
     }
 

@@ -122,8 +122,19 @@
         }
       }
     },
+    "Resume": {
+      "comment": "Accessibility label of the timer and stopwatch widgets' button that resumes them after a pause.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riprendi"
+          }
+        }
+      }
+    },
     "Start": {
-      "comment": "Accessibility label of the timer and stopwatch widgets' button that starts or resumes them.",
+      "comment": "Accessibility label of the timer and stopwatch widgets' button that starts them.",
       "localizations": {
         "it": {
           "stringUnit": {

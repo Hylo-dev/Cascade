@@ -8,20 +8,29 @@ import CascadePluginSDK
 import Foundation
 
 /// StopwatchFace is the stopwatch widget's document, a face for the 2x1 tile and one for the 1x1
-/// tile, the wider first. Idle, it shows 0:00 with start; running, the kernel's timer counting up
-/// from when the stopwatch would have started had it never paused, with pause; paused, what it
-/// counted, with resume and reset. The kernel keeps the running count current, so the plugin
-/// never runs while it counts.
+/// tile, the wider first. Idle, it shows 0:00; running, the kernel's timer counting up from when
+/// the stopwatch would have started had it never paused; paused, what it counted. The kernel
+/// keeps the running count current, so the plugin never runs while it counts.
 ///
-/// The 2x1 face is 100 points wide, the time beside 18-point buttons; the 1x1 face is the time
-/// over 15-point buttons, 31 points tall, which a 1x1 tile under a 38-point notch holds. In both
-/// the time has a fixed width, what the buttons leave of the row, and shrinks into it, so an
-/// hour-long count still fits. The fixed width is also what chooses the face: ViewThatFits
-/// measures a face with the tile's height already given.
+/// Both faces have two slots of 20-point buttons, and each control keeps its slot across the
+/// presses that change it: start, pause and resume share the second, so the press that resumes
+/// a paused stopwatch lands where pause was, and reset has the first, empty until there is
+/// something to reset, so it is never where start or pause was.
+///
+/// The 2x1 face is 108 points wide, a 15-point time beside the slots; the 1x1 face is a 9-point
+/// time over them, 31 points tall, which a 1x1 tile under a 38-point notch holds. In both the
+/// time has a fixed width, what the slots leave of the row, and shrinks into it, so an hour-long
+/// count still fits. The fixed width is also what chooses the face: ViewThatFits measures a face
+/// with the tile's height already given.
 enum StopwatchFace {
 
-    static let mediumWidth = 100.0
+    static let mediumWidth = 108.0
     static let smallWidth  = 48.0
+
+    private static let mediumPadding    = 6.0
+    private static let mediumGap        = 6.0
+    private static let slotSpacing      = 3.0
+    private static let smallSlotSpacing = 4.0
 
     static func publication(for state: StopwatchState) throws -> PluginPublication {
         try PluginPublication(
@@ -38,19 +47,19 @@ enum StopwatchFace {
         )
     }
 
-    /// medium is the 2x1 face: the time beside the buttons.
+    /// medium is the 2x1 face: the time beside the slots.
     private static func medium(_ state: StopwatchState) -> PluginNode {
-        let controls  = controls(for: state)
-        let timeWidth = mediumWidth - 2 * 6 - 6 - controlRowWidth(controls.count, diameter: 18, spacing: 3)
+        let slots     = slots(for: state)
+        let timeWidth = mediumWidth - 2 * mediumPadding - mediumGap - controlRowWidth(slots.count, spacing: slotSpacing)
 
-        return HStack(spacing: 6) {
+        return HStack(spacing: mediumGap) {
 
             time(state, size: 15)
                 .frame(width: timeWidth, alignment: .leading)
 
-            controlRow(controls, diameter: 18, spacing: 3)
+            controlRow(slots, spacing: slotSpacing)
         }
-        .padding(.horizontal, 6)
+        .padding(.horizontal, mediumPadding)
         .frame(
             width    : mediumWidth,
             maxWidth : .infinity,
@@ -59,23 +68,24 @@ enum StopwatchFace {
         )
     }
 
-    /// small is the 1x1 face: the time above the buttons.
+    /// small is the 1x1 face: the time above the slots.
     private static func small(_ state: StopwatchState) -> PluginNode {
-        VStack(spacing: 1) {
+        VStack(spacing: 0) {
 
-            time(state, size: 12)
+            time(state, size: 9)
                 .frame(width: smallWidth)
 
-            controlRow(controls(for: state), diameter: 15, spacing: 2)
+            controlRow(slots(for: state), spacing: smallSlotSpacing)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private static func controls(for state: StopwatchState) -> [WidgetControl] {
+    /// slots are reset and then start, pause or resume, the same on both faces.
+    private static func slots(for state: StopwatchState) -> [WidgetControl?] {
         switch state {
-            case .idle   : [.start]
-            case .running: [.pause]
-            case .paused : [.start, .reset]
+            case .idle   : [nil, .start]
+            case .running: [nil, .pause]
+            case .paused : [.reset, .resume]
         }
     }
 

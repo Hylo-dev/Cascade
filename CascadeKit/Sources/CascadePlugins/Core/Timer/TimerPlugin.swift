@@ -45,7 +45,7 @@ final class TimerPlugin: PluginProvider {
             if state.isFinished(at: date) { state = state.resetting() }
             if case .action(let action) = event,
                action.feature == Self.feature,
-               let control = WidgetControl(rawValue: action.action) {
+               let control = WidgetControl(action: action.action) {
                 state = Self.applying(control, to: state, at: date)
             }
 
@@ -72,7 +72,7 @@ final class TimerPlugin: PluginProvider {
         switch control {
             case .addOneMinute  : state.adding(60, at: date)
             case .addFiveMinutes: state.adding(300, at: date)
-            case .start         : state.starting(at: date)
+            case .start, .resume: state.starting(at: date)
             case .pause         : state.pausing(at: date)
             case .reset         : state.resetting()
         }

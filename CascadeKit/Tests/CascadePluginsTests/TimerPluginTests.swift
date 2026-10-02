@@ -32,6 +32,18 @@ struct TimerPluginTests {
         Set(PluginNodeSearch.actions(in: root))
     }
 
+    /// faces lists a state's faces, largest first: the 2x2, the 2x1 and the 1x1.
+    private func faces(of state: TimerState) throws -> [PluginNode] {
+        let root    = try #require(try TimerFace.publication(for: state).document).root
+        let smaller = try #require(root.children.last)
+
+        return [try #require(root.children.first)] + smaller.children
+    }
+
+    private func slots(of face: PluginNode) throws -> [String?] {
+        PluginNodeSearch.slots(of: try #require(PluginNodeSearch.controlRow(in: face)).row)
+    }
+
     /// plugin is a timer whose clock stands at `start` until the test moves it.
     private func plugin() -> (TimerPlugin, TestClock) {
         let clock = TestClock(start)
@@ -170,7 +182,7 @@ struct TimerPluginTests {
         let output = try plugin.handle(try action("add1"), context: context)
         let root   = try widget(in: output)
 
-        #expect(actions(in: root) == ["add1", "add5", "start"])
+        #expect(actions(in: root) == ["add1", "add5", "start", "reset"])
         #expect(PluginNodeSearch.texts(in: root).contains("1:00"))
         #expect(!PluginNodeSearch.kinds(in: root).contains { $0.name == "timer" })
         #expect(output.wake == nil)
@@ -322,7 +334,155 @@ struct TimerPluginTests {
         #expect(output.wake == nil)
     }
 
+    /// A second wake after the end, which a restarted kernel timer could send, finds an idle
+    /// timer and tells nothing again.
+    @Test
+    func aSecondWakeAfterTheEndTellsNothingAgain() throws {
+        let (plugin, clock) = plugin()
+        _ = try plugin.handle(try action("add1"), context: context)
+        _ = try plugin.handle(try action("start"), context: context)
+        clock.move(to: start.addingTimeInterval(60))
+        _ = try plugin.handle(.wake, context: context)
+
+        clock.move(to: start.addingTimeInterval(61))
+        let output = try plugin.handle(.wake, context: context)
+
+        #expect(output.publications.isEmpty)
+        #expect(output.wake == nil)
+    }
+
+    /// A PluginHost restart makes a new plugin, which knows nothing of the timer it ran, so the
+    /// first refresh shows the idle face and asks for no wake.
+    @Test
+    func aRestartedPluginShowsAnIdleTimerAndAsksForNoWake() throws {
+        let (before, _) = plugin()
+        _ = try before.handle(try action("add5"), context: context)
+        _ = try before.handle(try action("start"), context: context)
+
+        let (after, _) = plugin()
+        let output     = try after.handle(.refresh, context: context)
+
+        #expect(actions(in: try widget(in: output)) == ["add1", "add5"])
+        #expect(PluginNodeSearch.texts(in: try widget(in: output)).contains("0:00"))
+        #expect(output.wake == nil)
+    }
+
+    /// An action the plugin does not know changes nothing, and a running timer keeps its wake.
+    @Test
+    func anUnknownActionChangesNothingAndKeepsTheWake() throws {
+        let (plugin, _) = plugin()
+        _ = try plugin.handle(try action("add1"), context: context)
+        _ = try plugin.handle(try action("start"), context: context)
+
+        let output = try plugin.handle(try action("lap"), context: context)
+
+        #expect(output.publications.isEmpty)
+        #expect(output.wake == start.addingTimeInterval(60))
+    }
+
+    @Test
+    func resettingARunningTimerShowsItIdleAndCancelsTheWake() throws {
+        let (plugin, _) = plugin()
+        _ = try plugin.handle(try action("add1"), context: context)
+        _ = try plugin.handle(try action("start"), context: context)
+
+        let output = try plugin.handle(try action("reset"), context: context)
+
+        #expect(actions(in: try widget(in: output)) == ["add1", "add5"])
+        #expect(!output.publications.contains { $0.surface == .notice })
+        #expect(output.wake == nil)
+    }
+
+    /// A length set by mistake can be cleared without starting the timer.
+    @Test
+    func resettingAnIdleTimerClearsItsLength() throws {
+        let (plugin, _) = plugin()
+        _ = try plugin.handle(try action("add5"), context: context)
+
+        let output = try plugin.handle(try action("reset"), context: context)
+        let root   = try widget(in: output)
+
+        #expect(PluginNodeSearch.texts(in: root).contains("0:00"))
+        #expect(actions(in: root) == ["add1", "add5"])
+    }
+
     // MARK: - The faces and the manifest
+
+    /// Every button keeps its slot as the state changes, so a second press where the first one
+    /// landed hits the control that is there now by design: start becomes pause and pause
+    /// resume in one slot, +1 and +5 stay put as the length grows, and reset never takes the
+    /// slot of start, pause or +1. The 2x2 face has room for reset while idle; the 2x1 face
+    /// gives it the slot +5 leaves while paused, the 1x1 face the one +1 leaves, so a second
+    /// press there only adds to the idle timer.
+    @Test
+    func everyButtonKeepsItsSlotOnEveryFace() throws {
+        let states: [TimerState] = [
+            .idle(duration: 0),
+            .idle(duration: 60),
+            .running(end: start.addingTimeInterval(60), duration: 60),
+            .paused(remaining: 30, duration: 60),
+        ]
+        let faces = try states.map { try self.faces(of: $0) }
+
+        #expect(try faces.map { try slots(of: $0[0]) } == [
+            ["add1", "add5", nil, nil],
+            ["add1", "add5", "reset", "start"],
+            ["add1", nil, nil, "pause"],
+            [nil, nil, "reset", "start"],
+        ])
+        #expect(try faces.map { try slots(of: $0[1]) } == [
+            ["add1", "add5", nil],
+            ["add1", "add5", "start"],
+            ["add1", nil, "pause"],
+            [nil, "reset", "start"],
+        ])
+        #expect(try faces.map { try slots(of: $0[2]) } == [
+            ["add1", nil],
+            ["add1", "start"],
+            ["add1", "pause"],
+            ["reset", "start"],
+        ])
+
+        for face in 0..<3 {
+            let placements = faces.map { FacePlacement($0[face]) }
+
+            #expect(placements[0] != nil)
+            #expect(placements.allSatisfy { $0 == placements[0] })
+        }
+    }
+
+    /// The button that resumes a paused timer says so to VoiceOver, though it sends `start`.
+    @Test
+    func thePausedStartButtonReadsResume() throws {
+        let paused = try faces(of: .paused(remaining: 30, duration: 60)).flatMap(PluginNodeSearch.nodes)
+        let idle   = try faces(of: .idle(duration: 60)).flatMap(PluginNodeSearch.nodes)
+
+        #expect(Set(paused.filter { $0.kind == .button(action: "start") }.map(PluginNodeSearch.accessibilityLabel)) == ["Resume"])
+        #expect(Set(idle.filter { $0.kind == .button(action: "start") }.map(PluginNodeSearch.accessibilityLabel)) == ["Start"])
+    }
+
+    /// Every button, and every empty slot that holds a button's place, is at least the 20 points
+    /// macOS asks of a control.
+    @Test
+    func everySlotIsAtLeastTwentyPointsSquare() throws {
+        let states: [TimerState] = [.idle(duration: 0), .idle(duration: 60), .paused(remaining: 30, duration: 60)]
+
+        for state in states {
+            for face in try faces(of: state) {
+                let row = try #require(PluginNodeSearch.controlRow(in: face)).row
+
+                for slot in row.children {
+                    let target = slot.kind.name == "button" ? try #require(slot.children.first) : slot
+
+                    #expect(target.modifiers.contains { modifier in
+                        if case .frame(let width?, let height?, _, _, _) = modifier { return width >= 20 && height >= 20 }
+
+                        return false
+                    })
+                }
+            }
+        }
+    }
 
     /// Every button of every state is one the manifest declares and VoiceOver can name.
     @Test

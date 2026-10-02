@@ -143,7 +143,68 @@ struct StopwatchPluginTests {
         #expect(wake.publications.isEmpty)
     }
 
+    @Test
+    func anUnknownActionChangesNothing() throws {
+        let start  = self.start
+        let plugin = StopwatchPlugin(now: { start })
+
+        let output = try plugin.handle(try action("lap"), context: context)
+
+        #expect(output.publications.isEmpty)
+        #expect(output.wake == nil)
+    }
+
     // MARK: - The faces and the manifest
+
+    /// Start, pause and resume share one slot and reset has its own, empty until there is
+    /// something to reset, so the press that resumes a paused stopwatch never lands on reset.
+    @Test
+    func everyButtonKeepsItsSlotOnBothFaces() throws {
+        let states: [StopwatchState] = [.idle, .running(since: start, before: 0), .paused(elapsed: 30)]
+        let faces  = try states.map { state in try #require(try StopwatchFace.publication(for: state).document).root.children }
+
+        for face in 0..<2 {
+            let slots      = try faces.map { PluginNodeSearch.slots(of: try #require(PluginNodeSearch.controlRow(in: $0[face])).row) }
+            let placements = faces.map { FacePlacement($0[face]) }
+
+            #expect(slots == [[nil, "start"], [nil, "pause"], ["reset", "start"]])
+            #expect(placements[0] != nil)
+            #expect(placements.allSatisfy { $0 == placements[0] })
+        }
+    }
+
+    /// The button that resumes a paused stopwatch says so to VoiceOver, though it sends `start`.
+    @Test
+    func thePausedStartButtonReadsResume() throws {
+        let paused = PluginNodeSearch.nodes(in: try #require(try StopwatchFace.publication(for: .paused(elapsed: 30)).document).root)
+        let idle   = PluginNodeSearch.nodes(in: try #require(try StopwatchFace.publication(for: .idle).document).root)
+
+        #expect(Set(paused.filter { $0.kind == .button(action: "start") }.map(PluginNodeSearch.accessibilityLabel)) == ["Resume"])
+        #expect(Set(idle.filter { $0.kind == .button(action: "start") }.map(PluginNodeSearch.accessibilityLabel)) == ["Start"])
+    }
+
+    /// Every button, and every empty slot that holds a button's place, is at least the 20 points
+    /// macOS asks of a control.
+    @Test
+    func everySlotIsAtLeastTwentyPointsSquare() throws {
+        let states: [StopwatchState] = [.idle, .running(since: start, before: 0), .paused(elapsed: 30)]
+
+        for state in states {
+            for face in try #require(try StopwatchFace.publication(for: state).document).root.children {
+                let row = try #require(PluginNodeSearch.controlRow(in: face)).row
+
+                for slot in row.children {
+                    let target = slot.kind.name == "button" ? try #require(slot.children.first) : slot
+
+                    #expect(target.modifiers.contains { modifier in
+                        if case .frame(let width?, let height?, _, _, _) = modifier { return width >= 20 && height >= 20 }
+
+                        return false
+                    })
+                }
+            }
+        }
+    }
 
     /// Every button of every state is one the manifest declares and VoiceOver can name.
     @Test

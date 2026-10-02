@@ -105,6 +105,49 @@ struct FirstPartyWidgetFitTests {
         }
     }
 
+    /// A time with a fixed slot shrinks into it rather than being cut short: its widest value, an
+    /// hour and more, fits the slot at the smallest scale the face lets it reach. The fit tests
+    /// above measure a face's natural size, which a slot hides, so they cannot see this.
+    @Test
+    func everyTimeFitsItsSlotAtItsSmallestScale() throws {
+        let longest   = TimerState.longestDuration
+        let documents = try [
+            TimerFace.publication(for: .idle(duration: longest)),
+            TimerFace.publication(for: .running(end: Date.now.addingTimeInterval(longest), duration: longest)),
+            TimerFace.publication(for: .paused(remaining: longest, duration: longest)),
+            StopwatchFace.publication(for: .running(since: Date.now, before: 3_725)),
+            StopwatchFace.publication(for: .paused(elapsed: 3_725)),
+        ].map { try #require($0.document) }
+        var slotted = 0
+
+        for document in documents {
+            for node in walk(document.root) {
+                var font  : PluginFont?
+                var factor: Double?
+                var slot  : Double?
+                for modifier in node.modifiers {
+                    switch modifier {
+                        case .font(let value)                 : font = value
+                        case .minimumScaleFactor(let value)   : factor = value
+                        case .frame(let width?, _, _, _, _)   : slot = width
+                        default                               : break
+                    }
+                }
+                guard let font, let factor, let slot else { continue }
+
+                let widest = try size(of: PluginNode(.text("1:39:00"), modifiers: [.font(font)])).width
+                slotted += 1
+
+                #expect(Double(widest) * factor <= slot)
+            }
+        }
+        #expect(slotted == 10)
+    }
+
+    private func walk(_ node: PluginNode) -> [PluginNode] {
+        [node] + (node.children + node.layers).flatMap(walk)
+    }
+
     @Test
     func everyStopwatchFaceFitsItsTile() throws {
         let states: [StopwatchState] = [

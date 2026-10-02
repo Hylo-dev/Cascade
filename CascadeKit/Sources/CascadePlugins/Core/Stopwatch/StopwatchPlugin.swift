@@ -34,7 +34,7 @@ final class StopwatchPlugin: PluginProvider {
         let (before, after) = state.withLock { state in
             let before = state
             if case .action(let action) = event, action.feature == Self.feature {
-                switch WidgetControl(rawValue: action.action) {
+                switch WidgetControl(action: action.action) {
                     case .start?: state = state.starting(at: date)
                     case .pause?: state = state.pausing(at: date)
                     case .reset?: state = state.resetting()

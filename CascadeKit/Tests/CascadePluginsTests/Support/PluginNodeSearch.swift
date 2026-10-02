@@ -30,4 +30,49 @@ enum PluginNodeSearch {
     static func kinds(in node: PluginNode) -> [PluginNodeKind] {
         nodes(in: node).map(\.kind)
     }
+
+    /// controlRow is a face's row of buttons, the first horizontal stack whose children are all
+    /// buttons or the spacers that hold an empty slot, with the child indices that lead to it.
+    static func controlRow(
+        in node: PluginNode,
+        path   : [Int] = []
+    ) -> (path: [Int], row: PluginNode)? {
+        if case .hStack = node.kind, !node.children.isEmpty, node.children.allSatisfy(isSlot) {
+            return (path, node)
+        }
+
+        for (index, child) in node.children.enumerated() {
+            if let found = controlRow(in: child, path: path + [index]) { return found }
+        }
+
+        return nil
+    }
+
+    /// slots lists a row's slots by the action each button sends, nil for an empty slot.
+    static func slots(of row: PluginNode) -> [String?] {
+        row.children.map { slot in
+            if case .button(let action) = slot.kind { return action }
+
+            return nil
+        }
+    }
+
+    /// accessibilityLabel is the label a node gives VoiceOver, if it gives one.
+    static func accessibilityLabel(of node: PluginNode) -> String? {
+        for modifier in node.modifiers {
+            if case .accessibilityLabel(let label) = modifier { return label }
+        }
+
+        return nil
+    }
+
+    private static func isSlot(_ node: PluginNode) -> Bool {
+        switch node.kind {
+            case .button, .spacer:
+                true
+
+            default:
+                false
+        }
+    }
 }
