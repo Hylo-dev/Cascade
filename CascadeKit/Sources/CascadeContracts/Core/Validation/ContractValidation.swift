@@ -70,4 +70,17 @@ enum ContractValidation {
     static func finite(_ date: Date) throws {
         try require(date.timeIntervalSince1970.isFinite, "Date must be finite")
     }
+
+    /// knownFields rejects any wire field the type does not declare, so a misspelt manifest
+    /// key fails instead of being ignored.
+    static func knownFields<Keys: CodingKey & CaseIterable>(
+        in decoder: any Decoder,
+        _ keys    : Keys.Type
+    ) throws {
+        let fields = try decoder.container(keyedBy: WireKey.self)
+        try require(
+            Set(fields.allKeys.map(\.stringValue)).isSubset(of: Set(keys.allCases.map(\.stringValue))),
+            "Unknown wire field"
+        )
+    }
 }

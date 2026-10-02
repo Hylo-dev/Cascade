@@ -147,7 +147,7 @@ final class DisplayInventory: NSObject, DisplayInventoryProviding {
 
 ## State holders (UI-facing)
 
-This app targets **macOS 14**, so it uses the modern **Observation** framework — not the legacy `ObservableObject`.
+This app targets **macOS 15**, so it uses the modern **Observation** framework — not the legacy `ObservableObject`.
 
 - **Use `@Observable`** for state holders the SwiftUI layer reads. Its fine-grained tracking means a view re-renders only when a property it actually reads changes — which is exactly the re-render discipline the project demands.
 - State holders that own UI-visible domain state are `final class`, `@MainActor`.
@@ -282,7 +282,7 @@ This is the part that justifies the careful style. Treat it as a small, audited 
 
 - **`@frozen` on hot structs** the compiler benefits from laying out at compile time (`NotchGeometry`, `NotchState`, control points). It enables cache hits and a stable layout; only freeze what is genuinely stable across the app's evolution.
 - **Compact, aligned, contiguous storage.** Prefer parallel arrays / `ContiguousArray` / raw buffers over arrays-of-structs when the morph loop or the renderer walks them with unit stride. Keep structs small and field order chosen for alignment.
-- **`InlineArray` for fixed-size control-point buffers.** The notch outline has a known, fixed number of control points, so an `InlineArray` keeps them on the stack with no heap allocation and no ARC. It is **Swift 6.2 stdlib**, and its runtime ships with the newest OS — on the macOS 14 floor it must be gated:
+- **`InlineArray` for fixed-size control-point buffers.** The notch outline has a known, fixed number of control points, so an `InlineArray` keeps them on the stack with no heap allocation and no ARC. It is **Swift 6.2 stdlib**, and its runtime ships with the newest OS — on the macOS 15 floor it must be gated:
 
 ```swift
 /// Build the morph control points. On macOS 26+ we use a stack-resident

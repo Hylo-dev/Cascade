@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 2,
+  "id": "com.cascade.power",
+  "version": "1.0.0",
+  "compatibility": { "macOS": "15.0", "cascadeProtocol": { "major": 2, "minimumMinor": 0 } },
+  "execution": { "entryPoint": "ChargingPlugin" },
+  "features": [
+    {
+      "id": "charging",
+      "surfaces": { "notice": {} },
+      "sources": ["power"],
+      "components": [{ "id": "power.battery", "version": 1 }],
+      "actions": ["preview"]
+    }
+  ],
+  "resources": { "profile": "eventDriven" }
+}

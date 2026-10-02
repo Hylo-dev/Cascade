@@ -1,6 +1,6 @@
 # Cascade addon protocol v1 — initial contracts
 
-`CascadeContracts` is a Foundation-only, Sendable Swift 6 product targeting macOS 14.
+`CascadeContracts` is a Foundation-only, Sendable Swift 6 product targeting macOS 15.
 CascadeKit keeps its existing product and language mode. These contracts apply equally
 to bundled team addons and external addons; the manifest grants no privileges.
 

@@ -4,7 +4,10 @@
 //
 
 import AppKit
+import CascadeContracts
 import CascadeKit
+import CascadePluginEngine
+import CascadePlugins
 import CascadeRuntime
 import Observation
 
@@ -73,7 +76,11 @@ final class CascadeServices {
     var bluetoothEnabled: Bool {
         didSet {
             preferences.set(bluetoothEnabled, forKey: "bluetoothEnabled")
-            if isRunning { updateBluetoothMonitoring() }
+            plugins.setEnabled(bluetoothEnabled, for: BluetoothPlugin.id)
+            guard !bluetoothEnabled else { return }
+
+            bluetoothStatus = .stopped
+            suppressor.stop()
         }
     }
 
@@ -87,18 +94,22 @@ final class CascadeServices {
     var volumeEnabled: Bool {
         didSet {
             preferences.set(volumeEnabled, forKey: "volumeEnabled")
-            if isRunning { updateVolumeMonitoring() }
+            plugins.setEnabled(volumeEnabled, for: VolumePlugin.id)
         }
     }
 
     var chargingEnabled: Bool {
         didSet {
             preferences.set(chargingEnabled, forKey: "chargingEnabled")
-            if isRunning { updatePowerMonitoring() }
+            plugins.setEnabled(chargingEnabled, for: ChargingPlugin.id)
         }
     }
 
     private(set) var volumeStatus: VolumeMonitoringStatus = .stopped
+
+    /// pluginStatus is each plugin's state and PluginHost's, for settings; nil until the engine
+    /// has been composed.
+    private(set) var pluginStatus: PluginEngineStatus?
 
     var musicEnabled: Bool {
         didSet {
@@ -138,10 +149,16 @@ final class CascadeServices {
     }
 
     var suppressionStatus: BluetoothNoticeSuppressionStatus { suppressor.status }
-    var bluetoothStatus  : BluetoothMonitoringStatus { bluetooth.status }
+
+    /// bluetoothStatus is what the Bluetooth plugin's source last said about monitoring, as its
+    /// states reach the engine: monitoring once its baseline arrives, unavailable when IOBluetooth
+    /// refused it, stopped while the alerts are off or Cascade is not running.
+    private(set) var bluetoothStatus: BluetoothMonitoringStatus = .stopped
 
     @ObservationIgnored
     private let notch              : NotchEngine
+    @ObservationIgnored
+    private let plugins            : PluginSystem
     @ObservationIgnored
     private let fileShelfGovernor  : ResourceGovernor
     @ObservationIgnored
@@ -152,15 +169,11 @@ final class CascadeServices {
     private let spotlight          : SpotlightCoordinator
 
     @ObservationIgnored
-    private let bluetooth    : any BluetoothMonitoring = IOBluetoothConnectionMonitor()
-    @ObservationIgnored
     private let suppressor    = AccessibilityBluetoothNoticeSuppressor()
     @ObservationIgnored
-    private let volume       : any VolumeMonitoring = CoreAudioVolumeMonitor()
+    private let volumeSource = VolumePluginSource(monitor: CoreAudioVolumeMonitor())
     @ObservationIgnored
     private let network      : any NetworkMonitoring = NetworkConnectionMonitor()
-    @ObservationIgnored
-    private let power        : any PowerMonitoring = IOKitPowerMonitor()
     @ObservationIgnored
     private let mediaProvider = SystemNowPlayingProvider()
     @ObservationIgnored
@@ -176,25 +189,11 @@ final class CascadeServices {
     private var displayPreferencesRevision: UInt64 = 0
 
     @ObservationIgnored
-    private var bluetoothTask          : Task<Void, Never>?
-    @ObservationIgnored
-    private var bluetoothEventIDs      : [String: UInt64] = [:]
-    @ObservationIgnored
     private var mediaTask              : Task<Void, Never>?
-    @ObservationIgnored
-    private var volumeTask             : Task<Void, Never>?
     @ObservationIgnored
     private var networkTask            : Task<Void, Never>?
     @ObservationIgnored
-    private var powerTask              : Task<Void, Never>?
-    @ObservationIgnored
-    private var chargingPreviewRevision: UInt64 = 0
-    @ObservationIgnored
     private var networkBorderResetTask : Task<Void, Never>?
-    @ObservationIgnored
-    private var volumeNotice           : VolumeChangeNotice?
-    @ObservationIgnored
-    private var volumePreviewRevision  : UInt64 = 0
     @ObservationIgnored
     private var mediaActivity          : MediaLiveActivity?
     @ObservationIgnored
@@ -219,6 +218,7 @@ final class CascadeServices {
             displayPreferences: displayPreferencesStore.preferences
         )
         self.notch                   = notch
+        plugins                      = PluginSystem(host: notch, sources: [PluginVolumeState.source: volumeSource])
         self.displayPreferencesStore = displayPreferencesStore
 
         let fileShelfGovernor = ResourceGovernor()
@@ -281,6 +281,24 @@ final class CascadeServices {
                 if !isPresented { self?.settingsAnchorDisplayID = nil }
             }
         )
+
+        plugins.statusHandler = { [weak self] status in
+            self?.pluginStatus = status
+        }
+
+        volumeSource.statusHandler = { [weak self] status in
+            self?.volumeStatus = status
+        }
+
+        // Every Bluetooth state reaches the suppressor as it reaches the engine, before the
+        // engine keeps only the latest for the plugin, so no new connection is missed.
+        plugins.observe(PluginBluetoothState.source) { @Sendable [weak self] event in
+            guard let state = PluginBluetoothState(event) else { return }
+
+            DispatchQueue.main.async { [weak self] in
+                MainActor.assumeIsolated { self?.receiveBluetooth(state) }
+            }
+        }
 
         notch.onSettingsRequested = { [weak self] in
             self?.showSettings(reanchorToCurrentOwner: false)
@@ -365,7 +383,10 @@ final class CascadeServices {
         guard !isRunning else { return }
 
         isRunning = true
-        notch.register(ClockWidget())
+        plugins.setEnabled(bluetoothEnabled, for: BluetoothPlugin.id)
+        plugins.setEnabled(chargingEnabled, for: ChargingPlugin.id)
+        plugins.setEnabled(volumeEnabled, for: VolumePlugin.id)
+        plugins.start()
         notch.setHapticsEnabled(hapticsEnabled)
         notch.setSensitiveContentVisible(sensitiveContentVisible)
         fileShelfStartTask = Task { [weak fileShelfController] in
@@ -375,9 +396,6 @@ final class CascadeServices {
         notch.start()
         updateSpotlight()
         startNetworkMonitoring()
-        updateBluetoothMonitoring()
-        updateVolumeMonitoring()
-        updatePowerMonitoring()
         updateMusicMonitoring()
         requestStartupPermissions()
 
@@ -419,7 +437,7 @@ final class CascadeServices {
 
             // Volume and native Bluetooth replacement use the same AX grant.
             if self.volumeEnabled {
-                self.volume.requestAccess()
+                self.volumeSource.monitor.requestAccess()
             } else if self.bluetoothEnabled && self.nativeReplacementEnabled {
                 self.suppressor.requestAccess()
             }
@@ -450,22 +468,10 @@ final class CascadeServices {
         networkBorderResetTask = nil
         network.stop()
 
-        powerTask?.cancel()
-        powerTask = nil
-        power.stop()
         notch.setBorderAppearance(.neutral)
 
-        bluetoothTask?.cancel()
-        bluetoothTask = nil
-        bluetoothEventIDs.removeAll()
-        bluetooth.stop()
+        bluetoothStatus = .stopped
         suppressor.stop()
-
-        volumeTask?.cancel()
-        volumeTask = nil
-        volume.stop()
-        volumeNotice = nil
-        volumeStatus = .stopped
 
         mediaTask?.cancel()
         mediaTask = nil
@@ -500,10 +506,15 @@ final class CascadeServices {
     func refreshNativeReplacement() {
         if spotlightEnabled { spotlight.refresh() }
         refreshVolumePermissions()
+        updateNativeReplacement()
+    }
 
+    /// updateNativeReplacement watches for macOS's own Bluetooth banner only while Cascade shows
+    /// its Bluetooth notices in its place.
+    private func updateNativeReplacement() {
         guard isRunning,
               bluetoothEnabled,
-              bluetooth.status == .monitoring,
+              bluetoothStatus == .monitoring,
               nativeReplacementEnabled
         else {
             suppressor.stop()
@@ -587,126 +598,63 @@ final class CascadeServices {
     func refreshVolumePermissions() {
         guard isRunning, volumeEnabled else { return }
 
-        volume.refreshPermissions()
+        volumeSource.monitor.refreshPermissions()
     }
 
     func requestVolumeAccessibility() {
-        volume.requestAccess()
+        volumeSource.monitor.requestAccess()
     }
 
-    /// previewVolume never adjusts hardware or installs an input tap.
+    /// reenablePlugin brings back a plugin stopped after a hang or quarantined.
+    func reenablePlugin(_ plugin: PluginID) {
+        plugins.reenable(plugin)
+    }
+
+    /// restartPluginHost tries PluginHost again after repeated crashes.
+    func restartPluginHost() {
+        plugins.restartHost()
+    }
+
+    /// previewVolume never adjusts hardware or installs an input tap. The volume plugin draws the
+    /// preview through its own preview action.
     func previewVolume() {
-        volumePreviewRevision &+= 1
-
-        let event = VolumeChangeEvent(
-            percentage: 65,
-            isMuted   : false,
-            revision  : volumePreviewRevision
-        )
-        notch.showNotice(VolumeChangeNotice(event: event))
+        plugins.invoke(VolumePlugin.preview, feature: VolumePlugin.feature, of: VolumePlugin.id)
     }
 
-    /// previewBluetooth is explicitly synthetic and never arms the native
-    /// suppressor: a demo must not dismiss any real system notification.
+    /// previewBluetooth is explicitly synthetic and never arms the native suppressor: a demo must
+    /// not dismiss any real system notification. The Bluetooth plugin draws the preview through
+    /// its own preview action, which never passes through the source.
     func previewBluetooth() {
-        let event = BluetoothConnectionEvent(
-            deviceID   : "demo-headphones",
-            name       : String(localized: "AirPods · Preview"),
-            symbolName : "airpodspro",
-            isConnected: true,
-            battery    : BluetoothBatterySnapshot(
-                left     : 72,
-                right    : 68,
-                caseLevel: 81
-            ),
-            model      : .airPodsPro,
-            productID  : 0x200E
-        )
-        let activity = BluetoothConnectionActivity(event: event)
-        notch.showNotice(activity)
+        plugins.invoke(BluetoothPlugin.preview, feature: BluetoothPlugin.feature, of: BluetoothPlugin.id)
     }
 
-    /// previewCharging changes presentation only; it never changes macOS energy settings.
+    /// previewCharging changes presentation only; it never changes macOS energy settings. The
+    /// charging plugin draws the preview through its own preview action.
     func previewCharging(lowPower: Bool) {
-        chargingPreviewRevision &+= 1
-
-        notch.showNotice(
-            ChargingNotice(
-                snapshot: MacPowerSnapshot(
-                    percentage     : 19,
-                    isExternalPower: true,
-                    isCharging     : true,
-                    isLowPowerMode : lowPower
-                ),
-                revision: chargingPreviewRevision
-            )
-        )
+        plugins.invoke(ChargingPlugin.preview, value: .bool(lowPower), feature: ChargingPlugin.feature, of: ChargingPlugin.id)
     }
 
-    private func updatePowerMonitoring() {
-        powerTask?.cancel()
-        powerTask = nil
-        power.stop()
-        notch.dismissActivities(from: "cascade.power")
-        guard chargingEnabled else { return }
+    /// receiveBluetooth follows the Bluetooth source's states. Its availability is the menu's
+    /// status, and a new connection, the moment macOS raises its own banner, arms the native
+    /// banner's suppressor for that device. A battery or model reading of the same event never
+    /// arms it again.
+    private func receiveBluetooth(_ state: PluginBluetoothState) {
+        guard isRunning, bluetoothEnabled else { return }
 
-        let stream = power.start()
-        powerTask = Task { [weak self] in
-            for await update in stream {
-                guard !Task.isCancelled, let self, self.isRunning else { return }
-
-                switch update {
-                    case .connected(let snapshot, let revision):
-                        self.notch.showNotice(
-                            ChargingNotice(snapshot: snapshot, revision: revision)
-                        )
-
-                    case .updated(let snapshot, let revision):
-                        self.notch.updateNotice(
-                            ChargingNotice(snapshot: snapshot, revision: revision)
-                        )
-
-                    case .disconnected:
-                        self.notch.dismissActivities(from: "cascade.power")
-                }
-            }
-        }
-    }
-
-    private func updateBluetoothMonitoring() {
-        bluetoothTask?.cancel()
-        bluetoothTask = nil
-        bluetoothEventIDs.removeAll()
-        bluetooth.stop()
-        notch.dismissActivities(from: "cascade.bluetooth")
-        guard bluetoothEnabled else {
-            suppressor.stop()
-            return
+        let status: BluetoothMonitoringStatus = state.isAvailable
+            ? .monitoring
+            : .unavailable("IOBluetooth connection notifications are unavailable.")
+        if status != bluetoothStatus {
+            bluetoothStatus = status
+            updateNativeReplacement()
         }
 
-        let stream = bluetooth.start()
-        refreshNativeReplacement()
-        bluetoothTask = Task { [weak self] in
-            for await event in stream {
-                guard !Task.isCancelled, let self, self.isRunning else { return }
+        guard state.isNewConnection, nativeReplacementEnabled else { return }
 
-                let activity = BluetoothConnectionActivity(event: event)
-                if event.revision == 0 {
-                    self.bluetoothEventIDs[event.deviceID] = event.eventID
-                    if event.isConnected, self.nativeReplacementEnabled {
-                        // A real route/connection also refreshes AX trust and
-                        // banner-host identity without depending on menu mount.
-                        self.suppressor.start()
-                        self.suppressor.expectConnection(deviceName: event.name)
-                    }
-                    self.notch.showNotice(activity)
-                } else if self.bluetoothEventIDs[event.deviceID] == event.eventID {
-                    // Battery/model enrichment cannot replay an old connection,
-                    // extend its deadline or rearm native-banner suppression.
-                    self.notch.updateNotice(activity)
-                }
-            }
-        }
+        // A real route or connection also refreshes AX trust and banner-host identity without
+        // depending on the menu being open.
+        suppressor.start()
+        suppressor.expectConnection(deviceName: state.name)
     }
 
     /// startNetworkMonitoring keeps the ordinary rim neutral. An actual new
@@ -804,38 +752,5 @@ final class CascadeServices {
     private static func isRunning(_ bundleIdentifier: String) -> Bool {
         NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier)
             .contains { !$0.isTerminated }
-    }
-
-    private func updateVolumeMonitoring() {
-        volumeTask?.cancel()
-        volumeTask = nil
-        volume.stop()
-        volumeNotice = nil
-        volumeStatus = .stopped
-        notch.dismissActivities(from: "cascade.volume")
-        guard volumeEnabled else { return }
-
-        volumeStatus = .starting
-        let stream = volume.start()
-        volumeTask = Task { [weak self] in
-            for await update in stream {
-                guard !Task.isCancelled, let self, self.isRunning else { return }
-
-                switch update {
-                    case .status(let status):
-                        self.volumeStatus = status
-
-                    case .changed(let event):
-                        if let notice = self.volumeNotice {
-                            notice.update(event)
-                            self.notch.showNotice(notice)
-                        } else {
-                            let notice = VolumeChangeNotice(event: event)
-                            self.volumeNotice = notice
-                            self.notch.showNotice(notice)
-                        }
-                }
-            }
-        }
     }
 }

@@ -107,6 +107,7 @@ struct CascadeMenu: View {
         }
 
         Button("Test Volume Alert") { services.previewVolume() }
+            .disabled(!services.volumeEnabled)
 
         Divider()
 
@@ -118,6 +119,7 @@ struct CascadeMenu: View {
 
             Button("Low Power Mode · Yellow") { services.previewCharging(lowPower: true) }
         }
+        .disabled(!services.chargingEnabled)
 
         Divider()
 
@@ -154,9 +156,6 @@ struct CascadeMenu: View {
                         }
                         Button("Check Audio Permission Again") { services.retryAudioCapture() }
 
-                    case .unsupported:
-                        Text("The bars require macOS 14.2 or later.")
-
                     case .unavailable:
                         Text("Audio isn’t available to the visualizer")
                         Button("Retry Audio Visualizer") { services.retryAudioCapture() }
@@ -168,6 +167,7 @@ struct CascadeMenu: View {
         }
 
         Button("Test AirPods Alert") { services.previewBluetooth() }
+            .disabled(!services.bluetoothEnabled)
 
         Divider()
 

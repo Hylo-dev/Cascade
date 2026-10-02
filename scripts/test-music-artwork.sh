@@ -8,7 +8,7 @@ export CLANG_MODULE_CACHE_PATH=/private/tmp/cascade-artwork-module-cache
 
 /usr/bin/xcrun swiftc \
     -swift-version 6 \
-    -target arm64-apple-macosx14.0 \
+    -target arm64-apple-macosx15.0 \
     -default-isolation MainActor \
     -warnings-as-errors \
     -parse-as-library \

@@ -1,0 +1,11 @@
+{
+  "manifestVersion": 2,
+  "id": "com.cascade.clock",
+  "version": "1.0.0",
+  "compatibility": { "macOS": "15.0", "cascadeProtocol": { "major": 2, "minimumMinor": 0 } },
+  "execution": { "entryPoint": "ClockPlugin" },
+  "features": [
+    { "id": "time", "surfaces": { "widget": { "sizes": ["1x1", "2x1"] } } }
+  ],
+  "resources": { "profile": "eventDriven" }
+}

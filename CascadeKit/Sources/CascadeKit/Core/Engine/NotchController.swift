@@ -156,6 +156,16 @@ final class NotchController: NotchDisplayPresenting {
     @ObservationIgnored
     private let hoverHysteresis: CGFloat = 8
 
+    /// widgetGalleryHeight is how much taller the widget surface grows while
+    /// editing, for the gallery strip under the grid.
+    static let widgetGalleryHeight: CGFloat = 64
+
+    /// isEditingWidgets is widget editing on this surface. It only exists on an
+    /// open widget surface, keeps it open when the pointer leaves, and ends with
+    /// any collapse.
+    @ObservationIgnored
+    private(set) var isEditingWidgets = false
+
     @ObservationIgnored
     private let widgetHost          : WidgetHost
     @ObservationIgnored
@@ -396,6 +406,7 @@ final class NotchController: NotchDisplayPresenting {
         isSettingsFocused          = false
         isPanelVisible             = false
         isControlDragActive        = false
+        isEditingWidgets           = false
         dragReleaseTask?.cancel()
         dragReleaseTask = nil
 
@@ -501,6 +512,9 @@ final class NotchController: NotchDisplayPresenting {
 
         displayPresentation = presentation
         presentationKey     = nextKey
+        if !presentation.showsWidgets {
+            isEditingWidgets = false
+        }
         if keepsContextualPresentationExpanded {
             cancelHoverExit()
         }
@@ -809,7 +823,7 @@ final class NotchController: NotchDisplayPresenting {
             : softwareMetrics.restingSize.height + softwareMetrics.bodyOffset
         let canvasHeight = ceil(
             max(
-                normalizedMaximumExpandedHeight(),
+                normalizedMaximumExpandedHeight() + Self.widgetGalleryHeight,
                 normalizedActivityMaximumHeight(),
                 compactContentHeight(for: display),
                 restingSize(for: display).height
@@ -887,6 +901,33 @@ final class NotchController: NotchDisplayPresenting {
             setState(.open, trigger: .settings)
         } else {
             clickedOpen = false
+            handlePointer(at: lastPointer ?? NSEvent.mouseLocation)
+        }
+    }
+
+    /// setWidgetEditing enters or leaves widget editing. It can only begin on an
+    /// open surface that shows widgets. Both directions re-render the board once
+    /// and let the height spring grow or shrink the surface for the gallery;
+    /// leaving re-applies the hover rule to the last pointer sample, so the notch
+    /// closes if the pointer has already left it.
+    func setWidgetEditing(_ isEditing: Bool) {
+        guard isEditingWidgets != isEditing else { return }
+
+        if isEditing {
+            guard isStarted,
+                  isPanelVisible,
+                  !state.isClosed,
+                  displayPresentation?.showsWidgets == true
+            else { return }
+        }
+
+        isEditingWidgets = isEditing
+        cancelHoverExit()
+        renderContent()
+        renderCurrentFrame()
+        startMorphIfNeeded()
+
+        if !isEditing, isStarted, isPanelVisible {
             handlePointer(at: lastPointer ?? NSEvent.mouseLocation)
         }
     }
@@ -987,7 +1028,7 @@ final class NotchController: NotchDisplayPresenting {
                 }
             }
         } else {
-            if keepsContextualPresentationExpanded {
+            if keepsContextualPresentationExpanded || isEditingWidgets {
                 cancelHoverExit()
                 return
             }
@@ -1106,6 +1147,12 @@ final class NotchController: NotchDisplayPresenting {
 
         if isPressed {
             cancelHoverExit()
+            if isEditingWidgets, panel.ignoresMouseEvents {
+                // A click outside the notch ends editing and, being a click
+                // away, closes it without the clicked surface's grace period.
+                clickedOpen = false
+                setWidgetEditing(false)
+            }
             if state.isClosed, !panel.ignoresMouseEvents, let display = activeDisplay,
                displayedSecondaryActivity != nil,
                detachedBubbleFrame(for: display).contains(lastPointer ?? NSEvent.mouseLocation) {
@@ -1314,6 +1361,7 @@ final class NotchController: NotchDisplayPresenting {
             self.hoverExitTask    = nil
             self.pendingExitPoint = nil
             guard !self.keepsContextualPresentationExpanded,
+                  !self.isEditingWidgets,
                   !self.isSettingsFocused,
                   !self.isControlDragActive,
                   !self.hostView.auxiliaryInteraction.contains(point)
@@ -1433,7 +1481,8 @@ final class NotchController: NotchDisplayPresenting {
 
         cancelHoverExit()
         if newState.isClosed {
-            clickedOpen = false
+            clickedOpen      = false
+            isEditingWidgets = false
             hostView.auxiliaryInteraction.dismiss()
         }
 
@@ -1718,7 +1767,7 @@ final class NotchController: NotchDisplayPresenting {
         let maximumHeight = max(
             resting.height,
             compactContentHeight(for: display),
-            normalizedMaximumExpandedHeight(),
+            normalizedMaximumExpandedHeight() + Self.widgetGalleryHeight,
             normalizedActivityMaximumHeight()
         )
         let renderedHeight = min(
@@ -1911,7 +1960,8 @@ final class NotchController: NotchDisplayPresenting {
         }
 
         guard let activity = displayedPrimaryActivity else {
-            return max(resting.height, normalizedMaximumExpandedHeight())
+            let gallery = isEditingWidgets ? Self.widgetGalleryHeight : 0
+            return max(resting.height, normalizedMaximumExpandedHeight() + gallery)
         }
 
         let hardwareNotchHeight = display.hasHardwareNotch ? resting.height : 0
@@ -2035,7 +2085,7 @@ final class NotchController: NotchDisplayPresenting {
                     width : buttonSize,
                     height: buttonSize
                 ),
-                isVisible: rightEdge - buttonSize >= centerX + hardwareNotchWidth / 2
+                isVisible: rightEdge - buttonSize >= centerX + hardwareNotchWidth / 2 && !isEditingWidgets
             )
         }
 
@@ -2179,16 +2229,30 @@ final class NotchController: NotchDisplayPresenting {
 
         hostView.clearActivityContent()
 
-        let width  = effectiveExpandedHalfWidth(for: display) * 2
-        let height = expandedTargetHeight(for: display)
+        let width         = effectiveExpandedHalfWidth(for: display) * 2
+        let height        = expandedTargetHeight(for: display)
+        let galleryHeight = isEditingWidgets ? Self.widgetGalleryHeight : 0
+        let gridHeight    = height - galleryHeight
 
+        // Editing grows the surface downward; the grid keeps its place and the
+        // gallery takes the new strip under it.
         let interior = CGRect(
             x     : hostView.bounds.midX - width / 2,
-            y     : contentTopY - height,
+            y     : contentTopY - gridHeight,
             width : width,
-            height: height
+            height: gridHeight
         )
         .insetBy(dx: 20, dy: 16)
+
+        let galleryBottom = contentTopY - height + expandedBottomInset
+        let galleryFrame  = isEditingWidgets
+            ? CGRect(
+                x     : interior.minX,
+                y     : galleryBottom,
+                width : interior.width,
+                height: max(0, interior.minY - 8 - galleryBottom)
+            )
+            : .zero
 
         let notchWidth    = hardwareNotchWidth
         let topBandHeight = display.hasHardwareNotch
@@ -2201,7 +2265,11 @@ final class NotchController: NotchDisplayPresenting {
             interior     : interior,
             notchWidth   : notchWidth,
             topBandHeight: topBandHeight,
-            hostHeight   : hostView.bounds.height
+            hostHeight   : hostView.bounds.height,
+            isEditing    : isEditingWidgets,
+            galleryFrame : galleryFrame,
+            setEditing   : { [weak self] isEditing in self?.setWidgetEditing(isEditing) },
+            feedback     : { [weak self] in self?.hoverFeedback.snap() }
         )
 
         hostView.setContent(
@@ -2330,6 +2398,7 @@ final class NotchController: NotchDisplayPresenting {
         isSettingsFocused          = false
         isExternalSurfacePresented = false
         isControlDragActive        = false
+        isEditingWidgets           = false
         dragReleaseTask?.cancel()
         dragReleaseTask = nil
 

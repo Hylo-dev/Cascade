@@ -15,7 +15,7 @@ export SWIFT_MODULE_CACHE_PATH="$module_cache"
 
 compiler_options=(
     -swift-version 6
-    -target arm64-apple-macosx14.0
+    -target arm64-apple-macosx15.0
     -default-isolation MainActor
     -enable-upcoming-feature MemberImportVisibility
     -warnings-as-errors

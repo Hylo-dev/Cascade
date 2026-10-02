@@ -14,7 +14,7 @@ else { fatalError("Set CASCADE_SDK_PATH to an absolute public SDK package direct
 
 let package = Package(
     name              : "ServiceConsumer",
-    platforms         : [.macOS(.v14)],
+    platforms         : [.macOS(.v15)],
     products          : [
         "FocusSessionsExampleContract",
         "FocusSessionsExampleProvider",

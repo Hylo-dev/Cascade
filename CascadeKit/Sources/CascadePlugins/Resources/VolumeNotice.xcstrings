@@ -1,0 +1,50 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Muted": {
+      "comment": "Volume notice title when the output is muted.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Silenzioso"
+          }
+        }
+      }
+    },
+    "Volume": {
+      "comment": "Volume notice title.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volume"
+          }
+        }
+      }
+    },
+    "Audio muted": {
+      "comment": "Accessibility label of the volume notice when the output is muted.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio disattivato"
+          }
+        }
+      }
+    },
+    "Volume, %lld percent": {
+      "comment": "Accessibility label of the volume notice. %lld is the volume level from 0 to 100.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volume, %lld percento"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

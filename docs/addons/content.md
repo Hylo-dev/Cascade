@@ -1,7 +1,7 @@
 # Durable addon content
 
 `CascadeContracts`, `CascadePresentation` and `CascadeAddonSDK` are public Swift 6
-products with a macOS 14 floor. Every future Cascade widget uses these same
+products with a macOS 15 floor. Every future Cascade widget uses these same
 contracts and components as external addons. They grant no origin-based bypass.
 
 `CascadeContent` is a value description, not a transparent replacement for every

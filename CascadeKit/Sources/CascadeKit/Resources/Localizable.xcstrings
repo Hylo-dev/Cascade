@@ -1,6 +1,28 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Add Widget": {
+      "comment": "Button in the widget gallery that adds the widget at its first size.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi widget"
+          }
+        }
+      }
+    },
+    "Add Widget, Size %lld of %lld": {
+      "comment": "Accessibility label of a widget gallery size button: which of the widget's sizes it adds.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi widget, dimensione %1$lld di %2$lld"
+          }
+        }
+      }
+    },
     "Adjust Notch Size": {
       "comment": "Window title of the notch size calibration panel.",
       "localizations": {
@@ -78,6 +100,39 @@
         }
       }
     },
+    "Done": {
+      "comment": "Button that ends widget editing on the notch.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fine"
+          }
+        }
+      }
+    },
+    "Edit Widgets": {
+      "comment": "Accessibility action on a notch widget that starts widget editing.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifica widget"
+          }
+        }
+      }
+    },
+    "Every widget is on the notch.": {
+      "comment": "Shown in the widget gallery when no widget is left to add.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutti i widget sono nel notch."
+          }
+        }
+      }
+    },
     "Expand activity": {
       "comment": "Accessibility hint of a compact activity in the notch.",
       "localizations": {
@@ -140,6 +195,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apri"
+          }
+        }
+      }
+    },
+    "Remove Widget": {
+      "comment": "Button on a notch widget while editing that takes it off the grid.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi widget"
+          }
+        }
+      }
+    },
+    "Resize Widget": {
+      "comment": "Button on a notch widget while editing that switches it to its next size.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ridimensiona widget"
           }
         }
       }

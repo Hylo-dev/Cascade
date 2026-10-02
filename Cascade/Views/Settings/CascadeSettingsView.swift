@@ -122,6 +122,8 @@ struct CascadeSettingsView: View {
 
                     Section("Search") { settingRow(.spotlight) }
 
+                    PluginStatusSection(services: services)
+
                     permissions
             }
         }
@@ -188,12 +190,16 @@ struct CascadeSettingsView: View {
                 toggleRow(setting, value: $services.spotlightEnabled)
             case .volumePreview:
                 actionRow(setting) { services.previewVolume() }
+                    .disabled(!services.volumeEnabled)
             case .chargingPreview:
                 actionRow(setting) { services.previewCharging(lowPower: false) }
+                    .disabled(!services.chargingEnabled)
             case .lowPowerPreview:
                 actionRow(setting) { services.previewCharging(lowPower: true) }
+                    .disabled(!services.chargingEnabled)
             case .bluetoothPreview:
                 actionRow(setting) { services.previewBluetooth() }
+                    .disabled(!services.bluetoothEnabled)
             case .spotlightPreview:
                 actionRow(setting) { services.previewSpotlightDroplet(from: .settings) }
         }

@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 2,
+  "id": "com.cascade.bluetooth",
+  "version": "1.0.0",
+  "compatibility": { "macOS": "15.0", "cascadeProtocol": { "major": 2, "minimumMinor": 0 } },
+  "execution": { "entryPoint": "BluetoothPlugin" },
+  "features": [
+    {
+      "id": "connection",
+      "surfaces": { "notice": {} },
+      "sources": ["bluetooth"],
+      "components": [{ "id": "bluetooth.device", "version": 1 }, { "id": "bluetooth.battery", "version": 1 }],
+      "actions": ["preview"]
+    }
+  ],
+  "resources": { "profile": "eventDriven" }
+}

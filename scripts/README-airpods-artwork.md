@@ -48,18 +48,17 @@ playback, followed by one small poster. Unmount cancels loading and clears
 images; Reduce Motion decodes only a static poster. Nothing is persisted to
 disk by the app.
 
-After building Cascade, run:
+The `bluetooth.device` component in CascadeKit draws this artwork. Its checks are
+package tests:
 
 ```sh
-zsh scripts/test-bluetooth-presentation.sh /path/to/Build/Products/Debug
+cd CascadeKit && swift test --filter PluginBluetoothComponentTests
 ```
 
-The harness checks all twelve product IDs, official alias and color selection,
-unknown IDs, alpha preservation, actual frame differences, charge semantics,
-Reduce Motion, bounded playback, no restart on battery enrichment, teardown,
-and cancellation. It renders the real factories into
-`/private/tmp/cascade-bluetooth-presentation/notices.png` using an offscreen
-AppKit window. It does not launch Cascade or access Bluetooth/audio devices.
-An active graphics session is needed to decode the system movies and verify
-Core Animation. Catalog entries and files can differ across macOS versions;
-the runtime fallback handles their absence.
+They check the resolver's catalog reading, aliases, colors, unknown IDs and
+refused image names against a catalog they build, and decode the installed
+AirPods Pro movie into one bounded turn, a Reduce Motion poster and the static
+fallback. They mount the real turntable offscreen to check one three-second
+turn, no restart on battery enrichment, teardown and cancelled decoding. The
+checks that read system files are skipped where macOS lacks them. They do not
+launch Cascade or access Bluetooth or audio devices.

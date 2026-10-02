@@ -18,7 +18,7 @@ let package = Package(
     name: "CascadeKit",
     defaultLocalization: "en",
     platforms: [
-        .macOS(.v14)  // Floor: Sonoma. @Observable, CADisplayLink, safeAreaInsets.
+        .macOS(.v15)  // Floor: Sequoia. Mutex and Atomic, @Observable, CADisplayLink, safeAreaInsets.
     ],
     products: [
         .executable(name: "cascade-addon", targets: ["CascadeAddonTool"]),
@@ -41,6 +41,18 @@ let package = Package(
         .library(
             name: "CascadeKit",
             targets: ["CascadeKit"]
+        ),
+        .library(
+            name   : "CascadePluginHost",
+            targets: ["CascadePluginHost"]
+        ),
+        .library(
+            name   : "CascadePlugins",
+            targets: ["CascadePlugins"]
+        ),
+        .library(
+            name   : "CascadePluginEngine",
+            targets: ["CascadePluginEngine"]
         ),
     ],
     targets: [
@@ -93,8 +105,39 @@ let package = Package(
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .target(
+            name: "CascadePluginSDK",
+            dependencies: ["CascadeContracts"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .target(
+            name: "CascadePlugins",
+            dependencies: ["CascadeContracts", "CascadePluginSDK"],
+            resources: [.process("Resources")],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .testTarget(
+            name: "CascadePluginsTests",
+            dependencies: ["CascadePlugins", "CascadePluginSDK", "CascadeContracts"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .target(
+            name: "CascadePluginHost",
+            dependencies: ["CascadeContracts", "CascadePluginSDK"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .target(
+            name: "CascadePluginEngine",
+            dependencies: ["CascadeContracts", "CascadePluginSDK", "CascadePluginHost"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .testTarget(
+            name: "CascadePluginEngineTests",
+            dependencies: ["CascadePluginEngine", "CascadePluginHost", "CascadePluginSDK", "CascadeContracts"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .target(
             name: "CascadeKit",
-            dependencies: ["CascadeContracts", "CascadePresentation"],
+            dependencies: ["CascadeContracts", "CascadePresentation", "CascadePluginEngine"],
             resources: [.process("Resources")],
             swiftSettings: [
                 .defaultIsolation(MainActor.self)
@@ -102,7 +145,7 @@ let package = Package(
         ),
         .testTarget(
             name: "CascadeKitTests",
-            dependencies: ["CascadeKit", "CascadeContracts", "CascadePresentation", "CascadeRuntime"]
+            dependencies: ["CascadeKit", "CascadeContracts", "CascadePresentation", "CascadeRuntime", "CascadePluginEngine"]
         ),
     ],
     swiftLanguageModes: [.v5]

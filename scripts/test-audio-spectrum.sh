@@ -15,7 +15,7 @@ CLANG_MODULE_CACHE_PATH="$module_cache" \
 SWIFT_MODULE_CACHE_PATH="$module_cache" \
 /usr/bin/xcrun swiftc \
     -D AUDIO_SPECTRUM_TESTS -swift-version 6 \
-    -target arm64-apple-macosx14.0 \
+    -target arm64-apple-macosx15.0 \
     -default-isolation MainActor \
     -enable-upcoming-feature MemberImportVisibility \
     -warnings-as-errors \

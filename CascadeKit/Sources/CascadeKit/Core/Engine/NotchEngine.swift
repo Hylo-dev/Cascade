@@ -50,7 +50,11 @@ public final class NotchEngine {
         displayPreferences: DisplayPresentationPreferences = DisplayPresentationPreferences()
     ) {
         let activityHost = LiveActivityHost()
-        let widgetHost   = WidgetHost()
+        let widgetHost   = WidgetHost(store: UserDefaultsWidgetArrangementStore())
+
+        // The saved arrangements arrive off the main thread; until they do, a
+        // display shows the default arrangement, which costs nothing to replace.
+        Task { await widgetHost.restoreArrangements() }
 
         coordinator = NotchDisplayCoordinator(
             inventory   : DisplayInventory(),
