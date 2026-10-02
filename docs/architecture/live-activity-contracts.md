@@ -8,11 +8,11 @@ updates and task completion. Cascade applies these principles to its own
 macOS overlay. The native Live Activities that Apple describes on Mac come
 from iPhone; these protocols do not conform to ActivityKit.
 
-## Evolution toward the addon system
+## Plugins and these contracts
 
-Since 9 September 2026 the approved destination is the [common addon system](../superpowers/specs/2026-09-09-addon-runtime-design.md), with an [execution plan and migration](../superpowers/plans/2026-09-09-addon-runtime.md). All future team widgets, notices and activities use the same SDK, manifest, authorized services, processes and budgets as external addons.
+Cascade's notices and activities are moving to the [plugin engine](../superpowers/specs/2026-09-29-plugin-engine-design.md). The protocols below remain CascadeKit's internal host seams; plugins never conform to them. A plugin publishes a notice as data, its three regions plus `PluginNoticeAttributes` (duration, rim tint, compact width, accessibility sentence, show or update), and `PluginNotice` adapts each publication to `NotchTransientNotice`, so it follows every rule on this page.
 
-The protocols described below document the current engine and behavior. In the new architecture they are implemented by the host's generic bridge, while addons publish descriptions and actions through the SDK. A valid publication can remain without a provider process; the advanced remote view and the services have distinct grants. The migration preserves the visual, timing, privacy and accessibility rules described here. This note does not claim that the migration has already been carried out.
+The Bluetooth, charging and volume notices are already plugins. Music's activity is still the native `MediaLiveActivity` until the services and Music sub-project moves it, and plugin activities are not shown until that sub-project routes them. The file shelf's unsupported-file notice stays native, as part of a system surface. The visual, timing, privacy and accessibility rules described here hold for every path.
 
 ## Cascade contract choices
 
@@ -95,8 +95,8 @@ The curvature of the outline derives from Apple's `RoundedRectangle(.continuous)
 normalized and stored once. The same segments govern drawing,
 mask and hit testing, with reflection for the upper concave attachments.
 
-`compactPreferredSideWidth` lets a notice request wider wings
-(116 points for volume and Bluetooth); the renderer normalizes the request and limits it
+`compactPreferredSideWidth` lets a notice request the width of its wings
+(116 points for volume and charging, 40 for Bluetooth); the renderer normalizes the request and limits it
 to the display. The width is animated in points and the provider's getters are not
 called on every frame. Hidden sensitive content does not affect
 this dimension either.

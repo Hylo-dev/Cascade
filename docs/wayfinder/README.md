@@ -1,5 +1,7 @@
 # Cascade global plan
 
+> **Superseded record.** The [plugin engine spec](../superpowers/specs/2026-09-29-plugin-engine-design.md) of 29 September 2026 supersedes the addon platform this plan tracks and raised the deployment floor to macOS 15; the addon runtime, its SDK, `cascade-addon` and `CascadePresentation` were deleted on 2 October 2026. Every page in this folder, `context/` and `research/` included, is a dated record and is not kept current.
+
 The [modular product map](../../.scratch/cascade-product/map.md) is the canonical plan. It follows wayfinder: it clarifies decisions before turning them into specifications and implementation tasks.
 
 **Updated as of 23 September 2026:** 68 tickets, 52 resolved, 16 open and unassigned; RAM attribution to the owner and the progressive provider profile approved; runtime integration verified; drag/search stays separate. Addon progress is linked from the relevant tickets; an approved decision is not the same as a completed platform proof.

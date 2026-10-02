@@ -28,3 +28,5 @@ Corrected implementation frozen: 20 Python/parser/SwiftPM/CLI tests PASS; immuta
 ## Answer
 
 Source check delivered: four scripts imported exactly, 20 tests with the real parser/SwiftPM and independent review PASS. The latest audit of the corrected checkout passes on 3 packages/9 targets/88 sources/132 imports, with no changes to the 483 frozen inputs. [Evidence and limits](../../../docs/superpowers/verification/2026-09-18-addon-sdk-boundary-check.md). The perimeter of this ticket does not change app code and does not require a new launcher: the app delivery of the subscriptions continues separately. The [mandatory wiring into the build](37-required-sdk-build-check.md) remains a separate increment; C6/C12 and native parity are not completed.
+
+Superseded on 2 October 2026: `CascadeAddonSDK`, `CascadePresentation` and the examples were deleted, and the boundary is now `scripts/check-plugin-host-imports.sh`, run on PluginHost and on the plugin SDK. Kept as a dated record.
