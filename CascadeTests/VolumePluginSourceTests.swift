@@ -4,6 +4,7 @@
 //
 
 import CascadeContracts
+import CascadePluginEngine
 import Foundation
 import Synchronization
 import Testing
@@ -51,6 +52,41 @@ struct VolumePluginSourceTests {
 
         let counters = emitted.withLock { $0 }.compactMap(PluginVolumeState.init).map(\.announcement)
         #expect(counters == [0, 1, 2])
+    }
+
+    /// A level the monitor did not announce, the first one of a session included, reaches the
+    /// volume widget with the last counter, so the volume alerts show nothing for it.
+    @Test
+    func anUnannouncedLevelKeepsTheLastCounter() async throws {
+        let monitor = FakeVolumeMonitor()
+        let source  = VolumePluginSource(monitor: monitor)
+        let emitted = Mutex<[PluginSourceEvent]>([])
+        source.start { event in emitted.withLock { $0.append(event) } }
+        try await waitUntil { emitted.withLock { $0.count } == 1 }
+
+        monitor.send(.level(percentage: 30, isMuted: false))
+        monitor.send(.changed(VolumeChangeEvent(percentage: 65, isMuted: false, revision: 1)))
+        monitor.send(.level(percentage: 70, isMuted: true))
+        try await waitUntil { emitted.withLock { $0.count } == 4 }
+
+        let states = emitted.withLock { $0 }.compactMap(PluginVolumeState.init)
+        #expect(states == [
+            PluginVolumeState(percentage: nil, isMuted: false, announcement: 0),
+            PluginVolumeState(percentage: 30, isMuted: false, announcement: 0),
+            PluginVolumeState(percentage: 65, isMuted: false, announcement: 1),
+            PluginVolumeState(percentage: 70, isMuted: true, announcement: 1),
+        ])
+    }
+
+    /// The volume widget shares the source with the volume alerts, so the source may run while
+    /// the alerts are off; the keys then leave macOS its own HUD, since nothing would replace it.
+    @Test
+    func theKeysReplaceTheSystemHUDOnlyWhileTheVolumeAlertsRun() {
+        #expect(CascadeServices.routesVolumeKeys(alertsEnabled: true, alertsState: nil))
+        #expect(CascadeServices.routesVolumeKeys(alertsEnabled: true, alertsState: .active))
+        #expect(!CascadeServices.routesVolumeKeys(alertsEnabled: false, alertsState: .active))
+        #expect(!CascadeServices.routesVolumeKeys(alertsEnabled: true, alertsState: .quarantined))
+        #expect(!CascadeServices.routesVolumeKeys(alertsEnabled: true, alertsState: .disabledAfterHang))
     }
 
     @Test

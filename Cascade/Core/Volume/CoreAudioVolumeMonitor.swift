@@ -19,6 +19,10 @@ final class CoreAudioVolumeMonitor: VolumeMonitoring {
 
     private let permissionObserver = VolumeAccessibilityObserver()
 
+    var routesKeys = true {
+        didSet { worker?.setRoutesKeys(routesKeys) }
+    }
+
     func start() -> AsyncStream<VolumeMonitorUpdate> {
         stop()
         sessionID &+= 1
@@ -35,7 +39,11 @@ final class CoreAudioVolumeMonitor: VolumeMonitoring {
             }
         }
 
-        let worker = VolumeMonitorWorker(sessionID: currentSession, continuation: pair.continuation)
+        let worker = VolumeMonitorWorker(
+            sessionID   : currentSession,
+            routesKeys  : routesKeys,
+            continuation: pair.continuation
+        )
         self.worker = worker
         observeLifecycle()
         worker.start()

@@ -44,7 +44,8 @@ nonisolated struct VolumeChangeReducer {
         )
     }
 
-    private static func percentage(for snapshot: SystemVolumeSnapshot) -> Int {
+    /// percentage is the level a snapshot shows: zero while muted.
+    static func percentage(for snapshot: SystemVolumeSnapshot) -> Int {
         snapshot.isMuted ? 0 : Int((min(1, max(0, snapshot.scalar)) * 100).rounded())
     }
 }

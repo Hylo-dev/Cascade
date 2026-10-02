@@ -5,8 +5,12 @@
 
 /// VolumeMonitorUpdate transports copied state to the main actor. Its stream
 /// coalesces volume changes; CoreAudio objects and callback pointers never cross.
+/// A change worth a notice is `changed`; any other change of the visible level,
+/// the first of a session included, is `level`, for what shows the level
+/// without announcing it.
 nonisolated enum VolumeMonitorUpdate: Sendable {
 
     case status (VolumeMonitoringStatus)
     case changed(VolumeChangeEvent)
+    case level  (percentage: Int, isMuted: Bool)
 }

@@ -11,7 +11,9 @@ import Foundation
 /// because the two are one subsystem: the tap decides which changes replace the system HUD, falls
 /// silent when it forwards a key to macOS and forces feedback on a handled key at the limit. The
 /// source emits a baseline when it starts, then every change the monitor announced, numbered, and
-/// stops the monitor, and with it the tap, when the plugin releases it.
+/// every other change of the level with the last number, so the volume alerts show nothing for it
+/// and the volume widget still draws it. It stops the monitor, and with it the tap, when the last
+/// plugin releases it.
 ///
 /// The engine calls it on its own queue; everything here runs on the main actor, reached through
 /// the main queue so a start and the stop that follows it keep their order.
@@ -50,18 +52,25 @@ final class VolumePluginSource: PluginEventSource {
 
         let stream = monitor.start()
         task = Task { [weak self] in
+            var announcement: UInt64 = 0
             for await update in stream {
                 guard let self, !Task.isCancelled else { return }
 
+                let state: PluginVolumeState
                 switch update {
                     case .status(let status):
                         statusHandler(status)
+                        continue
 
                     case .changed(let change):
-                        let state = PluginVolumeState(percentage: change.percentage, isMuted: change.isMuted, announcement: change.revision)
-                        if let event = try? state.event() {
-                            emit(event)
-                        }
+                        announcement = change.revision
+                        state        = PluginVolumeState(percentage: change.percentage, isMuted: change.isMuted, announcement: announcement)
+
+                    case .level(let percentage, let isMuted):
+                        state = PluginVolumeState(percentage: percentage, isMuted: isMuted, announcement: announcement)
+                }
+                if let event = try? state.event() {
+                    emit(event)
                 }
             }
         }

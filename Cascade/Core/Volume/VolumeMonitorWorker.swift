@@ -12,6 +12,9 @@ import os
 /// The tap must decide synchronously whether to swallow a key; only its private
 /// thread waits for CoreAudio, while observation reaches UI as Sendable values.
 /// Unchecked Sendable is limited to this queue-confined worker boundary.
+///
+/// The tap is installed only while `routesKeys` holds; without it the worker
+/// still observes the output and reports its level, which announces nothing.
 nonisolated final class VolumeMonitorWorker: @unchecked Sendable {
 
     private let queue        = DispatchQueue(label: "Cascade.Volume", qos: .userInitiated)
@@ -25,18 +28,22 @@ nonisolated final class VolumeMonitorWorker: @unchecked Sendable {
     private var isSuspended   = false
     private var tapIsActive   = false
     private var tapGeneration: UInt64 = 0
+    private var routesKeys   : Bool
 
-    private var reducer    = VolumeChangeReducer()
-    private var router     = VolumeKeyRouter()
-    private var lastStatus: VolumeMonitoringStatus?
+    private var reducer      = VolumeChangeReducer()
+    private var router       = VolumeKeyRouter()
+    private var lastStatus   : VolumeMonitoringStatus?
+    private var reportedLevel: (percentage: Int, isMuted: Bool)?
 
     private let logger = Logger(subsystem: "hylo.Cascade", category: "VolumeMonitor")
 
     init(
         sessionID   : UInt64,
+        routesKeys  : Bool,
         continuation: AsyncStream<VolumeMonitorUpdate>.Continuation
     ) {
         self.sessionID    = sessionID
+        self.routesKeys   = routesKeys
         self.continuation = continuation
     }
 
@@ -84,6 +91,19 @@ nonisolated final class VolumeMonitorWorker: @unchecked Sendable {
         }
     }
 
+    /// setRoutesKeys installs the tap or removes it as key routing is allowed
+    /// or not; a suspended worker installs it on resume.
+    func setRoutesKeys(_ routesKeys: Bool) {
+        queue.async { [weak self] in
+            guard let self, self.routesKeys != routesKeys else { return }
+
+            self.routesKeys = routesKeys
+            guard isRunning, !isSuspended else { return }
+
+            installTap()
+        }
+    }
+
     func suspend() {
         queue.async { [weak self] in
             guard let self, isRunning, !isSuspended else { return }
@@ -122,6 +142,10 @@ nonisolated final class VolumeMonitorWorker: @unchecked Sendable {
         tap?.stop()
         tap = nil
 
+        guard routesKeys else {
+            publishStatus(.stopped)
+            return
+        }
         guard AXIsProcessTrusted() else {
             publishStatus(.permissionRequired)
             return
@@ -171,25 +195,34 @@ nonisolated final class VolumeMonitorWorker: @unchecked Sendable {
 
     /// audioDidChange runs only on the AudioObject listener's registered queue.
     /// A baseline still advances while fallback is active, preventing replay.
+    /// A visible level that is not announced, the session's first included, is
+    /// still reported once, so what shows the level never misses one.
     private func audioDidChange(forcesFeedback: Bool = false) {
         guard isRunning, let audio else { return }
 
         audio.refreshOutput()
-        if let snapshot = audio.snapshot(),
-           let event = reducer.receive(
-               snapshot,
-               sessionID     : sessionID,
-               allowsNotice  : tapIsActive && router.allowsObservedNotice,
-               forcesFeedback: forcesFeedback
-           ) {
-            continuation.yield(.changed(event))
+        if let snapshot = audio.snapshot(), snapshot.scalar.isFinite {
+            let level = (percentage: VolumeChangeReducer.percentage(for: snapshot), isMuted: snapshot.isMuted)
+            if let event = reducer.receive(
+                snapshot,
+                sessionID     : sessionID,
+                allowsNotice  : tapIsActive && router.allowsObservedNotice,
+                forcesFeedback: forcesFeedback
+            ) {
+                continuation.yield(.changed(event))
+            } else if reportedLevel.map({ $0 != level }) ?? true {
+                continuation.yield(.level(percentage: level.percentage, isMuted: level.isMuted))
+            }
+            reportedLevel = level
         }
 
         publishCurrentStatus()
     }
 
     private func publishCurrentStatus() {
-        if !AXIsProcessTrusted() {
+        if !routesKeys {
+            publishStatus(.stopped)
+        } else if !AXIsProcessTrusted() {
             publishStatus(.permissionRequired)
         } else if audio?.supportsVolume != true {
             publishStatus(.unsupportedOutput)

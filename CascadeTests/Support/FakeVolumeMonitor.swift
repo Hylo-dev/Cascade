@@ -6,15 +6,19 @@
 @testable import Cascade
 
 /// FakeVolumeMonitor is a volume monitor the test plays: it hands out one stream and records
-/// stops and permission requests.
+/// starts, stops and permission requests.
 @MainActor
 final class FakeVolumeMonitor: VolumeMonitoring {
 
+    var routesKeys = true
+
+    private(set) var starts   = 0
     private(set) var stops    = 0
     private(set) var requests = 0
     private var continuation : AsyncStream<VolumeMonitorUpdate>.Continuation?
 
     func start() -> AsyncStream<VolumeMonitorUpdate> {
+        starts += 1
         let (stream, continuation) = AsyncStream<VolumeMonitorUpdate>.makeStream()
         self.continuation = continuation
         return stream

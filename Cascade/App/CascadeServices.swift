@@ -95,6 +95,7 @@ final class CascadeServices {
         didSet {
             preferences.set(volumeEnabled, forKey: "volumeEnabled")
             plugins.setEnabled(volumeEnabled, for: VolumePlugin.id)
+            updateVolumeRouting()
         }
     }
 
@@ -284,11 +285,13 @@ final class CascadeServices {
 
         plugins.statusHandler = { [weak self] status in
             self?.pluginStatus = status
+            self?.updateVolumeRouting()
         }
 
         volumeSource.statusHandler = { [weak self] status in
             self?.volumeStatus = status
         }
+        updateVolumeRouting()
 
         // Every Bluetooth state reaches the suppressor as it reaches the engine, before the
         // engine keeps only the latest for the plugin, so no new connection is missed.
@@ -603,6 +606,25 @@ final class CascadeServices {
 
     func requestVolumeAccessibility() {
         volumeSource.monitor.requestAccess()
+    }
+
+    /// routesVolumeKeys says whether the volume keys may replace the system HUD: only while the
+    /// volume alerts are switched on and running, since they draw the replacement. The volume
+    /// widget leases the same source, so the source may run while the alerts are off, quarantined
+    /// or stopped after a hang, and macOS then keeps its own HUD. Before the engine reports any
+    /// state the alerts count as running, so the tap is in place from the source's first start.
+    static func routesVolumeKeys(
+        alertsEnabled: Bool,
+        alertsState  : PluginState?
+    ) -> Bool {
+        alertsEnabled && (alertsState ?? .active) == .active
+    }
+
+    private func updateVolumeRouting() {
+        volumeSource.monitor.routesKeys = Self.routesVolumeKeys(
+            alertsEnabled: volumeEnabled,
+            alertsState  : pluginStatus?.plugins[VolumePlugin.id]
+        )
     }
 
     /// reenablePlugin brings back a plugin stopped after a hang or quarantined.
