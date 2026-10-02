@@ -122,6 +122,23 @@ struct ProgressPluginTests {
         #expect(output.wake == (try TestCalendar.date(2026, 10, 6, in: rome)))
     }
 
+    /// The bars are white, as the clock's and the battery's figures are, rather than the dimmer
+    /// primary colour a bar that names no style inherits.
+    @Test
+    func theBarsAreWhite() throws {
+        let rome     = try TestCalendar.rome()
+        let periods  = ProgressPeriods(at: try TestCalendar.date(2026, 10, 2, 12, in: rome), calendar: rome)
+        let document = try #require(try ProgressFace.publication(for: periods).document)
+        let bars     = PluginNodeSearch.nodes(in: document.root).filter { node in
+            if case .timerProgress = node.kind { return true }
+
+            return false
+        }
+
+        #expect(bars.count == 6)
+        #expect(bars.allSatisfy { $0.modifiers == [.foregroundStyle(.color(.white))] })
+    }
+
     /// ViewThatFits measures a face with the tile's width already given, so a fixed height keeps
     /// the four bars for the tall tile and two for the short one.
     @Test

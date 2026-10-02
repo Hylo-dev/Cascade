@@ -90,15 +90,7 @@ struct PluginNodeContent: View {
                 Text(timerInterval: start...end, countsDown: countsDown)
 
             case .timerProgress(let start, let end):
-                PluginTimerProgressBar(
-                    start   : start,
-                    end     : end,
-                    isStyled: model.modifiers.contains { modifier in
-                        if case .foregroundStyle = modifier { return true }
-
-                        return false
-                    }
-                )
+                PluginTimerProgressBar(start: start, end: end)
 
             case .progress(let value, let total, .linear):
                 ProgressView(value: value, total: total)

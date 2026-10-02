@@ -15,21 +15,51 @@ struct PluginTimerProgressBarTests {
 
     private let start = Date(timeIntervalSince1970: 1_800_000_000)
 
-    /// drawn renders a document whose root is a timer progress over the last and the next
-    /// minute, so its bar stands half full, 100 points wide.
-    private func drawn(_ modifiers: [PluginModifier] = []) throws -> NSBitmapImageRep {
-        let now       = Date.now
-        let progress  = PluginNode(.timerProgress(start: now.addingTimeInterval(-60), end: now.addingTimeInterval(60)), modifiers: modifiers)
+    /// halfway is a timer progress over the last and the next minute, so its bar stands half full.
+    private func halfway(_ modifiers: [PluginModifier] = []) -> PluginNode {
+        let now = Date.now
+
+        return PluginNode(.timerProgress(start: now.addingTimeInterval(-60), end: now.addingTimeInterval(60)), modifiers: modifiers)
+    }
+
+    private func store(_ root: PluginNode) throws -> PluginNodeStore {
         var publisher = PluginRenderFixtures.Publisher()
         let store     = PluginNodeStore(key: PluginRenderFixtures.key, submit: { _ in })
-        store.apply(publisher.publish(try PluginDocument(root: progress)))
-        let renderer  = ImageRenderer(
-            content: PluginDocumentView(store: store)
+        store.apply(publisher.publish(try PluginDocument(root: root)))
+
+        return store
+    }
+
+    /// widget renders a document as the notch's widget surface draws it, 100 points wide, in a
+    /// light environment, so only the surface itself can make the defaults those of the black
+    /// notch.
+    private func widget(_ root: PluginNode) throws -> NSBitmapImageRep {
+        let widget = PluginWidget(
+            id               : WidgetIdentifier("test"),
+            sizes            : [],
+            isPlacedByDefault: false,
+            store            : try store(root),
+            visibility       : { _ in }
+        )
+        let renderer = ImageRenderer(
+            content: widget.makeContentView()
                 .frame(width: 100)
+                .environment(\.colorScheme, .light)
         )
         renderer.scale = 1
 
         return NSBitmapImageRep(cgImage: try #require(renderer.cgImage))
+    }
+
+    /// drawn is what SwiftUI draws of a schedule asked at `date`: every entry but the last,
+    /// which a finite timeline never draws, or the only entry when there is one.
+    private func drawn(
+        _ schedule: PluginTimerProgressBar.Schedule,
+        from date : Date
+    ) -> [Date] {
+        let entries = Array(schedule.entries(from: date, mode: .normal))
+
+        return entries.count > 1 ? Array(entries.dropLast()) : entries
     }
 
     private func color(
@@ -58,22 +88,52 @@ struct PluginTimerProgressBarTests {
     }
 
     /// The schedule steps on a grid from the start, so a bar that appears late lines up with one
-    /// that was there all along, and it stops at the end, where a finished bar has nothing left
-    /// to draw.
+    /// that was there all along.
     @Test
-    func theScheduleStepsFromTheStartAndStopsAtTheEnd() {
-        let end      = start.addingTimeInterval(50_000)
+    func theScheduleStepsOnAGridFromTheStart() {
+        let schedule = PluginTimerProgressBar.Schedule(start: start, end: start.addingTimeInterval(50_000))
+
+        let drawn = drawn(schedule, from: start.addingTimeInterval(250))
+
+        #expect(drawn.prefix(3) == [start.addingTimeInterval(200), start.addingTimeInterval(300), start.addingTimeInterval(400)])
+    }
+
+    /// SwiftUI never draws a finite timeline's last entry, so the entries go past the end and the
+    /// last one drawn is at or after it: a bar of any length is drawn full once it ends, whether
+    /// its end falls on the grid or between two steps.
+    @Test(arguments: [8.0, 11.0, 50_000.0])
+    func aBarIsDrawnFullOnceItEnds(span: Double) {
+        let end      = start.addingTimeInterval(span)
+        let schedule = PluginTimerProgressBar.Schedule(start: start, end: end)
+        let step     = PluginTimerProgressBar.step(from: start, to: end)
+
+        let last = drawn(schedule, from: start.addingTimeInterval(span / 2)).last ?? start
+
+        #expect(last >= end)
+        #expect(last < end.addingTimeInterval(2 * step))
+        #expect(PluginTimerProgressBar.fraction(at: last, from: start, to: end) == 1)
+    }
+
+    /// A bar asked after its end has a single entry, which SwiftUI draws, full, and then the
+    /// timeline has nothing left to wait for.
+    @Test
+    func aBarAskedAfterItsEndIsDrawnFullOnce() {
+        let end      = start.addingTimeInterval(100)
         let schedule = PluginTimerProgressBar.Schedule(start: start, end: end)
 
-        let middle = Array(schedule.entries(from: start.addingTimeInterval(250), mode: .normal))
-        let before = schedule.entries(from: start.addingTimeInterval(-150), mode: .normal).first { _ in true }
-        let after  = Array(schedule.entries(from: end.addingTimeInterval(1_000), mode: .normal))
+        #expect(Array(schedule.entries(from: end.addingTimeInterval(1_000), mode: .normal)) == [end])
+    }
 
-        #expect(middle.prefix(3) == [start.addingTimeInterval(200), start.addingTimeInterval(300), start.addingTimeInterval(400)])
-        #expect(middle.last == end)
-        #expect(middle.count == 499)
-        #expect(before == start.addingTimeInterval(-200))
-        #expect(after == [end])
+    /// A bar that starts later is drawn once, empty, at once, since SwiftUI draws a first entry
+    /// dated after now straight away, and then not again until it starts.
+    @Test
+    func aBarThatStartsLaterIsDrawnOnceUntilItStarts() {
+        let schedule = PluginTimerProgressBar.Schedule(start: start, end: start.addingTimeInterval(50_000))
+
+        let drawn = drawn(schedule, from: start.addingTimeInterval(-150))
+
+        #expect(drawn.first == start)
+        #expect(!drawn.contains { $0 < start })
     }
 
     @Test
@@ -88,13 +148,15 @@ struct PluginTimerProgressBarTests {
         #expect(height == PluginTimerProgressBar.height)
     }
 
+    /// A bar that inherits no style fills with the primary colour of the widget's dark scheme,
+    /// the white of text that names no colour.
     @Test
     func aBarFillsInWhiteOverADimTrackByDefault() throws {
-        let bitmap = try drawn()
+        let bitmap = try widget(halfway())
         let filled = try color(in: bitmap, x: 20)
         let track  = try color(in: bitmap, x: 80)
 
-        #expect(filled.alphaComponent > 0.9)
+        #expect(filled.alphaComponent > 0.8)
         #expect(filled.redComponent > 0.9 && filled.greenComponent > 0.9 && filled.blueComponent > 0.9)
         #expect(track.alphaComponent > 0.1 && track.alphaComponent < 0.4)
     }
@@ -102,10 +164,42 @@ struct PluginTimerProgressBarTests {
     @Test
     func aBarFillsWithItsNodesForegroundStyle() throws {
         let red    = PluginColor(red: 1, green: 0, blue: 0)
-        let bitmap = try drawn([.foregroundStyle(.color(red))])
+        let bitmap = try widget(halfway([.foregroundStyle(.color(red))]))
         let filled = try color(in: bitmap, x: 20)
 
         #expect(filled.alphaComponent > 0.9)
         #expect(filled.redComponent > 0.9 && filled.greenComponent < 0.3 && filled.blueComponent < 0.3)
+    }
+
+    /// A bar inherits a style its node does not name, as every other node does.
+    @Test
+    func aBarFillsWithItsParentsForegroundStyle() throws {
+        let red    = PluginColor(red: 1, green: 0, blue: 0)
+        let parent = PluginNode(
+            .vStack(alignment: .leading, spacing: nil),
+            modifiers: [.foregroundStyle(.color(red))],
+            children : [halfway()]
+        )
+        let bitmap = try widget(parent)
+        let filled = try color(in: bitmap, x: 20)
+
+        #expect(filled.alphaComponent > 0.9)
+        #expect(filled.redComponent > 0.9 && filled.greenComponent < 0.3 && filled.blueComponent < 0.3)
+    }
+
+    /// The widget surface draws in the dark scheme, as the notch's other surfaces do, so content
+    /// that names no colour is white on the black notch whatever the system appearance.
+    @Test
+    func aWidgetDrawsTextThatNamesNoColourInWhite() throws {
+        let bitmap = try widget(
+            PluginNode(
+                .text("████"),
+                modifiers: [.font(PluginFont(size: 20, weight: nil, design: nil))]
+            )
+        )
+        let ink = try (0..<bitmap.pixelsWide).map { x in try color(in: bitmap, x: x) }.filter { $0.alphaComponent > 0.5 }
+
+        #expect(!ink.isEmpty)
+        #expect(ink.allSatisfy { $0.redComponent > 0.9 && $0.greenComponent > 0.9 && $0.blueComponent > 0.9 })
     }
 }

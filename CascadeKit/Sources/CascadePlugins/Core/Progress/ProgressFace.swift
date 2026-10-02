@@ -71,7 +71,7 @@ enum ProgressFace {
         )
     }
 
-    /// row is one period: its name, small and dimmed, above the kernel's bar.
+    /// row is one period: its name, small and dimmed, above the kernel's bar in white.
     private static func row(
         _ label : String,
         _ period: ClosedRange<Date>
@@ -85,6 +85,7 @@ enum ProgressFace {
                 .minimumScaleFactor(0.8)
 
             ProgressView(timerInterval: period)
+                .foregroundStyle(.white)
         }
     }
 }

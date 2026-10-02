@@ -41,8 +41,14 @@ final class PluginWidget: NotchWidget {
         self.visibility        = visibility
     }
 
+    /// makeContentView draws the publication in the dark scheme, as the notch's activities and
+    /// notices are drawn: the notch is black whatever the system appearance, so content that
+    /// names no colour, text or a timer's bar, is white on it rather than black.
     func makeContentView() -> AnyView {
-        AnyView(PluginDocumentView(store: store))
+        AnyView(
+            PluginDocumentView(store: store)
+                .environment(\.colorScheme, .dark)
+        )
     }
 
     func activate(in context: WidgetContext) {
