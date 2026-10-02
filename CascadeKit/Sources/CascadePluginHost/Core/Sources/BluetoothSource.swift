@@ -15,17 +15,21 @@ import os
 /// output listener and IOKit's system power messages.
 ///
 /// Starting it emits a baseline, event zero, that says whether monitoring works; the devices
-/// connected at that moment are state, not news. A wake rebuilds that baseline silently, since
-/// callbacks may be stale or missing across sleep, and sleep stops the route listener until then.
-/// Event numbers keep counting across a stop and a start, so they never repeat within one
-/// PluginHost and a plugin can tell a newer event from a late reading of an older one. Unlike
-/// Cascade's old monitor, it does not pause while the user's session is switched out: an inactive
-/// session cannot see the notch, and the notice it might raise there expires on its own.
+/// connected at that moment are state, not news. A wake rebuilds that baseline, since callbacks
+/// may be stale or missing across sleep, and sleep stops the route listener until then. Event
+/// numbers keep counting across a stop and a start, so they never repeat within one PluginHost
+/// and a plugin can tell a newer event from a late reading of an older one. Unlike Cascade's old
+/// monitor, it does not pause while the user's session is switched out: an inactive session
+/// cannot see the notch, and the notice it might raise there expires on its own.
 ///
 /// Every state lists the devices connected when it is emitted, read from the reducer that
-/// already follows them, so a plugin that starts late still learns what is connected. A wake
-/// that changed the list emits a new baseline, never a connection, and one that did not emits
-/// nothing.
+/// already follows them, so a plugin that starts late still learns what is connected. The
+/// framework's list carries no battery, so each baseline reads the battery of the devices it
+/// lists, once, as a connection does. What a start or a wake emits is therefore a baseline,
+/// never a connection: a start always emits one, then one more each time its reads learn a
+/// battery; a wake emits one only when a device came or went while the Mac slept, then one
+/// each time its reads find a battery that changed. A wake that changed nothing emits nothing,
+/// and a battery read once a newer event exists waits for that event's next state.
 ///
 /// IOBluetooth delivers connection notifications through the run loop of the thread that
 /// registered, so the observer is started and stopped on the main queue, which PluginHost's main
@@ -238,9 +242,9 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
 
     /// rebuildBaseline reads the devices connected now as silent state, and emits them as a
     /// baseline when they are not the list last emitted: always at start, after a wake only if
-    /// a device came or went while the Mac slept. Callbacks queued before it belong to the old
-    /// baseline and are rejected; those that race it are held by the observer and replayed after
-    /// the baseline, preserving their order.
+    /// a device came or went while the Mac slept. Then it reads the battery of each device it
+    /// lists. Callbacks queued before it belong to the old baseline and are rejected; those that
+    /// race it are held by the observer and replayed after the baseline, preserving their order.
     private func rebuildBaseline() {
         guard let observer else { return }
 
@@ -249,13 +253,40 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
         reducer.replaceBaseline(with: observer.connectedDevices())
         restartRouteMonitoring()
 
-        let baseline = PluginBluetoothState.baseline(isAvailable: true, connectedDevices: connectedDevices)
+        let baseline = PluginBluetoothState.baseline(
+            isAvailable     : true,
+            connectedDevices: connectedDevices
+        )
         if baseline.connectedDevices != publishedDevices {
             publish(baseline)
         }
+        readBaselineMetadata()
 
         for callback in observer.finishBaselineReplacement() {
             receive(callback)
+        }
+    }
+
+    /// readBaselineMetadata reads the devices the baseline lists, at most four, on the
+    /// enricher's queue with its single retry, and emits a new baseline when a read changes a
+    /// battery. Only while no event has been numbered since: a baseline after event N makes the
+    /// alerts plugin forget N, so N's next revision would show its notice a second time. Then
+    /// the battery stays in the reducer and rides the next state instead.
+    private func readBaselineMetadata() {
+        let identity = gate.identity
+        let eventID  = nextEventID
+
+        for device in reducer.connectedDevices.prefix(PluginBluetoothDevice.maximumCount) {
+            enricher.enrich(deviceID: device.deviceID) { [weak self] metadata in
+                guard let self,
+                      isRunning,
+                      gate.accepts(identity),
+                      reducer.enrichBaselineDevice(deviceID: device.deviceID, metadata: metadata),
+                      nextEventID == eventID
+                else { return }
+
+                publish(.baseline(isAvailable: true, connectedDevices: connectedDevices))
+            }
         }
     }
 
@@ -319,7 +350,11 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
     /// summary its battery already reports, the lower earbud for AirPods.
     private var connectedDevices: [PluginBluetoothDevice] {
         reducer.connectedDevices.map { device in
-            PluginBluetoothDevice(name: device.name, symbolName: device.symbolName, batteryLevel: device.battery?.level)
+            PluginBluetoothDevice(
+                name        : device.name,
+                symbolName  : device.symbolName,
+                batteryLevel: device.battery?.level
+            )
         }
     }
 }

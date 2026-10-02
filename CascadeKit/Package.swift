@@ -107,7 +107,7 @@ let package = Package(
         ),
         .testTarget(
             name: "CascadePluginEngineTests",
-            dependencies: ["CascadePluginEngine", "CascadePluginHost", "CascadePluginSDK", "CascadeContracts"],
+            dependencies: ["CascadePluginEngine", "CascadePluginHost", "CascadePlugins", "CascadePluginSDK", "CascadeContracts"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .target(

@@ -4,6 +4,8 @@
 //
 
 import CascadeContracts
+import CascadePluginSDK
+import CascadePlugins
 import CoreAudio
 import Foundation
 import Synchronization
@@ -33,11 +35,12 @@ struct BluetoothSourceTests {
     private func source(
         _ system : FakeBluetoothSystem,
         metadata : BluetoothDeviceMetadata = BluetoothDeviceMetadata(battery: BluetoothBatterySnapshot(level: 64), model: .airPods),
+        reader   : FakeMetadataReader? = nil,
         routes   : RouteSources = RouteSources(snapshot: nil)
     ) -> (BluetoothSource, Recorder<PluginBluetoothState>) {
         let source = BluetoothSource(
             makeObserver      : system.makeObserver,
-            metadataReader    : FixedMetadataReader(metadata: metadata),
+            metadataReader    : reader ?? FakeMetadataReader(metadata: metadata),
             routeSourceFactory: routes.make,
             registrationQueue : DispatchQueue(label: "cascade.tests.bluetooth-registration"),
             metadataRetryDelay: .milliseconds(1)
@@ -53,16 +56,70 @@ struct BluetoothSourceTests {
     }
 
     @Test
-    func startingEmitsABaselineAndDevicesAlreadyConnectedStaySilent() async throws {
+    func startingEmitsABaselineThenTheBatteriesItReadsAndDevicesAlreadyConnectedStaySilent() async throws {
         let system           = FakeBluetoothSystem(connected: [airPods])
         let (source, states) = source(system)
-        #expect(try await eventually { states.values.count == 1 })
+        #expect(try await eventually { states.values.count == 2 })
 
         system.latest?.connect(airPods)
         try await Task.sleep(for: .milliseconds(30))
         source.stop()
 
-        #expect(states.values == [.baseline(isAvailable: true, connectedDevices: [listed(airPods)])])
+        #expect(states.values == [
+            .baseline(isAvailable: true, connectedDevices: [listed(airPods)]),
+            .baseline(isAvailable: true, connectedDevices: [listed(airPods, battery: 64)]),
+        ])
+    }
+
+    @Test
+    func aWakeRereadsTheBatteriesAndEmitsOnlyWhenOneChanged() async throws {
+        let system           = FakeBluetoothSystem(connected: [airPods])
+        let reader           = FakeMetadataReader(metadata: BluetoothDeviceMetadata(battery: BluetoothBatterySnapshot(level: 64)))
+        let (source, states) = source(system, reader: reader)
+        #expect(try await eventually { states.values.count == 2 })
+
+        source.simulate(.didWake)
+        #expect(try await eventually { reader.reads == 2 })
+        try await Task.sleep(for: .milliseconds(30))
+        #expect(states.values.count == 2)
+
+        reader.answer(with: BluetoothDeviceMetadata(battery: BluetoothBatterySnapshot(level: 50)))
+        source.simulate(.didWake)
+        #expect(try await eventually { states.values.count == 3 })
+        try await Task.sleep(for: .milliseconds(30))
+        source.stop()
+
+        #expect(states.values.map(\.connectedDevices) == [
+            [listed(airPods)],
+            [listed(airPods, battery: 64)],
+            [listed(airPods, battery: 50)],
+        ])
+        #expect(states.values.allSatisfy { $0.eventID == 0 })
+    }
+
+    @Test
+    func aConnectionBeforeABaselineBatteryIsReadCarriesItAndShowsOneNotice() async throws {
+        let system           = FakeBluetoothSystem(connected: [airPods])
+        let reader           = FakeMetadataReader(metadata: BluetoothDeviceMetadata(battery: BluetoothBatterySnapshot(level: 64)), holding: airPods.deviceID)
+        let (source, states) = source(system, reader: reader)
+        #expect(try await eventually { states.values.count == 1 })
+
+        system.latest?.connect(keyboard)
+        #expect(try await eventually { states.values.count == 2 })
+        reader.letThrough()
+        #expect(try await eventually { states.values.count == 3 })
+        try await Task.sleep(for: .milliseconds(30))
+        source.stop()
+
+        let plugin     = BluetoothPlugin()
+        let context    = PluginContext(plugin: BluetoothPlugin.id)
+        let deliveries = try states.values.map { state in
+            try plugin.handle(.source(state.event()), context: context).publications.first?.notice?.delivery
+        }
+
+        #expect(states.values.map(\.eventID) == [0, 1, 1])
+        #expect(states.values.last?.connectedDevices == [listed(airPods, battery: 64), listed(keyboard, battery: 64)])
+        #expect(deliveries == [nil, .show, .update])
     }
 
     @Test
@@ -94,7 +151,7 @@ struct BluetoothSourceTests {
     @Test
     func aWakeListsTheDevicesStillConnectedOnlyWhenTheListChanged() async throws {
         let system           = FakeBluetoothSystem(connected: [airPods, keyboard])
-        let (source, states) = source(system)
+        let (source, states) = source(system, metadata: BluetoothDeviceMetadata())
         #expect(try await eventually { states.values.count == 1 })
 
         system.replaceConnected(with: [keyboard, airPods])
@@ -395,12 +452,43 @@ final class RouteSources: Sendable {
     }
 }
 
-/// FixedMetadataReader answers every read with the same metadata.
-struct FixedMetadataReader: BluetoothDeviceMetadataReading {
+/// FakeMetadataReader answers every read with the metadata the test set last and counts the
+/// reads. A device it holds is answered only once the test lets it through, so a test can put
+/// that read after an event; the reads behind it wait too, as they do on the enricher's queue.
+final class FakeMetadataReader: BluetoothDeviceMetadataReading {
 
-    let metadata: BluetoothDeviceMetadata
+    private let state  : Mutex<(metadata: BluetoothDeviceMetadata, reads: Int)>
+    private let held   : String?
+    private let release = DispatchSemaphore(value: 0)
+
+    init(
+        metadata: BluetoothDeviceMetadata,
+        holding : String? = nil
+    ) {
+        self.state = Mutex((metadata: metadata, reads: 0))
+        self.held  = holding
+    }
+
+    var reads: Int {
+        state.withLock { $0.reads }
+    }
+
+    func answer(with metadata: BluetoothDeviceMetadata) {
+        state.withLock { $0.metadata = metadata }
+    }
+
+    func letThrough() {
+        release.signal()
+    }
 
     func metadata(for deviceID: String) -> BluetoothDeviceMetadata {
-        metadata
+        if deviceID == held {
+            release.wait()
+        }
+
+        return state.withLock { state in
+            state.reads += 1
+            return state.metadata
+        }
     }
 }

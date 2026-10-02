@@ -121,6 +121,35 @@ struct BluetoothConnectionReducerTests {
     }
 
     @Test
+    func audioComingBackToAKnownDeviceKeepsItsOwnNameAndSymbol() {
+        var reducer = BluetoothConnectionReducer()
+        let speaker = BluetoothConnectedDevice(deviceID: "AB-CD-EF-01-23-45", name: "Kitchen", symbolName: "speaker.wave.2")
+        reducer.replaceBaseline(with: [speaker])
+
+        let routed = reducer.recordAudioRoute(device(speaker.deviceID, name: "Kitchen Output"), eventID: 1, now: 100)
+
+        #expect(routed?.name == "Kitchen" && routed?.symbolName == "speaker.wave.2")
+        #expect(reducer.connectedDevices == [speaker])
+    }
+
+    @Test
+    func aBaselineDeviceTakesItsReadOnlyUntilAnEventOfItsOwnClaimsIt() {
+        var reducer  = BluetoothConnectionReducer()
+        let phones   = device("BB-CC-DD-EE-FF-00")
+        let metadata = BluetoothDeviceMetadata(battery: BluetoothBatterySnapshot(level: 40))
+        reducer.replaceBaseline(with: [phones])
+
+        let changed   = reducer.enrichBaselineDevice(deviceID: phones.deviceID, metadata: metadata)
+        let unchanged = reducer.enrichBaselineDevice(deviceID: phones.deviceID, metadata: metadata)
+        let unknown   = reducer.enrichBaselineDevice(deviceID: "CC-DD-EE-FF-00-11", metadata: metadata)
+        _ = reducer.recordAudioRoute(phones, eventID: 1, now: 100)
+        let claimed   = reducer.enrichBaselineDevice(deviceID: phones.deviceID, metadata: metadata)
+
+        #expect(changed && !unchanged && !unknown && !claimed)
+        #expect(reducer.connectedDevices.first?.battery == nil, "The route's own read revises it, not a baseline read")
+    }
+
+    @Test
     func theFirstRouteAfterAFreshConnectionIsCoalescedOnly() {
         var reducer = BluetoothConnectionReducer()
         let phones  = device("77-88-99-AA-BB-CC")
