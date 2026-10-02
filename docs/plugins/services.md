@@ -11,7 +11,7 @@ A service is a call a plugin makes, declared per feature in the manifest's `serv
 | Kernel | Touches frames, input or the notch window, or updates the UI more than about ten times a second | Spectrum capture (Core Audio tap), the spacebar and Spotlight input taps, the file shelf, Spotlight |
 | PluginHost | Talks to other apps or parses system data at human frequency | Now playing and Music commands (AppleEvents), Bluetooth, power, network |
 
-Tier-2 components bind only to kernel services and get their data from them directly, never through the plugin. Data born in PluginHost reaches the kernel as publication data: artwork, for example, will travel through the asset pipeline. Volume, which spec §6 placed in PluginHost, is a kernel source today, beside the volume key tap it shares a subsystem with.
+The planned service-fed components, `audio.spectrum`, `media.scrubber` and `audio.outputPicker`, will bind only to kernel services and get their data from them directly, never through the plugin; the four components drawn today take the parameters their plugin passes (see [Content](content.md)). Data born in PluginHost reaches the kernel as publication data: artwork, for example, will travel through the asset pipeline. Volume, which spec §6 placed in PluginHost, is a kernel source today, beside the volume key tap it shares a subsystem with.
 
 The SDK's client calls will be synchronous: each blocks the plugin's own thread with a timeout, and returning past the kernel's 250 ms deadline still counts as a hang. A plugin cannot make two client calls in parallel, which is acceptable for thin, event-driven plugins.
 

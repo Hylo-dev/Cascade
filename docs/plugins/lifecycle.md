@@ -5,7 +5,7 @@ A plugin is finite handlers plus the sources its manifest declares. Nothing runs
 ## Three separate lives
 
 1. **Work.** PluginHost starts with Cascade and stays alive while Cascade runs, idle when nothing changes. Launching it on demand would cost about 66 ms per wake, so it waits until measured RAM justifies it.
-2. **Presentation.** Publications live in the kernel's `PluginPublicationStore`, not in the plugin. The notch always shows the last valid content, across a throw, a hang or a PluginHost restart. After a Cascade restart nothing is restored from disk: every plugin is asked for its content again.
+2. **Presentation.** Publications live in the kernel's `PluginPublicationStore`, not in the plugin. The last valid content survives a throw and a PluginHost restart, and when PluginHost is killed for one plugin's hang, the others keep showing theirs. A plugin the kernel stops loses its content: one disabled after a hang, quarantined, switched off by the user, or whose feature loses a grant has its publications withdrawn. After a Cascade restart nothing is restored from disk: every plugin is asked for its content again.
 3. **Visibility.** It is decided per surface, not by `NotchState`. A widget is visible while its page is open on screen, a notice while it shows; the compact activity, once activities are routed, stays visible while the notch is closed.
 
 ## What wakes a plugin
@@ -60,10 +60,10 @@ Whenever a plugin may have lost its memory, after a retry, a PluginHost restart 
 | `handle()` throws | Retry after 1, 5 and then 30 s. The fourth incident of any kind but a hang within five minutes quarantines. |
 | PluginHost dies with a plugin inside `handle()` | Counts against that plugin like a throw. |
 | Invalid publication, CPU debt | Counts as an incident; the plugin returned, so there is nothing to retry. An invalid publication is rejected and the previous one stays. A plugin in debt is held until it has rested. |
-| Hang: `handle()` past 250 ms | The watchdog kills the PluginHost incarnation of the handshake with SIGKILL and PluginHost comes back for the others at once. The hung plugin stays `disabledAfterHang` until the user re-enables it or Cascade restarts; a second hang since Cascade started quarantines it. |
+| Hang: `handle()` past 250 ms | The watchdog kills the PluginHost incarnation of the handshake with SIGKILL and PluginHost comes back for the others at once. The hung plugin's content is withdrawn and it stays `disabledAfterHang` until the user re-enables it or Cascade restarts; a second hang since Cascade started quarantines it. |
 | PluginHost crashes with nothing in flight | Blamed on PluginHost. It comes back after 1, 5 and then 30 s. |
 | PluginHost past 96 MiB | Checked after each answer, so nothing polls. PluginHost is killed blaming no plugin, and comes back like after a crash. |
-| Three idle crashes or memory kills within five minutes | PluginHost is given up on. Settings show it stopped, with a Restart button. |
+| Three idle crashes or memory kills, in any mix, within five minutes | PluginHost is given up on. Settings show it stopped, with a Restart button. |
 | A new PluginHost silent for 30 s at handshake | Lost like a crash with nothing in flight. |
 
 PluginHost never comes back sooner than ten seconds after its last launch, because launchd holds back a service that died that young until then. The watchdog arms only on dispatches to an incarnation that completed its handshake, so it never times a host that is not there. Re-enable gives a quarantined plugin a clean history; a plugin disabled after a hang keeps its history, so a second hang quarantines it. Settings show every plugin's state (Widget page, Plugins section) with Re-enable where it applies.

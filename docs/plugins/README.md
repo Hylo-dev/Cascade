@@ -2,7 +2,7 @@
 
 Cascade's widgets, notices and activities are plugins. A plugin is data in and data out: it receives events and answers with declarative documents, and Cascade, the kernel, validates them, keeps them and draws them. A plugin never hands Cascade a view, so it cannot block the notch, trap inside it or make it redraw for nothing.
 
-First-party plugins run in **PluginHost**, an XPC service bundled in Cascade, each on a thread of its own. A plugin that crashes or hangs costs a PluginHost restart, and the notch keeps showing its last valid content meanwhile. The decisions and their reasons are in the [plugin engine spec](../superpowers/specs/2026-09-29-plugin-engine-design.md); these pages describe what the code does today.
+First-party plugins run in **PluginHost**, an XPC service bundled in Cascade, each on a thread of its own. A plugin that crashes or hangs costs a PluginHost restart, and the other plugins keep showing their content meanwhile. The decisions and their reasons are in the [plugin engine spec](../superpowers/specs/2026-09-29-plugin-engine-design.md); these pages describe what the code does today.
 
 ## Pages
 

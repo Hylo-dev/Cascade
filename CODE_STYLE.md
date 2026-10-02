@@ -29,7 +29,7 @@ Every file opens with the standard Xcode banner: the file name and the product n
 - **Never use cryptic names. The more explanatory, the better.** A slightly longer name that says what it is always beats a short one that needs a comment.
 - Prefer `activeScreen` over `scr`, `notchWidth` over `nw`, `morphProgress` over `mp`. No abbreviations unless they are universal (`url`, `id`, `dpi`, `rgb`).
 - Types: `UpperCamelCase`. Members: `lowerCamelCase`.
-- Protocols: role name (`DisplayInventoryProviding`, `EventMonitoring`, `PluginExecutor`, `PluginTransport`) or capability suffix (`HardwareNotchDetecting`).
+- Protocols: role name (`DisplayInventoryProviding`, `EventMonitoring`, `PluginExecutor`, `PluginTransport`) or capability suffix (`NotchSizeStoring`).
 - Concrete implementations: a qualifier that states their nature (`CoreAudioBluetoothRouteSource`, `MouseEventMonitor`, `DisplayLinkMorphEngine`, `XPCPluginTransport`).
 - Booleans read as questions (`isOpen`, `hasHardwareNotch`, `canExpand`, `isSuspended`).
 

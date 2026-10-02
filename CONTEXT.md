@@ -39,7 +39,7 @@ _Avoid_: Addon or extension, the names of the superseded design.
 
 **Source**: An always-armed listener from the host's catalog, such as power, Bluetooth or volume, that costs nothing while it waits and wakes the plugins that declared it with its latest state.
 
-**Publication**: What one feature shows on one surface. Cascade keeps it and shows it until the plugin replaces or withdraws it, whatever happens to the plugin meanwhile.
+**Publication**: What one feature shows on one surface. Cascade keeps it and shows it until the plugin replaces or withdraws it, or the kernel stops the plugin.
 
 **Notice**: A short message on the notch, at most ten seconds, shown on the focused display, such as a device connecting or the volume changing. Unlike a **Live Activity**, it reports one change and then leaves.
 
