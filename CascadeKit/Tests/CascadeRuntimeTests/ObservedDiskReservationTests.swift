@@ -24,7 +24,7 @@ struct ObservedDiskReservationTests {
     func observedDebtSurvivesGenericCleanupAndBlocksOwnerDiskGrowth() async throws {
         let governor = ResourceGovernor()
         let token    = try await governor.admitObservedDisk(bytes: 1, owner: first)
-        let cache    = try await governor.admit(.diskCache(bytes: 1), owner: first)
+        _            = try await governor.admit(.diskCache(bytes: 1), owner: first)
 
         #expect(try await governor.reconcileObservedDisk(
             token,
@@ -46,24 +46,8 @@ struct ObservedDiskReservationTests {
         }
 
         await #expect(throws: AddonFailure.self) {
-            try await governor.resizeDiskReservation(
-                cache.id,
-                owner    : first,
-                fromBytes: 1,
-                toBytes  : 2
-            )
-        }
-
-        await #expect(throws: AddonFailure.self) {
             try await governor.release(token.reservation.id, owner: first)
         }
-
-        #expect(try await !governor.resizeDiskReservation(
-            token.reservation.id,
-            owner    : first,
-            fromBytes: 11 * mib,
-            toBytes  : 0
-        ))
 
         await governor.releaseAll(owner: first)
         #expect(await governor.usage(.diskBytes) == 11 * mib)
@@ -318,11 +302,6 @@ struct ObservedDiskReservationTests {
             }
         }
 
-        #expect(await !governor.reduceStateReservation(
-            token.reservation.id,
-            owner  : first,
-            toBytes: 0
-        ))
         #expect(try await !governor.resizeStateReservation(
             token.reservation.id,
             owner    : first,

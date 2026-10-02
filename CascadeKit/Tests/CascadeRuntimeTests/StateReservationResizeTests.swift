@@ -25,7 +25,7 @@ struct StateReservationResizeTests {
     func growthUsesOnlyThePayloadDeltaAndKeepsReservationMetadata() async throws {
         let governor = ResourceGovernor(policy: ResourcePolicy(maximumRetainedStateBytes: 8_192))
         let state    = try await governor.admit(.state(bytes: 2_048), owner: first)
-        _ = try await governor.admit(.job, owner: second)
+        _ = try await governor.admit(.temporaryMemory(bytes: 0), owner: second)
         _ = try await governor.admit(.state(bytes: 2_048), owner: third)
 
         #expect(await governor.usage(.retainedStateBytes) == 7_168)
@@ -72,7 +72,7 @@ struct StateReservationResizeTests {
     func sameSizeAndShrinkSucceedAtFullCapacity() async throws {
         let governor = ResourceGovernor(policy: ResourcePolicy(maximumRetainedStateBytes: 8_192))
         let state    = try await governor.admit(.state(bytes: 6_144), owner: first)
-        _ = try await governor.admit(.job, owner: second)
+        _ = try await governor.admit(.temporaryMemory(bytes: 0), owner: second)
 
         #expect(await governor.usage(.retainedStateBytes) == 8_192)
         #expect(try await governor.resizeStateReservation(
@@ -96,11 +96,11 @@ struct StateReservationResizeTests {
     func ownershipPrecedesKindSizesAndDesiredAmountValidation() async throws {
         let governor = ResourceGovernor()
         let state    = try await governor.admit(.state(bytes: 128), owner: first)
-        let provider = try await governor.admit(.provider, owner: first)
+        let memory   = try await governor.admit(.temporaryMemory(bytes: 64 * 1_024 * 1_024), owner: first)
 
         do {
             _ = try await governor.resizeStateReservation(
-                provider.id,
+                memory.id,
                 owner    : second,
                 fromBytes: -1,
                 toBytes  : Int.max
@@ -117,7 +117,7 @@ struct StateReservationResizeTests {
             toBytes  : Int.max
         ))
         #expect(try await !governor.resizeStateReservation(
-            provider.id,
+            memory.id,
             owner    : first,
             fromBytes: 0,
             toBytes  : Int.max
@@ -129,7 +129,6 @@ struct StateReservationResizeTests {
             toBytes  : Int.max
         ))
         #expect(await governor.usage(.retainedStateBytes) == 2_176)
-        #expect(await governor.usage(.providers) == 1)
         #expect(await governor.usage(.admittedMemoryBytes) == 64 * 1_024 * 1_024)
     }
 
@@ -211,7 +210,7 @@ struct StateReservationResizeTests {
     func releaseAfterGrowthReturnsTheFinalChargeAndPreservesOtherOwners() async throws {
         let governor = ResourceGovernor()
         let state    = try await governor.admit(.state(bytes: 128), owner: first)
-        let provider = try await governor.admit(.provider, owner: second)
+        let memory   = try await governor.admit(.temporaryMemory(bytes: 64 * 1_024 * 1_024), owner: second)
 
         #expect(try await governor.resizeStateReservation(
             state.id,
@@ -222,13 +221,11 @@ struct StateReservationResizeTests {
 
         try await governor.release(state.id, owner: first)
         #expect(await governor.usage(.retainedStateBytes) == 1_024)
-        #expect(await governor.usage(.providers) == 1)
         #expect(await governor.usage(.admittedMemoryBytes) == 64 * 1_024 * 1_024)
         #expect(await governor.usage(.retainedStateBytes, owner: second) == 1_024)
 
-        try await governor.release(provider.id, owner: second)
+        try await governor.release(memory.id, owner: second)
         #expect(await governor.usage(.retainedStateBytes) == 0)
-        #expect(await governor.usage(.providers) == 0)
         #expect(await governor.usage(.admittedMemoryBytes) == 0)
     }
 }

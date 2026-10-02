@@ -1,5 +1,7 @@
 # Cascade: baseline for the application map
 
+> **Superseded record.** This survey of 4 September 2026 predates the [plugin engine spec](../../superpowers/specs/2026-09-29-plugin-engine-design.md): the deployment floor is now macOS 15, and widgets are plugins rather than `NotchWidget` objects registered in the host. It is kept as a dated record.
+
 Survey of 4 September 2026. This document collects the requirements received and the findings on the code; it is not yet the Wayfinder map nor an approved specification.
 
 ## Requested destination

@@ -34,22 +34,6 @@ enum ContractValidation {
                 .contains(where: { $0.allSatisfy(\.isNumber) && $0.count > 1 && $0.first == "0" }) ?? false)
     }
 
-    static func range(_ value: String) -> Bool {
-        let parts = value.split(separator: " ", omittingEmptySubsequences: false)
-
-        return !parts.isEmpty && parts.count <= 8
-            && parts.allSatisfy { part in
-                var version = String(part)
-                if version.hasPrefix(">=") || version.hasPrefix("<=") {
-                    version.removeFirst(2)
-                } else if version.hasPrefix(">") || version.hasPrefix("<") || version.hasPrefix("=") {
-                    version.removeFirst()
-                }
-
-                return semver(version)
-            }
-    }
-
     static func unique(
         _ values: [String],
         _ reason: String

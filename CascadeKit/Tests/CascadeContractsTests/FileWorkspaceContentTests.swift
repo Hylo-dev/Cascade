@@ -12,41 +12,8 @@ import Testing
 struct FileWorkspaceContentTests {
 
     @Test
-    func schemaThreeIsRequiredAndPreservesWorkspaceAssetsAndActions() throws {
+    func duplicateDescriptorsAreRejected() throws {
         let fixture = try WorkspaceContractFixture()
-        let node    = try ContentNode.fileWorkspace(fixture.presentation)
-
-        for schema in [1, 2] {
-            #expect(throws: (any Error).self) {
-                try ContentDocument(
-                    schemaVersion     : schema,
-                    root              : node,
-                    accessibilityLabel: "File shelf",
-                    privacy           : .sensitive,
-                    assets            : ["thumb-one"]
-                )
-            }
-        }
-
-        let document = try ContentDocument(
-            schemaVersion     : 3,
-            root              : node,
-            accessibilityLabel: "File shelf",
-            privacy           : .sensitive,
-            assets            : ["thumb-one"],
-            glassLights       : []
-        )
-        #expect(try ContentDocument.decode(document.encode()) == document)
-
-        #expect(throws: (any Error).self) {
-            try ContentDocument(
-                schemaVersion     : 3,
-                root              : node,
-                accessibilityLabel: "File shelf",
-                privacy           : .sensitive,
-                assets            : []
-            )
-        }
 
         #expect(throws: (any Error).self) {
             try FileWorkspacePresentation(
@@ -152,60 +119,5 @@ struct FileWorkspaceContentTests {
                 ]
             )
         }
-    }
-
-    @Test
-    func contextRequiresExplicitlyNegotiatedSchemaThreeForFutureTimelineContent() throws {
-        let fixture = try WorkspaceContractFixture()
-        let owner   = try #require(AddonID(rawValue: "com.example.files"))
-        let id      = PublicationID(
-            addonID   : owner,
-            instanceID: UUID(),
-            sessionID : UUID()
-        )
-        let document = try ContentDocument(
-            schemaVersion     : 3,
-            root              : .fileWorkspace(fixture.presentation),
-            accessibilityLabel: "File shelf",
-            privacy           : .sensitive,
-            assets            : ["thumb-one"]
-        )
-        let presentation = try PresentationSet(
-            widget         : document,
-            compactLeading : nil,
-            compactTrailing: nil,
-            minimal        : nil,
-            expanded       : nil
-        )
-        let publication = try Publication(
-            id         : id,
-            revision   : 1,
-            kind       : .widget,
-            content    : nil,
-            timeline   : [ScheduledEntry(date: Date().addingTimeInterval(30), content: presentation)],
-            expiresAt  : Date().addingTimeInterval(60),
-            stalePolicy: .remove
-        )
-        let output = try ProviderOutput(
-            schemaVersion: 1,
-            publications : [publication],
-            operations   : [],
-            completion   : nil,
-            checkpoint   : nil
-        )
-
-        #expect(throws: (any Error).self) {
-            try output.validateContext(
-                authenticatedAddonID: owner,
-                expectedCompletion  : nil,
-                previousRevisions   : [:]
-            )
-        }
-        try output.validateContext(
-            authenticatedAddonID: owner,
-            expectedCompletion  : nil,
-            previousRevisions   : [:],
-            contentSchemas      : [1, 2, 3]
-        )
     }
 }

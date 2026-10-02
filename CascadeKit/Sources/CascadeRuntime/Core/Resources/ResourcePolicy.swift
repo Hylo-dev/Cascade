@@ -27,13 +27,6 @@ public struct ResourcePolicy: Sendable {
         let mebibyte = Self.mebibyte
 
         switch dimension {
-            case .publications       : return perOwner ? 16 : Int.max
-            case .activities         : return perOwner ? 4 : 16
-            case .notices            : return 8
-            case .jobs               : return perOwner ? 1 : 2
-            case .commands           : return perOwner ? 4 : Int.max
-            case .providers          : return perOwner ? 1 : 3
-            case .scenes             : return 1
             case .retainedStateBytes : return maximumRetainedStateBytes
             case .assetBytes         : return (perOwner ? 8 : 32) * mebibyte
             case .admittedMemoryBytes: return (perOwner ? 128 : 256) * mebibyte
@@ -67,22 +60,6 @@ public struct ResourcePolicy: Sendable {
         }
 
         switch request {
-            case .publication(let kind):
-                result[.publications] = 1
-                if kind == .activity { result[.activities] = 1 }
-                if kind == .notice { result[.notices] = 1 }
-
-            case .job    : result[.jobs] = 1
-            case .command: result[.commands] = 1
-
-            case .provider:
-                result[.providers]           = 1
-                result[.admittedMemoryBytes] = 64 * Self.mebibyte
-
-            case .scene:
-                result[.scenes]              = 1
-                result[.admittedMemoryBytes] = 64 * Self.mebibyte
-
             case .state(let count): try bytes(count, dimension: .retainedStateBytes)
 
             case .asset(let count):

@@ -1,5 +1,7 @@
 # Cascade decision frontier
 
+> **Superseded record.** The [plugin engine spec](../superpowers/specs/2026-09-29-plugin-engine-design.md) of 29 September 2026 supersedes the addon frontier below, and the addon runtime and its SDK were deleted on 2 October 2026. This page is a dated record and is not kept current.
+
 Updated as of 27 September 2026 and derived from the ticket metadata. The [map](../../.scratch/cascade-product/map.md) stays canonical; this view does not keep the resolutions.
 
 92 tickets: 69 resolved, 0 in progress, 7 available, 16 blocked.

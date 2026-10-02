@@ -24,3 +24,5 @@ The 18 September request to continue the addon work up to the Codex limit extend
 ## Answer
 
 Source generator implemented and reviewed PASS: manifest, provider and tests based on the public SDK products; explicit paths, new destination and publication without replacement. 17 targeted tests, 5 tests of the independent project and 896 tests / 84 full suites passed. Signed build and restart verified. [Delivery and limits](../../../docs/superpowers/verification/2026-09-18-addon-sdk-scaffold.md). The distributable format, the bootstrap and native parity remain open.
+
+Superseded on 2 October 2026: `cascade-addon init` and the addon SDK it scaffolded for were deleted with the v1 runtime, and the manifest tool is now `cascade-plugin`, which only validates. Kept as a dated record.

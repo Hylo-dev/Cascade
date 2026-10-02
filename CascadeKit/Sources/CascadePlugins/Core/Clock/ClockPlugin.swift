@@ -28,23 +28,32 @@ struct ClockPlugin: PluginProvider {
     /// rather than how far the text could shrink.
     static func face() throws -> PluginDocument {
         try PluginDocument(
-            root: PluginNode(
-                .viewThatFits(axes: .vertical),
-                children: [
-                    stacked(dateSize: 12, timeSize: 34, padding: 12, width: nil, height: 56),
-                    PluginNode(
-                        .viewThatFits(axes: .horizontal),
-                        children: [
-                            stacked(dateSize: 10, timeSize: 21, padding: 10, width: 100, height: nil),
-                            PluginNode(
-                                .zStack(alignment: .center),
-                                modifiers: [.frame(width: nil, height: nil, maxWidth: .infinity, maxHeight: .infinity, alignment: .center)],
-                                children : [time(size: 15)]
-                            ),
-                        ]
-                    ),
-                ]
-            )
+            root: ViewThatFits(in: .vertical) {
+
+                stacked(
+                    dateSize: 12,
+                    timeSize: 34,
+                    padding : 12,
+                    width   : nil,
+                    height  : 56
+                )
+
+                ViewThatFits(in: .horizontal) {
+
+                    stacked(
+                        dateSize: 10,
+                        timeSize: 21,
+                        padding : 10,
+                        width   : 100,
+                        height  : nil
+                    )
+
+                    ZStack {
+                        time(size: 15)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
         )
     }
 
@@ -57,38 +66,33 @@ struct ClockPlugin: PluginProvider {
         width   : Double?,
         height  : Double?
     ) -> PluginNode {
-        PluginNode(
-            .vStack(alignment: .leading, spacing: 0),
-            modifiers: [
-                .padding(.horizontal, length: padding),
-                .frame(width: width, height: height, maxWidth: .infinity, maxHeight: .infinity, alignment: .leading),
-            ],
-            children: [
-                PluginNode(
-                    .today,
-                    modifiers: [
-                        .font(PluginFont(size: dateSize, weight: .semibold, design: .rounded)),
-                        .foregroundStyle(.color(PluginColor(red: 1, green: 1, blue: 1, opacity: 0.55))),
-                        .lineLimit(1),
-                        .minimumScaleFactor(0.8),
-                    ]
-                ),
-                time(size: timeSize),
-            ]
+        VStack(alignment: .leading, spacing: 0) {
+
+            Today()
+                .font(.system(size: dateSize, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.55))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+            time(size: timeSize)
+        }
+        .padding(.horizontal, padding)
+        .frame(
+            width    : width,
+            height   : height,
+            maxWidth : .infinity,
+            maxHeight: .infinity,
+            alignment: .leading
         )
     }
 
     /// time is the kernel-drawn time, rolling to the next minute.
     private static func time(size: Double) -> PluginNode {
-        PluginNode(
-            .clock,
-            modifiers: [
-                .font(PluginFont(size: size, weight: .semibold, design: .rounded, monospacedDigit: true)),
-                .foregroundStyle(.color(.white)),
-                .contentTransition(.numericText(countsDown: false)),
-                .lineLimit(1),
-                .minimumScaleFactor(0.5),
-            ]
-        )
+        Clock()
+            .font(.system(size: size, weight: .semibold, design: .rounded).monospacedDigit())
+            .foregroundStyle(.white)
+            .contentTransition(.numericText(countsDown: false))
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
     }
 }

@@ -6,19 +6,21 @@
 import Foundation
 
 /// AddonFailure carries a machine-readable failure and a bounded remedy for people.
-public struct AddonFailure: Error, Codable, Equatable, Sendable {
+///
+/// The name outlived the addon platform: the plugin contracts, the plugin kernel, the manifest
+/// tool and the file shelf's resource governor all throw it, so only the codes they raise
+/// remain.
+public struct AddonFailure: Error, Equatable, Sendable {
 
-    public enum Code: String, Codable, Sendable {
+    public enum Code: String, Sendable {
 
-        case missingRequirement, versionConflict, permissionDenied, dependencyUnavailable
-        case resolutionTooComplex, resourceDenied, rateLimited, deadlineExceeded
-        case sessionRevoked, invalidPayload, outcomeUnknown
+        case permissionDenied, resourceDenied, invalidPayload
     }
 
     public let code  : Code
     public let reason: String
 
-    /// AddonFailure preserves complete graphemes within the wire's UTF-8 byte budget.
+    /// AddonFailure preserves complete graphemes within a 4 KiB UTF-8 byte budget.
     /// Empty input, or an initial grapheme larger than the budget, receives a readable fallback.
     public init(
         code  : Code,
@@ -37,26 +39,5 @@ public struct AddonFailure: Error, Codable, Equatable, Sendable {
         }
 
         self.reason = boundedReason.isEmpty ? "Failure reason unavailable." : boundedReason
-    }
-
-    public init(from decoder: any Decoder) throws {
-        let values = try decoder.container(keyedBy: CodingKeys.self)
-        code       = try values.decode(Code.self, forKey: .code)
-        reason     = try values.decode(String.self, forKey: .reason)
-
-        try validate()
-    }
-
-    /// validate applies the same invariant at decoding and nested envelope admission.
-    public func validate() throws {
-        try ContractValidation.require(
-            !reason.isEmpty && reason.utf8.count <= 4096,
-            "Invalid failure reason"
-        )
-    }
-
-    private enum CodingKeys: String, CodingKey, CaseIterable {
-
-        case code, reason
     }
 }

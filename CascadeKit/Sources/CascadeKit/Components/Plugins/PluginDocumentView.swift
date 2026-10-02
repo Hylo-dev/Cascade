@@ -3,7 +3,6 @@
 //  CascadeKit
 //
 
-import CascadePresentation
 import SwiftUI
 
 /// PluginDocumentView shows a store's publication: its root node and the document's glass

@@ -1,6 +1,51 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%lld more files": {
+      "comment": "Shelf: accessibility label of the count of files beyond the deck.",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld more file"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld more files"
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Altro %lld file"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Altri %lld file"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld results available": {},
+    "+%lld": {},
+    "+%lld more inputs": {},
+    "+%lld more results": {},
     "Add Widget": {
       "comment": "Button in the widget gallery that adds the widget at its first size.",
       "localizations": {
@@ -45,6 +90,29 @@
         }
       }
     },
+    "Available": {
+      "comment": "Shelf: availability of a file.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disponibile"
+          }
+        }
+      }
+    },
+    "Back to Shelf": {
+      "comment": "Shelf: button that closes the file list and returns to the deck.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Torna al ripiano"
+          }
+        }
+      }
+    },
+    "Cancel": {},
     "Cancel Adjustment": {
       "comment": "Accessibility label of the calibration cancel button.",
       "localizations": {
@@ -74,6 +142,31 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impostazioni di Cascade"
+          }
+        }
+      }
+    },
+    "Choose a format": {},
+    "clear": {
+      "comment": "Shelf: lowercase caption under the clear icon; removes every file from the shelf.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "svuota"
+          }
+        }
+      }
+    },
+    "Conversion in progress": {},
+    "Conversion progress": {},
+    "convert": {
+      "comment": "Shelf: lowercase caption under the convert icon.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "converti"
           }
         }
       }
@@ -188,6 +281,19 @@
         }
       }
     },
+    "Inputs": {},
+    "Load More Files": {
+      "comment": "Shelf: button that loads the next page of files.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carica altri file"
+          }
+        }
+      }
+    },
+    "No formats": {},
     "Open": {
       "comment": "Button that opens the app behind an activity.",
       "localizations": {
@@ -195,6 +301,74 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apri"
+          }
+        }
+      }
+    },
+    "Open File List": {
+      "comment": "Shelf: accessibility label of the file deck, which opens the list.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri elenco file"
+          }
+        }
+      }
+    },
+    "Preview result format: %@": {},
+    "Preview results": {},
+    "Quick Look": {
+      "comment": "Shelf: context menu item that previews the file.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anteprima"
+          }
+        }
+      }
+    },
+    "Receiving": {
+      "comment": "Shelf: availability of a file still being received.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In ricezione"
+          }
+        }
+      }
+    },
+    "Relink": {
+      "comment": "Shelf: context menu item that lets the user locate a moved file again.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ricollega"
+          }
+        }
+      }
+    },
+    "Remove": {
+      "comment": "Shelf: context menu item that removes the file from the shelf, not from disk.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi"
+          }
+        }
+      }
+    },
+    "Remove all files from the shelf": {
+      "comment": "Shelf: help tag of the clear button.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi tutti i file dal ripiano"
           }
         }
       }
@@ -210,6 +384,28 @@
         }
       }
     },
+    "rename": {
+      "comment": "Shelf: lowercase caption under the rename icon.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "rinomina"
+          }
+        }
+      }
+    },
+    "Rename the selected file": {
+      "comment": "Shelf: help tag of the rename button.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rinomina il file selezionato"
+          }
+        }
+      }
+    },
     "Resize Widget": {
       "comment": "Button on a notch widget while editing that switches it to its next size.",
       "localizations": {
@@ -221,6 +417,7 @@
         }
       }
     },
+    "Results": {},
     "Save Size": {
       "comment": "Accessibility label of the calibration save button.",
       "localizations": {
@@ -243,6 +440,17 @@
         }
       }
     },
+    "Selected": {
+      "comment": "Shelf: accessibility label of a selected file.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selezionato"
+          }
+        }
+      }
+    },
     "Sensitive content hidden": {
       "comment": "Placeholder and accessibility label shown instead of a widget whose content is marked sensitive.",
       "localizations": {
@@ -261,6 +469,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impostazioni…"
+          }
+        }
+      }
+    },
+    "Show in Finder": {
+      "comment": "Shelf: context menu item.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra nel Finder"
+          }
+        }
+      }
+    },
+    "Start": {},
+    "The original files stay where they are": {
+      "comment": "Shelf: accessibility hint of the clear button.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I file originali restano al loro posto"
+          }
+        }
+      }
+    },
+    "Unavailable": {
+      "comment": "Shelf: availability of a file.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non disponibile"
           }
         }
       }

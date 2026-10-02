@@ -6,7 +6,7 @@ For this map the local fallback provided by wayfinder is used; no issues are pub
 
 - Canonical map: `.scratch/cascade-product/map.md`, with the label `wayfinder:map`.
 - Children: one file per ticket in `.scratch/cascade-product/issues/NN-name.md`; `ID` is the identity and `Parent` identifies the map.
-- Type and label: `Type: research|prototype|grilling|task` and `Labels: wayfinder:<tipo>`.
+- Type and label: `Type: research|prototype|grilling|task` and `Labels: wayfinder:<type>`.
 - States: `open`, `claimed`, `resolved`, `closed-out-of-scope`. The last two are closed.
 - Claim: set `Assignee` and `Status: claimed` **before** the work. Release both if the work is abandoned. Do not take a ticket that is already assigned.
 - Dependencies: `Blocked by: NN, NN`, or `none`. This is the textual fallback for a tracker without native relations.

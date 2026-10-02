@@ -5,7 +5,7 @@
 
 import AppKit
 import CascadeContracts
-import CascadePresentation
+import CascadeKit
 import SwiftUI
 
 struct FileShelfGlassLightEmitter: View {

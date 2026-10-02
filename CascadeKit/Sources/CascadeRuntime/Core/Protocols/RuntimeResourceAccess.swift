@@ -23,20 +23,7 @@ protocol RuntimeResourceAccess: Sendable {
         owner          : AddonID
     ) async throws
 
-    func reduceStateReservation(
-        _ reservationID: UUID,
-        owner          : AddonID,
-        toBytes bytes  : Int
-    ) async -> Bool
-
     func resizeStateReservation(
-        _ reservationID: UUID,
-        owner          : AddonID,
-        fromBytes      : Int,
-        toBytes        : Int
-    ) async throws -> Bool
-
-    func resizeDiskReservation(
         _ reservationID: UUID,
         owner          : AddonID,
         fromBytes      : Int,

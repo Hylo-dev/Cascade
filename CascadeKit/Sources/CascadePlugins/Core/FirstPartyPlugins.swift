@@ -9,7 +9,8 @@ import Foundation
 
 /// FirstPartyPlugins lists the plugins Cascade ships. PluginHost serves their providers by entry
 /// point, and Cascade registers their manifests, which are bundled as JSON and validated by the
-/// tests with the same rules `cascade-addon validate` applies, so a broken manifest never ships.
+/// tests and by `cascade-plugin validate` in the development build, so a broken manifest never
+/// ships.
 public enum FirstPartyPlugins {
 
     public static let providers: [String: any PluginProvider] = [

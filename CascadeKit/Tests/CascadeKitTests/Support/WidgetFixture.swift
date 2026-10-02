@@ -3,14 +3,12 @@
 //  CascadeKit
 //
 
-import CascadeContracts
-import CascadePresentation
-import CascadeRuntime
-import Foundation
 import SwiftUI
-import Testing
 @testable import CascadeKit
 
+/// WidgetFixture is a small widget that keeps the context it was activated with and counts its
+/// suspensions and content builds, so a test can poke a retained context after the host is done
+/// with it and see which widgets a refresh rebuilt.
 @MainActor
 final class WidgetFixture: NotchWidget {
 
@@ -32,6 +30,7 @@ final class WidgetFixture: NotchWidget {
 
     func activate(in context: WidgetContext) { self.context = context }
 
+    /// suspend asks for new content on purpose: a revoked context must swallow the request.
     func suspend() {
         suspensions += 1
         context?.setNeedsContent()

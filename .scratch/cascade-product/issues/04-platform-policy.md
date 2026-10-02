@@ -39,3 +39,5 @@ macOS 14 is kept as the project minimum already confirmed in the [approved inter
 | Addon modules | Process boundary already approved; no external code in the graphics process. Launcher blocked as long as the compliant exit proof is missing. |
 
 This is a resolved project policy, not the passing of the native tests. The choices for the individual experiences remain in the dedicated tickets; no access to personal data or change of permissions is implied.
+
+Superseded on 2 October 2026: the [plugin engine spec](../../../docs/superpowers/specs/2026-09-29-plugin-engine-design.md) raised the project minimum to macOS 15 and replaced the addon subsystem. This answer is kept as a dated record.

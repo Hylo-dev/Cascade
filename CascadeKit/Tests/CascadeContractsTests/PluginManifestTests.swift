@@ -54,13 +54,17 @@ struct PluginManifestTests {
     }
 
     @Test(arguments: [
-        "manifestVersion", "macOS", "protocolMajor", "executionMode", "unknownField", "noFeatures", "sourceApp",
+        "manifestVersion", "version", "macOS", "protocolMajor", "executionMode", "unknownField", "noFeatures",
+        "sourceApp",
     ])
     func rejectsInvalidTopLevelValues(_ change: String) throws {
         let data = try pluginManifestData { object in
             switch change {
                 case "manifestVersion":
                     object["manifestVersion"] = 1
+
+                case "version":
+                    object["version"] = "01.0.0"
 
                 case "macOS":
                     object["compatibility"] = ["macOS": "14.0", "cascadeProtocol": ["major": 2, "minimumMinor": 0]]
@@ -83,6 +87,21 @@ struct PluginManifestTests {
         }
 
         #expect(throws: (any Error).self) { try PluginManifest.decode(data) }
+    }
+
+    @Test
+    func acceptsOnlySemVerVersionsWithinTheByteBound() throws {
+        for version in ["1.2.3", "1.2.3-0+build.9", "1.2.3+" + String(repeating: "a", count: 122)] {
+            let data = try pluginManifestData { $0["version"] = version }
+
+            #expect(try PluginManifest.decode(data).version == version)
+        }
+
+        for version in ["", "01.2.3", "1.2.3-01", "1.2", "1.2.3+" + String(repeating: "a", count: 123)] {
+            let data = try pluginManifestData { $0["version"] = version }
+
+            #expect(throws: AddonFailure.self) { try PluginManifest.decode(data) }
+        }
     }
 
     @Test(arguments: [

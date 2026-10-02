@@ -7,7 +7,7 @@ import Foundation
 
 /// GlassLight describes a bounded sRGB light in the expanded notch's coordinate space.
 /// Coordinates start at the top left; radius is a fraction of the notch width.
-/// Immutable, validated values keep malformed provider input out of the renderer.
+/// Immutable, validated values keep malformed plugin input out of the renderer.
 public struct GlassLight: Codable, Equatable, Sendable {
 
     public static let maximumCount = 8

@@ -6,7 +6,7 @@
 #if DEBUG
 import AppKit
 import CascadeContracts
-import CascadePresentation
+import CascadeKit
 import SwiftUI
 import UniformTypeIdentifiers
 
