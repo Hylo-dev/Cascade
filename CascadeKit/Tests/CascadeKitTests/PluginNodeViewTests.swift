@@ -141,6 +141,24 @@ struct PluginNodeViewTests {
         #expect(drawn.fittingSize == expected.fittingSize)
     }
 
+    /// aTimerProgressIsABarWithoutTheRunningTime pins the bar alone: SwiftUI's own timer progress
+    /// adds the running time under its bar, a second line no widget tile has room for.
+    @Test
+    func aTimerProgressIsABarWithoutTheRunningTime() throws {
+        let now       = Date.now
+        let progress  = PluginNode(.timerProgress(start: now.addingTimeInterval(-60), end: now.addingTimeInterval(60)))
+        var publisher = PluginRenderFixtures.Publisher()
+        let store     = PluginNodeStore(key: PluginRenderFixtures.key, submit: { _ in })
+        store.apply(publisher.publish(try PluginDocument(root: progress)))
+        let drawn = NSHostingView(rootView: PluginDocumentView(store: store))
+        let bar   = NSHostingView(
+            rootView: ProgressView(value: 0.5)
+                .progressViewStyle(.linear)
+        )
+
+        #expect(drawn.fittingSize.height == bar.fittingSize.height)
+    }
+
     @Test
     func aTimeZoneDrawsTheClockAndTheDateInThatZone() throws {
         let rome   = try #require(TimeZone(identifier: "Europe/Rome"))
