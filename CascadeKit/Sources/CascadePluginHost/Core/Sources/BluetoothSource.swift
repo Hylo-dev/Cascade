@@ -24,12 +24,15 @@ import os
 ///
 /// Every state lists the devices connected when it is emitted, read from the reducer that
 /// already follows them, so a plugin that starts late still learns what is connected. The
-/// framework's list carries no battery, so each baseline reads the battery of the devices it
-/// lists, once, as a connection does. What a start or a wake emits is therefore a baseline,
-/// never a connection: a start always emits one, then one more each time its reads learn a
-/// battery; a wake emits one only when a device came or went while the Mac slept, then one
-/// each time its reads find a battery that changed. A wake that changed nothing emits nothing,
-/// and a battery read once a newer event exists waits for that event's next state.
+/// framework's list carries no battery and a device announces no new charge, so the source
+/// reads the batteries of the devices it lists, at most four, whenever it wakes anyway: at a
+/// start, at a wake, and at every connection, disconnection or return of audio, besides the
+/// device of that event, whose own read revises it. It never wakes to read, and a battery is
+/// never older than the last Bluetooth event. A read that changes a level emits the last state
+/// again with the new list: the same event at the same number and revision, which the alerts
+/// plugin has already shown, or the baseline when that was the last state. A start always emits
+/// a baseline; a wake emits one only when a device came or went while the Mac slept, and a wake
+/// whose reads find no new level emits nothing else.
 ///
 /// IOBluetooth delivers connection notifications through the run loop of the thread that
 /// registered, so the observer is started and stopped on the main queue, which PluginHost's main
@@ -60,6 +63,7 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
     private var isRunning       = false
 
     private var publishedDevices: [PluginBluetoothDevice]?
+    private var publishedEvent  : BluetoothConnectionEvent?
 
     public convenience init() {
         self.init(
@@ -167,6 +171,7 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
         observer         = nil
         reducer          = BluetoothConnectionReducer()
         publishedDevices = nil
+        publishedEvent   = nil
     }
 
     private func receive(_ transition: SystemPowerNotifications.Transition) {
@@ -203,6 +208,7 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
                 nextEventID &+= 1
                 enricher.cancel(deviceID: deviceID)
                 publish(event)
+                readListedBatteries()
         }
     }
 
@@ -222,7 +228,8 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
     }
 
     /// publishConnection publishes a new event and reads the device's metadata, which revises
-    /// that event only while it is still the device's current one.
+    /// that event only while it is still the device's current one, then the batteries of the
+    /// other devices listed.
     private func publishConnection(
         _ event : BluetoothConnectionEvent,
         identity: BluetoothConnectionCallbackIdentity
@@ -238,6 +245,8 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
 
             publish(update)
         }
+
+        readListedBatteries(besides: event.deviceID)
     }
 
     /// rebuildBaseline reads the devices connected now as silent state, and emits them as a
@@ -260,33 +269,46 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
         if baseline.connectedDevices != publishedDevices {
             publish(baseline)
         }
-        readBaselineMetadata()
+        readListedBatteries()
 
         for callback in observer.finishBaselineReplacement() {
             receive(callback)
         }
     }
 
-    /// readBaselineMetadata reads the devices the baseline lists, at most four, on the
-    /// enricher's queue with its single retry, and emits a new baseline when a read changes a
-    /// battery. Only while no event has been numbered since: a baseline after event N makes the
-    /// alerts plugin forget N, so N's next revision would show its notice a second time. Then
-    /// the battery stays in the reducer and rides the next state instead.
-    private func readBaselineMetadata() {
+    /// readListedBatteries reads the batteries of the devices a state lists, at most four,
+    /// besides `deviceID`, the device of the event that asked, whose own read revises that
+    /// event. It runs only when the source has woken for another reason, so it never polls; a
+    /// device whose read is pending keeps that read, and a rebuild, a stop or a disconnection
+    /// cancels these reads as it cancels every other. A read that changes a level emits the last
+    /// state again with the new list.
+    private func readListedBatteries(besides deviceID: String? = nil) {
         let identity = gate.identity
-        let eventID  = nextEventID
+        let listed   = reducer.connectedDevices.prefix(PluginBluetoothDevice.maximumCount)
 
-        for device in reducer.connectedDevices.prefix(PluginBluetoothDevice.maximumCount) {
-            enricher.enrich(deviceID: device.deviceID) { [weak self] metadata in
+        for device in listed where device.deviceID != deviceID {
+            enricher.refresh(deviceID: device.deviceID) { [weak self] metadata in
                 guard let self,
                       isRunning,
                       gate.accepts(identity),
-                      reducer.enrichBaselineDevice(deviceID: device.deviceID, metadata: metadata),
-                      nextEventID == eventID
+                      reducer.enrichListedDevice(deviceID: device.deviceID, metadata: metadata)
                 else { return }
 
-                publish(.baseline(isAvailable: true, connectedDevices: connectedDevices))
+                republish()
             }
+        }
+    }
+
+    /// republish emits the last state again with the devices listed now. After an event it is
+    /// that event at its own number and revision, which the alerts plugin has shown already and
+    /// ignores, where a baseline would make it forget the event and show the event's next
+    /// revision a second time; with no event since the last baseline it is that baseline. Only
+    /// the list is new, and the list is state, not news.
+    private func republish() {
+        if let publishedEvent {
+            publish(publishedEvent)
+        } else {
+            publish(.baseline(isAvailable: true, connectedDevices: connectedDevices))
         }
     }
 
@@ -330,20 +352,26 @@ public final class BluetoothSource: PluginCatalogSource, @unchecked Sendable {
                 kind            : event.kind,
                 isAvailable     : true,
                 connectedDevices: connectedDevices
-            )
+            ),
+            of: event
         )
     }
 
-    /// publish emits a state and remembers the devices it listed.
-    private func publish(_ state: PluginBluetoothState) {
+    /// publish emits a state and remembers the devices it listed and the event it carries, nil
+    /// for a baseline, so that a read can emit it again.
+    private func publish(
+        _ state : PluginBluetoothState,
+        of event: BluetoothConnectionEvent? = nil
+    ) {
         // ponytail: a state that does not encode is dropped, as it always was. Four devices with
         // the longest names Bluetooth allows still fit (PluginBluetoothStateTests); only names
         // made of characters JSON escapes could pass 4096 bytes, and retrying without the list
         // is the upgrade if one is ever seen.
-        guard let emit, let event = try? state.event() else { return }
+        guard let emit, let sourceEvent = try? state.event() else { return }
 
         publishedDevices = state.connectedDevices
-        emit(event)
+        publishedEvent   = event
+        emit(sourceEvent)
     }
 
     /// connectedDevices is the reducer's list as a state carries it; a device's charge is the

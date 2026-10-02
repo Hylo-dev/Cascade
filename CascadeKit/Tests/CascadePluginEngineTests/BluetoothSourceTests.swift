@@ -107,7 +107,7 @@ struct BluetoothSourceTests {
         system.latest?.connect(keyboard)
         #expect(try await eventually { states.values.count == 2 })
         reader.letThrough()
-        #expect(try await eventually { states.values.count == 3 })
+        #expect(try await eventually { states.values.count == 4 })
         try await Task.sleep(for: .milliseconds(30))
         source.stop()
 
@@ -117,15 +117,46 @@ struct BluetoothSourceTests {
             try plugin.handle(.source(state.event()), context: context).publications.first?.notice?.delivery
         }
 
-        #expect(states.values.map(\.eventID) == [0, 1, 1])
+        #expect(states.values.map(\.eventID) == [0, 1, 1, 1])
+        #expect(states.values.map(\.revision) == [0, 0, 0, 1])
+        #expect(states.values[2].connectedDevices == [listed(airPods, battery: 64), listed(keyboard)], "The connection's state again, with the battery read")
         #expect(states.values.last?.connectedDevices == [listed(airPods, battery: 64), listed(keyboard, battery: 64)])
-        #expect(deliveries == [nil, .show, .update])
+        #expect(deliveries == [nil, .show, nil, .update])
+    }
+
+    @Test
+    func aConnectionRereadsTheDevicesAlreadyListedAndTheirBatteriesShowNoNotice() async throws {
+        let system           = FakeBluetoothSystem(connected: [airPods])
+        let reader           = FakeMetadataReader(metadata: BluetoothDeviceMetadata(battery: BluetoothBatterySnapshot(level: 64)))
+        let (source, states) = source(system, reader: reader)
+        #expect(try await eventually { states.values.count == 2 })
+
+        reader.answer(with: BluetoothDeviceMetadata(battery: BluetoothBatterySnapshot(level: 50)))
+        system.latest?.connect(BluetoothConnectedDevice(deviceID: keyboard.deviceID, name: "Keyboard", symbolName: "keyboard", battery: BluetoothBatterySnapshot(level: 50)))
+        #expect(try await eventually { states.values.count == 4 })
+        try await Task.sleep(for: .milliseconds(30))
+        source.stop()
+
+        let plugin     = BluetoothPlugin()
+        let context    = PluginContext(plugin: BluetoothPlugin.id)
+        let deliveries = try states.values.map { state in
+            try plugin.handle(.source(state.event()), context: context).publications.first?.notice?.delivery
+        }
+
+        #expect(states.values.count == 4)
+        #expect(states.values.dropFirst(2).map(\.connectedDevices) == [
+            [listed(airPods, battery: 64), listed(keyboard, battery: 50)],
+            [listed(airPods, battery: 50), listed(keyboard, battery: 50)],
+        ])
+        #expect(states.values.map(\.eventID) == [0, 0, 1, 1])
+        #expect(states.values.map(\.revision) == [0, 0, 0, 0], "The read rides the connection's own state again")
+        #expect(deliveries == [nil, nil, .show, nil])
     }
 
     @Test
     func everyStateListsTheDevicesConnectedThenInTheOrderTheyConnected() async throws {
         let system           = FakeBluetoothSystem()
-        let (source, states) = source(system)
+        let (source, states) = source(system, metadata: BluetoothDeviceMetadata(battery: BluetoothBatterySnapshot(level: 64)))
         #expect(try await eventually { states.values.count == 1 })
 
         system.latest?.connect(airPods)
@@ -134,7 +165,8 @@ struct BluetoothSourceTests {
         #expect(try await eventually { states.values.count == 5 })
         system.latest?.connect(BluetoothConnectedDevice(deviceID: keyboard.deviceID, name: "Keyboard", symbolName: "keyboard", battery: BluetoothBatterySnapshot(level: 30)))
         system.latest?.disconnect(airPods.deviceID)
-        #expect(try await eventually { states.values.count == 6 })
+        #expect(try await eventually { states.values.count == 7 })
+        try await Task.sleep(for: .milliseconds(30))
         source.stop()
 
         #expect(states.values.map(\.connectedDevices) == [
@@ -144,8 +176,9 @@ struct BluetoothSourceTests {
             [listed(airPods, battery: 64), listed(keyboard)],
             [listed(airPods, battery: 64), listed(keyboard, battery: 64)],
             [listed(keyboard, battery: 30)],
+            [listed(keyboard, battery: 64)],
         ])
-        #expect(states.values.map(\.eventID) == [0, 1, 1, 2, 2, 3])
+        #expect(states.values.map(\.eventID) == [0, 1, 1, 2, 2, 3, 3], "A disconnection re-reads the devices still listed")
     }
 
     @Test

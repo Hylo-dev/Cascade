@@ -187,17 +187,16 @@ struct BluetoothConnectionReducer {
         return event
     }
 
-    /// enrichBaselineDevice applies a read of a device the baseline listed,
-    /// unless an event of its own has claimed the device since: that event's
-    /// read revises it instead. It says whether the battery level changed,
-    /// the only part of the reading a state's list of devices carries.
-    mutating func enrichBaselineDevice(
+    /// enrichListedDevice applies a read of a device the list carries, made
+    /// at a start, a wake or another device's event, to the list alone: an
+    /// event already numbered keeps what it carried, and the device's own
+    /// next revision starts from the read. It says whether the battery level
+    /// changed, the only part of the reading a state's list carries.
+    mutating func enrichListedDevice(
         deviceID: String,
         metadata: BluetoothDeviceMetadata
     ) -> Bool {
-        guard connectionEventsByID[deviceID] == nil,
-              let device = connectedDevicesByID[deviceID]
-        else { return false }
+        guard let device = connectedDevicesByID[deviceID] else { return false }
 
         let enriched = device.enriched(with: metadata)
         connectedDevicesByID[deviceID] = enriched

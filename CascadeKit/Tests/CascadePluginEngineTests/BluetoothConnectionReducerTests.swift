@@ -133,20 +133,22 @@ struct BluetoothConnectionReducerTests {
     }
 
     @Test
-    func aBaselineDeviceTakesItsReadOnlyUntilAnEventOfItsOwnClaimsIt() {
+    func aListedDeviceTakesEveryReadAndSaysWhenItsLevelChanged() {
         var reducer  = BluetoothConnectionReducer()
         let phones   = device("BB-CC-DD-EE-FF-00")
         let metadata = BluetoothDeviceMetadata(battery: BluetoothBatterySnapshot(level: 40))
         reducer.replaceBaseline(with: [phones])
 
-        let changed   = reducer.enrichBaselineDevice(deviceID: phones.deviceID, metadata: metadata)
-        let unchanged = reducer.enrichBaselineDevice(deviceID: phones.deviceID, metadata: metadata)
-        let unknown   = reducer.enrichBaselineDevice(deviceID: "CC-DD-EE-FF-00-11", metadata: metadata)
-        _ = reducer.recordAudioRoute(phones, eventID: 1, now: 100)
-        let claimed   = reducer.enrichBaselineDevice(deviceID: phones.deviceID, metadata: metadata)
+        let changed   = reducer.enrichListedDevice(deviceID: phones.deviceID, metadata: metadata)
+        let unchanged = reducer.enrichListedDevice(deviceID: phones.deviceID, metadata: metadata)
+        let unknown   = reducer.enrichListedDevice(deviceID: "CC-DD-EE-FF-00-11", metadata: metadata)
+        let routed    = reducer.recordAudioRoute(phones, eventID: 1, now: 100)
+        let reread    = reducer.enrichListedDevice(deviceID: phones.deviceID, metadata: BluetoothDeviceMetadata(battery: BluetoothBatterySnapshot(level: 35)))
 
-        #expect(changed && !unchanged && !unknown && !claimed)
-        #expect(reducer.connectedDevices.first?.battery == nil, "The route's own read revises it, not a baseline read")
+        #expect(changed && !unchanged && !unknown && reread)
+        #expect(reducer.connectedDevices.first?.battery?.level == 35, "A device with an event of its own is listed with its latest read")
+        #expect(routed?.battery == nil, "The read changes the list, never an event already numbered")
+        #expect(reducer.enrichConnection(deviceID: phones.deviceID, eventID: 1, metadata: BluetoothDeviceMetadata())?.battery?.level == 35)
     }
 
     @Test
