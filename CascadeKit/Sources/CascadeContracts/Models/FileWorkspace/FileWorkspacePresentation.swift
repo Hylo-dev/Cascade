@@ -143,14 +143,6 @@ public struct FileWorkspacePresentation: Codable, Equatable, Sendable {
         }?.descriptor
     }
 
-    var referencedAssets: Set<String> {
-        Set(snapshot.entries.compactMap(\.thumbnailAssetID))
-    }
-
-    var actionIdentifiers: [String] {
-        actions.map(\.descriptor.id)
-    }
-
     private enum CodingKeys: String, CodingKey, CaseIterable {
 
         case snapshot, mode, selectedEntryIDs, formats, selectedFormatID, actions

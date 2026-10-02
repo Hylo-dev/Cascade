@@ -7,7 +7,7 @@ import Foundation
 
 /// PluginID names a plugin in reverse-DNS form. It says nothing about who published the
 /// plugin: the host decides trust and execution mode from the package signature, never from
-/// this name. It mirrors `AddonID`, which goes away with the v1 contracts.
+/// this name. It mirrors `AddonID`, which now names only the file shelf's resource owner.
 public struct PluginID: RawRepresentable, Codable, Hashable, Sendable {
 
     public let rawValue: String

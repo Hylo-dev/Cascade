@@ -5,7 +5,7 @@
 
 import Foundation
 
-/// FileConversionFormat names one broker-supported output format without exposing a command line.
+/// FileConversionFormat names one host-supported output format without exposing a command line.
 public struct FileConversionFormat: Codable, Equatable, Sendable {
 
     public let id                  : String

@@ -224,57 +224,9 @@ struct FileWorkspaceContractTests {
     }
 
     @Test
-    func validatesCursorAndCommandIDs() throws {
+    func validatesCursor() throws {
         for cursor in ["", String(repeating: "é", count: 65)] {
             #expect(throws: AddonFailure.self) { try snapshot(cursor: cursor) }
-            #expect(throws: AddonFailure.self) { try FileWorkspaceCommand.list(cursor: cursor).validate() }
-        }
-
-        let id = UUID()
-        for command in [
-            FileWorkspaceCommand.remove(ids: [], revision: 0),
-            .remove(ids: [id, id], revision: 0),
-            .remove(ids: Array(repeating: id, count: 33), revision: 0),
-            .convert(ids: [id, id], formatID: "jpeg", revision: 0),
-            .convert(ids: [id], formatID: "../jpeg", revision: 0),
-        ] {
-            #expect(throws: AddonFailure.self) { try command.validate() }
-            #expect(throws: AddonFailure.self) { try JSONEncoder().encode(command) }
-        }
-    }
-
-    @Test
-    func taggedCommandsRoundTripAndRejectWrongKindFields() throws {
-        let id = UUID()
-        for command in [
-            FileWorkspaceCommand.list(cursor: nil),
-            .remove(ids: [id], revision: 1),
-            .relink(id: id),
-            .convert(ids: [id], formatID: "jpeg", revision: 2),
-            .cancel(jobID: id),
-        ] {
-            let data = try JSONEncoder().encode(command)
-            #expect(try JSONDecoder().decode(FileWorkspaceCommand.self, from: data) == command)
-
-            var object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
-            object["unexpected"] = true
-
-            #expect(throws: AddonFailure.self) {
-                try JSONDecoder().decode(
-                    FileWorkspaceCommand.self,
-                    from: JSONSerialization.data(withJSONObject: object)
-                )
-            }
-        }
-
-        let wrong = Data("{\"kind\":\"cancel\",\"jobID\":\"\(id.uuidString)\",\"ids\":[]}".utf8)
-        #expect(throws: AddonFailure.self) {
-            try JSONDecoder().decode(FileWorkspaceCommand.self, from: wrong)
-        }
-
-        let duplicateIDs = Data("{\"kind\":\"remove\",\"ids\":[\"\(id.uuidString)\",\"\(id.uuidString)\"],\"revision\":0}".utf8)
-        #expect(throws: AddonFailure.self) {
-            try JSONDecoder().decode(FileWorkspaceCommand.self, from: duplicateIDs)
         }
     }
 }

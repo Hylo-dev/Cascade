@@ -5,8 +5,9 @@
 
 import Foundation
 
-/// AddonID names an addon; the host must authenticate its publisher independently.
-public struct AddonID: RawRepresentable, Codable, Hashable, Sendable {
+/// AddonID names a resource owner in reverse-DNS form. The name outlived the addon platform:
+/// the resource governor keys its ledgers by it, and the file shelf is today its only owner.
+public struct AddonID: RawRepresentable, Hashable, Sendable {
 
     public let rawValue: String
 
@@ -16,19 +17,5 @@ public struct AddonID: RawRepresentable, Codable, Hashable, Sendable {
         else { return nil }
 
         self.rawValue = rawValue
-    }
-
-    public init(from decoder: any Decoder) throws {
-        let value = try decoder.singleValueContainer().decode(String.self)
-        guard let identity = Self(rawValue: value) else {
-            throw AddonFailure(code: .invalidPayload, reason: "Invalid addon ID")
-        }
-
-        self = identity
-    }
-
-    public func encode(to encoder: any Encoder) throws {
-        var container = encoder.singleValueContainer()
-        try container.encode(rawValue)
     }
 }

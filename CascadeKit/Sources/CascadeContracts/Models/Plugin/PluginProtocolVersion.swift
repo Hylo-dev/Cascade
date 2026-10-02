@@ -6,7 +6,7 @@
 import Foundation
 
 /// PluginProtocolVersion is the plugin protocol a manifest speaks: major 2, from a minimum
-/// minor up. The v1 `ProtocolVersion` accepts only major 1, so v2 has its own value.
+/// minor up.
 public struct PluginProtocolVersion: Codable, Equatable, Sendable {
 
     public let major       : Int

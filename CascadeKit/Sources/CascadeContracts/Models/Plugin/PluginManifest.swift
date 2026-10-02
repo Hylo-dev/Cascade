@@ -5,9 +5,9 @@
 
 import Foundation
 
-/// PluginManifest is manifest v2: what a plugin is and what each of its features needs. It
-/// replaces the addon manifest v1 with no migration, since no external addon exists. Execution
-/// mode and trust are absent on purpose: the host takes them from the package signature.
+/// PluginManifest is manifest v2, the only version Cascade decodes: what a plugin is and what
+/// each of its features needs. Execution mode and trust are absent on purpose: the host takes
+/// them from the package signature.
 public struct PluginManifest: Codable, Equatable, Sendable {
 
     public static let maximumBytes = 65_536
