@@ -13,10 +13,10 @@ import SwiftUI
 /// screen: four of them, the progress widget's tall tile, cost 13 to 19% of a core in the
 /// notch's panel, against 0.01% for this bar. Its timeline steps every five hundredth of the
 /// interval, which moves a 110-point bar by a fifth of a point at a time, and never more often
-/// than once a second, so a day's bar redraws every three minutes and a year's twice a day; it
-/// stops once it has drawn the end, where a finished bar has nothing left to draw. Each step
-/// draws the kernel's `PluginProgressBar` at the fraction reached, the bar a linear progress
-/// draws too.
+/// than once a second, so a day's bar redraws about every three minutes and a year's about every
+/// seventeen and a half hours; it stops once it has drawn the end, where a finished bar has
+/// nothing left to draw. Each step draws the kernel's `PluginProgressBar` at the fraction
+/// reached, the bar a linear progress draws too.
 struct PluginTimerProgressBar: View {
 
     let start: Date
