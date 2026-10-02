@@ -552,4 +552,15 @@ struct PluginKernelTests {
             _ = kernel.complete(volume, token: UInt64(step + 1), result: Fixtures.result(try notice("\(step)"), cpuTime: .microseconds(100)), at: now)
         }
     }
+
+    @Test
+    func aSwitchedOffPluginSaysSo() throws {
+        var kernel = Fixtures.kernel()
+        _ = kernel.register(try Fixtures.clock(), grants: [], at: start)
+
+        _ = kernel.setEnabled(false, for: clock, at: start)
+
+        #expect(kernel.state(of: clock) == .switchedOff)
+        #expect(kernel.states() == [clock: .switchedOff])
+    }
 }

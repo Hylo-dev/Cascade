@@ -21,6 +21,9 @@ public final class PluginEngine: Sendable {
     private let executor: any PluginExecutor
     private let sources : [String: any PluginEventSource]
     private let sink    : any PluginPublicationSink
+    private let status  = Mutex<(host: PluginHostStatus, last: PluginEngineStatus?, observer: (@Sendable (PluginEngineStatus) -> Void)?)>(
+        (host: .connecting, last: nil, observer: nil)
+    )
 
     public init(
         executor  : any PluginExecutor,
@@ -47,13 +50,19 @@ public final class PluginEngine: Sendable {
         timer.activate()
 
         executor.observe { [weak self] event in
-            self?.run { kernel, now in
+            self?.run { [weak self] kernel, now in
                 switch event {
                     case .available:
+                        self?.status.withLock { $0.host = .running }
                         return kernel.hostAvailable(at: now)
 
                     case .unavailable:
+                        self?.status.withLock { $0.host = $0.host == .stopped ? .stopped : .connecting }
                         return kernel.hostUnavailable()
+
+                    case .abandoned:
+                        self?.status.withLock { $0.host = .stopped }
+                        return []
                 }
             }
         }
@@ -119,6 +128,23 @@ public final class PluginEngine: Sendable {
         run { kernel, now in kernel.invoke(action, value: value, feature: feature, of: plugin, at: now) }
     }
 
+    /// observeStatus sends the engine's status now and again whenever it changes, on the engine's
+    /// queue: after any operation that changed a plugin's state or the host's, never otherwise.
+    public func observeStatus(_ handler: @escaping @Sendable (PluginEngineStatus) -> Void) {
+        queue.async { [self] in
+            status.withLock { status in
+                status.observer = handler
+                status.last     = nil
+            }
+            publishStatus()
+        }
+    }
+
+    /// restartHost asks the executor to try a host it gave up on again.
+    public func restartHost() {
+        executor.restart()
+    }
+
     /// state reads a plugin's state after everything already queued. It waits for the engine's
     /// queue, so it is for tests and tools: never call it from the main thread or the sink.
     public func state(of plugin: PluginID) -> PluginState? {
@@ -147,6 +173,23 @@ public final class PluginEngine: Sendable {
             perform(effect)
         }
         rearm(after: delay, onWallClock: isWake)
+        publishStatus()
+    }
+
+    /// publishStatus sends the status to its observer when it differs from the last one sent.
+    private func publishStatus() {
+        let plugins = kernel.withLock { $0.states() }
+        let changed = status.withLock { status -> (PluginEngineStatus, @Sendable (PluginEngineStatus) -> Void)? in
+            let current = PluginEngineStatus(plugins: plugins, host: status.host)
+            guard let observer = status.observer, current != status.last else { return nil }
+
+            status.last = current
+            return (current, observer)
+        }
+
+        if let (current, observer) = changed {
+            observer(current)
+        }
     }
 
     private func perform(_ effect: PluginEngineEffect) {

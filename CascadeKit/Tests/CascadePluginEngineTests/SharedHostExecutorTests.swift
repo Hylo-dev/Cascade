@@ -210,7 +210,7 @@ struct SharedHostExecutorTests {
         }
 
         #expect(rig.transport.links.count == 3)
-        #expect(rig.events.values.last == .unavailable)
+        #expect(rig.events.values.suffix(2) == [.unavailable, .abandoned])
     }
 
     @Test
@@ -269,5 +269,25 @@ struct SharedHostExecutorTests {
 
         #expect(link.sourceStops == ["power"])
         #expect(received.values.isEmpty)
+    }
+
+    @Test
+    func aHostGivenUpOnIsReportedAndARestartConnectsAgain() throws {
+        let rig = rig()
+        rig.executor.start(clock, entryPoint: "ClockPlugin")
+        for index in 0..<3 {
+            let link = try #require(rig.transport.links.last)
+            rig.time.set(index * 20)
+            link.greet()
+            link.die()
+            rig.time.runDelayed()
+        }
+
+        #expect(rig.events.values.last == .abandoned)
+
+        let links = rig.transport.links.count
+        rig.executor.restart()
+
+        #expect(rig.transport.links.count == links + 1)
     }
 }

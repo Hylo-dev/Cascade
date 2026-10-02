@@ -43,11 +43,20 @@ struct PluginKernel: Sendable {
 
     func state(of plugin: PluginID) -> PluginState? {
         records[plugin].map { record in
-            switch record.status {
+            guard record.isEnabled else { return .switchedOff }
+
+            return switch record.status {
                 case .idle, .handling, .retrying: .active
                 case .disabledAfterHang         : .disabledAfterHang
                 case .quarantined               : .quarantined
             }
+        }
+    }
+
+    /// states is every registered plugin's state, for settings.
+    func states() -> [PluginID: PluginState] {
+        records.keys.reduce(into: [:]) { states, plugin in
+            states[plugin] = state(of: plugin)
         }
     }
 

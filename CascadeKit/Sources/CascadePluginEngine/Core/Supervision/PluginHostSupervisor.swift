@@ -34,6 +34,13 @@ struct PluginHostSupervisor: Sendable {
         lastLaunch = instant
     }
 
+    /// forgive clears the crash history, so a host given up on is tried again.
+    mutating func forgive() {
+        crashes.removeAll()
+        idleCrashes.removeAll()
+        hasGivenUp = false
+    }
+
     /// lost records a loss and returns how long to wait before connecting again, or nil once the
     /// host is given up on.
     mutating func lost(

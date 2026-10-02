@@ -75,4 +75,28 @@ struct PluginEngineTests {
         #expect(!source.isRunning)
         gate.signal()
     }
+
+    @Test
+    func theStatusIsPushedOnlyWhenItChanges() async throws {
+        let clock    = PluginEngineFixtures.clockID
+        let output   = try PluginEngineFixtures.output("time", .widget, PluginEngineFixtures.text("12:00"))
+        let statuses = Recorder<PluginEngineStatus>()
+        let engine   = PluginEngine(
+            executor: InProcessExecutor(providers: ["ClockPlugin": ScriptedProvider { _ in output }]),
+            sources : [:],
+            sink    : RecordingSink()
+        )
+        engine.observeStatus { statuses.record($0) }
+
+        engine.register(try PluginEngineFixtures.clock(), grants: [])
+        #expect(try await eventually { statuses.values.last?.plugins[clock] == .active })
+        engine.setEnabled(false, for: clock)
+        #expect(try await eventually { statuses.values.last?.plugins[clock] == .switchedOff })
+        let pushed = statuses.values.count
+        engine.setEnabled(false, for: clock)
+        _ = engine.state(of: clock)
+
+        #expect(statuses.values.count == pushed)
+        #expect(statuses.values.last?.host == .running)
+    }
 }

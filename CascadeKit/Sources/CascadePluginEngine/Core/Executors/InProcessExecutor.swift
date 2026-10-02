@@ -24,6 +24,9 @@ public final class InProcessExecutor: PluginExecutor {
         handler(.available)
     }
 
+    /// restart does nothing: plugins run in this process, which is never given up on.
+    public func restart() {}
+
     public func start(
         _ plugin  : PluginID,
         entryPoint: String

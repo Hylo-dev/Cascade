@@ -31,4 +31,7 @@ public protocol PluginExecutor: Sendable {
 
     /// stop abandons whatever the plugin is doing. The kernel calls it on a hang.
     func stop(_ plugin: PluginID)
+
+    /// restart tries a host given up on again, at the user's request.
+    func restart()
 }

@@ -8,4 +8,5 @@ public enum PluginExecutorEvent: Equatable, Sendable {
 
     case available   // A host completed its handshake and loaded the plugins.
     case unavailable // The host is gone, or not there yet.
+    case abandoned   // The host was given up on after repeated crashes, until a restart.
 }

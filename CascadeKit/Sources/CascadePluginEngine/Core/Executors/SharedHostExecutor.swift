@@ -187,6 +187,17 @@ public final class SharedHostExecutor: PluginExecutor {
         drain()
     }
 
+    /// restart forgives a host given up on and connects again; a host that is running or coming
+    /// back is left alone.
+    public func restart() {
+        state.withLock { state in
+            guard state.supervisor.hasGivenUp else { return }
+
+            state.supervisor.forgive()
+        }
+        connectIfNeeded()
+    }
+
     /// finish completes one dispatch with the host's answer. No answer means the connection broke
     /// before the host replied, which is the loss of that host.
     private func finish(
@@ -280,6 +291,9 @@ public final class SharedHostExecutor: PluginExecutor {
             }
             if let observer = state.observer {
                 state.outbox.append { observer(.unavailable) }
+                if delay == nil {
+                    state.outbox.append { observer(.abandoned) }
+                }
             }
             for dispatch in dispatches {
                 state.outbox.append { dispatch.completion(outcome) }
