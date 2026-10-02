@@ -145,7 +145,35 @@ struct PluginTimerProgressBarTests {
 
         let height = Double(NSHostingView(rootView: PluginDocumentView(store: store)).fittingSize.height)
 
-        #expect(height == PluginTimerProgressBar.height)
+        #expect(height == PluginProgressBar.height)
+    }
+
+    /// A linear progress is the same bar at a fixed fraction, so a paused timer looks like the
+    /// running one rather than like SwiftUI's system bar, which turns grey in the notch's panel.
+    @Test
+    func aLinearProgressIsTheSameFivePointBar() throws {
+        let progress = PluginNode(.progress(value: 0.5, total: 1, style: .linear))
+
+        let height = Double(NSHostingView(rootView: PluginDocumentView(store: try store(progress))).fittingSize.height)
+
+        #expect(height == PluginProgressBar.height)
+    }
+
+    @Test
+    func aLinearProgressFillsToItsValueWithItsParentsForegroundStyle() throws {
+        let red    = PluginColor(red: 1, green: 0, blue: 0)
+        let parent = PluginNode(
+            .vStack(alignment: .leading, spacing: nil),
+            modifiers: [.foregroundStyle(.color(red))],
+            children : [PluginNode(.progress(value: 1, total: 4, style: .linear))]
+        )
+        let bitmap = try widget(parent)
+        let filled = try color(in: bitmap, x: 12)
+        let track  = try color(in: bitmap, x: 60)
+
+        #expect(filled.alphaComponent > 0.9)
+        #expect(filled.redComponent > 0.9 && filled.greenComponent < 0.3 && filled.blueComponent < 0.3)
+        #expect(track.alphaComponent > 0.1 && track.alphaComponent < 0.4)
     }
 
     /// A bar that inherits no style fills with the primary colour of the widget's dark scheme,

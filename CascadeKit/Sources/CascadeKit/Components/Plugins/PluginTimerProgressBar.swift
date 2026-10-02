@@ -14,35 +14,17 @@ import SwiftUI
 /// notch's panel, against 0.01% for this bar. Its timeline steps every five hundredth of the
 /// interval, which moves a 110-point bar by a fifth of a point at a time, and never more often
 /// than once a second, so a day's bar redraws every three minutes and a year's twice a day; it
-/// stops once it has drawn the end, where a finished bar has nothing left to draw. The system bar
-/// also turns grey in a window that is never key, which the notch's panel never is. This one
-/// fills with the foreground style it inherits, as text does, over a dim track of the same
-/// colour, which on the widget surface's dark scheme is white unless the node or a parent names
-/// another, and reads to VoiceOver as a progress indicator.
+/// stops once it has drawn the end, where a finished bar has nothing left to draw. Each step
+/// draws the kernel's `PluginProgressBar` at the fraction reached, the bar a linear progress
+/// draws too.
 struct PluginTimerProgressBar: View {
-
-    static let height = 5.0
 
     let start: Date
     let end  : Date
 
     var body: some View {
         TimelineView(Schedule(start: start, end: end)) { context in
-            let fraction = Self.fraction(at: context.date, from: start, to: end)
-
-            Capsule()
-                .fill(.foreground.opacity(0.22))
-                .overlay(alignment: .leading) {
-                    GeometryReader { proxy in
-                        Capsule()
-                            .fill(.foreground)
-                            .frame(width: proxy.size.width * fraction)
-                    }
-                }
-                .frame(height: Self.height)
-                .accessibilityRepresentation {
-                    ProgressView(value: fraction)
-                }
+            PluginProgressBar(fraction: Self.fraction(at: context.date, from: start, to: end))
         }
     }
 
