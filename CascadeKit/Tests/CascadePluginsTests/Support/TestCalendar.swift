@@ -7,13 +7,20 @@ import Foundation
 import Testing
 
 /// TestCalendar is the calendar the date tests run in, so none of them depends on the machine's
-/// settings or on today: Gregorian, in Rome's zone, which changes hour on 29 March and on 25
-/// October 2026, in English, with the first weekday each test says.
+/// settings or on today: Gregorian, in English, with the first weekday each test says, usually in
+/// Rome's zone, which changes hour on 29 March and on 25 October 2026.
 enum TestCalendar {
 
     static func rome(firstWeekday: Int = 2) throws -> Calendar {
+        try calendar(in: "Europe/Rome", firstWeekday: firstWeekday)
+    }
+
+    static func calendar(
+        in zone     : String,
+        firstWeekday: Int = 2
+    ) throws -> Calendar {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone     = try #require(TimeZone(identifier: "Europe/Rome"))
+        calendar.timeZone     = try #require(TimeZone(identifier: zone))
         calendar.locale       = Locale(identifier: "en_US")
         calendar.firstWeekday = firstWeekday
 

@@ -42,6 +42,18 @@ struct NextMidnightTests {
         #expect(midnight.timeIntervalSince(start) == 23 * 3_600)
     }
 
+    /// Chile moves its clocks forward at midnight, so 6 September 2026 has no midnight in
+    /// Santiago and starts at one in the morning.
+    @Test
+    func aDayWhoseMidnightIsSkippedStartsAtItsFirstMoment() throws {
+        let santiago = try TestCalendar.calendar(in: "America/Santiago")
+
+        let midnight = nextMidnight(after: try TestCalendar.date(2026, 9, 5, 12, in: santiago), in: santiago)
+
+        #expect(midnight == (try TestCalendar.date(2026, 9, 6, 1, in: santiago)))
+        #expect(santiago.component(.hour, from: midnight) == 1)
+    }
+
     @Test
     func aMomentAtMidnightWaitsForTheNextOne() throws {
         let rome = try TestCalendar.rome()
