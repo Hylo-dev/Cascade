@@ -35,14 +35,22 @@ First-party plugins run in **PluginHost**, an XPC service bundled in Cascade, ea
 | Plugin | Entry point | Surface | Source | Tier-2 components |
 | --- | --- | --- | --- | --- |
 | `com.cascade.battery` | `BatteryPlugin` | Widget (2x1, 2x2, 1x1) | `power` | `power.battery` |
+| `com.cascade.calendar` | `CalendarPlugin` | Widget (1x1, 2x2) | none | none |
 | `com.cascade.clock` | `ClockPlugin` | Widget (2x2, 2x1, 1x1) | none | none |
+| `com.cascade.devices` | `DevicesPlugin` | Widget (2x1, 2x2) | `bluetooth` | `bluetooth.battery` |
+| `com.cascade.network` | `NetworkPlugin` | Widget (1x1, 2x1) | `network` | none |
+| `com.cascade.progress` | `ProgressPlugin` | Widget (2x1, 2x2) | none | none |
+| `com.cascade.sound` | `SoundPlugin` | Widget (1x1, 2x1) | `volume` | `volume.level` |
+| `com.cascade.stopwatch` | `StopwatchPlugin` | Widget (1x1, 2x1) | none | none |
+| `com.cascade.timer` | `TimerPlugin` | Widget (1x1, 2x1, 2x2) and a notice when it ends | none | none |
+| `com.cascade.worldclock` | `WorldClockPlugin` | Widget (2x1, 2x2) | none | none |
 | `com.cascade.bluetooth` | `BluetoothPlugin` | Notice | `bluetooth` | `bluetooth.device`, `bluetooth.battery` |
 | `com.cascade.power` | `ChargingPlugin` | Notice | `power` | `power.battery` |
 | `com.cascade.volume` | `VolumePlugin` | Notice | `volume` | `volume.level` |
 
-PluginHost implements the `power` and `bluetooth` sources. The `volume` source runs in the kernel, beside the volume key tap it shares a subsystem with (`Cascade/Core/Volume/VolumePluginSource.swift`); that placement amends the spec's §6, which put volume in PluginHost.
+PluginHost implements the `power`, `bluetooth` and `network` sources (`PluginHostCatalog`). The `volume` source runs in the kernel, beside the volume key tap it shares a subsystem with (`Cascade/Core/Volume/VolumePluginSource.swift`); that placement amends the spec's §6, which put volume in PluginHost.
 
-The user places widgets on the notch grid: a long press starts editing, where a widget can be moved, added from the gallery, removed or resized to any size its manifest declares, and a display, once edited, keeps its own arrangement, saved by its UUID (`WidgetHost`). Settings show, on the Widget page under Plugins, the state of every plugin with Re-enable, and PluginHost's with Restart.
+The user places widgets on the notch grid: a long press starts editing, where a widget can be moved, added from the gallery, removed or resized to any size its manifest declares, and a display, once edited, keeps its own arrangement, saved by its UUID (`WidgetHost`). A display nobody has edited places only the Battery and Clock widgets, as they register (`FirstPartyPlugins.placedByDefault`); every other widget waits in the gallery until the user adds it. Settings show, on the Widget page under Plugins, the state of every plugin with Re-enable, and PluginHost's with Restart.
 
 ## Still pending
 

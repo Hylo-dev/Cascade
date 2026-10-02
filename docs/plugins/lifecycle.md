@@ -23,7 +23,7 @@ One event is in flight per plugin. Events that arrive meanwhile wait in its `Plu
 
 Sources come only from the host catalog (`PluginCatalog.sources`); plugins cannot write their own, because inside a shared process a polling source could not be attributed to its plugin. A source is an always-armed listener that costs nothing while it waits, a notification, a socket or a kernel event, and emits its state when it changes.
 
-- PluginHost implements `power` and `bluetooth` (`PluginHostCatalog`). Their states still travel through the kernel, which coalesces, schedules and times every dispatch in one place.
+- PluginHost implements `power`, `bluetooth` and `network` (`PluginHostCatalog`). Their states still travel through the kernel, which coalesces, schedules and times every dispatch in one place.
 - The kernel implements `volume`, beside the volume key tap it shares a subsystem with. A plugin cannot tell the difference.
 - The other catalog entries have no implementation yet, so a feature that declares one is unavailable.
 
