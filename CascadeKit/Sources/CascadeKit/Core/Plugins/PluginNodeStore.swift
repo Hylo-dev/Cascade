@@ -142,6 +142,16 @@ final class PluginNodeStore {
         }
     }
 
+    /// cancelDrag lets go of a slider's drag without sending it, its thumb going back to the
+    /// published value: the widget board began editing under the user's hand, and the drag
+    /// became a move of the widget.
+    func cancelDrag(_ model: PluginNodeModel) {
+        guard model.isDragging else { return }
+
+        model.isDragging = false
+        revert(model)
+    }
+
     /// reject reverts the control whose action the kernel refused, unless the user is dragging
     /// it again: the refusal was for the value let go before, and the new one is still to come.
     func reject(_ request: PluginActionRequest) {

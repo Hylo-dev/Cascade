@@ -13,8 +13,9 @@ import SwiftUI
 /// A timer progress is the kernel's own bar, `PluginTimerProgressBar`, which steps instead of
 /// redrawing every frame as SwiftUI's does, and a linear progress the same bar standing still,
 /// its fraction safe to take because the contract keeps the value within a positive total.
-/// Controls read their optimistic value first and hand every change to the store; a toggle with
-/// two children shows the first while off and the second while on. An asset reserves its frame
+/// Controls read their optimistic value first and hand every change to the store, unless the
+/// widget board is editing, which `PluginControlGate` tells them; a toggle with two children
+/// shows the first while off and the second while on. An asset reserves its frame
 /// and draws nothing until the asset pipeline exists; a tier-2 component draws through
 /// `PluginComponentView`.
 struct PluginNodeContent: View {
@@ -101,26 +102,43 @@ struct PluginNodeContent: View {
                     .progressViewStyle(.circular)
 
             case .button:
-                Button {
-                    store.press(model)
-                } label: {
-                    children
+                PluginControlGate { isEditingWidgets in
+                    Button {
+                        if !isEditingWidgets {
+                            store.press(model)
+                        }
+                    } label: {
+                        children
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
 
             case .toggle(let isOn, _):
                 let shown = model.optimistic?.bool ?? isOn
 
-                Toggle(isOn: Binding(get: { shown }, set: { store.set(.bool($0), on: model) })) {
-                    toggleLabel(isOn: shown)
+                PluginControlGate { isEditingWidgets in
+                    Toggle(isOn: switched(shown, isEditingWidgets: isEditingWidgets)) {
+                        toggleLabel(isOn: shown)
+                    }
+                    .toggleStyle(PluginToggleStyle())
                 }
-                .toggleStyle(PluginToggleStyle())
 
             case .slider(let value, let minimum, let maximum, let step, _):
-                if let step {
-                    Slider(value: thumb(value), in: minimum...maximum, step: step, onEditingChanged: released)
-                } else {
-                    Slider(value: thumb(value), in: minimum...maximum, onEditingChanged: released)
+                PluginControlGate { isEditingWidgets in
+                    if let step {
+                        Slider(
+                            value           : thumb(value, isEditingWidgets: isEditingWidgets),
+                            in              : minimum...maximum,
+                            step            : step,
+                            onEditingChanged: released(isEditingWidgets: isEditingWidgets)
+                        )
+                    } else {
+                        Slider(
+                            value           : thumb(value, isEditingWidgets: isEditingWidgets),
+                            in              : minimum...maximum,
+                            onEditingChanged: released(isEditingWidgets: isEditingWidgets)
+                        )
+                    }
                 }
 
             case .asset:
@@ -153,15 +171,50 @@ struct PluginNodeContent: View {
         }
     }
 
-    /// thumb is the slider's position: the optimistic one while dragged or awaiting
-    /// confirmation, the published one otherwise.
-    private func thumb(_ published: Double) -> Binding<Double> {
-        Binding(get: { model.optimistic?.number ?? published }, set: { store.drag($0, on: model) })
+    /// switched is a toggle's state: the one shown, and a change sent to the store, unless the
+    /// widget board is editing.
+    private func switched(
+        _ shown         : Bool,
+        isEditingWidgets: Bool
+    ) -> Binding<Bool> {
+        Binding(
+            get: { shown },
+            set: { isOn in
+                if !isEditingWidgets {
+                    store.set(.bool(isOn), on: model)
+                }
+            }
+        )
     }
 
-    private func released(_ isEditing: Bool) {
-        if !isEditing {
-            store.release(model)
+    /// thumb is the slider's position: the optimistic one while dragged or awaiting
+    /// confirmation, the published one otherwise. While the widget board is editing, a drag
+    /// moves nothing.
+    private func thumb(
+        _ published     : Double,
+        isEditingWidgets: Bool
+    ) -> Binding<Double> {
+        Binding(
+            get: { model.optimistic?.number ?? published },
+            set: { value in
+                if !isEditingWidgets {
+                    store.drag(value, on: model)
+                }
+            }
+        )
+    }
+
+    /// released sends the value a slider was let go at. Let go while the widget board is
+    /// editing, a drag begun before sends nothing and its thumb goes back to the published value.
+    private func released(isEditingWidgets: Bool) -> (Bool) -> Void {
+        { isDragging in
+            guard !isDragging else { return }
+
+            if isEditingWidgets {
+                store.cancelDrag(model)
+            } else {
+                store.release(model)
+            }
         }
     }
 }
