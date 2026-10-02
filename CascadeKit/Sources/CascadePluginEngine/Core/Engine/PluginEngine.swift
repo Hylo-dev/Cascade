@@ -140,9 +140,19 @@ public final class PluginEngine: Sendable {
         }
     }
 
-    /// restartHost asks the executor to try a host it gave up on again.
+    /// restartHost asks the executor to try a host it gave up on again. The host reads connecting
+    /// from that moment, so the user sees the restart begin, not a host still stopped until it
+    /// answers.
     public func restartHost() {
-        executor.restart()
+        queue.async { [self] in
+            status.withLock { status in
+                if status.host == .stopped {
+                    status.host = .connecting
+                }
+            }
+            executor.restart()
+            publishStatus()
+        }
     }
 
     /// state reads a plugin's state after everything already queued. It waits for the engine's

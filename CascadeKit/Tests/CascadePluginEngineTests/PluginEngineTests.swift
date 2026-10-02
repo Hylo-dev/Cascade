@@ -99,4 +99,31 @@ struct PluginEngineTests {
         #expect(statuses.values.count == pushed)
         #expect(statuses.values.last?.host == .running)
     }
+
+    @Test
+    func aRestartedHostReadsConnectingUntilItAnswers() async throws {
+        let transport = FakeHostTransport()
+        let time      = HostTime()
+        let statuses  = Recorder<PluginEngineStatus>()
+        let engine    = PluginEngine(
+            executor: SharedHostExecutor(transport: transport, clock: { time.now }, schedule: { time.schedule($0, $1) }),
+            sources : [:],
+            sink    : RecordingSink()
+        )
+        engine.observeStatus { statuses.record($0) }
+        engine.register(try PluginEngineFixtures.clock(), grants: [])
+        #expect(try await eventually { transport.links.count == 1 })
+        for index in 0..<3 {
+            time.set(index * 20)
+            transport.links.last?.die()
+            time.runDelayed()
+        }
+        #expect(try await eventually { statuses.values.last?.host == .stopped })
+
+        engine.restartHost()
+
+        #expect(try await eventually { statuses.values.last?.host == .connecting })
+        transport.links.last?.greet()
+        #expect(try await eventually { statuses.values.last?.host == .running })
+    }
 }
