@@ -4,7 +4,7 @@
 //
 
 import CascadeContracts
-import CascadePresentation
+import CascadeKit
 import AppKit
 import Foundation
 import SwiftUI

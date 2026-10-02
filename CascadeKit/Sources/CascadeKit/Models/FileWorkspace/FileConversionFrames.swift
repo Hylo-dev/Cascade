@@ -6,7 +6,7 @@
 import CoreGraphics
 
 /// FileConversionFrames keeps the conversion arrow centered between nonoverlapping groups.
-public struct FileConversionFrames: Equatable, Sendable {
+public nonisolated struct FileConversionFrames: Equatable, Sendable {
 
     public let inputs  : CGRect
     public let arrow   : CGRect

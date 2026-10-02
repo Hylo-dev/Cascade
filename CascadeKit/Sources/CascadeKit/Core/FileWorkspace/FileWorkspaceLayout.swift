@@ -6,7 +6,7 @@
 import CoreGraphics
 
 /// FileWorkspaceLayout contains deterministic geometry shared by rendering and previews.
-public enum FileWorkspaceLayout {
+public nonisolated enum FileWorkspaceLayout {
 
     public static let maximumVisibleCards = 4
 

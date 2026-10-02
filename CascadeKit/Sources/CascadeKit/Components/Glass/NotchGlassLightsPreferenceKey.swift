@@ -9,7 +9,7 @@ import SwiftUI
 
 /// NotchGlassLightsPreferenceKey combines descendant contributions in view order.
 /// Only the first eight lights reach the host, bounding the renderer's work.
-public struct NotchGlassLightsPreferenceKey: PreferenceKey {
+public nonisolated struct NotchGlassLightsPreferenceKey: PreferenceKey {
 
     public static var defaultValue: [GlassLight] { [] }
 
