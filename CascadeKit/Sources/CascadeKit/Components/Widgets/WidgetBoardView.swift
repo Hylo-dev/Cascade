@@ -78,7 +78,15 @@ struct WidgetBoardView: View {
                         path.addRoundedRect(in: cell, cornerSize: CGSize(width: 6, height: 6), style: .continuous)
                     }
                 }
-                .fill(Color.white.opacity(0.07))
+                .fill(Color.white.opacity(0.10))
+                .overlay {
+                    Path { path in
+                        for cell in cells {
+                            path.addRoundedRect(in: cell.insetBy(dx: 0.5, dy: 0.5), cornerSize: CGSize(width: 6, height: 6), style: .continuous)
+                        }
+                    }
+                    .stroke(Color.white.opacity(0.28), lineWidth: 1)
+                }
                 .allowsHitTesting(false)
 
                 WidgetEditingKeyboardTarget { actions.setEditing(false) }
