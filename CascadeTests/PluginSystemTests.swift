@@ -43,19 +43,26 @@ extension PluginHostTests {
             func dismissActivity(id: String) {}
         }
 
+        /// The clock is placed on a display nobody edited and the calendar, which waits in the
+        /// gallery, is not: this pins the app's wiring of `placedByDefault` into the router.
         @Test
         func theBundledClockReachesTheNotchThroughPluginHost() async throws {
             let grid    = Grid()
             let plugins = PluginSystem(host: grid, sources: [PluginBluetoothState.source: FakeBluetoothSource()])
             plugins.start()
 
+            let clock    = WidgetIdentifier("plugin:com.cascade.clock/time")
+            let calendar = WidgetIdentifier("plugin:com.cascade.calendar/calendar")
             let deadline = ContinuousClock.now.advanced(by: .seconds(30))
-            while grid.widgets.isEmpty, ContinuousClock.now < deadline {
+            while grid.widgets[clock] == nil || grid.widgets[calendar] == nil, ContinuousClock.now < deadline {
                 try await Task.sleep(for: .milliseconds(20))
             }
 
-            let widget = try #require(grid.widgets[WidgetIdentifier("plugin:com.cascade.clock/time")])
+            let widget = try #require(grid.widgets[clock])
             #expect(widget.size == GridSpan(columns: 4, rows: 2))
+            #expect(widget.isPlacedByDefault)
+            let waiting = try #require(grid.widgets[calendar])
+            #expect(!waiting.isPlacedByDefault)
         }
 
         @Test
