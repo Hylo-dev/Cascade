@@ -22,7 +22,12 @@ enum PluginNodeSearch {
         return found
     }
 
+    /// nodes lists a tree's nodes, layers included, so a test can find one by what it carries.
+    static func nodes(in node: PluginNode) -> [PluginNode] {
+        [node] + (node.children + node.layers).flatMap { nodes(in: $0) }
+    }
+
     static func kinds(in node: PluginNode) -> [PluginNodeKind] {
-        [node.kind] + (node.children + node.layers).flatMap { kinds(in: $0) }
+        nodes(in: node).map(\.kind)
     }
 }

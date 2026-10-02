@@ -15,12 +15,6 @@ struct CalendarPluginTests {
 
     private let context = PluginContext(plugin: CalendarPlugin.id)
 
-    /// nodes lists a tree's nodes depth first, layers included, so a test can find one by what
-    /// it carries.
-    private func nodes(in node: PluginNode) -> [PluginNode] {
-        [node] + (node.children + node.layers).flatMap { nodes(in: $0) }
-    }
-
     private func face(
         at date : Date,
         calendar: Calendar
@@ -117,8 +111,8 @@ struct CalendarPluginTests {
         let rome    = try TestCalendar.rome(firstWeekday: 2)
         let root    = try face(at: try TestCalendar.date(2026, 10, 2, 9, in: rome), calendar: rome)
         let large   = try #require(root.children.first)
-        let circled = nodes(in: large).filter { $0.layers.contains { $0.kind == .shape(.circle) } }
-        let dimmed  = nodes(in: large).filter { $0.modifiers.contains(.opacity(0.35)) }
+        let circled = PluginNodeSearch.nodes(in: large).filter { $0.layers.contains { $0.kind == .shape(.circle) } }
+        let dimmed  = PluginNodeSearch.nodes(in: large).filter { $0.modifiers.contains(.opacity(0.35)) }
 
         #expect(circled.map(\.kind) == [.text("2")])
         #expect(dimmed.map(\.kind) == [.text("28"), .text("29"), .text("30"), .text("1")])
