@@ -21,7 +21,7 @@ let package = Package(
         .macOS(.v15)  // Floor: Sequoia. Mutex and Atomic, @Observable, CADisplayLink, safeAreaInsets.
     ],
     products: [
-        .executable(name: "cascade-addon", targets: ["CascadeAddonTool"]),
+        .executable(name: "cascade-plugin", targets: ["CascadePluginTool"]),
         .library(
             name: "CascadeContracts",
             targets: ["CascadeContracts"]
@@ -49,13 +49,13 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "CascadeAddonTool",
+            name: "CascadePluginTool",
             dependencies: ["CascadeContracts"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .testTarget(
-            name: "CascadeAddonToolTests",
-            dependencies: ["CascadeAddonTool"],
+            name: "CascadePluginToolTests",
+            dependencies: ["CascadePluginTool"],
             resources: [.process("Fixtures")],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
