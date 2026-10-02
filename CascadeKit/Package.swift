@@ -120,7 +120,7 @@ let package = Package(
         ),
         .testTarget(
             name: "CascadeKitTests",
-            dependencies: ["CascadeKit", "CascadeContracts", "CascadePluginEngine"]
+            dependencies: ["CascadeKit", "CascadeContracts", "CascadePluginEngine", "CascadePlugins"]
         ),
     ],
     swiftLanguageModes: [.v5]

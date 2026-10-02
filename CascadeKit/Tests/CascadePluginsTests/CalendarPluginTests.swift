@@ -124,6 +124,48 @@ struct CalendarPluginTests {
         #expect(dimmed.map(\.kind) == [.text("28"), .text("29"), .text("30"), .text("1")])
     }
 
+    /// Every initial and every day is a flexible column, so the seven share whatever width the
+    /// tile has rather than adding up to exactly the width of one.
+    @Test
+    func theMonthSpreadsItsSevenColumnsAcrossTheTile() throws {
+        let rome  = try TestCalendar.rome(firstWeekday: 2)
+        let root  = try face(at: try TestCalendar.date(2026, 10, 2, 9, in: rome), calendar: rome)
+        let large = try #require(root.children.first)
+        let cells = large.children.dropFirst().flatMap(\.children)
+
+        #expect(cells.count == 7 * 6)
+        #expect(
+            cells.allSatisfy { cell in
+                cell.modifiers.contains { modifier in
+                    if case .frame(nil, _, .infinity, _, _) = modifier { return true }
+
+                    return false
+                }
+            }
+        )
+        #expect(
+            !cells.contains { cell in
+                cell.modifiers.contains { modifier in
+                    if case .frame(.some, _, _, _, _) = modifier { return true }
+
+                    return false
+                }
+            }
+        )
+    }
+
+    @Test
+    func theWeekdayInitialsAreSevenPointsAtThreeQuartersWhite() throws {
+        let rome    = try TestCalendar.rome(firstWeekday: 2)
+        let root    = try face(at: try TestCalendar.date(2026, 10, 2, 9, in: rome), calendar: rome)
+        let header  = try #require(root.children.first?.children.dropFirst().first)
+        let font    = PluginModifier.font(.system(size: 7, weight: .semibold, design: .rounded))
+        let opacity = PluginModifier.foregroundStyle(.color(.white.opacity(0.75)))
+
+        #expect(header.children.count == 7)
+        #expect(header.children.allSatisfy { $0.modifiers.contains(font) && $0.modifiers.contains(opacity) })
+    }
+
     @Test
     func theSmallFaceIsTheWeekdayAboveTheDay() throws {
         let rome  = try TestCalendar.rome(firstWeekday: 2)

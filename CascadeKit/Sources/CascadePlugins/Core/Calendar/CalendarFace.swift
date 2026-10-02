@@ -18,20 +18,21 @@ import Foundation
 /// first time the notch shows the widget an hour or more after its last publication, the
 /// kernel asks for a refresh, which costs one run when nothing changed.
 ///
-/// The large face is 66 points tall, which a 2x2 tile holds below a notch up to 38 points, and every
-/// week takes an equal share of what the title and the initials leave, with digits sized to it
-/// up to 8.5 points, so a month of 6 weeks fits as well as one of 4 and two-digit days never
-/// touch in their 14-point columns. The fixed height is also what chooses the face: ViewThatFits
-/// measures a face with the tile's width already given, and a fixed height keeps the choice on
-/// the tile, never on how far the text could shrink.
+/// Under a 38-point notch a 2x2 tile is 110 by 68 points and a 1x1 tile 52 by 31, and both faces
+/// fit those. The month is 66 points tall, and every week takes an equal share of what the title
+/// and the initials leave, with digits as tall as their row up to 8.5 points, so a month of 6
+/// weeks fits as well as one of 4; the seven columns share the tile's width rather than adding
+/// up to it, so another width spreads or narrows them and never clips one. The page is a 17-point
+/// day under an 8.5-point weekday, 31 points together. The fixed height is also what chooses the
+/// face: ViewThatFits measures a face with the tile's width already given, and a fixed height
+/// keeps the choice on the tile, never on how far the text could shrink.
 enum CalendarFace {
 
     static let largeHeight = 66.0
 
     private static let red          = PluginColor(red: 1, green: 0.27, blue: 0.23)
-    private static let titleHeight  = 11.0
+    private static let titleHeight  = 10.0
     private static let headerHeight = 9.0
-    private static let columnWidth  = 14.0
 
     static func publication(
         at date    : Date,
@@ -62,7 +63,7 @@ enum CalendarFace {
     /// of what the title and the initials leave.
     private static func month(_ month: CalendarMonth) -> PluginNode {
         let rowHeight = (largeHeight - titleHeight - headerHeight) / Double(max(month.weeks.count, 1))
-        let digitSize = min(rowHeight - 0.5, 8.5)
+        let digitSize = min(rowHeight, 8.5)
 
         return VStack(alignment: .leading, spacing: 0) {
 
@@ -78,9 +79,9 @@ enum CalendarFace {
 
                 for initial in month.weekdayInitials {
                     Text(initial)
-                        .font(.system(size: 6.5, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.55))
-                        .frame(width: columnWidth, height: headerHeight)
+                        .font(.system(size: 7, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.75))
+                        .frame(height: headerHeight, maxWidth: .infinity)
                 }
             }
 
@@ -125,16 +126,16 @@ enum CalendarFace {
                         .foregroundStyle(red)
                         .frame(width: circle, height: circle)
                 }
-                .frame(width: columnWidth)
+                .frame(maxWidth: .infinity)
         }
         if !day.isInMonth {
             return digits
                 .opacity(0.35)
-                .frame(width: columnWidth)
+                .frame(maxWidth: .infinity)
         }
 
         return digits
-            .frame(width: columnWidth)
+            .frame(maxWidth: .infinity)
     }
 
     /// page is the 1x1 face: the weekday in red above the day.
@@ -145,13 +146,13 @@ enum CalendarFace {
         VStack(spacing: 0) {
 
             Text(weekday)
-                .font(.system(size: 9, weight: .bold, design: .rounded))
+                .font(.system(size: 8.5, weight: .bold, design: .rounded))
                 .foregroundStyle(red)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
 
             Text("\(day)")
-                .font(.system(size: 19, weight: .semibold, design: .rounded).monospacedDigit())
+                .font(.system(size: 17, weight: .semibold, design: .rounded).monospacedDigit())
                 .foregroundStyle(.white)
                 .lineLimit(1)
         }

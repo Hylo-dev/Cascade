@@ -14,15 +14,14 @@ import Foundation
 /// goes stale after an hour, as the calendar's does, so a move to a zone ahead is caught the
 /// first time the notch shows the widget an hour later rather than at the old zone's midnight.
 ///
-/// Each bar is held to 5 points: the system bar is drawn that thin, but lays itself out 18
-/// points tall, which would push two rows out of a 34-point tile. The large face is 66 points
-/// tall, as the calendar's month is: ViewThatFits measures a face with the tile's width already
-/// given, and a fixed height keeps the choice on the tile.
+/// A row is an 8-point label sitting on the kernel's 5-point bar, about 14.5 points, so two fit
+/// the 31 points of a 2x1 tile under a 38-point notch and four the 66 of the large face, which a
+/// 2x2 tile holds there. The large face is 66 points tall, as the calendar's month is:
+/// ViewThatFits measures a face with the tile's width already given, and a fixed height keeps
+/// the choice on the tile.
 enum ProgressFace {
 
     static let largeHeight = 66.0
-
-    private static let barHeight = 5.0
 
     static func publication(for periods: ProgressPeriods) throws -> PluginPublication {
         let day   = row(String(localized: "Today", table: "Plugins", bundle: .module), periods.day)
@@ -36,7 +35,7 @@ enum ProgressFace {
             document  : PluginDocument(
                 root: ViewThatFits(in: .vertical) {
 
-                    VStack(alignment: .leading, spacing: 1) {
+                    VStack(alignment: .leading, spacing: 1.5) {
 
                         day
 
@@ -54,7 +53,7 @@ enum ProgressFace {
                         alignment: .leading
                     )
 
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 0.5) {
 
                         day
 
@@ -77,7 +76,7 @@ enum ProgressFace {
         _ label : String,
         _ period: ClosedRange<Date>
     ) -> PluginNode {
-        VStack(alignment: .leading, spacing: 1) {
+        VStack(alignment: .leading, spacing: 0) {
 
             Text(label)
                 .font(.system(size: 8, weight: .semibold, design: .rounded))
@@ -86,7 +85,6 @@ enum ProgressFace {
                 .minimumScaleFactor(0.8)
 
             ProgressView(timerInterval: period)
-                .frame(height: barHeight)
         }
     }
 }
