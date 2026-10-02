@@ -44,7 +44,7 @@ struct PluginNodeViewTests {
                         ]
                     ),
                     PluginNode(.date(now, style: .time), modifiers: [.font(PluginFont(size: 18, design: .rounded, monospacedDigit: true))]),
-                    PluginNode(.clock, modifiers: [.font(PluginFont(size: 18, weight: .semibold, design: .rounded, monospacedDigit: true))]),
+                    PluginNode(.clock, modifiers: [.font(PluginFont(size: 18, weight: .semibold, design: .rounded, monospacedDigit: true)), .timeZone("Asia/Tokyo")]),
                     PluginNode(.today, modifiers: [.foregroundStyle(.hierarchical(.secondary))]),
                     PluginNode(.timer(start: now, end: now.addingTimeInterval(60), countsDown: true), modifiers: [.contentTransition(.numericText(countsDown: true))]),
                     PluginNode(.timerProgress(start: now, end: now.addingTimeInterval(60))),
@@ -139,6 +139,48 @@ struct PluginNodeViewTests {
         let expected = NSHostingView(rootView: Text(Date.now, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated)))
 
         #expect(drawn.fittingSize == expected.fittingSize)
+    }
+
+    @Test
+    func aTimeZoneDrawsTheClockAndTheDateInThatZone() throws {
+        let rome   = try #require(TimeZone(identifier: "Europe/Rome"))
+        let tokyo  = try #require(TimeZone(identifier: "Asia/Tokyo"))
+        let locale = Locale(identifier: "en_GB")
+        /// image renders a view in Rome, so a node that names Tokyo matches Tokyo's time only
+        /// when the modifier reaches what the node draws.
+        func image(_ view: some View) throws -> Data {
+            let renderer = ImageRenderer(
+                content: view
+                    .frame(width: 120, height: 20)
+                    .environment(\.timeZone, rome)
+                    .environment(\.locale, locale)
+            )
+            let bitmap   = NSBitmapImageRep(cgImage: try #require(renderer.cgImage))
+
+            return try #require(bitmap.representation(using: .png, properties: [:]))
+        }
+        func drawn(_ node: PluginNode) throws -> Data {
+            var publisher = PluginRenderFixtures.Publisher()
+            let store     = PluginNodeStore(key: PluginRenderFixtures.key, submit: { _ in })
+            store.apply(publisher.publish(try PluginDocument(root: node)))
+
+            return try image(PluginDocumentView(store: store))
+        }
+        func clock(_ date: Date, in zone: TimeZone) throws -> Data {
+            try image(Text(verbatim: PluginTimeFormat.clock(date, in: zone, locale: locale)))
+        }
+
+        let before = Date.now
+        let shown  = try drawn(PluginNode(.clock, modifiers: [.timeZone("Asia/Tokyo")]))
+        let after  = Date.now
+        let fixed  = Date(timeIntervalSince1970: 1_790_983_800)
+
+        #expect(try [clock(before, in: tokyo), clock(after, in: tokyo)].contains(shown))
+        #expect(try shown != clock(after, in: rome))
+        #expect(
+            try drawn(PluginNode(.date(fixed, style: .time), modifiers: [.timeZone("Asia/Tokyo")]))
+                == image(Text(fixed, style: .time).environment(\.timeZone, tokyo))
+        )
     }
 
     @Test

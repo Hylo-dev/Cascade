@@ -240,6 +240,20 @@ struct PluginDocumentTests {
     }
 
     @Test
+    func aTimeZoneRoundTripsAndMustNameAKnownZone() throws {
+        let document = try PluginDocument(root: PluginNode(.clock, modifiers: [.timeZone("Asia/Tokyo")]))
+        let decoded  = try PluginDocument.decode(JSONEncoder().encode(document))
+
+        #expect(decoded == document)
+        #expect(throws: AddonFailure.self) {
+            try PluginDocument(root: PluginNode(.clock, modifiers: [.timeZone("Mars/Olympus")]))
+        }
+        #expect(throws: AddonFailure.self) {
+            try PluginDocument(root: PluginNode(.clock, modifiers: [.timeZone("")]))
+        }
+    }
+
+    @Test
     func aViewThatFitsRoundTripsAndNeedsAnAlternative() throws {
         let document = try PluginDocument(root: PluginNode(.viewThatFits(axes: .vertical), children: [PluginNode(.text("large")), PluginNode(.text("small"))]))
         let decoded  = try PluginDocument.decode(JSONEncoder().encode(document))

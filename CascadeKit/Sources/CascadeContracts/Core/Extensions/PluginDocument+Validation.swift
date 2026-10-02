@@ -202,6 +202,12 @@ extension PluginDocument {
             case .accessibilityLabel(let label):
                 try ContractValidation.require(label.utf8.count <= 512, "Accessibility label exceeds 512 bytes")
 
+            case .timeZone(let identifier):
+                try ContractValidation.require(
+                    !identifier.isEmpty && identifier.utf8.count <= 64 && TimeZone(identifier: identifier) != nil,
+                    "Unknown time zone"
+                )
+
             case .contentTransition, .transition, .overlay, .background:
                 break
         }

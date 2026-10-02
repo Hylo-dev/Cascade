@@ -6,7 +6,8 @@
 /// PluginModifier is one modifier, applied in the order the node lists them, as in SwiftUI.
 /// `overlay` and `background` carry no content of their own: the n-th of them takes the node's
 /// n-th layer. Keeping nodes out of the modifiers lets a node's own properties hash without
-/// its layers, so a change inside a layer updates only the layer.
+/// its layers, so a change inside a layer updates only the layer. `timeZone` names a zone by its
+/// identifier, as `TimeZone(identifier:)` reads it, and moves the kernel-drawn time beneath it.
 public enum PluginModifier: Codable, Hashable, Sendable {
 
     case font(PluginFont)
@@ -20,6 +21,7 @@ public enum PluginModifier: Codable, Hashable, Sendable {
     case contentTransition(PluginContentTransition)
     case transition(PluginTransition)
     case accessibilityLabel(String)
+    case timeZone(String)
     case overlay(alignment: PluginAlignment)
     case background(alignment: PluginAlignment)
 

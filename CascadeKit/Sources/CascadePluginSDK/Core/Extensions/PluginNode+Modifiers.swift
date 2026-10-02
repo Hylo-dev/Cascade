@@ -89,6 +89,12 @@ extension PluginNode {
         appending(.accessibilityLabel(label))
     }
 
+    /// timeZone draws the kernel's time in this subtree (clocks, dates, today) in another zone,
+    /// as SwiftUI's `\.timeZone` environment does; the plugin never computes the time itself.
+    public func timeZone(_ identifier: String) -> PluginNode {
+        appending(.timeZone(identifier))
+    }
+
     /// overlay draws its content over the node. Several nodes are laid over each other in a
     /// `ZStack` with the same alignment, as SwiftUI does with an overlay of several views.
     public func overlay(

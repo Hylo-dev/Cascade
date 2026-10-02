@@ -181,6 +181,14 @@ struct PluginBuilderTests {
     }
 
     @Test
+    func timeZoneAppendsItsModifier() {
+        let clock = Clock()
+            .timeZone("Asia/Tokyo")
+
+        #expect(clock == PluginNode(.clock, modifiers: [.timeZone("Asia/Tokyo")]))
+    }
+
+    @Test
     func idSetsTheNodesIdentity() {
         let text = Text("12:00")
             .font(.title)

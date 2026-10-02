@@ -52,9 +52,9 @@ HStack(spacing: 8) {
 | Kernel-drawn time | `Clock()`, `Today()`, `Text(_:style:)` with `.time`, `.date` or `.relative`, `Text(timerInterval:countsDown:)`, `ProgressView(timerInterval:)` |
 | Progress | `ProgressView(value:total:style:)`, linear or circular |
 | Controls | `Button(action:label:)`, `Toggle(isOn:action:label:)`, `Slider(value:in:step:action:)` |
-| Modifiers | `font`, `foregroundStyle` (color, hierarchical level or gradient of two to four colors), `frame`, `padding`, `opacity`, `clipShape`, `lineLimit`, `minimumScaleFactor`, `contentTransition` (`numericText`, `symbolEffect`), `transition` (`opacity`, `scale`, `move`), `accessibilityLabel`, `overlay`, `background`, `id` |
+| Modifiers | `font`, `foregroundStyle` (color, hierarchical level or gradient of two to four colors), `frame`, `padding`, `opacity`, `clipShape`, `lineLimit`, `minimumScaleFactor`, `contentTransition` (`numericText`, `symbolEffect`), `transition` (`opacity`, `scale`, `move`), `accessibilityLabel`, `timeZone`, `overlay`, `background`, `id` |
 
-`overlay` and `background` take their content as the node's next layer, several nodes laid in a `ZStack`. `ViewThatFits` is how a widget, which cannot know the size the user gave it, offers a face per size, largest first, as `ClockPlugin` does. Kernel-drawn time is drawn and kept current by the kernel, so a clock or a countdown costs the plugin nothing while it ticks.
+`overlay` and `background` take their content as the node's next layer, several nodes laid in a `ZStack`. `ViewThatFits` is how a widget, which cannot know the size the user gave it, offers a face per size, largest first, as `ClockPlugin` does. Kernel-drawn time is drawn and kept current by the kernel, so a clock or a countdown costs the plugin nothing while it ticks. `timeZone(_:)` takes a zone identifier, one `TimeZone(identifier:)` knows, and draws the kernel's time beneath it in that zone, as SwiftUI's `\.timeZone` environment does.
 
 Not in v1: `ForEach` and dynamic lists, grids and gestures. `Image(asset:)` draws nothing until the asset pipeline exists (see [Services, storage and assets](services.md)).
 
@@ -63,7 +63,7 @@ Not in v1: `ForEach` and dynamic lists, grids and gestures. `Image(asset:)` draw
 `PluginDocument` enforces, in one depth-first walk that stops at the first violation, and then by encoding the document once to check its real size:
 
 - 64 KiB per document, 256 nodes, depth 12, 16 modifiers per node, eight glass lights;
-- 4 KiB per text, 512 bytes per accessibility label;
+- 4 KiB per text, 512 bytes per accessibility label, 64 bytes per time zone identifier;
 - a component takes at most 16 parameters, each a string of at most 256 bytes, a finite number or a bool;
 - lengths are finite, from 0 to 10,000 points; colors, opacity and progress stay in range; a slider's range and step make sense; a timer does not end before it starts;
 - only containers and labelled controls take children, and `Regions` is a notice's root with exactly three regions.

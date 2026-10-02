@@ -9,14 +9,21 @@ import SwiftUI
 /// PluginNodeContent draws a node without its modifiers: a `switch` over the tier-1 vocabulary,
 /// with children drawn as `PluginNodeView`s. Time is drawn by SwiftUI itself, so a timer or a
 /// relative date costs the plugin nothing, and a clock redraws itself at every minute boundary,
-/// only while it is on screen. Controls read their optimistic value first and hand
-/// every change to the store; a toggle with two children shows the first while off and the
-/// second while on. An asset reserves its frame and draws nothing until the asset pipeline
-/// exists; a tier-2 component draws through `PluginComponentView`.
+/// only while it is on screen, in the environment's zone, which the `timeZone` modifier sets.
+/// Controls read their optimistic value first and hand every change to the store; a toggle with
+/// two children shows the first while off and the second while on. An asset reserves its frame
+/// and draws nothing until the asset pipeline exists; a tier-2 component draws through
+/// `PluginComponentView`.
 struct PluginNodeContent: View {
 
     let model: PluginNodeModel
     let store: PluginNodeStore
+
+    @Environment(\.timeZone)
+    private var timeZone
+
+    @Environment(\.locale)
+    private var locale
 
     var body: some View {
         switch model.kind {
@@ -68,13 +75,13 @@ struct PluginNodeContent: View {
 
             case .clock:
                 TimelineView(.everyMinute) { context in
-                    Text(context.date, format: .dateTime.hour().minute())
+                    Text(verbatim: PluginTimeFormat.clock(context.date, in: timeZone, locale: locale))
                         .animation(.smooth, value: context.date)
                 }
 
             case .today:
                 TimelineView(.everyMinute) { context in
-                    Text(context.date, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated))
+                    Text(verbatim: PluginTimeFormat.today(context.date, in: timeZone, locale: locale))
                 }
 
             case .timer(let start, let end, let countsDown):

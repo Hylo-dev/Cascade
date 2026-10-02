@@ -80,6 +80,10 @@ struct PluginModifierEffect: ViewModifier {
                 content
                     .accessibilityLabel(Text(verbatim: label))
 
+            case .timeZone(let identifier):
+                content
+                    .environment(\.timeZone, TimeZone(identifier: identifier) ?? .autoupdatingCurrent)
+
             case .overlay(let alignment):
                 content
                     .overlay(alignment: alignment.swiftUI) { layerView }
