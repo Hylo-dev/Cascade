@@ -51,7 +51,7 @@ public final class SharedHostExecutor: PluginExecutor {
         var plugins     : [PluginID: String] = [:]
         var inFlight    : [UInt64: Dispatch] = [:]
         var lastDispatch: UInt64 = 0
-        var isKilling   = false
+        var killing     : PluginHostSupervisor.Loss?
         var observer    : (@Sendable (PluginExecutorEvent) -> Void)?
         var supervisor  = PluginHostSupervisor()
         var outbox      : [@Sendable () -> Void] = []
@@ -149,7 +149,7 @@ public final class SharedHostExecutor: PluginExecutor {
                   let link = state.link
             else { return }
 
-            state.isKilling = true
+            state.killing = .killed
             state.outbox.append { link.kill() }
         }
         drain()
@@ -229,18 +229,19 @@ public final class SharedHostExecutor: PluginExecutor {
     }
 
     /// checkMemory restarts a host past `memoryLimit`. A shared process cannot say which plugin
-    /// holds the memory, so the kill blames no one: the dispatches it ends are lost, not failed,
-    /// and the host comes back at once.
+    /// holds the memory, so the kill blames no one: the dispatches it ends are lost, not failed.
+    /// The host comes back after a crash's backoff, and one that outgrows its memory again and
+    /// again is given up on.
     private func checkMemory(_ generation: UInt64) {
         let link = state.withLock { state in
-            state.generation == generation && state.phase == .ready && !state.isKilling ? state.link : nil
+            state.generation == generation && state.phase == .ready && state.killing == nil ? state.link : nil
         }
         guard let link, let footprint = link.footprint(), footprint > Self.memoryLimit else { return }
 
         state.withLock { state in
-            guard state.generation == generation, state.phase == .ready, !state.isKilling, let link = state.link else { return }
+            guard state.generation == generation, state.phase == .ready, state.killing == nil, let link = state.link else { return }
 
-            state.isKilling = true
+            state.killing = .overMemory
             state.outbox.append { link.kill() }
         }
         drain()
@@ -321,12 +322,10 @@ public final class SharedHostExecutor: PluginExecutor {
         state.withLock { state in
             guard state.generation == generation, state.phase == .connecting || state.phase == .ready else { return }
 
-            let cause: PluginHostSupervisor.Loss = state.isKilling
-                ? .killed
-                : (state.inFlight.isEmpty ? .crashedIdle : .crashed)
-            let outcome = state.isKilling
-                ? PluginExecutionResult.lost
-                : PluginExecutionResult(outcome: .failed, cpuTime: .zero)
+            let cause   = state.killing ?? (state.inFlight.isEmpty ? .crashedIdle : .crashed)
+            let outcome = state.killing == nil
+                ? PluginExecutionResult(outcome: .failed, cpuTime: .zero)
+                : PluginExecutionResult.lost
             let delay      = state.supervisor.lost(cause, at: now)
             let dispatches = state.inFlight.values
 
@@ -350,9 +349,9 @@ public final class SharedHostExecutor: PluginExecutor {
             }
 
             state.inFlight.removeAll()
-            state.link      = nil
-            state.isKilling = false
-            state.phase     = delay == nil ? .disconnected : .waiting
+            state.link    = nil
+            state.killing = nil
+            state.phase   = delay == nil ? .disconnected : .waiting
         }
         drain()
     }

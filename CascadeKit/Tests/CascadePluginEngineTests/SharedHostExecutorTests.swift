@@ -338,4 +338,24 @@ struct SharedHostExecutorTests {
         #expect(link.wasKilled)
         #expect(rig.results.values == [.output(output), .lost])
     }
+
+    @Test
+    func aHostPastItsMemoryLimitOnEveryLaunchIsGivenUp() throws {
+        let rig    = rig()
+        let output = try PluginOutput()
+        rig.executor.start(clock, entryPoint: "ClockPlugin")
+        for index in 0..<3 {
+            let link = try #require(rig.transport.links.last)
+            rig.time.set(index * 20)
+            link.greet()
+            link.memoryFootprint = SharedHostExecutor.memoryLimit + 1
+            rig.dispatch(.refresh, to: clock)
+            link.answer(0, with: PluginEngineFixtures.result(output))
+            link.die()
+            rig.time.runDelayed()
+        }
+
+        #expect(rig.transport.links.count == 3)
+        #expect(rig.events.values.last == .abandoned)
+    }
 }
