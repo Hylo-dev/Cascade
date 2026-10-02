@@ -133,6 +133,17 @@
         }
       }
     },
+    "Stopwatch": {
+      "comment": "Settings name of the stopwatch widget plugin.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cronometro"
+          }
+        }
+      }
+    },
     "This month": {
       "comment": "Progress widget label of the bar for how much of this month has gone.",
       "localizations": {

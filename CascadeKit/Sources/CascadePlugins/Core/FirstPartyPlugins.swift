@@ -20,6 +20,7 @@ public enum FirstPartyPlugins {
         "ChargingPlugin" : ChargingPlugin(),
         "ClockPlugin"    : ClockPlugin(),
         "ProgressPlugin" : ProgressPlugin(),
+        "StopwatchPlugin": StopwatchPlugin(),
         "TimerPlugin"    : TimerPlugin(),
         "VolumePlugin"   : VolumePlugin(),
     ]
@@ -40,6 +41,7 @@ public enum FirstPartyPlugins {
             case "com.cascade.clock"    : String(localized: "Clock", table: "Plugins", bundle: .module)
             case "com.cascade.power"    : String(localized: "Charging alerts", table: "Plugins", bundle: .module)
             case "com.cascade.progress" : String(localized: "Progress", table: "Plugins", bundle: .module)
+            case "com.cascade.stopwatch": String(localized: "Stopwatch", table: "Plugins", bundle: .module)
             case "com.cascade.timer"    : String(localized: "Timer", table: "Plugins", bundle: .module)
             case "com.cascade.volume"   : String(localized: "Volume alerts", table: "Plugins", bundle: .module)
             default                     : plugin.rawValue

@@ -104,4 +104,20 @@ struct FirstPartyWidgetFitTests {
             #expect(try fits(smaller[1], in: Self.small))
         }
     }
+
+    @Test
+    func everyStopwatchFaceFitsItsTile() throws {
+        let states: [StopwatchState] = [
+            .idle,
+            .running(since: Date.now, before: 3_725),
+            .paused(elapsed: 3_725),
+        ]
+
+        for state in states {
+            let faces = try faces(of: StopwatchFace.publication(for: state))
+
+            #expect(try fits(faces[0], in: Self.short))
+            #expect(try fits(faces[1], in: Self.small))
+        }
+    }
 }
