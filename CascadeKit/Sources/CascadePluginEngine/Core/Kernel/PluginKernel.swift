@@ -329,27 +329,40 @@ struct PluginKernel: Sendable {
     }
 
     /// hostAvailable resumes dispatching once the executor's host has completed a handshake. A
-    /// host that restarted lost every plugin's state, so every runnable plugin is primed again;
-    /// after the first handshake that only repeats the refresh registration already queued.
+    /// host that restarted lost every plugin's state, so every runnable plugin leases its sources
+    /// again, each of which starts by emitting its current state, and is asked for its content.
     mutating func hostAvailable(at now: PluginInstant) -> [PluginEngineEffect] {
         isHostReady = true
 
-        for plugin in records.keys {
+        var effects: [PluginEngineEffect] = []
+        for plugin in records.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
             guard var record = records[plugin], record.isRunnable else { continue }
 
+            syncLeases(plugin, &record, &effects)
             prime(&record)
             records[plugin] = record
         }
 
-        var effects: [PluginEngineEffect] = []
         schedule(at: now, into: &effects)
         return effects
     }
 
-    /// hostUnavailable holds every dispatch while the host is gone. Events keep coalescing in the
-    /// mailboxes and nothing comes due until the host is back, so a dead host costs nothing.
-    mutating func hostUnavailable() {
+    /// hostUnavailable holds every dispatch while the host is gone and releases every source.
+    /// Nothing comes due until the host is back, so a dead host costs nothing, and a source the
+    /// kernel runs for a plugin that cannot run stops instead of working for no one: the volume
+    /// source's key tap lets macOS show its own HUD again rather than swallow keys silently.
+    mutating func hostUnavailable() -> [PluginEngineEffect] {
         isHostReady = false
+
+        var effects: [PluginEngineEffect] = []
+        for plugin in records.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
+            guard var record = records[plugin] else { continue }
+
+            syncLeases(plugin, &record, &effects)
+            records[plugin] = record
+        }
+
+        return effects
     }
 
     /// nextDelay is how long the engine's one timer may sleep: until the earliest watchdog,
@@ -463,8 +476,12 @@ struct PluginKernel: Sendable {
         }
 
         if !changes.isEmpty {
+            let rest = changes.allSatisfy { $0.key.surface == .notice }
+                ? record.noticeBudget.spend(at: now.monotonic)
+                : record.budget.spend(at: now.monotonic)
+
             effects.append(.deliver(changes))
-            record.throttledUntil = max(record.throttledUntil, now.monotonic + record.budget.spend(at: now.monotonic))
+            record.throttledUntil = max(record.throttledUntil, now.monotonic + rest)
         }
         record.wake = output.wake.map { max($0, now.wall.addingTimeInterval(Self.minimumWake)) }
 
@@ -561,15 +578,15 @@ struct PluginKernel: Sendable {
     }
 
     /// syncLeases makes the plugin hold exactly the sources its available features declare
-    /// while it is runnable, and none otherwise, starting and stopping shared sources as their
-    /// first holder arrives and their last one leaves.
+    /// while it is runnable and its host is there, and none otherwise, starting and stopping
+    /// shared sources as their first holder arrives and their last one leaves.
     private mutating func syncLeases(
         _ plugin : PluginID,
         _ record : inout PluginRecord,
         _ effects: inout [PluginEngineEffect]
     ) {
         let current = record
-        let wanted  = current.isRunnable
+        let wanted  = current.isRunnable && isHostReady
             ? Set(current.manifest.features.filter { isAvailable($0, in: current) }.flatMap(\.sources))
             : []
 

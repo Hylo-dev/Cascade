@@ -419,27 +419,27 @@ struct PluginKernelTests {
     }
 
     @Test
-    func nothingIsDispatchedOrDueWhileTheHostIsUnavailable() throws {
+    func nothingIsDispatchedLeasedOrDueWhileTheHostIsUnavailable() throws {
         var kernel = Fixtures.kernel()
-        kernel.hostUnavailable()
+        _ = kernel.hostUnavailable()
 
         let effects = kernel.register(try Fixtures.music(), grants: ["automation.music"], at: start)
 
-        #expect(effects == [.start(music, entryPoint: "MusicPlugin"), .startSource("media.nowPlaying")])
+        #expect(effects == [.start(music, entryPoint: "MusicPlugin")])
         #expect(kernel.nextDelay(at: start) == nil)
     }
 
     @Test
-    func aHostThatComesBackPrimesEveryPlugin() throws {
+    func aLostHostReleasesEverySourceAndAReturningOneLeasesThemAgain() throws {
         let song   = try Fixtures.nowPlaying("Song")
         var kernel = Fixtures.kernel()
         try playing(Fixtures.text("Song"), in: &kernel)
         _ = kernel.receive(song, at: start)
         _ = kernel.complete(music, token: 2, result: Fixtures.result(try PluginOutput()), at: start)
-        kernel.hostUnavailable()
 
-        #expect(kernel.hostAvailable(at: start) == [.dispatch(music, .source(song), token: 3)])
-        #expect(kernel.complete(music, token: 3, result: Fixtures.result(try PluginOutput()), at: start) == [.dispatch(music, .refresh, token: 4)])
+        #expect(kernel.hostUnavailable() == [.stopSource("media.nowPlaying")])
+        #expect(kernel.receive(song, at: start).isEmpty)
+        #expect(kernel.hostAvailable(at: start) == [.startSource("media.nowPlaying"), .dispatch(music, .refresh, token: 3)])
     }
 
     @Test
@@ -518,5 +518,38 @@ struct PluginKernelTests {
         let later = kernel.tick(at: start.advanced(by: 60))
 
         #expect(!later.contains { if case .dispatch = $0 { true } else { false } })
+    }
+
+    /// noticer is a plugin that shows a notice for every volume state, as the volume plugin does.
+    private func noticer() throws -> PluginManifest {
+        try Fixtures.manifest(
+            PluginID(rawValue: "com.cascade.volume")!,
+            entryPoint: "VolumePlugin",
+            features  : [PluginFeature(id: "volume", surfaces: PluginSurfaces(notice: PluginPlainSurface()), sources: ["volume"])]
+        )
+    }
+
+    private func notice(_ text: String) throws -> PluginOutput {
+        let document = try PluginDocument(root: PluginNode(.regions, children: [PluginNode(.text(text)), PluginNode(.text(text)), PluginNode(.text(text))]))
+
+        return try PluginOutput(
+            publications: [PluginPublication(feature: "volume", surface: .notice, document: document, notice: PluginNoticeAttributes(duration: 1.8, accessibilityLabel: text))]
+        )
+    }
+
+    @Test
+    func noticesKeepUpWithAHeldKey() throws {
+        let volume = PluginID(rawValue: "com.cascade.volume")!
+        var kernel = Fixtures.kernel(sources: ["volume"])
+        _ = kernel.register(try noticer(), grants: [], at: start)
+        _ = kernel.complete(volume, token: 1, result: Fixtures.result(try PluginOutput()), at: start)
+
+        for step in 1...20 {
+            let now   = start.advanced(by: Double(step) * 0.04)
+            let state = try PluginSourceEvent(source: "volume", fields: ["announcement": .number(Double(step))])
+
+            #expect(kernel.receive(state, at: now) == [.dispatch(volume, .source(state), token: UInt64(step + 1))])
+            _ = kernel.complete(volume, token: UInt64(step + 1), result: Fixtures.result(try notice("\(step)"), cpuTime: .microseconds(100)), at: now)
+        }
     }
 }

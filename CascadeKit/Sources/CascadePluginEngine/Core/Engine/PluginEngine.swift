@@ -53,8 +53,7 @@ public final class PluginEngine: Sendable {
                         return kernel.hostAvailable(at: now)
 
                     case .unavailable:
-                        kernel.hostUnavailable()
-                        return []
+                        return kernel.hostUnavailable()
                 }
             }
         }

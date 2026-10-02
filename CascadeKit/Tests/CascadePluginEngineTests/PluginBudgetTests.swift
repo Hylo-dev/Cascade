@@ -56,4 +56,15 @@ struct PluginBudgetTests {
         }
         #expect(budget.spend(at: .seconds(60)) == .milliseconds(250))
     }
+
+    @Test
+    func noticesRefillAtTheFastestKeyRepeat() {
+        var budget = PluginPublicationBudget(interval: PluginPublicationBudget.noticeInterval, at: .zero)
+
+        for _ in 1...7 {
+            #expect(budget.spend(at: .zero) == .zero)
+        }
+        #expect(budget.spend(at: .zero) == PluginPublicationBudget.noticeInterval)
+        #expect(PluginPublicationBudget.noticeInterval <= .milliseconds(34))
+    }
 }

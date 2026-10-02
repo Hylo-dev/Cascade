@@ -7,7 +7,7 @@ import CascadeContracts
 import Foundation
 
 /// PluginRecord is everything the kernel tracks for one registered plugin: what it declared and
-/// was granted, its supervisor state and health history, its pending events, its two budgets,
+/// was granted, its supervisor state and health history, its pending events, its budgets,
 /// the wake it asked for, the sources it holds, and whether the user switched it on.
 struct PluginRecord: Sendable {
 
@@ -18,6 +18,7 @@ struct PluginRecord: Sendable {
     var history       = PluginHealthHistory()
     var cpu           : PluginCPUBudget
     var budget        : PluginPublicationBudget
+    var noticeBudget  : PluginPublicationBudget
     var throttledUntil: Duration
     var wake          : Date?
     var leased        : Set<String> = []
@@ -32,6 +33,7 @@ struct PluginRecord: Sendable {
         self.grants    = grants
         cpu            = PluginCPUBudget(at: instant)
         budget         = PluginPublicationBudget(at: instant)
+        noticeBudget   = PluginPublicationBudget(interval: PluginPublicationBudget.noticeInterval, at: instant)
         throttledUntil = instant
     }
 
