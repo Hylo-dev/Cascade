@@ -1,0 +1,61 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Battery": {
+      "comment": "Settings name of the battery widget plugin.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Batteria"
+          }
+        }
+      }
+    },
+    "Bluetooth alerts": {
+      "comment": "Settings name of the Bluetooth notice plugin.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvisi Bluetooth"
+          }
+        }
+      }
+    },
+    "Charging alerts": {
+      "comment": "Settings name of the charging notice plugin.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvisi di carica"
+          }
+        }
+      }
+    },
+    "Clock": {
+      "comment": "Settings name of the clock widget plugin.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orologio"
+          }
+        }
+      }
+    },
+    "Volume alerts": {
+      "comment": "Settings name of the volume notice plugin.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvisi del volume"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

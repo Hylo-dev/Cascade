@@ -20,6 +20,20 @@ public enum FirstPartyPlugins {
         "VolumePlugin"   : VolumePlugin(),
     ]
 
+    /// name is how settings call a bundled plugin, in the user's language. Manifests carry no
+    /// names, so the first-party ones live here, beside the plugins they name; an unknown id
+    /// reads as itself.
+    public static func name(of plugin: PluginID) -> String {
+        switch plugin.rawValue {
+            case "com.cascade.battery"  : String(localized: "Battery", table: "Plugins", bundle: .module)
+            case "com.cascade.bluetooth": String(localized: "Bluetooth alerts", table: "Plugins", bundle: .module)
+            case "com.cascade.clock"    : String(localized: "Clock", table: "Plugins", bundle: .module)
+            case "com.cascade.power"    : String(localized: "Charging alerts", table: "Plugins", bundle: .module)
+            case "com.cascade.volume"   : String(localized: "Volume alerts", table: "Plugins", bundle: .module)
+            default                     : plugin.rawValue
+        }
+    }
+
     /// manifests decodes every bundled manifest, in a stable order. One that fails validation
     /// can only be a broken bundle, since the tests decode them all, and is left out.
     public static func manifests() -> [PluginManifest] {

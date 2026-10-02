@@ -64,4 +64,14 @@ struct FirstPartyPluginsTests {
         #expect(manifest.features.first?.surfaces.widget?.sizes == [try PluginWidgetSize(columns: 2, rows: 2), try PluginWidgetSize(columns: 2, rows: 1), try PluginWidgetSize(columns: 1, rows: 1)])
         #expect(face.componentReferences.isEmpty)
     }
+
+    @Test
+    func everyBundledPluginHasAName() {
+        for manifest in FirstPartyPlugins.manifests() {
+            let name = FirstPartyPlugins.name(of: manifest.id)
+
+            #expect(!name.isEmpty)
+            #expect(name != manifest.id.rawValue)
+        }
+    }
 }

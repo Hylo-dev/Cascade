@@ -28,6 +28,10 @@ final class PluginSystem {
     private var disabled     = Set<PluginID>()
     private var observers    : [String: @Sendable (PluginSourceEvent) -> Void] = [:]
 
+    /// statusHandler receives the engine's status on the main thread whenever it changes: each
+    /// plugin's state and PluginHost's, for settings.
+    var statusHandler: (PluginEngineStatus) -> Void = { _ in }
+
     init(
         host   : any PluginSurfaceHosting,
         sources: [String: any PluginEventSource] = [:]
@@ -81,6 +85,16 @@ final class PluginSystem {
         observers[source] = observer
     }
 
+    /// reenable brings back a plugin stopped after a hang or quarantined.
+    func reenable(_ plugin: PluginID) {
+        engine?.reenable(plugin)
+    }
+
+    /// restartHost tries PluginHost again after repeated crashes made the engine give up on it.
+    func restartHost() {
+        engine?.restartHost()
+    }
+
     /// invoke asks a plugin to run one of its declared actions; before the engine is composed it
     /// does nothing.
     func invoke(
@@ -127,6 +141,11 @@ final class PluginSystem {
         }
         for plugin in disabled {
             engine.setEnabled(false, for: plugin)
+        }
+        engine.observeStatus { [weak self] status in
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated { self?.statusHandler(status) }
+            }
         }
 
         self.surfaces = surfaces

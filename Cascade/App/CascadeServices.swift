@@ -6,6 +6,7 @@
 import AppKit
 import CascadeContracts
 import CascadeKit
+import CascadePluginEngine
 import CascadePlugins
 import CascadeRuntime
 import Observation
@@ -105,6 +106,10 @@ final class CascadeServices {
     }
 
     private(set) var volumeStatus: VolumeMonitoringStatus = .stopped
+
+    /// pluginStatus is each plugin's state and PluginHost's, for settings; nil until the engine
+    /// has been composed.
+    private(set) var pluginStatus: PluginEngineStatus?
 
     var musicEnabled: Bool {
         didSet {
@@ -276,6 +281,10 @@ final class CascadeServices {
                 if !isPresented { self?.settingsAnchorDisplayID = nil }
             }
         )
+
+        plugins.statusHandler = { [weak self] status in
+            self?.pluginStatus = status
+        }
 
         volumeSource.statusHandler = { [weak self] status in
             self?.volumeStatus = status
@@ -594,6 +603,16 @@ final class CascadeServices {
 
     func requestVolumeAccessibility() {
         volumeSource.monitor.requestAccess()
+    }
+
+    /// reenablePlugin brings back a plugin stopped after a hang or quarantined.
+    func reenablePlugin(_ plugin: PluginID) {
+        plugins.reenable(plugin)
+    }
+
+    /// restartPluginHost tries PluginHost again after repeated crashes.
+    func restartPluginHost() {
+        plugins.restartHost()
     }
 
     /// previewVolume never adjusts hardware or installs an input tap. The volume plugin draws the

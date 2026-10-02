@@ -1223,6 +1223,28 @@
         }
       }
     },
+    "Off": {
+      "comment": "Settings: a plugin the user switched off.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spento"
+          }
+        }
+      }
+    },
+    "On": {
+      "comment": "Settings: a plugin that runs.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attivo"
+          }
+        }
+      }
+    },
     "Only regular local files are accepted, not folders or promised files.": {
       "comment": "Shelf status after an unsupported drop.",
       "localizations": {
@@ -1311,6 +1333,28 @@
         }
       }
     },
+    "Plugin host": {
+      "comment": "Settings: the row for the process that runs the plugins.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Processo dei plugin"
+          }
+        }
+      }
+    },
+    "Plugins": {
+      "comment": "Settings: header of the plugin status section.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plugin"
+          }
+        }
+      }
+    },
     "Preview charging in Low Power Mode.": {
       "comment": "Settings row description",
       "localizations": {
@@ -1383,6 +1427,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Esci da Cascade"
+          }
+        }
+      }
+    },
+    "Re-enable": {
+      "comment": "Settings: button that brings back a plugin stopped after a fault.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riattiva"
+          }
+        }
+      }
+    },
+    "Re-enable %@": {
+      "comment": "Settings: accessibility label of the Re-enable button; %@ is the plugin's name.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riattiva %@"
           }
         }
       }
@@ -1497,6 +1563,28 @@
         }
       }
     },
+    "Restart": {
+      "comment": "Settings: button that tries the plugin host again.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riavvia"
+          }
+        }
+      }
+    },
+    "Restart the plugin host": {
+      "comment": "Settings: accessibility label of the Restart button.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riavvia il processo dei plugin"
+          }
+        }
+      }
+    },
     "Retry Audio Visualizer": {
       "comment": "Menu bar menu: button",
       "localizations": {
@@ -1526,6 +1614,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Riprova sostituzione volume"
+          }
+        }
+      }
+    },
+    "Running": {
+      "comment": "Settings: the plugin host is running.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In funzione"
           }
         }
       }
@@ -1823,6 +1922,61 @@
           "stringUnit": {
             "state": "translated",
             "value": "Spotlight non risponde · riprova la scorciatoia"
+          }
+        }
+      }
+    },
+    "Starting": {
+      "comment": "Settings: the plugin host is starting or restarting.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In avvio"
+          }
+        }
+      }
+    },
+    "Starting plugins…": {
+      "comment": "Settings: shown until the plugin engine reports its status.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvio dei plugin…"
+          }
+        }
+      }
+    },
+    "Stopped after freezing": {
+      "comment": "Settings: a plugin stopped because it froze.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fermato dopo un blocco"
+          }
+        }
+      }
+    },
+    "Stopped after repeated crashes": {
+      "comment": "Settings: the plugin host was given up on after repeated crashes.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fermato dopo crash ripetuti"
+          }
+        }
+      }
+    },
+    "Stopped after repeated errors": {
+      "comment": "Settings: a plugin quarantined after repeated failures.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fermato dopo errori ripetuti"
           }
         }
       }
@@ -2230,6 +2384,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tasti volume reindirizzati al notch"
+          }
+        }
+      }
+    },
+    "Widgets and alerts run as plugins in a separate process, so a fault in one never takes the notch down.": {
+      "comment": "Settings: footer of the plugin status section.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Widget e avvisi girano come plugin in un processo separato, così un guasto in uno non blocca mai il notch."
           }
         }
       }

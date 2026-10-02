@@ -5,6 +5,7 @@
 
 import CascadeContracts
 import CascadeKit
+import CascadePluginEngine
 import CascadePlugins
 import Foundation
 import Synchronization
@@ -189,6 +190,25 @@ extension PluginHostTests {
             try await Task.sleep(for: .milliseconds(500))
 
             #expect(bluetooth.starts == 0)
+        }
+
+        @Test
+        func theEngineStatusReachesTheApp() async throws {
+            let grid     = Grid()
+            let plugins  = PluginSystem(host: grid, sources: [PluginBluetoothState.source: FakeBluetoothSource()])
+            var statuses = [PluginEngineStatus]()
+            plugins.statusHandler = { statuses.append($0) }
+            plugins.start()
+
+            let deadline = ContinuousClock.now.advanced(by: .seconds(30))
+            while statuses.last?.host != .running || statuses.last?.plugins.isEmpty != false, ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+
+            let status = try #require(statuses.last)
+            #expect(status.host == .running)
+            #expect(Set(status.plugins.keys) == Set(FirstPartyPlugins.manifests().map(\.id)))
+            #expect(status.plugins.values.allSatisfy { $0 == .active })
         }
 
         private static func airPods(eventID: UInt64) -> PluginBluetoothState {

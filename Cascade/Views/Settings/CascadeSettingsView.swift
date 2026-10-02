@@ -122,6 +122,8 @@ struct CascadeSettingsView: View {
 
                     Section("Search") { settingRow(.spotlight) }
 
+                    PluginStatusSection(services: services)
+
                     permissions
             }
         }
