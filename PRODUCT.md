@@ -25,8 +25,9 @@ Controls that steal focus, continuous decorative animations, interfaces that int
 - Show context without interrupting the action in progress.
 - Keep the physical bond with the notch and the native macOS conventions.
 - Make modules independent through small, verifiable contracts.
-- Build Cascade's own widgets with the same [addon SDK and runtime](docs/superpowers/specs/2026-09-09-addon-runtime-design.md) too: identical permissions, isolation and limits, with no privileged private paths.
-- Keep valid content without needlessly keeping alive the code that produced it; separate an activity's visibility, work and lifetime.
+- Build Cascade's own widgets, notices and activities as plugins of the same [plugin engine](docs/superpowers/specs/2026-09-29-plugin-engine-design.md) external plugins will use: the same manifest, declarations, grants and limits, with no private code path. Only the default approver differs: bundled plugins signed by us receive the permissions they declare, external ones will ask the user.
+- Isolation is the one deliberate exception (the microkernel decision): first-party plugins share one PluginHost process, a thread each, while external plugins will get a process each. Running a plugin inside Cascade is reserved for the test and development double.
+- Keep valid content on screen independently of the code that produced it: publications live in Cascade and survive a PluginHost restart, while PluginHost stays alive and idle when nothing changes. Separate an activity's visibility, work and lifetime.
 - Update the UI only when a real input changes.
 - Activities and notices follow the [notch contracts](docs/architecture/live-activity-contracts.md), adapted from Apple's Live Activities HIG.
 

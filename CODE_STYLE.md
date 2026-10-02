@@ -2,20 +2,20 @@
 
 Code style conventions for **Cascade**. Goal: **protocol-oriented, explicit, type-safe** code that reads well, with a clear seam between the *style* rules (which never bend) and the *performance* rules (which let us reach for the unsafe, low-level tools where the always-on overlay demands it).
 
-Cascade is a **standalone macOS app**: a high-performance Dynamic Notch built on **AppKit + Core Animation** for the window, geometry and morph, **SwiftUI** for widget content, and a strict **widget plugin protocol** for modularity. The deployment floor is **macOS 14**. There is an app shell here (unlike a pure library), but the notch engine and the widget layer are designed as if they were libraries — clean contracts, no leaking internals.
+Cascade is a **standalone macOS app**: a high-performance Dynamic Notch built on **AppKit + Core Animation** for the window, geometry and morph, **SwiftUI** for content, and a **plugin data contract** for modularity: plugins publish declarative documents, and Cascade, the kernel, validates and draws them. The deployment floor is **macOS 15**. There is an app shell here (unlike a pure library), but the notch engine and the plugin engine are designed as if they were libraries: clean contracts, no leaking internals.
 
 ## Principles
 
-1. **Protocol-oriented first — and harder than usual.** Depend on abstractions (protocols), never on concrete implementations. Every service / resolver / monitor / engine / renderer / widget has its protocol so callers know only the contract and the app stays testable and mockable. This is the backbone of the whole project: the app depends on `NotchWidget`, not on any concrete widget, and the display coordinator on `DisplayInventoryProviding`, not on `NSScreen` directly.
+1. **Protocol-oriented first, and harder than usual.** Depend on abstractions (protocols), never on concrete implementations. Every service / resolver / monitor / engine / renderer / executor has its protocol so callers know only the contract and the app stays testable and mockable. This is the backbone of the whole project: the plugin engine depends on `PluginExecutor`, not on PluginHost, and the display coordinator on `DisplayInventoryProviding`, not on `NSScreen` directly.
 2. **Immutable value models, by default.** Anything that describes state (notch geometry, screen snapshot, widget descriptor) is a value `struct` with `let` properties. The `NotchState` is an `@frozen OptionSet`. Mutable, framework-coupled state belongs to the UI layer (`@Observable`), not to the model.
 3. **Performance is a first-class constraint.** Cascade must not devour RAM, CPU or battery, and must never hang — it is always on screen. In the hot geometry / morph / rendering path we deliberately use `@frozen`, compact and aligned structs, contiguous storage, `InlineArray` and `UnsafePointer` for cache-friendly, allocation-free access. This is the **one** place where we trade safety for speed — explicitly, behind a clean API, never leaking the unsafety to callers. See **Performance-critical code**.
 4. **No unsafe unwraps in ordinary code.** `!` (force unwrap) and `try!` are forbidden outside the audited performance path. Use `guard let` / `if let`, `??`, or explicit error handling.
 5. **Explicit over clever.** Readability comes before one-line tricks — even in the fast path, comment the trick.
-6. **Resources are part of the contract.** A widget or a subsystem that wakes the CPU on a timer, blocks the main thread or re-renders without a real input change is a *bug*, not a style nit. The type system and the protocols are shaped to make the cheap path the default one. See **Widget plugin protocol** and **Performance-critical code**.
+6. **Resources are part of the contract.** A plugin or a subsystem that wakes the CPU on a timer, blocks the main thread or re-renders without a real input change is a *bug*, not a style nit. The type system and the protocols are shaped to make the cheap path the default one. See **Plugin SDK** and **Performance-critical code**.
 
 ## File header
 
-Every file opens with the standard Xcode banner: the file name and the product name. The product is `Cascade` for the app target, its checks and its test targets, `CascadeKit` for every file inside the CascadeKit package, sources and tests alike, and the package's own name for an example or prototype package. The `Created by` line is optional — keep it if it is there, drop it if it is not; don't churn it.
+Every file opens with the standard Xcode banner: the file name and the product name. The product is `Cascade` for the app target, its checks and its test targets, `PluginHost` for the PluginHost service target, `CascadeKit` for every file inside the CascadeKit package, sources and tests alike, and the package's own name for a prototype package. The `Created by` line is optional: keep it if it is there, drop it if it is not; don't churn it.
 
 ```swift
 //
@@ -29,8 +29,8 @@ Every file opens with the standard Xcode banner: the file name and the product n
 - **Never use cryptic names. The more explanatory, the better.** A slightly longer name that says what it is always beats a short one that needs a comment.
 - Prefer `activeScreen` over `scr`, `notchWidth` over `nw`, `morphProgress` over `mp`. No abbreviations unless they are universal (`url`, `id`, `dpi`, `rgb`).
 - Types: `UpperCamelCase`. Members: `lowerCamelCase`.
-- Protocols: role name (`DisplayInventoryProviding`, `EventMonitoring`, `NotchRendering`, `WidgetHosting`) or capability suffix (`HardwareNotchDetecting`).
-- Concrete implementations: a qualifier that states their nature (`CoreAudioBluetoothRouteSource`, `MouseEventMonitor`, `SpringMorphEngine`, `CAShapeLayerNotchRenderer`).
+- Protocols: role name (`DisplayInventoryProviding`, `EventMonitoring`, `PluginExecutor`, `PluginTransport`) or capability suffix (`HardwareNotchDetecting`).
+- Concrete implementations: a qualifier that states their nature (`CoreAudioBluetoothRouteSource`, `MouseEventMonitor`, `DisplayLinkMorphEngine`, `XPCPluginTransport`).
 - Booleans read as questions (`isOpen`, `hasHardwareNotch`, `canExpand`, `isSuspended`).
 
 ## Comments — Antirez style, in English
@@ -39,7 +39,7 @@ Comments are written **in English**, in the style of Salvatore Sanfilippo (antir
 
 - **Doc comments use `///`, never `/* … */`.** Triple-slash is the standard for every type, function and property worth documenting.
 - Put a `///` doc comment above every non-trivial type and function describing what it does, why it exists, and any non-obvious behavior or edge case.
-- **Open the doc comment with the symbol's own name as the subject** ("NotchState describes…", "SpringMorphEngine drives…", "WidgetContext hands a widget…") so it reads as a definition.
+- **Open the doc comment with the symbol's own name as the subject** ("NotchState describes…", "DisplayLinkMorphEngine drives…", "PluginKernel is the engine's decision core…") so it reads as a definition.
 - Use full English sentences. Explain reasoning, assumptions, and the things that would surprise the next reader.
 - In the performance path, **always document the unsafe contract**: who owns the buffer, what the pointer's lifetime is, why the bounds are safe.
 - Keep comments in sync with the code. Never leave commented-out code in the repo.
@@ -168,91 +168,52 @@ final class NotchController {
 private var controller = NotchController()
 ```
 
-## Addon SDK: one contract for Cascade and external widgets
+## Plugin SDK: one contract for every plugin
 
-The approved [addon architecture](docs/superpowers/specs/2026-09-09-addon-runtime-design.md)
-and [implementation plan](docs/superpowers/plans/2026-09-09-addon-runtime.md)
-define the destination of the widget layer. All future widgets, notices and
-activities developed by the Cascade team must use the same public SDK, manifest,
-REQUIRES, permissions, process isolation and resource policy as external addons.
-Bundled origin is distribution metadata, never an authorization or budget bypass.
+The [plugin engine spec](docs/superpowers/specs/2026-09-29-plugin-engine-design.md) defines the plugin layer, and the [plugin pages](docs/plugins/README.md) describe it for the developer. Every widget, notice and activity the Cascade team writes is a plugin, built on the same SDK, manifest, grants and limits an external plugin will use.
 
-Providers publish bounded content descriptions; Cascade renders them with SwiftUI
-and retains valid publications after the provider exits. Advanced SwiftUI scenes
-run remotely with a separate visibility lease. Do not load custom provider code
-into the host or register new concrete widgets directly with NotchEngine.
-Renderer and system adapters are shared infrastructure; access from a widget goes
-through the same broker and grants regardless of its publisher.
-
-The SDK is planned, not implemented by this documentation update. New widget work
-must include its required SDK milestone first. Existing implementations migrate
-in P3; only the generic presentation bridge will use the internal notch protocols.
-
-**Approved local exception (26 September 2026):** the file shelf may be mounted
-temporarily as a directly integrated Cascade page, like the existing music page,
-while the external addon launcher remains blocked. This exception covers only the
-file shelf and does not authorize other new widgets, in-host external code, or a
-relaxation of SDK grants, isolation or resource budgets. The shelf's external
-addon path remains subject to the native gate before activation.
-
-## Legacy widget protocol (migration reference)
-
-The following sketch describes the earlier in-process model, not the public addon
-SDK. Keep it only as context for existing code until P3 removes the direct path.
-Its view lifecycle does not define the lifetime of an addon publication or service.
-
-The widget layer is the modular heart of Cascade, and the protocol is deliberately severe because a widget is a guest in an **always-on** overlay. The protocol is shaped so the cheap, event-driven path is the only natural one.
+- **A plugin is a `PluginProvider`.** Its one method, `handle(_:context:)`, is synchronous and runs on the plugin's own thread inside PluginHost (or inside Cascade through `InProcessExecutor`, the test and development double), and the same code serves both. It answers one `PluginEvent` with one `PluginOutput` and returns within the kernel's 250 ms deadline. It never touches AppKit or SwiftUI and never blocks a thread it does not own.
+- **Plugins emit data, never `AnyView`.** Content is a `PluginDocument` written with the SDK's SwiftUI-mirror builder: free functions named after SwiftUI's views (`VStack`, `Text`, `Image(systemName:)`, `Toggle`, …) collected by `PluginNodeBuilder`, and SwiftUI's modifier syntax on `PluginNode` (`PluginNode+Modifiers.swift`). Building never throws; `PluginDocument.init` validates the tree against the limits. The SwiftUI rules of this file apply to it: one modifier per line, siblings separated by a blank line.
+- **State is small and behind a lock.** A provider is `Sendable`. The little state a plugin keeps, usually a reducer that remembers the last source state, sits behind a `Mutex`; PluginHost calls a plugin on one thread at a time, so the lock is never contended. A plugin persists nothing: after any restart it receives the latest state of its sources and a `refresh`, which is all it needs to rebuild what it shows.
+- **Every manifest declares everything, first-party included.** Surfaces, sources, tier-2 components, permissions and actions are declared per feature; undeclared use is denied, and a declared need the host cannot meet makes the feature unavailable. Parity means no private code path: bundled plugins signed by us get their declared permissions automatically, external plugins will need the user's approval, and that approver is the only difference (spec §10).
+- **Strings are localised by the plugin.** `Text` shows a string as given, so a plugin localises with its own String Catalog in its bundle, as `VolumeNotice` does with `VolumeNotice.xcstrings`.
 
 ```swift
-/// NotchWidget is the contract every widget conforms to.
-///
-/// A widget knows nothing about Cascade's internals: it is registered, placed
-/// in a region, and driven entirely through this protocol and the typed
-/// `WidgetContext` it is handed. Because the overlay is always on screen, the
-/// protocol is strict about resources — a widget that blocks, polls or
-/// re-renders without cause is a bug, not a preference.
-@MainActor
-protocol NotchWidget: AnyObject {
+HStack(spacing: 8) {
 
-    /// Stable identity used by the registry; never changes at runtime.
-    static var identifier: WidgetIdentifier { get }
+    VStack(alignment: .leading) {
 
-    /// Where the widget wants to live. The host honors it against `NotchState`.
-    var preferredRegion: NotchRegion { get }
+        Text(title)
+            .font(.headline)
+            .lineLimit(1)
 
-    /// Build the SwiftUI content. Called rarely — on activation and on a
-    /// declared input change — never on a timer. Must return within a frame.
-    func makeContentView() -> AnyView
+        Text(artist)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+    }
 
-    /// Activated when the region becomes visible. Acquire resources here and
-    /// subscribe to the event sources exposed by the context.
-    func activate(in context: WidgetContext)
+    Spacer()
 
-    /// Suspended when the notch closes or the region hides. Release images,
-    /// cancel subscriptions, free buffers. After `suspend()` the widget must
-    /// consume zero CPU and only minimal resident RAM.
-    func suspend()
+    Toggle(isOn: isPlaying, action: "togglePlayback") {
+        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+    }
+    .contentTransition(.symbolEffect)
 }
 ```
 
-The rules every widget — and the host that loads it — must honor:
+`FirstPartyPlugins` (`CascadePlugins`) lists the plugins Cascade ships: Battery and Clock as widgets, and the Bluetooth, Charging (`com.cascade.power`) and Volume alerts as notices. Music is still native (`MediaLiveActivity` and the expanded fallback) until the services and Music sub-project makes it a tier-2 plugin.
 
-- **The main thread is non-negotiable.** `makeContentView()` and `activate(in:)` run on the main actor and must return within a frame budget. Anything heavier (network, decode, parse) runs on a background QoS handed out by the `WidgetContext` and publishes its result back on the main actor.
-- **Event-driven only — no polling.** Widgets subscribe to data through the context. `Timer` / `DispatchSourceTimer` polling loops are forbidden; if a widget needs periodic data, it asks the context for a coalesced, host-managed tick that stops when the notch closes.
-- **Re-render only on real change.** A widget asks the host for new content (`context.setNeedsContent()`) only when one of its declared inputs changed. `@Observable` provides the granularity; never invalidate on every frame or every tick.
-- **Lifecycle equals resources.** `activate(in:)` acquires; `suspend()` releases. A suspended widget is *measurably* idle: no retained images, no live subscriptions, no CPU. The host suspends every widget whose region is not currently in `NotchState`.
-- **Isolated and modular.** A widget reaches the outside world only through the typed `WidgetContext`. No singletons, no `NSApp` spelunking, no reaching into the engine. This is what lets a widget be added or removed without touching the notch engine.
-- **Frugal by contract.** Compact state, lazy assets, large resources released on `suspend()`. The host may measure a widget and cap or evict one that misbehaves.
+`scripts/build-development.sh` runs `cascade-plugin validate` on every bundled manifest and `scripts/check-plugin-host-imports.sh` on `PluginHost/` and on `CascadePluginSDK` before Xcode compiles anything, so a broken manifest or a forbidden import stops the build. PluginHost may import only `CascadePlugins`, `CascadePluginHost`, `CascadePluginSDK`, `CascadeContracts` and system modules (Foundation, Darwin, Dispatch, Synchronization, Security): it runs data, never UI.
+
+**System surfaces** stay native by rule. The file shelf touches frames, input and the notch window, so it lives in the kernel (spec §6, §7) and is drawn through `NotchContextualPage`. Music is direct only until its sub-project.
+
+## Host seams
+
+`NotchWidget`, `NotchLiveActivity`, `NotchTransientNotice` and `NotchContextualPage` are CascadeKit's internal host seams, not an API for plugins. Only kernel adapters and system surfaces implement them: `PluginWidget` and `PluginNotice` on the plugin side, `FileShelfController` and `FileShelfUnsupportedNotice` for the file shelf, and `MediaLiveActivity` until Music moves. Where a seam has `activate` and `suspend`, they bracket what the host keeps alive while a surface is on screen; for a plugin widget they only report visibility to the kernel, which uses it to decide on a refresh and never forwards it to the plugin.
 
 ## Activity and notice contracts
 
-Preserve [the notch activity behavior](docs/architecture/live-activity-contracts.md)
-and its Apple HIG reference through the common SDK. New providers publish finite
-activities or brief notices as values, with privacy, accessibility, revision and
-expiry metadata. The generic bridge adapts them to `NotchLiveActivity` and
-`NotchTransientNotice`; concrete addon code does not conform to those host
-protocols directly. The host owns presentation and deadlines; shared data sources
-are acquired through the broker, independently from visible-resource lifetimes.
+Preserve [the notch activity behavior](docs/architecture/live-activity-contracts.md) and its Apple HIG reference. A plugin publishes a notice as a value: its regions, plus `PluginNoticeAttributes` with a duration of at most ten seconds, the rim's tint, the compact width, the sentence VoiceOver reads and whether it shows a new event or updates the one on screen. `PluginSurfaceRouter` turns publications into `PluginWidget`s and `PluginNotice`s; plugin code never conforms to the host seams. The host owns presentation and deadlines. Sources are leased by the kernel (`PluginSourceLeases`), independently of what is visible. Activity publications are accepted but not shown until the Music sub-project routes them.
 
 ## Extensions
 
@@ -261,20 +222,31 @@ are acquired through the broker, independently from visible-resource lifetimes.
 - One file per extended type and capability, named `Type+Capability.swift`. The `+` makes it obvious what the file adds: `CGPath+Notch.swift`, `NSScreen+HardwareNotch.swift`.
 - Do not pile unrelated helpers into one giant `NSScreen+Extensions.swift`: split by capability.
 
-## Concurrency — three strictly separated contexts
+## Concurrency: separated contexts
 
 The app's smoothness depends on keeping three classes of work apart. Mixing them causes hangs, dropped frames or battery drain.
 
 1. **Compositor / WindowServer (system-owned, real-time).** We feed it layer changes inside a `CATransaction`. **Never** stall the commit with disk reads, allocation, locks or heavy compute — anything that blocks shows up as a dropped frame.
 2. **Main thread / main actor (interactive, 120 Hz).** SwiftUI, AppKit, the `NSPanel`, event monitoring, the `CADisplayLink` morph callback. Handles user input, positioning and the morph only. Use `@MainActor` for anything UI-visible. A hang here freezes the overlay.
-3. **Background worker (utility / background QoS).** `Task.detached` or a dedicated `DispatchQueue`: widget data loading, image decode, geometry / persistence caches.
+3. **Background worker (utility / background QoS).** `Task.detached` or a dedicated `DispatchQueue`: data loading, image decode, geometry / persistence caches.
 
 Rules:
 
-- `async`/`await` for application asynchronous work. Keep platform-required callbacks, such as Objective-C XPC reply blocks, inside transport adapters and expose async interfaces to consumers.
+- Outside the plugin engine, `async`/`await` for application asynchronous work. Keep platform-required callbacks, such as Objective-C XPC reply blocks, inside transport adapters and expose async interfaces to consumers.
 - Heavy work (decode, IO, parse) stays off the main actor and never stalls the compositor.
 - Cross the actor boundary explicitly when handing a finished result back to the UI; do not let observation reach into background-mutated state.
-- New addon providers run in their controlled process and use SDK clients for managed services. `WidgetContext` is only the legacy/internal presentation seam; it is not an isolation boundary or the new background-work API.
+- A plugin's `handle()` is synchronous. The SDK's client calls, which arrive with the first service, will block the plugin's own thread with a timeout, never the main thread. `WidgetContext` is only an internal presentation seam of the widget host; it is not an isolation boundary or a background-work API.
+
+### The plugin engine (spec §3)
+
+The engine adds its own contexts: the engine's serial queue, where the kernel decides; the XPC thread, which hands PluginHost's messages to that queue; and one thread per plugin in PluginHost. It follows stricter rules than the rest of the app, because it must keep running whatever a plugin does.
+
+- **A `Mutex` per state owner, no actors.** Each piece of shared state is a value-type state machine owned by one `final class …: Sendable` that guards it with one `Mutex`, as `PluginEngine` guards `PluginKernel`. The compiler keeps checking those owners; `@unchecked Sendable` needs a written justification next to the field. `CascadePluginEngine`, `CascadePluginHost`, `CascadePluginSDK` and `CascadePlugins` hold no actors.
+- **Never call out while holding a lock.** No callback, XPC send or plugin code runs under a lock: decide, copy what the call needs, release, then call. `PluginKernel` returns the effects to perform instead of performing them, and `SharedHostExecutor` queues its calls in an outbox it drains once the lock is released.
+- **Block only on threads the engine owns.** Never the main thread, never the Swift concurrency pool. `DispatchSemaphore` is only a signal between dedicated threads, always with a timeout.
+- **One timer.** A single `DispatchSourceTimer` on the engine queue covers the kernel's watchdogs, retries, held events and wakes, rearmed from `PluginKernel.nextDelay` after every call and disarmed when nothing is due. No `Task.sleep`, no per-object timers.
+- **Explicit `nonisolated`.** The app and CascadeKit default to MainActor isolation. Their code that the engine calls off main, such as a kernel source (`VolumePluginSource`) or a source observer, is explicitly `nonisolated`: a MainActor-isolated callback that runs off main traps.
+- **One hop to main.** `PluginSurfaceRelay` keeps deliveries under a lock and queues a hop to main only when none is pending, so a burst of publications costs one hop and one render, and the main thread never waits on a contended lock.
 
 ## Performance-critical code (the fast path)
 
@@ -301,7 +273,7 @@ func controlPoints(for geometry: NotchGeometry) -> InlineArray<8, CGPoint> {
   - guarantee the bounds before entering the unsafe region.
 - **Do not allocate in the `CADisplayLink` callback**, and avoid per-frame allocation in the morph loop generally. The spring integrator is pure value math on the stack.
 - **Renderer:** update the `path` of a `CAShapeLayer` instead of overriding `draw(_:)`, so the GPU does the rasterization. The morph runs on its own layer; opening one side must never trigger a recompute of unrelated layers. Target 120 Hz or better.
-- **Widgets pay rent in the budget too.** Host rendering adapters are frame-bounded; provider work, remote scenes and shared services count in the common resource policy. Apply the same admission and supervision to bundled and external addons.
+- **Plugins pay rent in the budget too.** Rendering adapters are frame-bounded. Plugin work is supervised by `PluginHostSupervisor` and `StandardHealthPolicy` and charged to `PluginCPUBudget` and `PluginPublicationBudget`, the same for every plugin, bundled or external.
 - When you optimize, **say what you traded and why** in a comment. An unexplained `UnsafeMutablePointer` is a future bug.
 
 ## Error handling
@@ -372,7 +344,7 @@ final class SpotlightKeyTap: SpotlightKeyTapping {
 
 - One type per file; file name = type name (see **Types per file**). The file opens with the header banner (see **File header**).
 - `private` / `fileprivate` for everything that is not part of the public contract.
-- The **addon SDK surface** is limited to the public contracts, content components and provider/service clients defined in the implementation plan. Keep host engine, windows, monitors and runtime administration out of those products. Existing public notch protocols are a migration surface, not the API for future third-party or Cascade widgets.
+- The **plugin SDK surface** is `CascadePluginSDK` plus `CascadeContracts`: the provider protocol, its context, the builder and the contract values. Keep the engine, windows, monitors, AppKit and SwiftUI out of them; `scripts/check-plugin-host-imports.sh` enforces what PluginHost and the SDK may import. The `Notch*` protocols are host seams, not an API for plugins.
 - `private(set)` for read-only exposed state.
 - Use extensions to separate protocol conformances (`extension Foo: SomeProtocol { … }`) — kept in the type's own file unless the Extensions rule above applies.
 - `// MARK: -` to separate sections of a long file.
