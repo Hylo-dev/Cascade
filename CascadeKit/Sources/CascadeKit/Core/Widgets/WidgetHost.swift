@@ -317,7 +317,8 @@ final class WidgetHost {
         hostHeight   : CGFloat,
         isEditing    : Bool = false,
         galleryFrame : CGRect = .zero,
-        setEditing   : @escaping (Bool) -> Void = { _ in }
+        setEditing   : @escaping (Bool) -> Void = { _ in },
+        feedback     : @escaping () -> Void = {}
     ) -> AnyView {
         let layout = resolver.resolve(
             interior     : interior,
@@ -333,13 +334,16 @@ final class WidgetHost {
         let tiles = layout.frames.compactMap { id, rect -> WidgetBoardView.Tile? in
             guard let widget = widgets[id] else { return nil }
 
-            let view = cachedViews[id] ?? widget.makeContentView()
+            let view   = cachedViews[id] ?? widget.makeContentView()
+            let limits = sizeLimits(of: id, in: layout)
             cachedViews[id] = view
             return WidgetBoardView.Tile(
-                id       : id,
-                view     : view,
-                frame    : flipped(rect),
-                canResize: widget.sizes.count > 1
+                id         : id,
+                view       : view,
+                frame      : flipped(rect),
+                canResize  : widget.sizes.count > 1,
+                minimumSize: limits?.minimum ?? rect.size,
+                maximumSize: limits?.maximum ?? rect.size
             )
         }
 
@@ -376,7 +380,7 @@ final class WidgetHost {
             doneFrame   : flipped(doneFrame),
             galleryFrame: flipped(galleryFrame),
             gallery     : gallery,
-            actions     : actions(for: layout, flip: flipped, setEditing: setEditing)
+            actions     : actions(for: layout, flip: flipped, setEditing: setEditing, feedback: feedback)
         ))
     }
 
@@ -387,7 +391,8 @@ final class WidgetHost {
     func actions(
         for layout: NotchLayout,
         flip      : @escaping (CGRect) -> CGRect = { $0 },
-        setEditing: @escaping (Bool) -> Void
+        setEditing: @escaping (Bool) -> Void,
+        feedback  : @escaping () -> Void = {}
     ) -> WidgetBoardView.Actions {
         WidgetBoardView.Actions(
             setEditing  : setEditing,
@@ -409,7 +414,23 @@ final class WidgetHost {
                 return self.target(placement, of: id, in: layout, flip: flip)
             },
             commitResize: { [weak self] id, span in self?.resizeInPlace(id, to: span, on: layout.grid) ?? false },
-            add         : { [weak self] id, span in self?.add(id, size: span, on: layout.grid) }
+            add         : { [weak self] id, span in self?.add(id, size: span, on: layout.grid) },
+            feedback    : feedback
+        )
+    }
+
+    /// sizeLimits are the smallest and largest sizes, side by side, among those a widget
+    /// declares, drawn on this layout: how far a stretch of its corner may go.
+    func sizeLimits(
+        of id    : WidgetIdentifier,
+        in layout: NotchLayout
+    ) -> (minimum: CGSize, maximum: CGSize)? {
+        guard let sizes = widgets[id]?.sizes, !sizes.isEmpty else { return nil }
+
+        let drawn = sizes.map { size(of: $0, in: layout) }
+        return (
+            minimum: CGSize(width: drawn.map(\.width).min() ?? 0, height: drawn.map(\.height).min() ?? 0),
+            maximum: CGSize(width: drawn.map(\.width).max() ?? 0, height: drawn.map(\.height).max() ?? 0)
         )
     }
 

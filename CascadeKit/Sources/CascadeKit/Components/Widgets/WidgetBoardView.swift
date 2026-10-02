@@ -17,13 +17,16 @@ import SwiftUI
 /// while editing so that Escape ends it too.
 struct WidgetBoardView: View {
 
-    /// Tile is one placed widget: its view, its frame and whether it can change size.
+    /// Tile is one placed widget: its view, its frame, whether it can change size and the
+    /// smallest and largest sizes a stretch of its corner may reach.
     struct Tile: Identifiable {
 
-        let id       : WidgetIdentifier
-        let view     : AnyView
-        let frame    : CGRect
-        let canResize: Bool
+        let id         : WidgetIdentifier
+        let view       : AnyView
+        let frame      : CGRect
+        let canResize  : Bool
+        let minimumSize: CGSize
+        let maximumSize: CGSize
     }
 
     /// GalleryEntry is one widget that is not on the grid, with a preview and the sizes it can
@@ -70,6 +73,18 @@ struct WidgetBoardView: View {
         let resizeTarget: (WidgetIdentifier, CGSize) -> Target?
         let commitResize: (WidgetIdentifier, GridSpan) -> Bool
         let add         : (WidgetIdentifier, GridSpan) -> Void
+        let feedback    : () -> Void
+    }
+
+    /// ticks is true when a drag or a stretch reaches a cell it was not over, which the trackpad
+    /// marks with a tick.
+    static func ticks(
+        from previous: Target?,
+        to next      : Target?
+    ) -> Bool {
+        guard let next else { return false }
+
+        return next.placement != previous?.placement
     }
 
     let tiles       : [Tile]
@@ -147,6 +162,9 @@ struct WidgetBoardView: View {
                     isEditing: isEditing,
                     actions  : actions,
                     onTarget : { target in
+                        if Self.ticks(from: highlight, to: target) {
+                            actions.feedback()
+                        }
                         if highlight != target {
                             highlight = target
                         }

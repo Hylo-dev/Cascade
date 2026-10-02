@@ -36,4 +36,16 @@ struct HoverFeedbackTests {
         feedback.update(isHovering: true)
         #expect(performer.impulses == 0)
     }
+
+    @Test
+    func aSnapTicksOnlyWhileHapticsAreOn() {
+        let performer = HapticFixture()
+        let feedback  = HoverFeedback(performer: performer)
+
+        feedback.snap()
+        feedback.isEnabled = false
+        feedback.snap()
+
+        #expect(performer.impulses == 1)
+    }
 }

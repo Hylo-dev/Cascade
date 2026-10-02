@@ -2268,7 +2268,8 @@ final class NotchController: NotchDisplayPresenting {
             hostHeight   : hostView.bounds.height,
             isEditing    : isEditingWidgets,
             galleryFrame : galleryFrame,
-            setEditing   : { [weak self] isEditing in self?.setWidgetEditing(isEditing) }
+            setEditing   : { [weak self] isEditing in self?.setWidgetEditing(isEditing) },
+            feedback     : { [weak self] in self?.hoverFeedback.snap() }
         )
 
         hostView.setContent(

@@ -5,7 +5,8 @@
 
 /// HoverFeedback emits at entry, synchronously before the opening animation.
 /// Tracking entry even when disabled prevents a delayed impulse if preferences
-/// change while the pointer is already inside the notch.
+/// change while the pointer is already inside the notch. It also plays the snap
+/// that widget editing asks for, under the same preference.
 @MainActor
 final class HoverFeedback {
 
@@ -24,5 +25,10 @@ final class HoverFeedback {
         self.isHovering = isHovering
 
         if entered && isEnabled { performer.performHoverFeedback() }
+    }
+
+    /// snap ticks the trackpad once, while haptics are on.
+    func snap() {
+        if isEnabled { performer.performSnapFeedback() }
     }
 }

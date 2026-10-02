@@ -254,4 +254,27 @@ struct WidgetHostEditingTests {
         #expect(actions.commitResize(clock.id, wide))
         #expect(host.arrangement[clock.id] == placement(0, 1, wide))
     }
+
+    @Test
+    func aStretchStopsAtTheLargestAndSmallestSizesTheWidgetDeclares() throws {
+        let (host, clock, _)  = host()
+        let (layout, _)       = editing(host)
+        let limits = try #require(host.sizeLimits(of: clock.id, in: layout))
+        let tallest = try #require(layout.frames[clock.id])
+
+        #expect(limits.maximum == tallest.size)
+        #expect(limits.minimum.width == tallest.width)
+        #expect(limits.minimum.height < tallest.height)
+    }
+
+    @Test
+    func aTickMarksEveryNewCellAndNothingElse() {
+        let here  = WidgetBoardView.Target(placement: placement(0, 1, wide), cells: [], fits: true)
+        let there = WidgetBoardView.Target(placement: placement(1, 1, wide), cells: [], fits: false)
+
+        #expect(WidgetBoardView.ticks(from: nil, to: here))
+        #expect(WidgetBoardView.ticks(from: here, to: there))
+        #expect(!WidgetBoardView.ticks(from: here, to: here))
+        #expect(!WidgetBoardView.ticks(from: here, to: nil))
+    }
 }

@@ -115,11 +115,12 @@ struct WidgetTileView: View {
             .contentShape(Rectangle())
     }
 
-    /// stretchedSize is the tile's size under a corner drag, never smaller than a sliver.
+    /// stretchedSize is the tile's size under a corner drag, held between the smallest and the
+    /// largest sizes the widget declares, so it never grows past what it can become.
     private var stretchedSize: CGSize {
         CGSize(
-            width : max(24, tile.frame.width + stretch.width),
-            height: max(24, tile.frame.height + stretch.height)
+            width : min(tile.maximumSize.width, max(tile.minimumSize.width, tile.frame.width + stretch.width)),
+            height: min(tile.maximumSize.height, max(tile.minimumSize.height, tile.frame.height + stretch.height))
         )
     }
 
@@ -213,6 +214,7 @@ struct WidgetTileView: View {
             guard !Task.isCancelled, press?.canStartEditing == true else { return }
 
             actions.setEditing(true)
+            actions.feedback()
             press?.beginEditing()
         }
     }
