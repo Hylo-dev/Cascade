@@ -61,6 +61,9 @@ extension PluginDocument {
             node.kind != .regions || depth == 1 && node.children.count == 3,
             "Regions are a document's root, with three regions"
         )
+        if case .viewThatFits = node.kind {
+            try ContractValidation.require(!node.children.isEmpty, "A view that fits needs an alternative")
+        }
         try ContractValidation.require(
             node.modifiers.count <= maximumModifiers,
             "A node takes at most \(maximumModifiers) modifiers"
@@ -90,7 +93,7 @@ extension PluginDocument {
             case .vStack(_, let spacing), .hStack(_, let spacing):
                 try length(spacing)
 
-            case .zStack, .clock, .today, .regions:
+            case .zStack, .viewThatFits, .clock, .today, .regions:
                 break
 
             case .spacer(let minimumLength):

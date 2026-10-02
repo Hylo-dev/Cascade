@@ -11,12 +11,15 @@ import Foundation
 /// day and month, while `date`, `timer` and `timerProgress` show the dates they are given, so
 /// none of them costs the plugin anything while it ticks, which is how the clock stops waking
 /// anything once a second. A `regions` node is the root of a notice's document, holding its
-/// compact leading, compact trailing and minimal regions in that order.
+/// compact leading, compact trailing and minimal regions in that order. A `viewThatFits` shows the
+/// first of its children that fits the space it is given, which is how a widget that comes in
+/// several sizes, and cannot know which one it was given, offers a face for each.
 public enum PluginNodeKind: Codable, Hashable, Sendable {
 
     case vStack(alignment: PluginHorizontalAlignment, spacing: Double?)
     case hStack(alignment: PluginVerticalAlignment, spacing: Double?)
     case zStack(alignment: PluginAlignment)
+    case viewThatFits(axes: PluginAxes)
     case spacer(minLength: Double?)
     case text(String)
     case symbol(name: String)
@@ -41,6 +44,7 @@ public enum PluginNodeKind: Codable, Hashable, Sendable {
             case .vStack       : "vStack"
             case .hStack       : "hStack"
             case .zStack       : "zStack"
+            case .viewThatFits : "viewThatFits"
             case .spacer       : "spacer"
             case .text         : "text"
             case .symbol       : "symbol"
@@ -63,7 +67,7 @@ public enum PluginNodeKind: Codable, Hashable, Sendable {
     /// takesChildren separates containers and labelled controls from leaves.
     public var takesChildren: Bool {
         switch self {
-            case .vStack, .hStack, .zStack, .button, .toggle, .regions:
+            case .vStack, .hStack, .zStack, .viewThatFits, .button, .toggle, .regions:
                 true
 
             default:

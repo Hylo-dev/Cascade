@@ -194,4 +194,26 @@ struct PluginNodeViewTests {
         #expect(try whitePixels(isCharging: true) > 0)
         #expect(try whitePixels(isCharging: false) == 0)
     }
+
+    @Test
+    func aViewThatFitsShowsTheFirstAlternativeThatFits() throws {
+        /// image renders a view into a fixed slot, so two renders compare pixel for pixel.
+        func image(_ view: some View, width: CGFloat) throws -> Data {
+            let renderer = ImageRenderer(content: view.frame(width: width, height: 20))
+            let bitmap   = NSBitmapImageRep(cgImage: try #require(renderer.cgImage))
+
+            return try #require(bitmap.representation(using: .png, properties: [:]))
+        }
+        func document(width: CGFloat) throws -> Data {
+            var publisher = PluginRenderFixtures.Publisher()
+            let store     = PluginNodeStore(key: PluginRenderFixtures.key, submit: { _ in })
+            let fits      = PluginNode(.viewThatFits(axes: .horizontal), children: [PluginNode(.text("WWWWWWWWWWWW")), PluginNode(.text("W"))])
+            store.apply(publisher.publish(try PluginDocument(root: fits)))
+
+            return try image(PluginDocumentView(store: store), width: width)
+        }
+
+        #expect(try document(width: 30) == (try image(Text(verbatim: "W"), width: 30)))
+        #expect(try document(width: 400) == (try image(Text(verbatim: "WWWWWWWWWWWW"), width: 400)))
+    }
 }

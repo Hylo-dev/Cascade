@@ -40,6 +40,11 @@ struct PluginNodeContent: View {
                     children
                 }
 
+            case .viewThatFits(let axes):
+                ViewThatFits(in: axes.swiftUI) {
+                    children
+                }
+
             case .spacer(let minLength):
                 Spacer(minLength: minLength.map { CGFloat($0) })
 

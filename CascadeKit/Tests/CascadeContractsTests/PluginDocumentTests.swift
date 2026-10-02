@@ -238,4 +238,16 @@ struct PluginDocumentTests {
             try PluginDocument(root: PluginNode(.today, children: [PluginNode(.text("x"))]))
         }
     }
+
+    @Test
+    func aViewThatFitsRoundTripsAndNeedsAnAlternative() throws {
+        let document = try PluginDocument(root: PluginNode(.viewThatFits(axes: .vertical), children: [PluginNode(.text("large")), PluginNode(.text("small"))]))
+        let decoded  = try PluginDocument.decode(JSONEncoder().encode(document))
+
+        #expect(decoded == document)
+        #expect(decoded.root.kind.name == "viewThatFits")
+        #expect(throws: AddonFailure.self) {
+            try PluginDocument(root: PluginNode(.viewThatFits(axes: .both)))
+        }
+    }
 }
