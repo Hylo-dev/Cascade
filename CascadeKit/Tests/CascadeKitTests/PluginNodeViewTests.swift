@@ -184,6 +184,40 @@ struct PluginNodeViewTests {
     }
 
     @Test
+    func aNodeReadsTheZoneAndTheLocaleOnlyInsideAClockOrToday() throws {
+        var publisher = PluginRenderFixtures.Publisher()
+        let store     = PluginNodeStore(key: PluginRenderFixtures.key, submit: { _ in })
+        store.apply(publisher.publish(try PluginDocument(root: PluginNode(.text("Title")))))
+        let content   = PluginNodeContent(model: try #require(store.root), store: store)
+
+        let environment = Mirror(reflecting: content).children.filter { String(describing: type(of: $0.value)).hasPrefix("Environment<") }
+
+        #expect(environment.isEmpty, "A node that draws no time depends on no environment value")
+    }
+
+    @Test
+    func aLabelledNodeReadsAsOneElementOnlyWhenItHoldsNoControl() throws {
+        /// readsAsOneElement asks the renderer about the root of a document drawn by a store.
+        func readsAsOneElement(_ root: PluginNode) throws -> Bool {
+            var publisher = PluginRenderFixtures.Publisher()
+            let store     = PluginNodeStore(key: PluginRenderFixtures.key, submit: { _ in })
+            store.apply(publisher.publish(try PluginDocument(root: root)))
+
+            return PluginModifiedView.readsAsOneElement(try #require(store.root), in: store)
+        }
+        let label : [PluginModifier] = [.accessibilityLabel("Calendar")]
+        let row    = PluginNode(.hStack(alignment: .center, spacing: nil), children: [PluginNode(.symbol(name: "sun.max")), PluginNode(.text("Sunny"))])
+        let volume = PluginNode(.slider(value: 0.5, minimum: 0, maximum: 1, step: nil, action: "setVolume"))
+        let button = PluginNode(.button(action: "next"), children: [PluginNode(.symbol(name: "forward.fill"))])
+
+        #expect(try readsAsOneElement(PluginNode(.vStack(alignment: .leading, spacing: nil), modifiers: label, children: [PluginNode(.text("Mon")), row])))
+        #expect(try !readsAsOneElement(PluginNode(.vStack(alignment: .leading, spacing: nil), modifiers: label, children: [PluginNode(.text("Sound")), PluginNode(.hStack(alignment: .center, spacing: nil), children: [volume])])))
+        #expect(try !readsAsOneElement(PluginNode(.zStack(alignment: .center), modifiers: label + [.overlay(alignment: .topTrailing)], children: [row], layers: [button])))
+        #expect(try !readsAsOneElement(PluginNode(.toggle(isOn: true, action: "togglePlayback"), modifiers: label, children: [PluginNode(.symbol(name: "pause.fill"))])))
+        #expect(try !readsAsOneElement(PluginNode(.text("Mon"), modifiers: label)))
+    }
+
+    @Test
     func everyCatalogComponentIsDrawnAndAnUnknownOneOnlyKeepsItsFrame() throws {
         /// opaquePixels counts the pixels a component draws at more than half opacity, so a bar's
         /// fill tells from its dimmed track.

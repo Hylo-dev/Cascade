@@ -6,12 +6,15 @@
 import CascadeContracts
 import SwiftUI
 
-/// PluginModifierEffect applies one plugin modifier with the SwiftUI modifier it mirrors.
+/// PluginModifierEffect applies one plugin modifier with the SwiftUI modifier it mirrors. An
+/// accessibility label on a node that `readsAsOneElement` also makes the node one element, so
+/// VoiceOver reads the label once instead of once for each child.
 struct PluginModifierEffect: ViewModifier {
 
-    let modifier: PluginModifier
-    let layer   : PluginNodeModel?
-    let store   : PluginNodeStore
+    let modifier         : PluginModifier
+    let layer            : PluginNodeModel?
+    let store            : PluginNodeStore
+    let readsAsOneElement: Bool
 
     func body(content: Content) -> some View {
         switch modifier {
@@ -75,6 +78,11 @@ struct PluginModifierEffect: ViewModifier {
             case .transition(let transition):
                 content
                     .transition(transition.swiftUI)
+
+            case .accessibilityLabel(let label) where readsAsOneElement:
+                content
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text(verbatim: label))
 
             case .accessibilityLabel(let label):
                 content

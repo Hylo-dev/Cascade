@@ -8,8 +8,9 @@ import SwiftUI
 
 /// PluginNodeContent draws a node without its modifiers: a `switch` over the tier-1 vocabulary,
 /// with children drawn as `PluginNodeView`s. Time is drawn by SwiftUI itself, so a timer or a
-/// relative date costs the plugin nothing, and a clock redraws itself at every minute boundary,
-/// only while it is on screen, in the environment's zone, which the `timeZone` modifier sets.
+/// relative date costs the plugin nothing, and a clock or a date of today, `PluginClockView` and
+/// `PluginTodayView`, redraws itself at every minute boundary, only while it is on screen, in
+/// the zone the `timeZone` modifier sets; no other node reads the zone or the locale.
 /// A timer progress is the kernel's own bar, `PluginTimerProgressBar`, which steps instead of
 /// redrawing every frame as SwiftUI's does, and a linear progress the same bar standing still,
 /// its fraction safe to take because the contract keeps the value within a positive total.
@@ -22,12 +23,6 @@ struct PluginNodeContent: View {
 
     let model: PluginNodeModel
     let store: PluginNodeStore
-
-    @Environment(\.timeZone)
-    private var timeZone
-
-    @Environment(\.locale)
-    private var locale
 
     var body: some View {
         switch model.kind {
@@ -78,15 +73,10 @@ struct PluginNodeContent: View {
                 Text(date, style: style.swiftUI)
 
             case .clock:
-                TimelineView(.everyMinute) { context in
-                    Text(verbatim: PluginTimeFormat.clock(context.date, in: timeZone, locale: locale))
-                        .animation(.smooth, value: context.date)
-                }
+                PluginClockView()
 
             case .today:
-                TimelineView(.everyMinute) { context in
-                    Text(verbatim: PluginTimeFormat.today(context.date, in: timeZone, locale: locale))
-                }
+                PluginTodayView()
 
             case .timer(let start, let end, let countsDown):
                 Text(timerInterval: start...end, countsDown: countsDown)
