@@ -12,29 +12,34 @@ import CascadePluginEngine
 /// only update the store. A notice gets one store and one `PluginNotice`, shown again for every
 /// publication, or only enriched in place when the publication asks to update, and dismissed with
 /// its withdrawal. Activities are routed by the Music
-/// sub-project; until then their publications are not shown.
+/// sub-project; until then their publications are not shown. Which plugins' widgets a display
+/// nobody edited places by default is the app's policy, handed in as `placedByDefault`; every
+/// other plugin's widget waits in the gallery.
 @MainActor
 public final class PluginSurfaceRouter {
 
     /// components lists the tier-2 components these surfaces draw, for the engine's capabilities.
     public static let components: Set<String> = PluginComponentView.identifiers
 
-    private let host      : any PluginSurfaceHosting
-    private let sizes     : [PluginPublicationKey: [GridSpan]]
-    private let submit    : (PluginActionRequest) -> Void
-    private let visibility: (Bool, PluginPublicationKey) -> Void
-    private var stores    : [PluginPublicationKey: PluginNodeStore] = [:]
-    private var notices   : [PluginPublicationKey: PluginNotice] = [:]
+    private let host           : any PluginSurfaceHosting
+    private let sizes          : [PluginPublicationKey: [GridSpan]]
+    private let placedByDefault: Set<PluginID>
+    private let submit         : (PluginActionRequest) -> Void
+    private let visibility     : (Bool, PluginPublicationKey) -> Void
+    private var stores         : [PluginPublicationKey: PluginNodeStore] = [:]
+    private var notices        : [PluginPublicationKey: PluginNotice] = [:]
 
     public init(
-        host      : any PluginSurfaceHosting,
-        manifests : [PluginManifest],
-        submit    : @escaping (PluginActionRequest) -> Void,
-        visibility: @escaping (Bool, PluginPublicationKey) -> Void
+        host           : any PluginSurfaceHosting,
+        manifests      : [PluginManifest],
+        placedByDefault: Set<PluginID>,
+        submit         : @escaping (PluginActionRequest) -> Void,
+        visibility     : @escaping (Bool, PluginPublicationKey) -> Void
     ) {
-        self.host       = host
-        self.submit     = submit
-        self.visibility = visibility
+        self.host            = host
+        self.placedByDefault = placedByDefault
+        self.submit          = submit
+        self.visibility      = visibility
 
         var sizes: [PluginPublicationKey: [GridSpan]] = [:]
         for manifest in manifests {
@@ -127,10 +132,11 @@ public final class PluginSurfaceRouter {
 
         host.register(
             PluginWidget(
-                id        : Self.identifier(of: key),
-                sizes     : sizes[key] ?? [],
-                store     : store,
-                visibility: { [visibility] isVisible in visibility(isVisible, key) }
+                id               : Self.identifier(of: key),
+                sizes            : sizes[key] ?? [],
+                isPlacedByDefault: placedByDefault.contains(key.plugin),
+                store            : store,
+                visibility       : { [visibility] isVisible in visibility(isVisible, key) }
             )
         )
     }

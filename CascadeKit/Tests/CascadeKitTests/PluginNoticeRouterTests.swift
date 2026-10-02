@@ -21,7 +21,7 @@ struct PluginNoticeRouterTests {
     }
 
     private func router(_ host: RecordingSurfaceHost) -> PluginSurfaceRouter {
-        PluginSurfaceRouter(host: host, manifests: [], submit: { _ in }, visibility: { _, _ in })
+        PluginSurfaceRouter(host: host, manifests: [], placedByDefault: [], submit: { _ in }, visibility: { _, _ in })
     }
 
     private func notice(_ percent: String = "80%") throws -> (PluginDocument, PluginNoticeAttributes) {

@@ -15,26 +15,30 @@ final class PluginWidget: NotchWidget {
 
     static let kind = WidgetKind("com.cascade.plugin")
 
-    let id   : WidgetIdentifier
-    let sizes: [GridSpan]
-    let store: PluginNodeStore
+    let id               : WidgetIdentifier
+    let sizes            : [GridSpan]
+    let isPlacedByDefault: Bool
+    let store            : PluginNodeStore
 
     var size: GridSpan { sizes[0] }
 
     private let visibility: (Bool) -> Void
 
-    /// init(id:sizes:store:visibility:) takes the sizes the manifest declares, in its order;
-    /// an empty list, which a valid manifest cannot produce, falls back to the clock's 4×1.
+    /// init(id:sizes:isPlacedByDefault:store:visibility:) takes the sizes the manifest declares,
+    /// in its order; an empty list, which a valid manifest cannot produce, falls back to the
+    /// clock's 4×1.
     init(
-        id        : WidgetIdentifier,
-        sizes     : [GridSpan],
-        store     : PluginNodeStore,
-        visibility: @escaping (Bool) -> Void
+        id               : WidgetIdentifier,
+        sizes            : [GridSpan],
+        isPlacedByDefault: Bool,
+        store            : PluginNodeStore,
+        visibility       : @escaping (Bool) -> Void
     ) {
-        self.id         = id
-        self.sizes      = sizes.isEmpty ? [GridSpan(columns: 4, rows: 1)] : sizes
-        self.store      = store
-        self.visibility = visibility
+        self.id                = id
+        self.sizes             = sizes.isEmpty ? [GridSpan(columns: 4, rows: 1)] : sizes
+        self.isPlacedByDefault = isPlacedByDefault
+        self.store             = store
+        self.visibility        = visibility
     }
 
     func makeContentView() -> AnyView {

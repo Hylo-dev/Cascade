@@ -12,7 +12,8 @@ import SwiftUI
 /// - `widgets` holds each instance once, keyed by id; an arrangement references
 ///   widgets by id, so one widget shown on several displays is never duplicated.
 /// - A display nobody edited shows the shared default arrangement, which
-///   auto-places every widget as it registers. The first edit on a display gives
+///   auto-places every widget placed by default as it registers; any other waits
+///   in the gallery until the user adds it. The first edit on a display gives
 ///   it its own copy, keyed by the display's stable identity. An edited
 ///   arrangement never auto-places a newly registered widget: it waits in the
 ///   gallery, as a new widget does on a phone's home screen.
@@ -91,14 +92,15 @@ final class WidgetHost {
         }
     }
 
-    /// register adds a widget instance and, if it isn't placed yet, auto-places
-    /// it into the first free block of the default arrangement's main rows.
+    /// register adds a widget instance and, if it isn't placed yet and is placed by
+    /// default, auto-places it into the first free block of the default
+    /// arrangement's main rows.
     func register(_ widget: NotchWidget) {
         if widgets[widget.id] == nil { registrationOrder.append(widget.id) }
         widgets[widget.id] = widget
         cachedViews.removeValue(forKey: widget.id)
 
-        guard defaultArrangement[widget.id] == nil else { return }
+        guard defaultArrangement[widget.id] == nil, widget.isPlacedByDefault else { return }
 
         if let placement = autoPlacement(for: widget.size) {
             defaultArrangement[widget.id] = placement

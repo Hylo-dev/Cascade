@@ -51,6 +51,32 @@ struct WidgetHostEditingTests {
     }
 
     @Test
+    func aWidgetNotPlacedByDefaultWaitsInTheGalleryWhileADefaultOneIsPlaced() {
+        let (host, clock, battery) = host()
+        let timer    = EditableWidgetFixture("timer", sizes: [wide], isPlacedByDefault: false)
+        let calendar = EditableWidgetFixture("calendar", sizes: [wide])
+
+        host.register(timer)
+        host.register(calendar)
+
+        #expect(host.arrangement == [clock.id: placement(0, 1, tall), battery.id: placement(4, 1, wide), calendar.id: placement(8, 1, wide)])
+        #expect(host.gallery.map(\.id) == [timer.id])
+    }
+
+    @Test
+    func addingAWidgetNotPlacedByDefaultPlacesItFromTheGallery() {
+        let (host, _, _) = host()
+        let timer        = EditableWidgetFixture("timer", sizes: [wide], isPlacedByDefault: false)
+        host.register(timer)
+
+        let added = host.add(timer.id, size: wide, on: grid)
+
+        #expect(added)
+        #expect(host.arrangement[timer.id] == placement(8, 1, wide))
+        #expect(host.gallery.isEmpty)
+    }
+
+    @Test
     func aDropOnAFreeFitMovesTheWidgetAndAnOccupiedOneIsRefused() {
         let (host, clock, battery) = host()
 

@@ -32,6 +32,11 @@ public protocol NotchWidget: AnyObject {
     /// widget usually has one; a plugin widget offers the sizes its manifest declares.
     var sizes: [GridSpan] { get }
 
+    /// isPlacedByDefault tells the host whether a display nobody edited places the widget as it
+    /// registers. One that is not waits in the gallery until the user adds it, so a new widget
+    /// never pushes itself onto a page the user has come to know.
+    var isPlacedByDefault: Bool { get }
+
     /// Build the SwiftUI content shown in the widget's cell.
     func makeContentView() -> AnyView
 
@@ -47,6 +52,8 @@ public protocol NotchWidget: AnyObject {
 public extension NotchWidget {
 
     var sizes: [GridSpan] { [size] }
+
+    var isPlacedByDefault: Bool { true }
 
     // Most widgets hold no resources beyond their view, so the lifecycle hooks
     // are optional: the default pair does nothing.

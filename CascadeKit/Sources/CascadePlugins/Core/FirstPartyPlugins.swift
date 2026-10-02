@@ -21,6 +21,11 @@ public enum FirstPartyPlugins {
         "VolumePlugin"   : VolumePlugin(),
     ]
 
+    /// placedByDefault lists the plugins whose widgets a display nobody edited places as they
+    /// register. Every other widget waits in the gallery for the user to add it. The policy is
+    /// the host's, so it lives here rather than in a manifest.
+    public static let placedByDefault: Set<PluginID> = [BatteryPlugin.id, ClockPlugin.id]
+
     /// name is how settings call a bundled plugin, in the user's language. Manifests carry no
     /// names, so the first-party ones live here, beside the plugins they name; an unknown id
     /// reads as itself.

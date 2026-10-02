@@ -34,6 +34,14 @@ struct FirstPartyPluginsTests {
     }
 
     @Test
+    func onlyTheBatteryAndTheClockArePlacedByDefault() {
+        let bundled = Set(FirstPartyPlugins.manifests().map(\.id))
+
+        #expect(FirstPartyPlugins.placedByDefault.map(\.rawValue).sorted() == ["com.cascade.battery", "com.cascade.clock"])
+        #expect(FirstPartyPlugins.placedByDefault.isSubset(of: bundled))
+    }
+
+    @Test
     func theClockAnswersEveryEventWithTheSameFaceAndNoWake() throws {
         let clock   = ClockPlugin()
         let context = PluginContext(plugin: PluginID(rawValue: "com.cascade.clock")!)

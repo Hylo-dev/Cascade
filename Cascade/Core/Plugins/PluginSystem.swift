@@ -112,10 +112,11 @@ final class PluginSystem {
         requirement: String?
     ) {
         let surfaces = PluginSurfaceRouter(
-            host      : host,
-            manifests : manifests,
-            submit    : { [weak self] request in self?.engine?.submit(request) },
-            visibility: { [weak self] isVisible, key in self?.engine?.setVisible(isVisible, for: key) }
+            host           : host,
+            manifests      : manifests,
+            placedByDefault: FirstPartyPlugins.placedByDefault,
+            submit         : { [weak self] request in self?.engine?.submit(request) },
+            visibility     : { [weak self] isVisible, key in self?.engine?.setVisible(isVisible, for: key) }
         )
         let executor = SharedHostExecutor(transport: XPCPluginTransport(serviceName: serviceName, requirement: requirement))
         let hosted   = Dictionary(
