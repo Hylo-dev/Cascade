@@ -16,8 +16,10 @@ public enum FirstPartyPlugins {
     public static let providers: [String: any PluginProvider] = [
         "BatteryPlugin"  : BatteryPlugin(),
         "BluetoothPlugin": BluetoothPlugin(),
+        "CalendarPlugin" : CalendarPlugin(),
         "ChargingPlugin" : ChargingPlugin(),
         "ClockPlugin"    : ClockPlugin(),
+        "ProgressPlugin" : ProgressPlugin(),
         "VolumePlugin"   : VolumePlugin(),
     ]
 
@@ -33,8 +35,10 @@ public enum FirstPartyPlugins {
         switch plugin.rawValue {
             case "com.cascade.battery"  : String(localized: "Battery", table: "Plugins", bundle: .module)
             case "com.cascade.bluetooth": String(localized: "Bluetooth alerts", table: "Plugins", bundle: .module)
+            case "com.cascade.calendar" : String(localized: "Calendar", table: "Plugins", bundle: .module)
             case "com.cascade.clock"    : String(localized: "Clock", table: "Plugins", bundle: .module)
             case "com.cascade.power"    : String(localized: "Charging alerts", table: "Plugins", bundle: .module)
+            case "com.cascade.progress" : String(localized: "Progress", table: "Plugins", bundle: .module)
             case "com.cascade.volume"   : String(localized: "Volume alerts", table: "Plugins", bundle: .module)
             default                     : plugin.rawValue
         }

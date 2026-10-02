@@ -23,6 +23,17 @@
         }
       }
     },
+    "Calendar": {
+      "comment": "Settings name of the calendar widget plugin.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calendario"
+          }
+        }
+      }
+    },
     "Charging alerts": {
       "comment": "Settings name of the charging notice plugin.",
       "localizations": {
@@ -41,6 +52,61 @@
           "stringUnit": {
             "state": "translated",
             "value": "Orologio"
+          }
+        }
+      }
+    },
+    "Progress": {
+      "comment": "Settings name of the progress widget plugin.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avanzamento"
+          }
+        }
+      }
+    },
+    "This month": {
+      "comment": "Progress widget label of the bar for how much of this month has gone.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo mese"
+          }
+        }
+      }
+    },
+    "This week": {
+      "comment": "Progress widget label of the bar for how much of this week has gone.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questa settimana"
+          }
+        }
+      }
+    },
+    "This year": {
+      "comment": "Progress widget label of the bar for how much of this year has gone.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quest'anno"
+          }
+        }
+      }
+    },
+    "Today": {
+      "comment": "Progress widget label of the bar for how much of today has gone.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oggi"
           }
         }
       }
