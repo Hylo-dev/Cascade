@@ -42,9 +42,9 @@ struct NetworkSourceTests {
         let source   = NetworkSource(monitor: monitors.make)
         let states   = Recorder<PluginNetworkState>()
         start(source, into: states)
-        #expect(try await eventually { monitors.all.count == 1 })
+        #expect(try await eventually { monitors.started.count == 1 })
 
-        let monitor = monitors.all[0]
+        let monitor = monitors.started[0]
         monitor.deliver(path(usesWifi: true))
         monitor.deliver(path(usesWifi: true))
         monitor.deliver(path(usesWiredEthernet: true))
@@ -59,21 +59,21 @@ struct NetworkSourceTests {
         let source   = NetworkSource(monitor: monitors.make)
         let states   = Recorder<PluginNetworkState>()
         start(source, into: states)
-        #expect(try await eventually { monitors.all.count == 1 })
+        #expect(try await eventually { monitors.started.count == 1 })
 
-        let first = monitors.all[0]
+        let first = monitors.started[0]
         first.deliver(path(usesWifi: true))
         source.stop()
         #expect(try await eventually { first.isCancelled })
         first.deliver(path(usesCellular: true))
 
         start(source, into: states)
-        #expect(try await eventually { monitors.all.count == 2 })
-        monitors.all[1].deliver(path(usesWifi: true))
+        #expect(try await eventually { monitors.started.count == 2 })
+        monitors.started[1].deliver(path(usesWifi: true))
         first.deliver(path(usesCellular: true))
         source.stop()
 
-        #expect(try await eventually { monitors.all[1].isCancelled })
+        #expect(try await eventually { monitors.started[1].isCancelled })
         #expect(states.values.map(\.interface) == [.wifi, .wifi])
     }
 
@@ -113,12 +113,14 @@ struct NetworkSourceTests {
 }
 
 /// FakePathMonitors hands the source a new monitor each time it starts and keeps them in order.
+/// The source builds a monitor a moment before it starts it, so a test waits on `started`, the
+/// monitors that already have a queue to deliver on.
 final class FakePathMonitors: Sendable {
 
     private let monitors = Mutex<[FakePathMonitor]>([])
 
-    var all: [FakePathMonitor] {
-        monitors.withLock { $0 }
+    var started: [FakePathMonitor] {
+        monitors.withLock { $0 }.filter(\.isStarted)
     }
 
     var make: @Sendable () -> any NetworkPathMonitoring {
@@ -137,6 +139,10 @@ final class FakePathMonitor: NetworkPathMonitoring, Sendable {
 
     private let state = Mutex<(queue: DispatchQueue?, onUpdate: (@Sendable (NetworkPathSnapshot) -> Void)?, isCancelled: Bool)>((nil, nil, false))
 
+    var isStarted: Bool {
+        state.withLock { $0.queue != nil }
+    }
+
     var isCancelled: Bool {
         state.withLock { $0.isCancelled }
     }
@@ -152,9 +158,14 @@ final class FakePathMonitor: NetworkPathMonitoring, Sendable {
         state.withLock { $0.isCancelled = true }
     }
 
+    /// deliver records an issue instead of dropping the path when the monitor has not started.
     func deliver(_ snapshot: NetworkPathSnapshot) {
         let (queue, onUpdate) = state.withLock { ($0.queue, $0.onUpdate) }
+        guard let queue, let onUpdate else {
+            Issue.record("A path was delivered to a monitor the source has not started")
+            return
+        }
 
-        queue?.sync { onUpdate?(snapshot) }
+        queue.sync { onUpdate(snapshot) }
     }
 }
