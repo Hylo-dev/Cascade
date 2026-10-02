@@ -23,6 +23,12 @@ struct SharedHostExecutorTests {
         let events   : Recorder<PluginExecutorEvent>
         let results  : Recorder<PluginExecutionResult.Outcome>
 
+        /// restarts are the delays the executor scheduled to connect again, without the handshake
+        /// timeouts every connection schedules.
+        var restarts: [Duration] {
+            time.delays.filter { $0 != SharedHostExecutor.handshakeTimeout }
+        }
+
         func dispatch(
             _ event  : PluginEvent,
             to plugin: PluginID
@@ -85,7 +91,7 @@ struct SharedHostExecutorTests {
 
         #expect(rig.results.values == [.failed])
         #expect(rig.events.values == [.unavailable, .available, .unavailable])
-        #expect(rig.time.delays == [.seconds(8)])
+        #expect(rig.restarts == [.seconds(8)])
 
         rig.time.set(10)
         rig.time.runDelayed()
@@ -110,7 +116,7 @@ struct SharedHostExecutorTests {
         link.die()
 
         #expect(rig.results.values == [.failed])
-        #expect(rig.time.delays == [.seconds(1)])
+        #expect(rig.restarts == [.seconds(1)])
     }
 
     @Test
@@ -175,7 +181,7 @@ struct SharedHostExecutorTests {
 
         #expect(first.wasKilled)
         #expect(rig.results.values == [.lost, .lost])
-        #expect(rig.time.delays == [.seconds(10)])
+        #expect(rig.restarts == [.seconds(10)])
 
         rig.time.runDelayed()
         let second = try #require(rig.transport.links.last)
@@ -289,5 +295,29 @@ struct SharedHostExecutorTests {
         rig.executor.restart()
 
         #expect(rig.transport.links.count == links + 1)
+    }
+
+    @Test
+    func aHandshakeThatNeverCompletesIsALossAndAStaleTimeoutTouchesNothing() throws {
+        let rig = rig()
+        rig.executor.start(clock, entryPoint: "ClockPlugin")
+
+        #expect(rig.time.delays == [SharedHostExecutor.handshakeTimeout])
+
+        rig.time.set(30)
+        rig.time.runDelayed()
+
+        #expect(rig.events.values == [.unavailable, .unavailable])
+        #expect(rig.time.delays.count == 1)
+
+        rig.time.set(31)
+        rig.time.runDelayed()
+        let second = try #require(rig.transport.links.last)
+        second.greet()
+        rig.time.runDelayed()
+
+        #expect(rig.transport.links.count == 2)
+        #expect(rig.events.values.last == .available)
+        #expect(second.starts == [clock])
     }
 }

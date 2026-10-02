@@ -59,6 +59,11 @@ public final class SharedHostExecutor: PluginExecutor {
         var sources     : [String: @Sendable (PluginSourceEvent) -> Void] = [:]
     }
 
+    /// handshakeTimeout is how long a new host may take to answer its handshake. launchd holds a
+    /// young service's relaunch for ten seconds, so the bound sits well past that; a host that
+    /// stays silent longer is lost like one that crashed with nothing in flight.
+    static let handshakeTimeout = Duration.seconds(30)
+
     private let state    = Mutex(State())
     private let transport: any PluginTransport
     private let clock    : @Sendable () -> Duration
@@ -239,6 +244,22 @@ public final class SharedHostExecutor: PluginExecutor {
         }
         link.hello { [weak self] incarnation in
             self?.greet(generation, with: incarnation)
+        }
+
+        let timeOut: @Sendable () -> Void = { [weak self] in
+            self?.abandonHandshake(generation)
+        }
+        schedule(Self.handshakeTimeout, timeOut)
+    }
+
+    /// abandonHandshake loses a connection still waiting for its handshake; one that completed,
+    /// or a later connection, is untouched.
+    private func abandonHandshake(_ generation: UInt64) {
+        let isWaiting = state.withLock { state in
+            state.generation == generation && state.phase == .connecting
+        }
+        if isWaiting {
+            lose(generation)
         }
     }
 
