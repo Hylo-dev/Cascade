@@ -35,3 +35,4 @@ xcuserdata/
 # Generated profiling data and Python bytecode
 *.profraw
 __pycache__/
+.superpowers/
