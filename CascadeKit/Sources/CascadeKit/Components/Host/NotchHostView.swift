@@ -44,6 +44,7 @@ final class NotchHostView: NSView {
     private let optionsKeyboardTarget = OptionsKeyboardTarget()
     private let optionsHost = NSHostingView(rootView: AnyView(EmptyView()))
     private let outgoingOptionsHost = NSHostingView(rootView: AnyView(EmptyView()))
+    private let optionsHeaderDivider = CALayer()
     private var optionsIdentity: UUID?
     private var optionsRevision: UInt64 = 0
     private var optionsTransitionTask: Task<Void, Never>?
@@ -156,6 +157,14 @@ final class NotchHostView: NSView {
             contentContainer.addSubview(hostingView)
         }
 
+        // Options have a mandatory body boundary below the cutout and navigation
+        // chrome. Provider overflow must not draw over that reserved top band.
+        optionsHost.clipsToBounds = true
+        outgoingOptionsHost.clipsToBounds = true
+        optionsHeaderDivider.name = "options.header.divider"
+        optionsHeaderDivider.isHidden = true
+        contentContainer.layer?.addSublayer(optionsHeaderDivider)
+
         settingsButton.image            = NSImage(
             systemSymbolName        : "gearshape",
             accessibilityDescription: String(localized: "Cascade Settings", bundle: .module)
@@ -212,6 +221,9 @@ final class NotchHostView: NSView {
         animated    : Bool
     ) {
         let workspace = NSWorkspace.shared
+        optionsHeaderDivider.backgroundColor = NSColor.white.withAlphaComponent(
+            workspace.accessibilityDisplayShouldIncreaseContrast ? 0.35 : 0.12
+        ).cgColor
         borderRenderer.setAppearance(
             appearance,
             animated           : animated && !workspace.accessibilityDisplayShouldReduceMotion,
@@ -254,6 +266,16 @@ final class NotchHostView: NSView {
         frame       : CGRect,
         reducesMotion: Bool
     ) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        optionsHeaderDivider.frame = CGRect(
+            x     : frame.minX,
+            y     : frame.maxY + 1,
+            width : frame.width,
+            height: 1 / (window?.backingScaleFactor ?? 2)
+        )
+        optionsHeaderDivider.isHidden = identity == nil || content == nil
+        CATransaction.commit()
         guard optionsIdentity != identity || optionsRevision != revision else {
             optionsHost.frame = frame
             return
@@ -283,7 +305,12 @@ final class NotchHostView: NSView {
         }
         optionsIdentity = identity
         optionsRevision = revision
-        update(host: optionsHost, view: isPresented ? content : nil, frame: frame)
+        let body = content.map { content in
+            AnyView(ScrollView(.vertical) {
+                content.fixedSize(horizontal: false, vertical: true)
+            }.clipped())
+        }
+        update(host: optionsHost, view: isPresented ? body : nil, frame: frame)
         if isPresented && !wasPresented {
             previousOptionsResponder = window?.firstResponder
             installOptionsKeyboardRoute()
@@ -351,6 +378,7 @@ final class NotchHostView: NSView {
             if hadOptionsContent { host.layoutSubtreeIfNeeded() }
         }
         backButton.isHidden = true
+        optionsHeaderDivider.isHidden = true
         removeOptionsKeyboardRoute()
         if window?.firstResponder === optionsKeyboardTarget {
             window?.makeFirstResponder(previousOptionsResponder)

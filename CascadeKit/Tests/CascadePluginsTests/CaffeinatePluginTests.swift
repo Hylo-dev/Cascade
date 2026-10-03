@@ -49,7 +49,7 @@ struct CaffeinatePluginTests {
         let document = try #require(output.publications.first?.document)
         #expect(!PluginNodeTable(document).entries.contains { if case .button = $0.kind { return true }; return false })
         #expect(!PluginNodeTable(document).entries.contains { if case .toggle = $0.kind { return true }; return false })
-        #expect(PluginNodeTable(document).entries.contains { $0.kind == .text("Updating…") })
+        #expect(PluginNodeTable(document).entries.contains { $0.modifiers.contains(.accessibilityLabel("Updating…")) })
         let malformed = try PluginSourceEvent(source: "caffeinate", fields: ["isActive": .bool(true)])
         #expect(PluginCaffeinateState(malformed) == nil)
         #expect(try plugin.handle(.source(malformed), context: PluginContext(plugin: owner)).publications.isEmpty)

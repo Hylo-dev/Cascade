@@ -310,6 +310,47 @@ struct NotchOptionsNavigationTests {
         #expect(documentAssets == nil)
     }
 
+    @Test
+    func optionsContentIsClippedBelowTheNavigationBand() throws {
+        let host = NotchHostView(frame: CGRect(x: 0, y: 0, width: 440, height: 144))
+        let panel = NotchPanel(contentView: host)
+        defer { panel.close() }
+        let frame = CGRect(x: 20, y: 16, width: 400, height: 92)
+        host.setOptionsContent(
+            AnyView(Color.red.frame(width: 400, height: 300)),
+            identity     : UUID(),
+            revision     : 1,
+            frame        : frame,
+            reducesMotion: true
+        )
+        let nativeHosts = host.subviews.flatMap(\.subviews).compactMap {
+            $0 as? NSHostingView<AnyView>
+        }.filter { !$0.isHidden }
+        let options = try #require(nativeHosts.first)
+        #expect(nativeHosts.count == 1)
+        #expect(options.frame == frame)
+        #expect(options.clipsToBounds)
+        options.layoutSubtreeIfNeeded()
+        func findScrollView(in view: NSView) -> NSScrollView? {
+            if let scroll = view as? NSScrollView { return scroll }
+            for child in view.subviews {
+                if let scroll = findScrollView(in: child) { return scroll }
+            }
+            return nil
+        }
+        let scroll = try #require(findScrollView(in: options))
+        let document = try #require(scroll.documentView)
+        #expect(document.frame.height > scroll.contentView.bounds.height)
+        let divider = try #require(host.subviews.flatMap { $0.layer?.sublayers ?? [] }.first {
+            $0.name == "options.header.divider"
+        })
+        #expect(!divider.isHidden)
+        #expect(divider.frame.minY >= frame.maxY)
+        #expect(divider.frame.maxY <= host.bounds.maxY)
+        host.clearOptionsContent()
+        #expect(divider.isHidden)
+    }
+
     @Test(arguments: [false, true])
     func nativeTransitionReleasesOutgoingDocumentAssets(reducesMotion: Bool) async throws {
         let host    = NotchHostView(frame: CGRect(x: 0, y: 0, width: 640, height: 260))

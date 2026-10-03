@@ -164,16 +164,82 @@ the existing samples, without repeating them. Raw files:
 `/private/tmp/caffeinate-options-redesign-preview-idle.{json,top.txt,footprint.txt}`.
 
 The final normal launch then stayed at 0.0% CPU across all nine samples; physical
-footprint was 27,362,288 bytes (26.10 MiB), peak 30,671,952 bytes. Normal-launch
+footprint was 27,362,288 bytes (26.09 MiB), peak 30,671,952 bytes. Normal-launch
 idle observations using the same method are:
 
 | Metric | Earlier normal baseline | Final normal launch |
 | --- | ---: | ---: |
 | Last-five mean process CPU | 0.18% | 0.0% |
 | Last-five maximum process CPU | 0.9% | 0.0% |
-| Physical footprint | 26.47 MiB | 26.10 MiB |
+| Physical footprint | 26.47 MiB | 26.09 MiB |
 
 Final raw files: `/private/tmp/caffeinate-options-redesign-normal-idle.{json,top.txt,footprint.txt}`.
 These are idle observations, not a driven open/Back scenario. They neither explain
 the variable preview sample nor qualify animation cost, physical input, wakeups
 or private resident RAM.
+
+## Mandatory top band and icon-only heading follow-up
+
+The user requested a mandatory border/reserved top band for the physical cutout,
+Back and Settings, and only the cup in Caffeinate's heading. The shared host now
+clips incoming and outgoing options hosts at the allocated body boundary and
+draws a native one-pixel divider below the navigation band. A native vertical
+ScrollView keeps longer detail content reachable inside that boundary. Its
+document measures naturally; credits and errors scroll without growing the notch.
+The existing physical/software notch header calculation and navigation controls
+remain host-owned. The divider follows increased-contrast settings and is hidden
+when the page is cleared. Existing finite transitions and focus behavior remain.
+
+Caffeinate's cup now sits beside the duration segments. Visible title/status and
+the extra duration heading are removed; the status remains accessible on the cup,
+and actual errors still have a separate inline message. No timer, dependency,
+SDK primitive or per-frame callback was added.
+
+The earlier 220-point component measurement did not prove fit inside the actual
+configured notch body. The follow-up renders use 400-point width and the standard
+144-point notch: 32-point physical cutout/navigation height, 4-point top inset,
+16-point bottom inset, and a 92-point body. Normal, active and busy content now
+measure exactly 92 points in English and Italian. Credits measure 137 points;
+credits plus error measure 156 points, and use the shared scroll area. Aggregate
+documents contain 46–70 nodes. Native host export confirms the cup/controls stay
+below the divider and Back/Settings occupy the reserved band in the inspected
+initial render. Native exports are controlled offscreen component evidence,
+not physical input or a camera-cutout screenshot.
+
+Evidence:
+
+- RED: `/private/tmp/caffeinate-header-red.log`, exit 1, two expected failures for
+  unclipped native content and missing divider.
+- GREEN: `/private/tmp/caffeinate-header-green-final.log`, exit 0, 33 tests passed
+  (3 provider tests + 30 native host/navigation tests). The new regression also
+  confirms a 300-point document can scroll inside the 92-point clipped viewport,
+  and clearing the page hides the divider. Existing lifetime/focus/retarget checks pass.
+- Component/native render harness: `/private/tmp/render-caffeinate-header.swift`;
+  metrics `/private/tmp/caffeinate-header-design-{en,it}.json` and corresponding
+  PNGs. The initial isolated native export failed with SIGABRT in AppKit's
+  `_RegisterApplication`; running the same compiled local renderer outside the
+  filesystem sandbox completed for both languages, exit 0. No product code
+  change was used to bypass that harness environment failure.
+- Canonical signed build: `/private/tmp/caffeinate-header-app-build.log`, exit 0,
+  `BUILD SUCCEEDED`, signature/boundary verification and application-link update.
+- Normal restart: `/private/tmp/caffeinate-header-final-launch.json`, PID 70590,
+  exact feature-build executable with no diagnostic arguments. The link still
+  targets `/private/tmp/cascade-widget-fullscreen-feature-derived/Build/Products/Debug/Cascade.app`.
+
+The two previously recorded generic authorization/slider residuals remain open;
+this bounded presentation change does not alter those paths. Physical input,
+multiple-display and driven animation/wakeup qualification remain separate.
+The final UI-tool inspection again returned only window/menu chrome, without
+widget controls; this is not a successful real-app input check.
+
+The normal-launch idle comparison uses the same nine five-second samples and
+separate physical-footprint measurement:
+
+| Metric | Before this follow-up (PID 67923) | After (PID 70590) |
+| --- | ---: | ---: |
+| Last-five mean and maximum process CPU | 0.0% / 0.0% | 0.0% / 0.0% |
+| Physical footprint | 26.09 MiB | 25.19 MiB |
+
+After raw files: `/private/tmp/caffeinate-header-normal-idle.{json,top.txt,footprint.txt}`.
+The final footprint is 26,412,016 bytes, peak 30,164,024 bytes. Idle observations
+do not establish a causal memory saving or qualify scrolling/animation costs.

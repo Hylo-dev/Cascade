@@ -5,6 +5,12 @@ notch. The host supplies native Back, the sensor reservation, finite transitions
 and restoration of the ordinary widget grid. The provider supplies values and
 declared actions, never a window, frame or executable host view.
 
+The host reserves the entire upper navigation band for the physical cutout,
+`chevron.left` Back and Settings. A native divider marks its lower edge. Detail
+content is clipped below that band and scrolls vertically when it exceeds the
+configured notch body; providers cannot draw over the chrome or enlarge the notch.
+Providers supply only body content and do not duplicate navigation or top padding.
+
 ## Declare the feature
 
 Set `supportsFullscreen: true` on the feature canonically assigned to the widget

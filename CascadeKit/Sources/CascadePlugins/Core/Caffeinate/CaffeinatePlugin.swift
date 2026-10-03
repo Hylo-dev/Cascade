@@ -109,10 +109,6 @@ public struct CaffeinatePlugin: PluginProvider {
             : state.isActive
                 ? String(localized: "On", table: "Plugins", bundle: .module)
                 : String(localized: "Off", table: "Plugins", bundle: .module))
-        var statusNodes = [PluginNode(.text(status))]
-        if state.isActive, !state.isBusy, state.error == nil, let until = state.until {
-            statusNodes.append(PluginNode(.date(until, style: .time)))
-        }
         let durationNodes = [0, 15, 30, 60, 120, 240, 480].map { minutes in
             let label = minutes == 0 ? "∞" : minutes < 60 ? "\(minutes)m" : "\(minutes / 60)h"
             let selected = minutes == state.minutes
@@ -139,29 +135,17 @@ public struct CaffeinatePlugin: PluginProvider {
         }
         var rows = [
             PluginNode(
-                .hStack(alignment: .center, spacing: 10),
+                .hStack(alignment: .center, spacing: 8),
                 children: [
                     PluginNode(.symbol(name: state.isActive ? "cup.and.saucer.fill" : "cup.and.saucer"), modifiers: [
                         .font(PluginFont(size: 24, weight: .medium)),
                         .foregroundStyle(.color(state.isActive ? amber : .white)),
-                        .frame(width: 34, height: 34, maxWidth: nil, maxHeight: nil, alignment: .center),
+                        .frame(width: 26, height: 26, maxWidth: nil, maxHeight: nil, alignment: .center),
+                        .accessibilityLabel(status),
                     ]),
-                    PluginNode(.vStack(alignment: .leading, spacing: 2), children: [
-                        PluginNode(.text(String(localized: "Caffeinate", table: "Plugins", bundle: .module)), modifiers: [.font(PluginFont(size: 16, weight: .semibold))]),
-                        PluginNode(.hStack(alignment: .center, spacing: 5), modifiers: [
-                            .font(PluginFont(size: 11)),
-                            .foregroundStyle(.color(muted)),
-                            .lineLimit(1),
-                            .accessibilityLabel(status),
-                        ], children: statusNodes),
-                    ]),
-                    PluginNode(.spacer(minLength: nil)),
+                    PluginNode(.hStack(alignment: .center, spacing: 4), children: durationNodes),
                 ]
             ),
-            PluginNode(.vStack(alignment: .leading, spacing: 5), children: [
-                PluginNode(.text(String(localized: "Duration", table: "Plugins", bundle: .module)), modifiers: [.font(PluginFont(size: 11, weight: .medium)), .foregroundStyle(.color(muted))]),
-                PluginNode(.hStack(alignment: .center, spacing: 4), children: durationNodes),
-            ]),
         ]
         func displayLabel(isOn: Bool) -> PluginNode {
             PluginNode(
@@ -217,8 +201,11 @@ public struct CaffeinatePlugin: PluginProvider {
         if state.showsCredits {
             rows.append(PluginNode(.text(String(localized: "Functional references: Vorssaint (2026, GPL-3.0-or-later) and Amphetamine by William Gustafson. Independently authored with Apple IOKit and SF Symbols; no third-party code or assets.", table: "Plugins", bundle: .module)), modifiers: [.font(PluginFont(size: 10)), .lineLimit(4), .foregroundStyle(.color(muted))]))
         }
+        if let error = state.error {
+            rows.append(PluginNode(.text(error), modifiers: [.font(PluginFont(size: 10)), .lineLimit(2), .foregroundStyle(.color(muted))]))
+        }
         return PluginNode(
-            .vStack(alignment: .leading, spacing: 10),
+            .vStack(alignment: .leading, spacing: 6),
             id: "caffeinate.options.page",
             modifiers: [.foregroundStyle(.color(.white)), .padding(.horizontal, length: 8), .frame(width: nil, height: nil, maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)],
             children: rows
