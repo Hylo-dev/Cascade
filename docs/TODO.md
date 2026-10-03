@@ -7,6 +7,10 @@
 - [ ] Complete native input and multiple-display acceptance for the shared container:
   Back, Escape, withdrawal/disable, termination and restoration of the underlying
   arrangement, ordinary page and contextual slot.
+- [ ] Preserve captured options authority when a control ID moves into compact content;
+  cancel a revoked slider drag without clearing a later page's interaction. These generic
+  compatibility cases remain open after independent review; Caffeinate uses separate IDs
+  and publishes no slider. See the [verification report](superpowers/verification/2026-10-03-caffeinate-widget-options.md).
 - [x] Connect Caffeinate's text/disclosure hit area to the shared host container, with duration,
   keep-display-awake, stop and credits controls. Keep the cup as a separate toggle.
   At the icon-only size, expose options through the common widget context action while the cup
