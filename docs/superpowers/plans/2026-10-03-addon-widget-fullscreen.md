@@ -47,11 +47,11 @@
 
 **Interfaces:** `AddonOptionsRequest(publicationID:observedRevision:actionRequestID:leaseID:document:)` is an immutable Codable bounded request. `OperationRequest.presentOptions(AddonOptionsRequest)`/`.dismissOptions(UUID)` carry only values. A host-only opaque origin token binds the accepted action to the display and prior selection. Runtime supplies accepted presentation changes to `AddonPresentationBridge`; do not let a wire display ID mint an origin. The host presenter returns acceptance and an idempotent dismiss callback, keeping the contextual page slot intact. Retained options actions enter the existing action authorization/delivery path with the leased document as the authorized representation.
 
-- [ ] Write failing checks: false/absent flag preserves old encoding; true flag round trip; options unknown-field/size validation; missing capability/stale action/forged source/reused old lease rejection; invalid imported assets reject a mixed options batch before projection while preserving valid detail/budget; latest pending A/B click wins and Back rejects both late replies; Back/close/display removal preserve ordinary navigation and the unselected contextual slot; selected shelf/activity rejects hidden widget origins; source revision revokes copied controls; interrupted transition clears outgoing content.
-- [ ] Run those checks red with `DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer /usr/bin/xcrun swift test --package-path CascadeKit --scratch-path /private/tmp/cascade-widget-fullscreen-swift --no-parallel --filter <focused suite>`; capture exact failures. Existing relevant suites supply the baseline.
-- [ ] Implement the shortest shared contracts/runtime/presenter path, using canonical snapshots and finite native animations. Negotiate `notch.options.v1` only on a connected host and preserve older negotiation.
-- [ ] Run focused suites green, then full serial package tests and boundary checks. Expected: no new failures and unchanged launcher hold. Record exact results and any pre-existing failures.
-- [ ] Commit only this feature's code and tests; produce a report of files, red/green evidence, authority/resource/lifecycle decisions and any qualification limits.
+- [x] Write failing checks: false/absent flag preserves old encoding; true flag round trip; options unknown-field/size validation; missing capability/stale action/forged source/reused old lease rejection; invalid imported assets reject a mixed options batch before projection while preserving valid detail/budget; latest pending A/B click wins and Back rejects both late replies; Back/close/display removal preserve ordinary navigation and the unselected contextual slot; selected shelf/activity rejects hidden widget origins; source revision revokes copied controls; interrupted transition clears outgoing content.
+- [x] Run those checks red with `DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer /usr/bin/xcrun swift test --package-path CascadeKit --scratch-path /private/tmp/cascade-widget-fullscreen-swift --no-parallel --filter <focused suite>`; capture exact failures. Existing relevant suites supply the baseline.
+- [x] Implement the shortest shared contracts/runtime/presenter path, using canonical snapshots and finite native animations. Negotiate `notch.options.v1` only on a connected host and preserve older negotiation.
+- [x] Run focused suites green, then full serial package tests and boundary checks. Expected: no new failures and unchanged launcher hold. Record exact results and any pre-existing failures.
+- [x] Commit only this feature's code and tests; produce a report of files, red/green evidence, authority/resource/lifecycle decisions and any qualification limits.
 
 ### Task 2: App fixture, visual and performance qualification
 
@@ -59,12 +59,20 @@
 
 **Interfaces:** The Debug scenario publishes an ordinary snapshot widget through the generic bridge and opens detail using the same host container. It exposes a clickable title, a separate compact control, detail actions and native Back, plus deterministic withdrawal/refresh hooks. It never starts or bypasses an external addon process.
 
-- [ ] Add a check demonstrating the fixture exercises the common origin/presentation/dismiss path, including stale source rejection. Run red then green.
-- [ ] Capture the existing app's ordinary notch idle/open/close CPU and memory baseline. Build the feature through `scripts/build-development.sh` with scratch DerivedData under `/private/tmp`.
+- [x] Add the finite compiled-app check covering the common origin/presentation/dismiss path, including stale source rejection; compile the real missing hook RED then GREEN, and pass covering shared behavioral checks. Native execution of that check remains in the next pending qualification item.
+- [x] Capture normal closed and requested-expanded CPU/physical-footprint baseline; build the feature through `scripts/build-development.sh` with scratch DerivedData under `/private/tmp`. Actual interactive open/close baseline was unavailable through the empty computer-use surface; private-memory/wakeup/timing and matched after measurements remain pending.
 - [ ] Drive the opt-in real app fixture through opening, independent control, Back, Escape, rapid retarget and close/reopen; inspect the notch visually. Measure matching idle/open-close/visible/closed windows and compare CPU/memory/wakeups where available. Keep hardware-only multi-display evidence explicit.
-- [ ] Document the public usage pattern and record verified versus pending scenarios. Expected: fixture route works, no periodic options timer, no accumulating hosts/leases, successful canonical build.
+- [x] Document public usage and verified versus pending scenarios, including shared route/host checks and the successful canonical build. The fixture's native scenario still needs execution; no periodic options timer was introduced.
 - [ ] Commit verification/docs. Request fresh independent review of the whole feature, address important findings with red/green checks, and run covering regression tests.
-- [ ] Update `/Applications/Cascade.app`, quit/relaunch the normal updated app and verify executable/PID. Keep the managed worktree attached with its finished code; do not merge or push without a user instruction.
+- [x] Update `/Applications/Cascade.app`, quit/relaunch the normal updated app and verify executable/PID (44307, exact feature-derived executable). Keep the managed worktree attached with its finished code; do not merge or push without a user instruction.
+
+Execution evidence: `docs/superpowers/verification/2026-10-03-addon-widget-fullscreen.md`.
+The user's session is locked and computer-use automatic unlock failed. Native
+check execution, physical interaction/visual clearance, matching after
+measurements and physical multi-display coverage remain unqualified. The user
+was asked to unlock; no hidden-source or lock bypass was introduced. The code
+and docs passed their task reviews; final whole-feature review follows before
+the available work is handed back with these explicit limits.
 
 ## Self-review and execution
 
