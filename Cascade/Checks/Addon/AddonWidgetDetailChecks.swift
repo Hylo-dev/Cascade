@@ -25,6 +25,7 @@ enum AddonWidgetDetailChecks {
         try require(fixture.engine.expandedDisplayID != nil, "No expanded display; visible source unavailable")
         let initialHosts = visibleHostingViewCount()
         let initialBrightness = fixture.brightness
+        reportHost(fixture, state: "ordinary-before-compact-action")
         try press(label: "Mock brightness \(Int(initialBrightness * 100))% +")
         try require(fixture.brightness > initialBrightness, "Independent compact brightness action did not run")
         try require(fixture.active == nil, "Compact brightness action opened detail")
@@ -151,7 +152,124 @@ enum AddonWidgetDetailChecks {
         for root in candidates {
             if let control = findButton(root, label: label, remaining: 512) { return control }
         }
-        throw Failure(reason: "Visible accessibility button unavailable: \(label); source may be hidden or screen locked")
+        diagnoseMissingButton(label: label)
+        throw Failure(
+            reason: "Native check unqualified: no enabled AX button labelled \(label); "
+                + "see host snapshot; environment versus implementation cause unresolved"
+        )
+    }
+
+    /// diagnoseMissingButton emits one bounded snapshot only after lookup fails.
+    /// Public native views and AX object getters distinguish an absent surface
+    /// from an unsupported protocol cast or a label/title mismatch. Unexpected
+    /// strings are redacted because this fixture needs only its synthetic text.
+    private static func diagnoseMissingButton(label: String) {
+        print("DIAGNOSTIC: missing=\(label) windows=\(NSApp.windows.count) active=\(NSApp.isActive)")
+        var viewBudget = 32
+        var accessibilityBudget = 48
+        var hitTestBudget = 2
+        var visited: Set<ObjectIdentifier> = []
+        for (index, window) in NSApp.windows.prefix(8).enumerated() {
+            let windowClass = NSStringFromClass(type(of: window))
+            print(
+                "WINDOW: index=\(index) class=\(windowClass) visible=\(window.isVisible) "
+                    + "key=\(window.isKeyWindow) alpha=\(window.alphaValue) frame=\(NSStringFromRect(window.frame))"
+            )
+            guard window.isVisible,
+                  windowClass.hasSuffix(".NotchPanel"),
+                  let root = window.contentView
+            else { continue }
+            diagnoseView(root, depth: 0, remaining: &viewBudget, hitTestBudget: &hitTestBudget)
+            diagnoseAccessibility(root, depth: 0, remaining: &accessibilityBudget, visited: &visited)
+        }
+        print("DIAGNOSTIC: remainingViewBudget=\(viewBudget) remainingAXBudget=\(accessibilityBudget)")
+    }
+
+    private static func diagnoseView(
+        _ view: NSView,
+        depth: Int,
+        remaining: inout Int,
+        hitTestBudget: inout Int
+    ) {
+        guard remaining > 0, depth <= 8 else { return }
+        remaining -= 1
+        print(
+            "VIEW: depth=\(depth) class=\(NSStringFromClass(type(of: view))) hidden=\(view.isHidden) "
+                + "alpha=\(view.alphaValue) frame=\(NSStringFromRect(view.frame)) children=\(view.subviews.count)"
+        )
+        if !view.isHidden, NSStringFromClass(type(of: view)).contains("NSHostingView"), let window = view.window {
+            for proxy in view.subviews where !proxy.isHidden && NSStringFromClass(type(of: proxy)).contains("KeyViewProxy") {
+                guard hitTestBudget > 0 else { break }
+                hitTestBudget -= 1
+                let center = proxy.convert(NSPoint(x: proxy.bounds.midX, y: proxy.bounds.midY), to: nil)
+                let screenPoint = window.convertPoint(toScreen: center)
+                let hit = view.accessibilityHitTest(screenPoint)
+                let role = hit.flatMap { diagnosticAttribute($0, name: "accessibilityRole") }
+                let label = hit.flatMap { diagnosticAttribute($0, name: "accessibilityLabel") }
+                let title = hit.flatMap { diagnosticAttribute($0, name: "accessibilityTitle") }
+                let children = hit.flatMap { diagnosticAttribute($0, name: "accessibilityChildren") } as? [Any]
+                let hitClass = hit.map { String(describing: type(of: $0)) } ?? "nil"
+                print(
+                    "AX-HIT: point=\(NSStringFromPoint(screenPoint)) class=\(hitClass) "
+                        + "role=\(diagnosticText(role)) label=\(diagnosticText(label)) "
+                        + "title=\(diagnosticText(title)) children=\(children?.count ?? 0)"
+                )
+            }
+        }
+        for child in view.subviews {
+            guard remaining > 0 else { break }
+            diagnoseView(child, depth: depth + 1, remaining: &remaining, hitTestBudget: &hitTestBudget)
+        }
+    }
+
+    private static func diagnoseAccessibility(
+        _ value: Any,
+        depth: Int,
+        remaining: inout Int,
+        visited: inout Set<ObjectIdentifier>
+    ) {
+        guard remaining > 0, depth <= 12 else { return }
+        if let object = value as? NSObject {
+            guard visited.insert(ObjectIdentifier(object)).inserted else { return }
+        }
+        remaining -= 1
+        let children = diagnosticAttribute(value, name: "accessibilityChildren") as? [Any] ?? []
+        let role = diagnosticText(diagnosticAttribute(value, name: "accessibilityRole"))
+        let label = diagnosticText(diagnosticAttribute(value, name: "accessibilityLabel"))
+        let title = diagnosticText(diagnosticAttribute(value, name: "accessibilityTitle"))
+        let content = diagnosticText(diagnosticAttribute(value, name: "accessibilityValue"))
+        let identifier = diagnosticText(diagnosticAttribute(value, name: "accessibilityIdentifier"))
+        print(
+            "AX: depth=\(depth) class=\(String(describing: type(of: value))) "
+                + "protocol=\(value is any NSAccessibilityProtocol) role=\(role) label=\(label) "
+                + "title=\(title) value=\(content) identifier=\(identifier) children=\(children.count)"
+        )
+        for child in children {
+            guard remaining > 0 else { break }
+            diagnoseAccessibility(child, depth: depth + 1, remaining: &remaining, visited: &visited)
+        }
+    }
+
+    /// diagnosticAttribute calls only AppKit AX getters with object return types.
+    /// NSObject selector discovery is diagnostic evidence when SwiftUI's element
+    /// does not declare the broad NSAccessibilityProtocol conformance.
+    private static func diagnosticAttribute(_ value: Any, name: String) -> Any? {
+        guard let object = value as? NSObject else { return nil }
+        let selector = NSSelectorFromString(name)
+        guard object.responds(to: selector) else { return nil }
+        return object.perform(selector)?.takeUnretainedValue()
+    }
+
+    private static func diagnosticText(_ value: Any?) -> String {
+        guard let value else { return "nil" }
+        if let number = value as? NSNumber { return number.stringValue }
+        let text = String(describing: value)
+        let allowedPrefixes = [
+            "AX", "Mock", "Debug", "Dim mock", "Refresh mock", "Withdraw mock",
+            "Host-owned Debug", "Brightness", "notch.options.", "Cascade", "Back"
+        ]
+        guard allowedPrefixes.contains(where: text.hasPrefix) else { return "<redacted>" }
+        return String(text.prefix(120)).replacingOccurrences(of: "\n", with: " ")
     }
 
     private static func findButton(
