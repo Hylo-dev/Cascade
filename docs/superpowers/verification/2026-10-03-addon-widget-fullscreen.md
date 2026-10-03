@@ -27,6 +27,18 @@ successful retry at the unchanged sequence. A test-only mixed-output
 classification error was corrected; it was not another production defect.
 Evidence: `/private/tmp/cascade-widget-fullscreen-fix-1-*.log`.
 
+The whole-feature review found no Critical/Important defect, and one Minor
+metric ambiguity: visible host count did not establish retained-root lifetime.
+Genuine weak-owner checks then exposed mounted SwiftUI document retention after
+rapid stop. Cleanup now settles the two cleared native hosts once, only when
+active/outgoing content existed. Both normal and Reduce Motion mounted checks
+pass, including immediate owner release after stop. The scoped fix review
+approved all findings with no new breakage. Final focused checks passed 116
+tests; fresh full serial checks passed **1,875** tests (902 runtime, 436 Kit,
+185 contracts, 162 presentation, 125 plugin engine, 45 plugins, 20 SDK/tool).
+Expected CoreData corruption and pasteboard sandbox diagnostics remain disclosed.
+Evidence: `/private/tmp/cascade-widget-options-lifetime-*.log`.
+
 ## Baseline measurement
 
 Base commit `2ff46d96c1fda59c8acd1cdb8fe70d39c7b0f317` was built with the
@@ -46,6 +58,20 @@ and the corresponding `*-top.txt` / `*-footprint.txt` files. The expanded
 argument requested opening; the computer-use surface returned an empty
 transparent panel, so actual visible opening and input were not verified.
 The expanded row therefore cannot qualify interactive animation performance.
+
+The updated build used the same nine-sample method and normal startup paths:
+
+| Requested scenario | Mean CPU, last five | Maximum CPU, last five | Physical footprint |
+| --- | ---: | ---: | ---: |
+| Normal closed, PID 48153 | 0.18% | 0.9% | 27,755,480 bytes |
+| `--inspect-expanded-notch`, PID 48720 | 0.00% | 0.0% | 30,442,480 bytes |
+
+Raw after evidence is `/private/tmp/widget-fullscreen-after-closed.json` and
+`/private/tmp/widget-fullscreen-after-expanded.json`, with corresponding sample
+logs. These measurements establish idle process costs in the requested scenarios;
+background sources and visible opening were not independently matched. Computer
+use still returned an empty white panel and no content accessibility controls.
+The numbers do not establish animation, private-memory, wakeup or latency budgets.
 
 ## Product and authority decisions
 
@@ -71,10 +97,22 @@ unknown `SWIFT_DEBUG_INFORMATION_VERSION` environment warning; it was not a
 warning-free build. Scoped independent re-review found all findings addressed,
 with no new Critical/Important breakage.
 
-The Debug fixture is implemented and the full build passed. After measurements
-and real input/visual inspection are pending. Computer use reported that
-the Mac is locked and automatic unlock failed; the user has been asked to unlock
-it. No input or matching unlocked-session measurements are claimed while locked.
+The final source at `0fa653bd7b9d990e2b7036eb33f02b64e60aa44a` also passed
+the canonical build, strict signature verification and application-link update,
+exit 0: `/private/tmp/cascade-widget-fullscreen-final-build.log`. The existing
+AppIntents/environment warnings remain. The additional Debug failure diagnostic
+charges every traversal attempt before depth/visited rejection, stops at maximum
+depth, and performs at most two hit tests through the same bounded traversal.
+Its focused review approved the correction with no new findings. Strict Swift 6
+MainActor/import-visibility compilation and whitespace checks passed; unchanged
+package code did not require another full suite run.
+
+The Debug fixture is implemented and the full build passed. Real input/visual
+inspection and interaction performance are pending. Computer use initially
+reported a locked Mac and failed automatic unlock; the user was asked to unlock
+it. Later it could read the shell without the lock error, but menu/Cmd-Q actions
+returned `AXError.actionUnsupported` and the screenshot remained an empty white
+panel. No physical input or visual clearance is claimed from that surface.
 Physical multiple-display behavior and production adapter assembly require
 their own evidence.
 
@@ -99,8 +137,31 @@ The app exposes `--preview-addon-widget-detail` and
 `--check-addon-widget-detail`. The finite check drives native accessibility
 actions and the real Back button, checking compact action separation,
 same-lease refresh, stale controls, delayed A/B replies, rapid retargeting and
-withdrawal. These checks are available in the compiled binary but have not been
-executed while the Mac is locked. The check and preview together retain a valid
+withdrawal. The actual signed compiled check was executed after the shell became
+readable and returned exit 1: `Visible accessibility button unavailable: Mock
+brightness 60% +`. A diagnostic rebuild reproduced the failure. The ordinary
+widget is mounted in the visible expanded panel with its two SwiftUI button
+proxies, but the hosting accessibility group reports zero children. A single
+Debug activation experiment changed app activity from false to true, with the
+same empty AX group and failure; that hypothesis was falsified and the activation
+experiment was removed. This evidence does not identify a production detail
+defect or qualify the native route. Logs are
+`/private/tmp/cascade-widget-fullscreen-native-check.log`,
+`/private/tmp/cascade-widget-fullscreen-native-diagnostic.log` and
+`/private/tmp/cascade-widget-fullscreen-native-activation.log`.
+The public accessibility hit test at each of the two mounted native button
+proxy centers also returned only the empty hosting group. The check still
+returned exit 1; no action fallback, visibility change or origin bypass was
+introduced. Renderer/board/tile grouping was traced and no applicable parent
+accessibility-hiding modifier was found. Environment versus implementation
+remains unresolved, so this is an explicit failed qualification check, not a
+production pass or a confirmed lock-only diagnosis. Final probe log:
+`/private/tmp/cascade-widget-fullscreen-native-hit-test.log`.
+The final diagnostic source was executed again and terminated in under one second
+with exit 1. It reports: `Native check unqualified: no enabled AX button labelled
+Mock brightness 60% +; see host snapshot; environment versus implementation cause
+unresolved`. Evidence: `/private/tmp/cascade-widget-fullscreen-native-final.log`.
+The check and preview together retain a valid
 detail after completion for idle measurement; the check alone exits after its
 result. This is programmatic app evidence when run, not physical input.
 
@@ -118,11 +179,10 @@ finite check. Multiple-display qualification needs physical displays.
 
 ## Normal relaunch
 
-On 2026-10-03 at 18:13:58 UTC, the exact prior Cascade PID 29852 was terminated
-with SIGTERM because the locked session prevented a UI quit. LaunchServices then
-started the successful updated build normally, without preview/check arguments:
-PID **44307**, executable
+After the final finite check exited and released its fixture, LaunchServices
+started the successful updated build normally on 2026-10-03 at 19:23:10 UTC,
+without preview/check arguments: PID **51182**, executable
 `/private/tmp/cascade-widget-fullscreen-feature-derived/Build/Products/Debug/Cascade.app/Contents/MacOS/Cascade`.
 The application link resolved to that bundle and exactly one intended process
-was found. Record: `/private/tmp/widget-fullscreen-final-relaunch.json`.
+was found. Record: `/private/tmp/widget-fullscreen-final-normal-relaunch.json`.
 This proves relaunch/process identity, not unlocked visual/input qualification.

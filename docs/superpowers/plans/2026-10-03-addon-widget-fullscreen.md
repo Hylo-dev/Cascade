@@ -60,19 +60,24 @@
 **Interfaces:** The Debug scenario publishes an ordinary snapshot widget through the generic bridge and opens detail using the same host container. It exposes a clickable title, a separate compact control, detail actions and native Back, plus deterministic withdrawal/refresh hooks. It never starts or bypasses an external addon process.
 
 - [x] Add the finite compiled-app check covering the common origin/presentation/dismiss path, including stale source rejection; compile the real missing hook RED then GREEN, and pass covering shared behavioral checks. Native execution of that check remains in the next pending qualification item.
-- [x] Capture normal closed and requested-expanded CPU/physical-footprint baseline; build the feature through `scripts/build-development.sh` with scratch DerivedData under `/private/tmp`. Actual interactive open/close baseline was unavailable through the empty computer-use surface; private-memory/wakeup/timing and matched after measurements remain pending.
+- [x] Capture normal closed and requested-expanded CPU/physical-footprint baseline and updated idle samples; build the feature through `scripts/build-development.sh` with scratch DerivedData under `/private/tmp`. Actual interactive open/close baseline was unavailable through the empty computer-use surface; visible source matching, private-memory/wakeup/timing and interaction measurements remain pending.
 - [ ] Drive the opt-in real app fixture through opening, independent control, Back, Escape, rapid retarget and close/reopen; inspect the notch visually. Measure matching idle/open-close/visible/closed windows and compare CPU/memory/wakeups where available. Keep hardware-only multi-display evidence explicit.
 - [x] Document public usage and verified versus pending scenarios, including shared route/host checks and the successful canonical build. The fixture's native scenario still needs execution; no periodic options timer was introduced.
-- [ ] Commit verification/docs. Request fresh independent review of the whole feature, address important findings with red/green checks, and run covering regression tests.
-- [x] Update `/Applications/Cascade.app`, quit/relaunch the normal updated app and verify executable/PID (44307, exact feature-derived executable). Keep the managed worktree attached with its finished code; do not merge or push without a user instruction.
+- [x] Commit verification/docs. Request fresh independent review of the whole feature, address findings with red/green checks, and run covering regression tests. Whole-feature review and the single scoped lifetime-fix review approved; 1,875 full tests passed. Newly executed native fixture qualification is recorded separately.
+- [x] Update `/Applications/Cascade.app`, quit/relaunch the normal updated app and verify executable/PID (51182, final source 0fa653b, exact feature-derived executable). Keep the managed worktree attached with its finished code; do not merge or push without a user instruction.
 
 Execution evidence: `docs/superpowers/verification/2026-10-03-addon-widget-fullscreen.md`.
-The user's session is locked and computer-use automatic unlock failed. Native
-check execution, physical interaction/visual clearance, matching after
-measurements and physical multi-display coverage remain unqualified. The user
-was asked to unlock; no hidden-source or lock bypass was introduced. The code
-and docs passed their task reviews; final whole-feature review follows before
-the available work is handed back with these explicit limits.
+Computer use initially reported a locked session and failed automatic unlock.
+The shell later became readable, but input actions returned
+AXError.actionUnsupported and the screenshot remained an empty white panel.
+The signed native fixture check was executed and failed to find its first
+compact button: the mounted SwiftUI hosting group had no AX children. A Debug
+activation experiment was falsified and removed. Native interaction/visual
+clearance, interaction measurements and physical multi-display coverage remain
+unqualified. No hidden-source or lock bypass was introduced. Normal idle CPU
+and physical-footprint samples are recorded, without claiming visual matching.
+Task reviews, whole-feature review and the single scoped lifetime fix review
+are approved; qualification evidence preserves the outstanding app-check failure.
 
 ## Self-review and execution
 
