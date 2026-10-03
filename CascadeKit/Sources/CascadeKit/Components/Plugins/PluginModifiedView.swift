@@ -3,6 +3,7 @@
 //  CascadeKit
 //
 
+import CascadeContracts
 import SwiftUI
 
 /// PluginModifiedView is a node's content with its first `count` modifiers applied, the last of
@@ -10,16 +11,31 @@ import SwiftUI
 /// a node with any number of modifiers, at most sixteen, needs no type erasure.
 struct PluginModifiedView: View {
 
-    let model: PluginNodeModel
-    let store: PluginNodeStore
+    let model        : PluginNodeModel
+    let store        : PluginNodeStore
+    var optionsOrigin: AddonOptionsOrigin? = nil
     let count: Int
 
     var body: some View {
         if count > 0, count <= model.modifiers.count {
-            PluginModifiedView(model: model, store: store, count: count - 1)
-                .modifier(PluginModifierEffect(modifier: model.modifiers[count - 1], layer: layer(at: count - 1), store: store))
+            PluginModifiedView(
+                model        : model,
+                store        : store,
+                optionsOrigin: optionsOrigin,
+                count        : count - 1
+            )
+            .modifier(PluginModifierEffect(
+                modifier     : model.modifiers[count - 1],
+                layer        : layer(at: count - 1),
+                store        : store,
+                optionsOrigin: optionsOrigin
+            ))
         } else {
-            PluginNodeContent(model: model, store: store)
+            PluginNodeContent(
+                model        : model,
+                store        : store,
+                optionsOrigin: optionsOrigin
+            )
         }
     }
 

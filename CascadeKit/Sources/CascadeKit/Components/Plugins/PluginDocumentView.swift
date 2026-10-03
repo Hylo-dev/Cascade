@@ -3,6 +3,7 @@
 //  CascadeKit
 //
 
+import CascadeContracts
 import CascadePresentation
 import SwiftUI
 
@@ -11,12 +12,17 @@ import SwiftUI
 /// invalidates it.
 struct PluginDocumentView: View {
 
-    let store: PluginNodeStore
+    let store        : PluginNodeStore
+    var optionsOrigin: AddonOptionsOrigin? = nil
     var showsOptions = false
 
     var body: some View {
         if let root = showsOptions ? store.optionsRoot : store.root {
-            PluginNodeView(model: root, store: store)
+            PluginNodeView(
+                model        : root,
+                store        : store,
+                optionsOrigin: optionsOrigin
+            )
                 .notchGlassLights(store.glassLights)
         }
     }

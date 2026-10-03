@@ -15,8 +15,9 @@ import SwiftUI
 /// exists; a tier-2 component draws through `PluginComponentView`.
 struct PluginNodeContent: View {
 
-    let model: PluginNodeModel
-    let store: PluginNodeStore
+    let model        : PluginNodeModel
+    let store        : PluginNodeStore
+    var optionsOrigin: AddonOptionsOrigin? = nil
 
     var body: some View {
         switch model.kind {
@@ -100,8 +101,8 @@ struct PluginNodeContent: View {
                     .progressViewStyle(.circular)
 
             case .button:
-                Button {
-                    store.press(model)
+                Button { [optionsOrigin] in
+                    store.press(model, optionsOrigin: optionsOrigin)
                 } label: {
                     children
                         .contentShape(Rectangle())
@@ -111,7 +112,16 @@ struct PluginNodeContent: View {
             case .toggle(let isOn, _):
                 let shown = model.optimistic?.bool ?? isOn
 
-                Toggle(isOn: Binding(get: { shown }, set: { store.set(.bool($0), on: model) })) {
+                Toggle(isOn: Binding(
+                    get: { shown },
+                    set: { [optionsOrigin] value in
+                        store.set(
+                            .bool(value),
+                            on           : model,
+                            optionsOrigin: optionsOrigin
+                        )
+                    }
+                )) {
                     toggleLabel(isOn: shown)
                 }
                 .toggleStyle(PluginToggleStyle())
@@ -135,7 +145,11 @@ struct PluginNodeContent: View {
     private var children: some View {
         ForEach(model.children, id: \.self) { id in
             if let child = store.model(id) {
-                PluginNodeView(model: child, store: store)
+                PluginNodeView(
+                    model        : child,
+                    store        : store,
+                    optionsOrigin: optionsOrigin
+                )
             }
         }
     }
@@ -146,7 +160,11 @@ struct PluginNodeContent: View {
     @ViewBuilder
     private func toggleLabel(isOn: Bool) -> some View {
         if model.children.count == 2, let child = store.model(model.children[isOn ? 1 : 0]) {
-            PluginNodeView(model: child, store: store)
+            PluginNodeView(
+                model        : child,
+                store        : store,
+                optionsOrigin: optionsOrigin
+            )
         } else {
             children
                 .opacity(isOn ? 1 : 0.5)
@@ -156,12 +174,21 @@ struct PluginNodeContent: View {
     /// thumb is the slider's position: the optimistic one while dragged or awaiting
     /// confirmation, the published one otherwise.
     private func thumb(_ published: Double) -> Binding<Double> {
-        Binding(get: { model.optimistic?.number ?? published }, set: { store.drag($0, on: model) })
+        Binding(
+            get: { model.optimistic?.number ?? published },
+            set: { [optionsOrigin] value in
+                store.drag(
+                    value,
+                    on           : model,
+                    optionsOrigin: optionsOrigin
+                )
+            }
+        )
     }
 
     private func released(_ isEditing: Bool) {
         if !isEditing {
-            store.release(model)
+            store.release(model, optionsOrigin: optionsOrigin)
         }
     }
 }

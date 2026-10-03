@@ -9,9 +9,10 @@ import SwiftUI
 /// PluginModifierEffect applies one plugin modifier with the SwiftUI modifier it mirrors.
 struct PluginModifierEffect: ViewModifier {
 
-    let modifier: PluginModifier
-    let layer   : PluginNodeModel?
-    let store   : PluginNodeStore
+    let modifier     : PluginModifier
+    let layer        : PluginNodeModel?
+    let store        : PluginNodeStore
+    var optionsOrigin: AddonOptionsOrigin? = nil
 
     @Environment(\.accessibilityReduceMotion)
     private var reducesMotion
@@ -96,7 +97,11 @@ struct PluginModifierEffect: ViewModifier {
     @ViewBuilder
     private var layerView: some View {
         if let layer {
-            PluginNodeView(model: layer, store: store)
+            PluginNodeView(
+                model        : layer,
+                store        : store,
+                optionsOrigin: optionsOrigin
+            )
         }
     }
 }

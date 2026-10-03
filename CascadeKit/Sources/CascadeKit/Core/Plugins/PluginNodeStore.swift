@@ -36,21 +36,24 @@ final class PluginNodeStore {
     @ObservationIgnored private var generations: [PluginNodeID: UInt64] = [:]
     @ObservationIgnored private var optionsNodes: Set<PluginNodeID> = []
 
-    private let submit  : (PluginActionRequest) -> Void
-    private let schedule: (Duration, @escaping @MainActor () -> Void) -> Void
+    private let submit       : (PluginActionRequest) -> Void
+    private let submitOptions: ((PluginActionRequest, AddonOptionsOrigin) -> Void)?
+    private let schedule     : (Duration, @escaping @MainActor () -> Void) -> Void
 
     init(
-        key     : PluginPublicationKey,
-        submit  : @escaping (PluginActionRequest) -> Void,
-        schedule: @escaping (Duration, @escaping @MainActor () -> Void) -> Void = { delay, task in
+        key          : PluginPublicationKey,
+        submit       : @escaping (PluginActionRequest) -> Void,
+        submitOptions: ((PluginActionRequest, AddonOptionsOrigin) -> Void)? = nil,
+        schedule     : @escaping (Duration, @escaping @MainActor () -> Void) -> Void = { delay, task in
             DispatchQueue.main.asyncAfter(deadline: .now() + delay / .seconds(1)) {
                 MainActor.assumeIsolated(task)
             }
         }
     ) {
-        self.key      = key
-        self.submit   = submit
-        self.schedule = schedule
+        self.key           = key
+        self.submit        = submit
+        self.submitOptions = submitOptions
+        self.schedule      = schedule
     }
 
     func model(_ id: PluginNodeID) -> PluginNodeModel? {
@@ -110,24 +113,35 @@ final class PluginNodeStore {
 
     /// press sends a button's action. A button holds no state: SwiftUI shows the press, and
     /// whatever the action changes arrives as the next publication.
-    func press(_ model: PluginNodeModel) {
-        guard models[model.id] === model else { return }
-        submit(PluginActionRequest(key: key, node: model.id, revision: revision))
+    func press(
+        _ model      : PluginNodeModel,
+        optionsOrigin: AddonOptionsOrigin? = nil
+    ) {
+        guard canInteract(with: model, optionsOrigin: optionsOrigin) else { return }
+        let request = PluginActionRequest(key: key, node: model.id, revision: revision)
+        send(request, optionsOrigin: optionsOrigin)
     }
 
     /// set shows a control's new value at once, sends the action, and arms the revert.
     func set(
-        _ value : PluginValue,
-        on model: PluginNodeModel
+        _ value      : PluginValue,
+        on model     : PluginNodeModel,
+        optionsOrigin: AddonOptionsOrigin? = nil
     ) {
-        guard models[model.id] === model else { return }
+        guard canInteract(with: model, optionsOrigin: optionsOrigin) else { return }
         generations[model.id, default: 0] += 1
         let generation = generations[model.id]
 
         withAnimation(.snappy) {
             model.optimistic = value
         }
-        submit(PluginActionRequest(key: key, node: model.id, revision: revision, value: value))
+        let request = PluginActionRequest(
+            key     : key,
+            node    : model.id,
+            revision: revision,
+            value   : value
+        )
+        send(request, optionsOrigin: optionsOrigin)
 
         schedule(Self.confirmationTimeout) { [weak self, weak model] in
             guard let self, let model,
@@ -142,20 +156,30 @@ final class PluginNodeStore {
     /// drag also outdates the revert an earlier release armed, so its timeout cannot pull the
     /// thumb from under the user's hand.
     func drag(
-        _ value : Double,
-        on model: PluginNodeModel
+        _ value      : Double,
+        on model     : PluginNodeModel,
+        optionsOrigin: AddonOptionsOrigin? = nil
     ) {
+        guard canInteract(with: model, optionsOrigin: optionsOrigin) else { return }
         generations[model.id, default: 0] += 1
         model.isDragging = true
         model.optimistic = .number(value)
     }
 
     /// release sends the value the slider was let go at.
-    func release(_ model: PluginNodeModel) {
+    func release(
+        _ model      : PluginNodeModel,
+        optionsOrigin: AddonOptionsOrigin? = nil
+    ) {
+        guard canInteract(with: model, optionsOrigin: optionsOrigin) else { return }
         model.isDragging = false
 
         if let value = model.optimistic?.number {
-            set(.number(value), on: model)
+            set(
+                .number(value),
+                on           : model,
+                optionsOrigin: optionsOrigin
+            )
         }
     }
 
@@ -164,6 +188,28 @@ final class PluginNodeStore {
     func reject(_ request: PluginActionRequest) {
         if let model = models[request.node], !model.isDragging {
             revert(model)
+        }
+    }
+
+    /// canInteract rejects revoked page callbacks before they change optimistic state.
+    /// Options controls require their captured origin; compact controls need only their model.
+    private func canInteract(
+        with model   : PluginNodeModel,
+        optionsOrigin: AddonOptionsOrigin?
+    ) -> Bool {
+        guard models[model.id] === model else { return false }
+        return !isOptionsNode(model.id) || (optionsOrigin?.isValid == true && submitOptions != nil)
+    }
+
+    private func send(
+        _ request    : PluginActionRequest,
+        optionsOrigin: AddonOptionsOrigin?
+    ) {
+        if isOptionsNode(request.node) {
+            guard let optionsOrigin else { return }
+            submitOptions?(request, optionsOrigin)
+        } else {
+            submit(request)
         }
     }
 

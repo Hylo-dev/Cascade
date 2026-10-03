@@ -7,6 +7,10 @@ import CascadeContracts
 import CascadePluginEngine
 import Foundation
 
+/// PluginAcceptedAction lets the captured page validate authority on main immediately
+/// before invoking the native effect. The effect cannot escape that synchronous boundary.
+public typealias PluginAcceptedAction = @MainActor @Sendable (_ nativeEffect: @MainActor () -> Void) -> Void
+
 /// PluginSurfaceRouter puts plugin publications where they belong on the notch, as the spec's
 /// publication sink does: one store per publication, and for a widget one `PluginWidget` on the
 /// grid, registered with its first content and removed with its withdrawal. Later publications
@@ -23,7 +27,7 @@ public final class PluginSurfaceRouter {
     private let sizes         : [PluginPublicationKey: [GridSpan]]
     private let submit        : (PluginActionRequest) -> Void
     private let visibility    : (Bool, PluginPublicationKey) -> Void
-    private let submitAccepted: ((PluginActionRequest, @escaping @MainActor @Sendable () -> Void) -> Void)?
+    private let submitAccepted: ((PluginActionRequest, @escaping PluginAcceptedAction) -> Void)?
     private let fullscreen    : Set<PluginPublicationKey>
     private var publicationIDs: [PluginPublicationKey: PublicationID] = [:]
     private var options: OptionsBinding?
@@ -47,7 +51,7 @@ public final class PluginSurfaceRouter {
         manifests     : [PluginManifest],
         submit        : @escaping (PluginActionRequest) -> Void,
         visibility    : @escaping (Bool, PluginPublicationKey) -> Void,
-        submitAccepted: ((PluginActionRequest, @escaping @MainActor @Sendable () -> Void) -> Void)? = nil
+        submitAccepted: ((PluginActionRequest, @escaping PluginAcceptedAction) -> Void)? = nil
     ) {
         self.host           = host
         self.submit         = submit
@@ -181,7 +185,11 @@ public final class PluginSurfaceRouter {
     /// so the grid never shows an empty tile.
     private func place(_ change: PluginPublicationChange) {
         let key   = change.key
-        let store = PluginNodeStore(key: key, submit: { [weak self] request in self?.submitWidget(request) })
+        let store = PluginNodeStore(
+            key          : key,
+            submit       : { [weak self] request in self?.submitWidget(request) },
+            submitOptions: { [weak self] request, origin in self?.submitOptions(request, origin: origin) }
+        )
         store.apply(change)
         stores[key] = store
         if let addonID = AddonID(rawValue: key.plugin.rawValue) {
@@ -203,13 +211,7 @@ public final class PluginSurfaceRouter {
     /// acceptance closure holds that exact click, so equal late requests cannot win.
     private func submitWidget(_ request: PluginActionRequest) {
         guard let store = stores[request.key], store.revision == request.revision else { return }
-        if store.isOptionsNode(request.node) {
-            guard let binding = options, binding.key == request.key,
-                  binding.isPresented, binding.origin.isValid, binding.store === store
-            else { return }
-            submit(request)
-            return
-        }
+        guard !store.isOptionsNode(request.node) else { return }
         guard store.optionsButton?.id == request.node else {
             submit(request)
             return
@@ -228,23 +230,60 @@ public final class PluginSurfaceRouter {
             origin : origin,
             store  : store,
             leaseID: UUID(),
-            page   : PluginOptionsPage(id: Self.identifier(of: request.key).rawValue + "/options", store: store)
+            page   : PluginOptionsPage(
+                id    : Self.identifier(of: request.key).rawValue + "/options",
+                store : store,
+                origin: origin
+            )
         )
         options = binding
-        submitAccepted(request) { [weak self, origin] in self?.acceptOptions(origin) }
+        submitAccepted(request) { [weak self, origin] nativeEffect in
+            guard self?.acceptOptions(origin) == true, origin.isValid else { return }
+            nativeEffect()
+        }
     }
 
-    private func acceptOptions(_ origin: AddonOptionsOrigin) {
+    /// submitOptions carries the control's own origin through acceptance. Equal-valued
+    /// requests from later pages cannot authorize this effect, even over the same live store.
+    private func submitOptions(
+        _ request: PluginActionRequest,
+        origin   : AddonOptionsOrigin
+    ) {
+        guard let submitAccepted, isCurrentOptions(request, origin: origin) else { return }
+        submitAccepted(request) { [weak self, origin] nativeEffect in
+            guard self?.isCurrentOptions(request, origin: origin) == true else { return }
+            nativeEffect()
+        }
+    }
+
+    private func isCurrentOptions(
+        _ request: PluginActionRequest,
+        origin   : AddonOptionsOrigin
+    ) -> Bool {
+        guard let binding = options,
+              binding.origin === origin,
+              origin.isValid,
+              binding.key == request.key,
+              binding.isPresented,
+              stores[request.key] === binding.store,
+              binding.store.revision == request.revision,
+              binding.store.isOptionsNode(request.node)
+        else { return false }
+        return true
+    }
+
+    private func acceptOptions(_ origin: AddonOptionsOrigin) -> Bool {
         guard var binding = options, binding.origin === origin, origin.isValid,
               stores[binding.key] === binding.store,
               binding.store.revision == origin.observedRevision,
               binding.store.optionsRoot != nil
-        else { return }
+        else { return false }
         guard host.presentOptions(page: binding.page, leaseID: binding.leaseID, origin: origin, onDismiss: { [weak self, origin] in
             self?.didDismiss(origin)
-        }) else { clearOptions(); return }
+        }) else { clearOptions(); return false }
         binding.isPresented = true
         options = binding
+        return true
     }
 
     private func didDismiss(_ origin: AddonOptionsOrigin) {

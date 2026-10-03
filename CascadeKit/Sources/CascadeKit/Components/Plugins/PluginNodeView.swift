@@ -3,6 +3,7 @@
 //  CascadeKit
 //
 
+import CascadeContracts
 import SwiftUI
 
 /// PluginNodeView renders one node: its modifiers, applied in the plugin's order around its
@@ -10,10 +11,16 @@ import SwiftUI
 /// SwiftUI keeps every node's identity and no view is type-erased.
 struct PluginNodeView: View {
 
-    let model: PluginNodeModel
-    let store: PluginNodeStore
+    let model        : PluginNodeModel
+    let store        : PluginNodeStore
+    var optionsOrigin: AddonOptionsOrigin? = nil
 
     var body: some View {
-        PluginModifiedView(model: model, store: store, count: model.modifiers.count)
+        PluginModifiedView(
+            model        : model,
+            store        : store,
+            optionsOrigin: optionsOrigin,
+            count        : model.modifiers.count
+        )
     }
 }

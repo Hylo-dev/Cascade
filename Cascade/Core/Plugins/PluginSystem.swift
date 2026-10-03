@@ -34,6 +34,7 @@ final class PluginSystem {
 
     /// actionHandler routes an accepted control to a native resource owner. The engine invokes
     /// it only after revision, control, manifest and permission checks, then we hop to main.
+    /// Detail controls also validate their captured page authority on main before this effect.
     var actionHandler: (PluginActionRequest) -> Void = { _ in }
 
     init(
@@ -130,8 +131,7 @@ final class PluginSystem {
                 self?.engine?.submit(request, onAccepted: { [weak self] request in
                     DispatchQueue.main.async {
                         MainActor.assumeIsolated {
-                            self?.actionHandler(request)
-                            accepted()
+                            accepted { self?.actionHandler(request) }
                         }
                     }
                 })
