@@ -28,6 +28,7 @@ The `cascade-addon init` command generates a source project with a provider, a m
 - [Session negotiation and admission](sessions.md)
 - [REQUIRES dependencies](requires.md)
 - [Declarative content](content.md)
+- [Widget detail options](widget-options.md)
 - [Glass lighting](../architecture/glass-lighting.md)
 - [Lifecycle, queues and actions](lifecycle.md)
 - [Command authorization and coordination](actions.md)

@@ -236,7 +236,17 @@ final class CascadeServices {
     @ObservationIgnored
     private var isRunning = false
 
+    #if DEBUG
+    @ObservationIgnored
+    private var addonWidgetDetailFixture: AddonWidgetDetailFixture?
+    #endif
+
     init(preferences: UserDefaults = .standard) {
+        #if DEBUG
+        let isAddonWidgetDetailPreview = AddonWidgetDetailFixture.isRequested
+        #else
+        let isAddonWidgetDetailPreview = false
+        #endif
         screenshotPage = ScreenshotPage(preferences: preferences)
         caffeinate = CaffeinateController(
             source     : caffeinateSource,
@@ -245,8 +255,10 @@ final class CascadeServices {
         )
         let displayPreferencesStore = DisplayPresentationPreferencesStore(defaults: preferences)
         let notch = NotchEngine(
-            configuration     : .default,
-            displayPreferences: displayPreferencesStore.preferences
+            configuration             : .default,
+            displayPreferences        : isAddonWidgetDetailPreview
+                ? DisplayPresentationPreferences() : displayPreferencesStore.preferences,
+            persistsWidgetArrangements: !isAddonWidgetDetailPreview
         )
         self.notch                   = notch
         plugins = PluginSystem(
@@ -262,6 +274,7 @@ final class CascadeServices {
         let fileShelfGovernor = ResourceGovernor()
         self.fileShelfGovernor = fileShelfGovernor
         do {
+            if isAddonWidgetDetailPreview { throw CocoaError(.userCancelled) }
             let directory = try Self.makeFileShelfDirectory()
             let host      = try FileWorkspaceHost(directory: directory, governor: fileShelfGovernor)
             fileShelfController = FileShelfController(
@@ -418,7 +431,7 @@ final class CascadeServices {
                 self?.captureTask = nil
             }
         }
-        updateContextualPage()
+        if !isAddonWidgetDetailPreview { updateContextualPage() }
     }
 
     /// updateContextualPage gives the explicit screenshot session precedence
@@ -488,6 +501,22 @@ final class CascadeServices {
         guard !isRunning else { return }
 
         isRunning = true
+        #if DEBUG
+        if AddonWidgetDetailFixture.isRequested {
+            do {
+                let fixture = try AddonWidgetDetailFixture(engine: notch)
+                addonWidgetDetailFixture = fixture
+                fixture.start(
+                    check   : CommandLine.arguments.contains("--check-addon-widget-detail"),
+                    keepOpen: CommandLine.arguments.contains("--preview-addon-widget-detail")
+                )
+            } catch {
+                print("FAIL: addon widget detail fixture startup: \(error)")
+                exit(EXIT_FAILURE)
+            }
+            return
+        }
+        #endif
         plugins.setEnabled(bluetoothEnabled, for: BluetoothPlugin.id)
         plugins.setEnabled(chargingEnabled, for: ChargingPlugin.id)
         plugins.setEnabled(volumeEnabled, for: VolumePlugin.id)
@@ -571,6 +600,10 @@ final class CascadeServices {
         guard isRunning else { return }
 
         isRunning = false
+        #if DEBUG
+        addonWidgetDetailFixture?.stop()
+        addonWidgetDetailFixture = nil
+        #endif
         settings?.close()
         spotlight.stop()
         screenshot.stop()

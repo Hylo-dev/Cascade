@@ -162,6 +162,10 @@
             },
             "maxItems": 64,
             "uniqueItems": true
+          },
+          "supportsFullscreen": {
+            "type": "boolean",
+            "default": false
           }
         },
         "required": [
