@@ -2539,6 +2539,136 @@
           }
         }
       }
+    },
+    "Caffeinate Options": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opzioni Caffeinate"
+          }
+        }
+      }
+    },
+    "Start session": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvia sessione"
+          }
+        }
+      }
+    },
+    "Until I turn it off": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finché non lo disattivo"
+          }
+        }
+      }
+    },
+    "15 minutes": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "15 minuti"
+          }
+        }
+      }
+    },
+    "30 minutes": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 minuti"
+          }
+        }
+      }
+    },
+    "1 hour": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 ora"
+          }
+        }
+      }
+    },
+    "2 hours": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 ore"
+          }
+        }
+      }
+    },
+    "4 hours": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4 ore"
+          }
+        }
+      }
+    },
+    "8 hours": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "8 ore"
+          }
+        }
+      }
+    },
+    "Keep display awake": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantieni lo schermo acceso"
+          }
+        }
+      }
+    },
+    "End session": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termina sessione"
+          }
+        }
+      }
+    },
+    "Choose a session ending within the next 24 hours.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli una sessione che termina entro le prossime 24 ore."
+          }
+        }
+      }
+    },
+    "Credits": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crediti"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

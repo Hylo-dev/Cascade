@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 2,
+  "id": "com.cascade.caffeinate",
+  "version": "1.0.0",
+  "compatibility": { "macOS": "15.0", "cascadeProtocol": { "major": 2, "minimumMinor": 0 } },
+  "execution": { "entryPoint": "CaffeinatePlugin" },
+  "features": [
+    {
+      "id": "awake",
+      "surfaces": { "widget": { "sizes": ["2x2", "1x1"] } },
+      "sources": ["caffeinate"],
+      "permissions": ["power.keepAwake"],
+      "actions": ["caffeinate.toggle", "caffeinate.options"]
+    }
+  ],
+  "resources": { "profile": "eventDriven" }
+}

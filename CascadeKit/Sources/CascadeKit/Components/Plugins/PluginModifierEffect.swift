@@ -13,6 +13,9 @@ struct PluginModifierEffect: ViewModifier {
     let layer   : PluginNodeModel?
     let store   : PluginNodeStore
 
+    @Environment(\.accessibilityReduceMotion)
+    private var reducesMotion
+
     func body(content: Content) -> some View {
         switch modifier {
             case .font(let font):
@@ -70,7 +73,7 @@ struct PluginModifierEffect: ViewModifier {
 
             case .contentTransition(.symbolEffect):
                 content
-                    .contentTransition(.symbolEffect(.automatic))
+                    .contentTransition(reducesMotion ? .identity : .symbolEffect(.automatic))
 
             case .transition(let transition):
                 content

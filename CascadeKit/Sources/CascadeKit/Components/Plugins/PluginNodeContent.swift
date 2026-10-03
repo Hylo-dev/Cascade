@@ -52,7 +52,11 @@ struct PluginNodeContent: View {
                 Text(verbatim: text)
 
             case .symbol(let name):
-                Image(systemName: name)
+                if model.modifiers.contains(.contentTransition(.symbolEffect)) {
+                    PluginSymbolView(name: name)
+                } else {
+                    Image(systemName: name)
+                }
 
             case .shape(.circle):
                 Circle()
@@ -100,6 +104,7 @@ struct PluginNodeContent: View {
                     store.press(model)
                 } label: {
                     children
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
 

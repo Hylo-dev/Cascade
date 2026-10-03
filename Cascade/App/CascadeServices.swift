@@ -187,6 +187,10 @@ final class CascadeServices {
     @ObservationIgnored
     private let recordingSource = ScreenRecordingPluginSource()
     @ObservationIgnored
+    private let caffeinateSource = CaffeinatePluginSource()
+    @ObservationIgnored
+    private let caffeinate: CaffeinateController
+    @ObservationIgnored
     private var captureTask: Task<Void, Never>?
 
     @ObservationIgnored
@@ -234,6 +238,11 @@ final class CascadeServices {
 
     init(preferences: UserDefaults = .standard) {
         screenshotPage = ScreenshotPage(preferences: preferences)
+        caffeinate = CaffeinateController(
+            source     : caffeinateSource,
+            session    : CaffeinateSession(backend: IOKitCaffeinateAssertions()),
+            preferences: preferences
+        )
         let displayPreferencesStore = DisplayPresentationPreferencesStore(defaults: preferences)
         let notch = NotchEngine(
             configuration     : .default,
@@ -245,6 +254,7 @@ final class CascadeServices {
             sources: [
                 PluginVolumeState.source         : volumeSource,
                 PluginScreenRecordingState.source: recordingSource,
+                PluginCaffeinateState.source      : caffeinateSource,
             ]
         )
         self.displayPreferencesStore = displayPreferencesStore
@@ -380,6 +390,7 @@ final class CascadeServices {
         }
         plugins.actionHandler = { [weak self] request in
             self?.captureController?.handleAction(request)
+            self?.caffeinate.handleAction(request)
         }
         recordingSource.onReleased = { [weak self] in
             self?.captureController?.requestStop()
@@ -545,12 +556,15 @@ final class CascadeServices {
         }
     }
 
-    var needsCaptureShutdown: Bool { captureTask != nil || captureController?.isRecording == true }
+    var needsResourceShutdown: Bool {
+        captureTask != nil || captureController?.isRecording == true || caffeinate.needsShutdown
+    }
 
-    func finishCaptureBeforeTermination() async {
+    func finishResourcesBeforeTermination() async {
         captureTask?.cancel()
         await captureTask?.value
         await captureController?.shutdown()
+        await caffeinate.shutdown()
     }
 
     func stop() {

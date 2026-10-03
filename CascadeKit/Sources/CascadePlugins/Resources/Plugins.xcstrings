@@ -75,6 +75,86 @@
           }
         }
       }
+    },
+    "Caffeinate": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Caffeinate"
+          }
+        }
+      }
+    },
+    "Caffeinate Options": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opzioni Caffeinate"
+          }
+        }
+      }
+    },
+    "Toggle Caffeinate": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attiva o disattiva Caffeinate"
+          }
+        }
+      }
+    },
+    "Updating…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiornamento…"
+          }
+        }
+      }
+    },
+    "Check options": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Controlla le opzioni"
+          }
+        }
+      }
+    },
+    "On": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attivo"
+          }
+        }
+      }
+    },
+    "Off": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disattivo"
+          }
+        }
+      }
+    },
+    "Error": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Errore"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

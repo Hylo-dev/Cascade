@@ -56,10 +56,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard services.needsCaptureShutdown else { return .terminateNow }
+        guard services.needsResourceShutdown else { return .terminateNow }
 
         Task { @MainActor in
-            await services.finishCaptureBeforeTermination()
+            await services.finishResourcesBeforeTermination()
             sender.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater

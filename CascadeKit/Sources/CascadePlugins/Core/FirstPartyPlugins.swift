@@ -19,6 +19,7 @@ public enum FirstPartyPlugins {
         "ClockPlugin"    : ClockPlugin(),
         "VolumePlugin"   : VolumePlugin(),
         "ScreenRecordingPlugin": ScreenRecordingPlugin(),
+        "CaffeinatePlugin": CaffeinatePlugin(),
     ]
 
     /// name is how settings call a bundled plugin, in the user's language. Manifests carry no
@@ -32,6 +33,7 @@ public enum FirstPartyPlugins {
             case "com.cascade.power"    : String(localized: "Charging alerts", table: "Plugins", bundle: .module)
             case "com.cascade.volume"   : String(localized: "Volume alerts", table: "Plugins", bundle: .module)
             case "com.cascade.screen-recording": String(localized: "Screen Recording", table: "Plugins", bundle: .module)
+            case "com.cascade.caffeinate": String(localized: "Caffeinate", table: "Plugins", bundle: .module)
             default                     : plugin.rawValue
         }
     }

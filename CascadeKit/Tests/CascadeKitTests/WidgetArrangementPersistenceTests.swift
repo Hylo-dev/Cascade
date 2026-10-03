@@ -33,6 +33,28 @@ struct WidgetArrangementPersistenceTests {
         return defaults
     }
 
+    @Test(arguments: [false, true])
+    func aSmallerProviderDeclarationShrinksOldSavedTiles(registerFirst: Bool) async {
+        let id = WidgetIdentifier("plugin:com.cascade.caffeinate/awake")
+        let external = DisplayIdentity(rawValue: "external")
+        let saved = [
+            builtIn: [id: placement(0, 1, GridSpan(columns: 6, rows: 2))],
+            external: [id: placement(4, 1, GridSpan(columns: 8, rows: 2))],
+        ]
+        let store = RecordingArrangementStore(seeded: saved)
+        let host = WidgetHost(store: store)
+        let widget = EditableWidgetFixture(id.rawValue, sizes: [tall, GridSpan(columns: 2, rows: 1)])
+        if registerFirst { host.register(widget) }
+        await host.restoreArrangements()
+        if !registerFirst { host.register(widget) }
+        host.update(state: .open, display: builtIn)
+        #expect(host.arrangement[id] == placement(0, 1, tall))
+        host.update(state: .open, display: external)
+        #expect(host.arrangement[id] == placement(4, 1, tall))
+        #expect(store.saved.last?[builtIn]?[id]?.span == tall)
+        #expect(store.saved.last?[external]?[id]?.span == tall)
+    }
+
     @Test
     func theStoreReadsBackWhatItSavedByDisplay() async throws {
         let store    = UserDefaultsWidgetArrangementStore(defaults: try defaults())

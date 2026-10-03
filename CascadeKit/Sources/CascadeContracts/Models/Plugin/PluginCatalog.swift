@@ -15,6 +15,7 @@ public enum PluginCatalog {
         "power",
         "volume",
         "screen.recording",
+        "caffeinate",
         "network",
         "net.webSocket",
         "net.sse",
