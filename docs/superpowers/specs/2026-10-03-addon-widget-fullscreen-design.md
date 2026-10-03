@@ -83,7 +83,10 @@ Audio mixer, Display controller or Caffeinate's individual options.
    and owner/generation. A publication refresh or startup event cannot open a
    detail page without that accepted user action.
 3. The runtime validates and reserves the document and options state before
-   retention or handoff. It issues a display-bound presentation lease containing
+   retention or handoff. Every publication, imported asset and correlated action
+   completion in the same batch must also prepare and validate before any
+   presenter mutation; the subsequent canonical commit is nonthrowing and has no
+   actor suspension. It issues a display-bound presentation lease containing
    only host-approved values. Revoked, hidden, redacted, stale or over-budget
    origins reject the request.
 4. The generic presentation bridge renders the accepted detail. It rechecks the
@@ -94,10 +97,13 @@ Audio mixer, Display controller or Caffeinate's individual options.
    existing payload bounds, action deadlines and final-delivery revalidation.
 
 Only one options lease is active across the notch presentation system, matching
-the existing single expanded owner. A new valid explicit opening replaces that
-lease and revokes its controls. It preserves the original underlying selection,
-instead of creating a stack of detail pages. Automatic publications update valid
-content but never take navigation priority.
+the existing single expanded owner. The host retains one pending visible widget
+action origin: the latest pending click wins and immediately revokes the earlier
+origin. If A and then B are clicked before their replies, a delayed A reply is
+ignored and only B may open detail. Detail covers the source grid, so a visible
+detail has no competing source widget entry surface. Back revokes its origin;
+neither delayed reply can reopen it. There is no origin queue or detail stack.
+Automatic publications update valid content but never take navigation priority.
 
 `presentOptions` with the same canonically active lease ID refreshes its document
 in place, after owner, feature, generation, current publication revision and
@@ -109,12 +115,25 @@ detail action permits; the container retains its selection while awaiting a
 valid replacement document for that revision, with unavailable controls disabled.
 Lease lifetime never exceeds the source publication's currently valid lifetime.
 
+Dismissed lease IDs remain charged replay tombstones until their exact canonical
+owner/connection generation is invalidated. The shared runtime retains at most
+256 bindings across all live connection generations, at 128 bytes each (32 KiB
+total). Back refunds the detail document but retains its binding charge. An
+owner/generation invalidation refunds only its matching bindings. At capacity,
+new lease IDs fail closed with resource denial; history is never silently evicted.
+Long-lived generations therefore permit at most 256 distinct leases collectively
+until canonical invalidation refunds capacity.
+
 ## Container and navigation
 
-The detail temporarily covers the widget grid or activity page within the owning
-notch. The grid arrangement and prior selection remain unchanged. A dedicated
-options overlay preserves an underlying contextual page such as the file shelf;
+The detail temporarily covers the visible ordinary widget grid within the owning
+notch. The grid arrangement and ordinary selection remain unchanged. A dedicated
+options overlay preserves an unselected contextual page such as the file shelf;
 installing detail must not overwrite the legacy single contextual-page slot.
+When the file shelf or an activity is selected, the source widget is hidden and
+cannot authorize an opening. A selected-contextual origin and its restoration
+are unreachable under this entry policy, rather than pending hardware evidence.
+This feature adds no widget entry surface to those pages.
 
 The header reserves the top center for the physical camera/sensor obstruction.
 Back is a native `NSButton` with a left-facing filled triangle (`arrowtriangle.left.fill`),
@@ -123,8 +142,9 @@ It sits in the top-left shoulder at the mirrored position of settings on the
 right. Cascade owns both controls; the document occupies the remaining content
 area and cannot cover Back. The title comes from the detail's accessible label.
 
-Back and Escape revoke the lease and restore the original page on the original
-display. Closing the notch also dismisses detail; the next ordinary opening shows
+Back and Escape revoke the lease and restore the original ordinary selection on
+the original display, with the contextual slot preserved. Closing the notch also
+dismisses detail; the next ordinary opening shows
 the retained underlying page. Withdrawal, expiry, disable, removal of the source
 widget, loss of its grants or display removal revoke detail and visible resources.
 If the saved page no longer exists, restore the normal widget page. Repeated
@@ -168,9 +188,11 @@ authorization, publication accounting and display presentation suites.
 
 Exercise title click, independent compact controls, Back, Escape, rapid retarget,
 notch close/reopen, publication updates, withdrawal, expiry, disable, original-page
-removal, competing leases and display removal. Verify that late replies and old
-controls cannot reopen or operate a revoked page. Cover restoration of both an
-ordinary activity and the contextual file shelf.
+removal, competing pending visible clicks and display removal. Verify that late
+replies and old controls cannot reopen or operate a revoked page. Cover ordinary
+grid restoration on the original display and preservation of an unselected file
+shelf slot. Verify that selected contextual and activity pages cannot mint hidden
+widget origins.
 
 Drive the real running app through the same scenario before and after: 30 seconds
 idle, 20 detail open/Back cycles, 30 seconds with detail visible, then 30 seconds

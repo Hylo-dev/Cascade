@@ -256,6 +256,16 @@ public struct AddonScheduler: Sendable {
         _ id : UUID,
         owner: AddonID
     ) throws {
+        try validateFinish(id, owner: owner)
+        finishValidated(id, owner: owner)
+    }
+
+    /// validateFinish checks ownership and actual execution before a publication
+    /// batch can project detail. Validation must not release the job reservation.
+    func validateFinish(
+        _ id : UUID,
+        owner: AddonID
+    ) throws {
         guard let record = records[id] else { return }
         guard record.owner == owner else {
             throw AddonFailure(
@@ -269,6 +279,16 @@ public struct AddonScheduler: Sendable {
                 reason: "A queued job has not completed execution."
             )
         }
+    }
+
+    /// finishValidated consumes an already checked job without a new failure path.
+    /// The owning runtime must not suspend or mutate scheduling after validation.
+    mutating func finishValidated(
+        _ id : UUID,
+        owner: AddonID
+    ) {
+        guard let record = records[id] else { return }
+        precondition(record.owner == owner && record.phase != .queued)
 
         records.removeValue(forKey: id)
         busyOwners.remove(owner)

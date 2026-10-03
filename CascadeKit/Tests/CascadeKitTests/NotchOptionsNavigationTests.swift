@@ -17,8 +17,6 @@ struct NotchOptionsNavigationTests {
     func backKeepsContextualSlotAndRejectsDelayedOpening() throws {
         let fixture  = DisplayCoordinatorFixture(displayIDs: [10])
         let source   = try publicationID()
-        let widgetID =
-            "addon:\(source.addonID.rawValue):\(source.sessionID.uuidString):\(source.instanceID.uuidString)"
         fixture.coordinator.register(try snapshot(source))
         let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
         fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
@@ -56,6 +54,74 @@ struct NotchOptionsNavigationTests {
                 onDismiss: {}
             )
         )
+        fixture.coordinator.stop()
+    }
+
+    @Test
+    func latestPendingVisibleClickWinsAndBackRejectsBothDelayedReplies() throws {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10, 11])
+        let sourceA = try publicationID()
+        let sourceB = try publicationID()
+        fixture.coordinator.register(try snapshot(sourceA))
+        fixture.coordinator.register(try snapshot(sourceB))
+        let shelf = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: false)
+        fixture.coordinator.start()
+        fixture.coordinator.requestExpansion(on: 10, activityID: nil)
+        let original = try #require(fixture.surfaces[10]?.presentations.last)
+        #expect(original.showsWidgets)
+        #expect(!original.contextualPageIsSelected)
+        let originA = try #require(
+            fixture.coordinator.captureOptionsOrigin(publicationID: sourceA, observedRevision: 1)
+        )
+        let originB = try #require(
+            fixture.coordinator.captureOptionsOrigin(publicationID: sourceB, observedRevision: 1)
+        )
+        #expect(!originA.isValid)
+        #expect(originB.isValid)
+        let leaseA = UUID()
+        let leaseB = UUID()
+        let pageA  = CoordinatorContextualPage(id: "detail-A", contentRevision: 1)
+        let pageB  = CoordinatorContextualPage(id: "detail-B", contentRevision: 1)
+        #expect(
+            !fixture.coordinator.presentOptions(
+                page     : pageA,
+                leaseID  : leaseA,
+                origin   : originA,
+                onDismiss: {}
+            )
+        )
+        #expect(fixture.surfaces[10]?.presentations.last?.showsWidgets == true)
+        #expect(
+            fixture.coordinator.presentOptions(
+                page     : pageB,
+                leaseID  : leaseB,
+                origin   : originB,
+                onDismiss: {}
+            )
+        )
+        #expect(fixture.surfaces[10]?.presentations.last?.optionsPage === pageB)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPage === shelf)
+        #expect(fixture.surfaces[11]?.presentations.last?.optionsPage == nil)
+        fixture.coordinator.dismissOptions(leaseID: leaseB)
+        #expect(!originA.isValid)
+        #expect(!originB.isValid)
+        for (page, lease, origin) in [(pageA, leaseA, originA), (pageB, leaseB, originB)] {
+            #expect(
+                !fixture.coordinator.presentOptions(
+                    page     : page,
+                    leaseID  : lease,
+                    origin   : origin,
+                    onDismiss: {}
+                )
+            )
+        }
+        let restored = try #require(fixture.surfaces[10]?.presentations.last)
+        #expect(restored.showsWidgets == original.showsWidgets)
+        #expect(restored.contextualPageIsSelected == original.contextualPageIsSelected)
+        #expect(restored.contextualPage === shelf)
+        #expect(restored.optionsPage == nil)
+        #expect(fixture.coordinator.expandedDisplayID == 10)
         fixture.coordinator.stop()
     }
 

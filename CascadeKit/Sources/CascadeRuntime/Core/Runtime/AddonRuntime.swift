@@ -3047,11 +3047,9 @@ actor AddonRuntime {
                 ) else { throw failure(.sessionRevoked) }
             }
 
-            if let preparedOptions, optionsAdapter?.present(preparedOptions) != true {
-                throw failure(.sessionRevoked)
-            }
-            let admission = try commitPublicationAndAssets(
+            let admission = try prepareAndCommitPublicationAndAssets(
                 prepared,
+                options   : preparedOptions,
                 connection: connection,
                 at        : finalInstant.wall
             )
@@ -3071,14 +3069,13 @@ actor AddonRuntime {
 
             var completedActionResources: ActionResources?
             if case .action(let key, let delivery, let outcome) = completion {
-                let accepted = try dispatcher.complete(
+                dispatcher.completeValidated(
                     delivery,
                     owner     : owner,
                     generation: connection.publicationConnection.generation,
                     outcome   : outcome,
                     at        : finalInstant.monotonic
                 )
-                precondition(accepted)
                 completedActionResources = actionResources.removeValue(forKey: key)
                 releaseDelivery(
                     .action(ticketID: delivery.ticket.id),
@@ -8159,10 +8156,13 @@ actor AddonRuntime {
         return scope
     }
 
-    /// commitPublicationAndAssets destroys its proposal before the caller can await pool reduction.
-    /// Both components validate before either commits, with no actor suspension between them.
-    private func commitPublicationAndAssets(
+    /// prepareAndCommitPublicationAndAssets validates imported aliases and every
+    /// canonical proposal before the options presenter can mutate. Its commit is
+    /// nonthrowing and synchronous; borrowed asset proposals are destroyed before
+    /// the caller can suspend while refunding the pool.
+    private func prepareAndCommitPublicationAndAssets(
         _ prepared: PublicationState.PreparedOutput,
+        options   : AddonOptionsPresentation?,
         connection: RuntimeConnection,
         at date   : Date
     ) throws -> PublicationAdmission {
@@ -8181,7 +8181,11 @@ actor AddonRuntime {
             if publication.kind != .notice { changesArchive = true }
         }
 
-        let admission = try publicationState.commitPreparedOutput(prepared, at: date)
+        if let options, optionsAdapter?.present(options) != true {
+            throw failure(.sessionRevoked)
+        }
+
+        let admission = publicationState.commitValidatedOutput(prepared)
         assetState.commitPrepared(assets)
         // Use postcommit kinds: a new publication ended in this same batch has no preimage
         // and is intentionally absent from the changed-publication visitor.

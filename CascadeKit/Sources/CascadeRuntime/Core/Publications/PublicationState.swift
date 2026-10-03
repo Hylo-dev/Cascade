@@ -594,6 +594,14 @@ struct PublicationState: Sendable {
         at instant: Date
     ) throws -> PublicationAdmission {
         try validatePreparedOutput(prepared, at: instant)
+        return commitValidatedOutput(prepared)
+    }
+
+    /// commitValidatedOutput follows final validation in the same synchronous actor
+    /// turn. The runtime can publish an options projection only after every proposal
+    /// passes, so no recoverable failure may occur once that projection is installed.
+    mutating func commitValidatedOutput(_ prepared: PreparedOutput) -> PublicationAdmission {
+        precondition(!isRevisionExhausted && prepared.stateRevision == stateRevision)
 
         for (id, record) in prepared.records { records[id] = record }
         retainedBytes = prepared.retainedBytesAfter

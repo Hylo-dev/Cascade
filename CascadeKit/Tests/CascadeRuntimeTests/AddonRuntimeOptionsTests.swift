@@ -93,6 +93,113 @@ struct AddonRuntimeOptionsTests {
         await fixture.tearDown()
     }
 
+    @Test(arguments: [false, true])
+    func anUnimportedAssetRejectsTheWholeBatchBeforeAnyDetailProjection(
+        hasExistingDetail: Bool
+    ) async throws {
+        let fixture = try await RuntimeOptionsFixture.make(includesSecondPublication: true)
+        do {
+            let otherID = try #require(fixture.secondPublicationID)
+            try await fixture.publish()
+            let origin = AddonOptionsOrigin(
+                publicationID   : fixture.publicationID,
+                observedRevision: 1
+            )
+            let delivery = try await fixture.action(origin: origin)
+            let initial  = try fixture.optionsRequest(delivery)
+            if hasExistingDetail {
+                try await fixture.output(operations: [.presentOptions(initial)], sequence: 2)
+            }
+            let previousProjection = fixture.options.presentation
+            let previousAttempts   = fixture.options.presentationAttempts
+            let previousBudget     = await fixture.governor.usage(.retainedStateBytes)
+            let previousState      = await fixture.runtime.diagnostics(owner: fixture.publicationID.addonID)
+            let refresh = try AddonOptionsRequest(
+                publicationID   : initial.publicationID,
+                observedRevision: initial.observedRevision,
+                actionRequestID : initial.actionRequestID,
+                leaseID         : initial.leaseID,
+                document        : ContentDocument(
+                    root              : .text("Uncommitted replacement"),
+                    privacy           : .publicContent,
+                    accessibilityLabel: "Uncommitted replacement"
+                )
+            )
+            let invalid = try Publication(
+                id                 : otherID,
+                revision           : 1,
+                kind               : .widget,
+                content            : PresentationSet(
+                    widget         : ContentDocument(
+                        root              : .text("Missing asset"),
+                        privacy           : .publicContent,
+                        accessibilityLabel: "Missing asset",
+                        assetIDs          : ["not-imported"]
+                    ),
+                    compactLeading : nil,
+                    compactTrailing: nil,
+                    minimal        : nil,
+                    expanded       : nil
+                ),
+                timeline   : nil,
+                expiresAt  : fixture.clock.now().wall.addingTimeInterval(100),
+                stalePolicy: .remove
+            )
+            let missingAlias = AddonFailure(
+                code  : .permissionDenied,
+                reason: "Asset alias is not imported by this publication and connection."
+            )
+            await #expect(throws: missingAlias) {
+                try await fixture.output(
+                    publications: [invalid],
+                    operations  : [.presentOptions(refresh)],
+                    completion  : .action(
+                        requestID: delivery.ticket.request.requestID,
+                        outcome  : .completed(payload: Data([1]))
+                    ),
+                    sequence    : hasExistingDetail ? 3 : 2
+                )
+            }
+            #expect(fixture.options.presentationAttempts == previousAttempts)
+            #expect(fixture.options.presentation?.request == previousProjection?.request)
+            #expect(fixture.options.presentation?.origin === previousProjection?.origin)
+            #expect(fixture.options.presentation?.generation == previousProjection?.generation)
+            #expect(origin.isValid)
+            #expect(await fixture.governor.usage(.retainedStateBytes) == previousBudget)
+            #expect(
+                await fixture.runtime.diagnostics(owner: fixture.publicationID.addonID)?
+                    .reservedStateBytes == previousState?.reservedStateBytes
+            )
+            let snapshot = await fixture.runtime.snapshot(at: fixture.clock.now().wall)
+            #expect(snapshot.publications.count == 1)
+            #expect(snapshot.publications.first?.id == fixture.publicationID)
+            #expect(snapshot.publications.first?.revision == 1)
+            // Rejected ingress consumes neither sequence nor the accepted action.
+            // A corrected batch commits its options and correlated completion together.
+            try await fixture.output(
+                operations: [.presentOptions(refresh)],
+                completion: .action(
+                    requestID: delivery.ticket.request.requestID,
+                    outcome  : .completed(payload: Data([1]))
+                ),
+                sequence: hasExistingDetail ? 3 : 2
+            )
+            #expect(fixture.options.presentationAttempts == previousAttempts + 1)
+            #expect(fixture.options.presentation?.request == refresh)
+            #expect(
+                try await !fixture.runtime.receiveActionCompletion(
+                    delivery,
+                    connection: fixture.connection,
+                    outcome   : .completed(payload: Data([1]))
+                )
+            )
+        } catch {
+            await fixture.tearDown()
+            throw error
+        }
+        await fixture.tearDown()
+    }
+
     @Test
     func aClaimedCapabilityWithoutTheCompleteAssemblyCannotEnableTheFeature() async throws {
         let fixture   = try ActionFixture()

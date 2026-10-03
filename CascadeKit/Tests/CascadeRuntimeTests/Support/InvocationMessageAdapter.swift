@@ -265,6 +265,7 @@ final class InvocationMessageAdapter: AddonRuntimeServiceSubscriptionAdapter, Ad
             incarnation     : connection.incarnation,
             encodedBytes    : bytes.count,
             isCompletionOnly: value.completion != nil
+                && value.publications.isEmpty && value.operations.isEmpty
         )
         let cap = lock.withLock { slots[connection.incarnation]?.start.maximumIngressBytes ?? 0 }
 

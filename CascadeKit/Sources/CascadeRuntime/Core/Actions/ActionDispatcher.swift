@@ -536,10 +536,11 @@ public struct ActionDispatcher: Sendable {
               ),
               let record = records[key],
               !record.revoked,
-              record.jobID != nil
+              let jobID = record.jobID
         else { return false }
 
         try outcome.validate()
+        try scheduler.validateFinish(jobID, owner: owner)
 
         return journal.canComplete(
             key.requestID,
@@ -547,6 +548,34 @@ public struct ActionDispatcher: Sendable {
             generation: generation,
             at        : instant
         )
+    }
+
+    /// completeValidated follows canComplete in the same synchronous actor turn.
+    /// Publication, assets, options and the correlated result then share a commit
+    /// that cannot throw after the presenter has accepted the detail projection.
+    mutating func completeValidated(
+        _ delivery: Delivery,
+        owner     : AddonID,
+        generation: ConnectionGeneration,
+        outcome   : ActionOutcome,
+        at instant: Duration
+    ) {
+        guard let key = canonical(delivery, owner: owner, generation: generation),
+              let record = records[key],
+              !record.revoked,
+              let jobID = record.jobID
+        else { preconditionFailure("Validated action completion authority changed.") }
+
+        journal.completeValidated(
+            key.requestID,
+            owner     : owner,
+            generation: generation,
+            outcome   : outcome,
+            at        : instant
+        )
+        scheduler.finishValidated(jobID, owner: owner)
+        records[key]?.jobID = nil
+        pruneHistory()
     }
 
     /// observeExit releases a real job only for its exact host-owned delivery.

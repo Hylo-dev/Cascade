@@ -15,8 +15,11 @@
 - `supportsFullscreen` defaults to false, and false is omitted from encoded manifests.
 - No external provider code runs in the host; current native launcher hold remains intact.
 - Options use the canonical feature/publication/action, revision, generation and resource checks; source display is host-owned.
-- One options lease across the presentation system, preserving the original underlying page.
+- One options lease and one pending visible widget origin across the presentation system. The latest pending click revokes the preceding origin; no origin queue or detail stack.
+- Opening requires the visible ordinary widget grid. Back restores that ordinary selection on the original display and preserves the unselected contextual slot. Selected shelf/activity pages have no visible widget entry surface.
 - 128 nodes, depth 8, 64 KiB per document and existing aggregate/owner budgets.
+- Replay history holds 256 bindings across all live connection generations, charged at 128 bytes each (32 KiB total). Exact owner/generation invalidation refunds its bindings; capacity denies new leases without history eviction.
+- Prepare and validate every publication, imported asset, options proposal and correlated completion before presenter mutation; then commit synchronously without throwing.
 - Native Back triangle at the position mirrored from settings; 180 ms finite layer transform/opacity transition; Reduce Motion uses opacity only.
 - No per-frame SwiftUI state, periodic options timer, polling or main-thread I/O.
 - Back/Escape/close/withdrawal/expiry/disable/display removal revoke resources; late replies and old controls cannot reopen detail.
@@ -26,7 +29,7 @@
 
 1. A click starts provider work, then Back or a display switch happens before the response: obsolete origins cannot reopen or move detail.
 2. A publication revision changes while detail is visible: old controls revoke immediately, while the selected detail remains until a valid refresh or revocation.
-3. A competing detail replaces another over the file shelf: dismiss restores the original contextual selection rather than overwriting its slot.
+3. Visible grid clicks A then B occur before either reply: B revokes A, delayed A cannot open, B opens, and Back prevents either reply reopening. Restore the original ordinary selection and preserve the unselected file shelf slot; selected contextual/activity pages cannot authorize hidden widgets.
 4. Rapid open/Back/open interrupts a transition: at most current incoming/outgoing hosts survive and completion of an old animation cannot hide the new page.
 5. A provider forges or reuses another lease/source/request: canonical owner/feature/generation and current budgets reject before projection.
 
@@ -44,7 +47,7 @@
 
 **Interfaces:** `AddonOptionsRequest(publicationID:observedRevision:actionRequestID:leaseID:document:)` is an immutable Codable bounded request. `OperationRequest.presentOptions(AddonOptionsRequest)`/`.dismissOptions(UUID)` carry only values. A host-only opaque origin token binds the accepted action to the display and prior selection. Runtime supplies accepted presentation changes to `AddonPresentationBridge`; do not let a wire display ID mint an origin. The host presenter returns acceptance and an idempotent dismiss callback, keeping the contextual page slot intact. Retained options actions enter the existing action authorization/delivery path with the leased document as the authorized representation.
 
-- [ ] Write failing checks: false/absent flag preserves old encoding; true flag round trip; options unknown-field/size validation; missing capability/stale action/forged source/reused old lease rejection; Back/close/display removal restore ordinary and contextual pages; source revision revokes copied controls; interrupted transition clears outgoing content.
+- [ ] Write failing checks: false/absent flag preserves old encoding; true flag round trip; options unknown-field/size validation; missing capability/stale action/forged source/reused old lease rejection; invalid imported assets reject a mixed options batch before projection while preserving valid detail/budget; latest pending A/B click wins and Back rejects both late replies; Back/close/display removal preserve ordinary navigation and the unselected contextual slot; selected shelf/activity rejects hidden widget origins; source revision revokes copied controls; interrupted transition clears outgoing content.
 - [ ] Run those checks red with `DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer /usr/bin/xcrun swift test --package-path CascadeKit --scratch-path /private/tmp/cascade-widget-fullscreen-swift --no-parallel --filter <focused suite>`; capture exact failures. Existing relevant suites supply the baseline.
 - [ ] Implement the shortest shared contracts/runtime/presenter path, using canonical snapshots and finite native animations. Negotiate `notch.options.v1` only on a connected host and preserve older negotiation.
 - [ ] Run focused suites green, then full serial package tests and boundary checks. Expected: no new failures and unchanged launcher hold. Record exact results and any pre-existing failures.

@@ -13,17 +13,18 @@ import Testing
 /// publication slot. Temporary storage and the deterministic adapter are test owned.
 struct RuntimeOptionsFixture: Sendable {
 
-    let root         : URL
-    let runtime      : AddonRuntime
-    let governor     : ResourceGovernor
-    let storage      : AddonStorageCoordinator
-    let adapter      : InvocationMessageAdapter
-    let options      : RecordingOptionsAdapter
-    let connection   : RuntimeConnection
-    let clock        : InvocationMessageClock
-    let publicationID: PublicationID
+    let root               : URL
+    let runtime            : AddonRuntime
+    let governor           : ResourceGovernor
+    let storage            : AddonStorageCoordinator
+    let adapter            : InvocationMessageAdapter
+    let options            : RecordingOptionsAdapter
+    let connection         : RuntimeConnection
+    let clock              : InvocationMessageClock
+    let publicationID      : PublicationID
+    let secondPublicationID: PublicationID?
 
-    static func make() async throws -> Self {
+    static func make(includesSecondPublication: Bool = false) async throws -> Self {
         let root       = URL(fileURLWithPath: "/private/tmp/cascade-runtime-options-\(UUID())")
         let checkpoint = root.appendingPathComponent("checkpoint")
         let keyed      = root.appendingPathComponent("keyed")
@@ -82,21 +83,32 @@ struct RuntimeOptionsFixture: Sendable {
             featureID : "controls",
             instanceID: UUID()
         )
+        let secondPublicationID: PublicationID?
+        if includesSecondPublication {
+            secondPublicationID = try await runtime.assignPublication(
+                owner     : action.owner,
+                featureID : "controls",
+                instanceID: UUID()
+            )
+        } else {
+            secondPublicationID = nil
+        }
         let launch     = try await runtime.requestLaunch(owner: action.owner)
         let connection = try await runtime.attach(
             launchID: launch,
             offer   : ProtocolOffer(major: 1, minimumMinor: 0, maximumMinor: 5, contentSchemas: [1])
         )
         return Self(
-            root         : root,
-            runtime      : runtime,
-            governor     : governor,
-            storage      : storage,
-            adapter      : adapter,
-            options      : options,
-            connection   : connection,
-            clock        : clock,
-            publicationID: publicationID
+            root               : root,
+            runtime            : runtime,
+            governor           : governor,
+            storage            : storage,
+            adapter            : adapter,
+            options            : options,
+            connection         : connection,
+            clock              : clock,
+            publicationID      : publicationID,
+            secondPublicationID: secondPublicationID
         )
     }
 
@@ -164,14 +176,17 @@ struct RuntimeOptionsFixture: Sendable {
         return request
     }
 
-    func output(publications: [Publication] = [], operations: [OperationRequest], sequence: UInt64)
-        async throws
-    {
+    func output(
+        publications: [Publication] = [],
+        operations  : [OperationRequest],
+        completion  : InvocationCompletion? = nil,
+        sequence    : UInt64
+    ) async throws {
         let output = try ProviderOutput(
             schemaVersion: 1,
             publications : publications,
             operations   : operations,
-            completion   : nil,
+            completion   : completion,
             checkpoint   : nil
         )
         let staged = try adapter.stagePublication(output, connection: connection)

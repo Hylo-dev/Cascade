@@ -486,6 +486,8 @@ final class NotchDisplayCoordinator {
 
     /// captureOptionsOrigin binds a mounted widget action to the current display
     /// and selection. Hidden, redacted and suspended widgets cannot mint origins.
+    /// The latest pending visible click revokes its predecessor; one origin owns
+    /// asynchronous navigation, so an earlier response cannot steal the selection.
     func captureOptionsOrigin(
         publicationID   : PublicationID,
         observedRevision: UInt64

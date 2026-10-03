@@ -302,6 +302,20 @@ public struct ActionJournal: Sendable {
         return matches(record.state, generation: generation)
     }
 
+    /// completeValidated follows canComplete and outcome validation without an
+    /// intervening mutation. It commits the reserved result during the runtime's
+    /// nonthrowing publication transaction rather than revalidating after projection.
+    mutating func completeValidated(
+        _ id      : UUID,
+        owner     : AddonID,
+        generation: ConnectionGeneration,
+        outcome   : ActionOutcome,
+        at instant: Duration
+    ) {
+        precondition(canComplete(id, owner: owner, generation: generation, at: instant))
+        finish(Key(owner: owner, id: id), outcome: outcome)
+    }
+
     public mutating func connectionLost(
         owner     : AddonID,
         generation: ConnectionGeneration

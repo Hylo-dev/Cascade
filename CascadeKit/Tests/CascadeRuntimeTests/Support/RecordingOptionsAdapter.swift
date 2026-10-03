@@ -15,9 +15,11 @@ final class RecordingOptionsAdapter: AddonRuntimeOptionsAdapter, @unchecked Send
     private var origin     : AddonOptionsOrigin?
     private var selected   : AddonOptionsPresentation?
     private var invalidated: Set<UUID> = []
+    private var attempts    = 0
 
-    var presentation     : AddonOptionsPresentation? { lock.withLock { selected } }
-    var invalidatedLeases: Set<UUID> { lock.withLock { invalidated } }
+    var presentation        : AddonOptionsPresentation? { lock.withLock { selected } }
+    var invalidatedLeases   : Set<UUID> { lock.withLock { invalidated } }
+    var presentationAttempts: Int { lock.withLock { attempts } }
 
     func capture(_ origin: AddonOptionsOrigin) {
         lock.withLock { self.origin = origin }
@@ -29,6 +31,7 @@ final class RecordingOptionsAdapter: AddonRuntimeOptionsAdapter, @unchecked Send
 
     func present(_ presentation: AddonOptionsPresentation) -> Bool {
         lock.withLock {
+            attempts += 1
             guard origin === presentation.origin, presentation.origin.isValid else { return false }
             selected = presentation
             invalidated.remove(presentation.request.leaseID)
