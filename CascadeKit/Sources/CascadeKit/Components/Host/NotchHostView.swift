@@ -51,7 +51,8 @@ final class NotchHostView: NSView {
     private var optionsGlobalKeyMonitor: Any?
     private weak var previousOptionsResponder: NSResponder?
 
-    var retainedOptionsHostCount: Int {
+    /// visibleOptionsHostCount describes visibility; both native hosts remain reusable.
+    var visibleOptionsHostCount: Int {
         (optionsHost.isHidden ? 0 : 1) + (outgoingOptionsHost.isHidden ? 0 : 1)
     }
 
@@ -329,6 +330,7 @@ final class NotchHostView: NSView {
     /// clearOptionsContent releases both roots and native key observation immediately
     /// on close, hide and revocation. There is no idle or periodic options source.
     func clearOptionsContent() {
+        let hadOptionsContent = optionsIdentity != nil || !outgoingOptionsHost.isHidden
         optionsTransitionTask?.cancel()
         optionsTransitionTask = nil
         optionsTransitionGeneration &+= 1
@@ -338,6 +340,9 @@ final class NotchHostView: NSView {
             host.layer?.removeAllAnimations()
             host.layer?.opacity = 1
             update(host: host, view: nil, frame: .zero)
+            // A mounted SwiftUI graph can retain its previous document after the
+            // root assignment. Settle teardown once, before the panel disappears.
+            if hadOptionsContent { host.layoutSubtreeIfNeeded() }
         }
         backButton.isHidden = true
         removeOptionsKeyboardRoute()

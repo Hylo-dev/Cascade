@@ -266,34 +266,87 @@ struct NotchOptionsNavigationTests {
         panel.close()
     }
 
-    @Test
-    func stoppingAControllerImmediatelyClearsOptionsRoots() {
-        let fixture = ControllerFixture(reducesMotion: true)
+    @Test(arguments: [false, true])
+    func stoppingAControllerImmediatelyClearsOptionsRoots(reducesMotion: Bool) throws {
+        let fixture = ControllerFixture(reducesMotion: reducesMotion)
         fixture.controller.start()
         fixture.controller.surface.setOptionsDismissHandler({})
-        fixture.controller.surface.applyPresentation(
-            DisplayPresentation(
-                primary                 : nil,
-                secondary               : nil,
-                notice                  : nil,
-                expanded                : nil,
-                expandedIsLiveActivity  : false,
-                showsWidgets            : false,
-                contextualPage          : nil,
-                contextualPageIsSelected: false,
-                widgetContentRevision   : 0,
-                style                   : .notch,
-                optionsPage             : CoordinatorContextualPage(id: "detail", contentRevision: 1),
-                optionsLeaseID          : UUID()
+        weak var outgoingAssets: OptionsLifetimeAssets?
+        weak var documentAssets: OptionsLifetimeAssets?
+        for id in ["outgoing", "incoming"] {
+            let assets = OptionsLifetimeAssets()
+            if id == "outgoing" { outgoingAssets = assets } else { documentAssets = assets }
+            fixture.controller.surface.applyPresentation(
+                DisplayPresentation(
+                    primary                 : nil,
+                    secondary               : nil,
+                    notice                  : nil,
+                    expanded                : nil,
+                    expandedIsLiveActivity  : false,
+                    showsWidgets            : false,
+                    contextualPage          : nil,
+                    contextualPageIsSelected: false,
+                    widgetContentRevision   : 0,
+                    style                   : .notch,
+                    optionsPage             : try optionsPage(id: id, assets: assets),
+                    optionsLeaseID          : UUID()
+                )
             )
-        )
-        #expect(fixture.hostView.retainedOptionsHostCount > 0)
+        }
+        #expect(outgoingAssets != nil)
+        #expect(documentAssets != nil)
+        #expect(fixture.hostView.visibleOptionsHostCount > 0)
         fixture.controller.stop()
-        #expect(fixture.hostView.retainedOptionsHostCount == 0)
+        #expect(fixture.hostView.visibleOptionsHostCount == 0)
+        #expect(outgoingAssets == nil)
+        #expect(documentAssets == nil)
+    }
+
+    @Test(arguments: [false, true])
+    func nativeTransitionReleasesOutgoingDocumentAssets(reducesMotion: Bool) async throws {
+        let host    = NotchHostView(frame: CGRect(x: 0, y: 0, width: 640, height: 260))
+        let panel   = NotchPanel(contentView: host)
+        defer { panel.close() }
+        let frame   = CGRect(x: 20, y: 20, width: 600, height: 180)
+        let context = NotchContextualPageContext(availableSize: frame.size)
+        weak var outgoingAssets: OptionsLifetimeAssets?
+        weak var incomingAssets: OptionsLifetimeAssets?
+        do {
+            let assets = OptionsLifetimeAssets()
+            outgoingAssets = assets
+            host.setOptionsContent(
+                try optionsPage(id: "first", assets: assets).makeContentView(in: context),
+                identity     : UUID(),
+                revision     : 1,
+                frame        : frame,
+                reducesMotion: reducesMotion
+            )
+        }
+        host.layoutSubtreeIfNeeded()
+        do {
+            let assets = OptionsLifetimeAssets()
+            incomingAssets = assets
+            host.setOptionsContent(
+                try optionsPage(id: "latest", assets: assets).makeContentView(in: context),
+                identity     : UUID(),
+                revision     : 1,
+                frame        : frame,
+                reducesMotion: reducesMotion
+            )
+        }
+        host.layoutSubtreeIfNeeded()
+        // Both mounted document roots own assets while the finite transition is active.
+        #expect(outgoingAssets != nil)
+        #expect(incomingAssets != nil)
+        try await Task.sleep(for: .milliseconds(250))
+        #expect(outgoingAssets == nil)
+        #expect(incomingAssets != nil)
+        host.clearOptionsContent()
+        #expect(incomingAssets == nil)
     }
 
     @Test
-    func nativeTransitionRetargetKeepsTwoHostsAndClearsOutgoing() async throws {
+    func nativeTransitionRetargetKeepsAtMostTwoVisibleHostsAndClearsOutgoing() async throws {
         let host  = NotchHostView(frame: CGRect(x: 0, y: 0, width: 640, height: 260))
         let frame = CGRect(x: 20, y: 20, width: 600, height: 180)
         host.setContent(AnyView(Text("Grid")), frame: frame, isVisible: true)
@@ -304,7 +357,7 @@ struct NotchOptionsNavigationTests {
             frame        : frame,
             reducesMotion: false
         )
-        #expect(host.retainedOptionsHostCount <= 2)
+        #expect(host.visibleOptionsHostCount <= 2)
         host.setOptionsContent(nil, identity: nil, revision: 0, frame: frame, reducesMotion: false)
         host.setOptionsContent(
             AnyView(Text("Latest")),
@@ -314,9 +367,27 @@ struct NotchOptionsNavigationTests {
             reducesMotion: false
         )
         try await Task.sleep(for: .milliseconds(250))
-        #expect(host.retainedOptionsHostCount == 1)
+        #expect(host.visibleOptionsHostCount == 1)
         host.clearOptionsContent()
-        #expect(host.retainedOptionsHostCount == 0)
+        #expect(host.visibleOptionsHostCount == 0)
+    }
+
+    /// optionsPage uses the real snapshot document renderer so the weak resolver
+    /// tracks retained document assets rather than a host's visibility flag.
+    private func optionsPage(
+        id    : String,
+        assets: OptionsLifetimeAssets
+    ) throws -> SnapshotOptionsPage {
+        try SnapshotOptionsPage(
+            id      : id,
+            document: ContentDocument(
+                root              : .text(id),
+                privacy           : .publicContent,
+                accessibilityLabel: id
+            ),
+            assets : assets,
+            actions: ActionLease { _ in }
+        )
     }
 
     private func snapshot(_ source: PublicationID) throws -> SnapshotWidget {
@@ -344,4 +415,12 @@ struct NotchOptionsNavigationTests {
             sessionID : UUID()
         )
     }
+}
+
+/// OptionsLifetimeAssets is owned by the real snapshot document root; weak test
+/// references cannot keep it alive after both reusable hosts discard that root.
+@MainActor
+private final class OptionsLifetimeAssets: ContentAssetResolving {
+
+    func image(for assetID: String) -> Image? { nil }
 }
