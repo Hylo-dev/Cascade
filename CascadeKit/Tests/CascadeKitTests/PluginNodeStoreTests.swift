@@ -162,6 +162,25 @@ struct PluginNodeStoreTests {
     }
 
     @Test
+    func aRemovedModelsTimeoutCannotCancelItsReplacementConfirmation() throws {
+        var publisher = Fixtures.Publisher()
+        let scheduler = ManualScheduler()
+        let store = store(scheduler: scheduler)
+        store.apply(publisher.publish(try Fixtures.face()))
+        let old = try #require(store.model(play))
+        store.set(.bool(false), on: old)
+        store.apply(publisher.publish(try PluginDocument(root: PluginNode(.text("Removed")))))
+        store.apply(publisher.publish(try Fixtures.face()))
+        let current = try #require(store.model(play))
+        store.set(.bool(false), on: current)
+
+        scheduler.run(0)
+        #expect(current.optimistic == .bool(false))
+        scheduler.run(1)
+        #expect(current.optimistic == nil)
+    }
+
+    @Test
     func aRefusedActionReverts() throws {
         var publisher = Fixtures.Publisher()
         let sent      = SentRequests()

@@ -12,9 +12,10 @@ import SwiftUI
 struct PluginDocumentView: View {
 
     let store: PluginNodeStore
+    var showsOptions = false
 
     var body: some View {
-        if let root = store.root {
+        if let root = showsOptions ? store.optionsRoot : store.root {
             PluginNodeView(model: root, store: store)
                 .notchGlassLights(store.glassLights)
         }

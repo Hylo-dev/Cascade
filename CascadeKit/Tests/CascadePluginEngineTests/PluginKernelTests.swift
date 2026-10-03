@@ -12,6 +12,49 @@ import Testing
 @Suite
 struct PluginKernelTests {
 
+    @Test
+    func aHostWithoutTheOptionsContainerDoesNotAcquireFullscreenSources() throws {
+        let feature = try PluginFeature(
+            id                : "test",
+            surfaces          : PluginSurfaces(widget: PluginWidgetSurface(sizes: [PluginWidgetSize(columns: 1, rows: 1)])),
+            sources           : ["caffeinate"],
+            actions           : ["open"],
+            supportsFullscreen: true
+        )
+        let manifest = try PluginEngineFixtures.manifest(PluginEngineFixtures.clockID, entryPoint: "Test", features: [feature])
+        var kernel = PluginKernel(
+            capabilities: PluginHostCapabilities(sources: ["caffeinate"], services: [], components: []),
+            policy      : StandardHealthPolicy()
+        )
+        let effects = kernel.register(manifest, grants: [], at: PluginEngineFixtures.start)
+        #expect(!effects.contains(.startSource("caffeinate")))
+    }
+
+    @Test(arguments: [false, true])
+    func optionsOutsideFullscreenOrActionDeclarationsAreRefused(fullscreen: Bool) throws {
+        let feature = try PluginFeature(
+            id                : "test",
+            surfaces          : PluginSurfaces(widget: PluginWidgetSurface(sizes: [PluginWidgetSize(columns: 1, rows: 1)])),
+            actions           : ["open"],
+            supportsFullscreen: fullscreen
+        )
+        let manifest = try PluginEngineFixtures.manifest(PluginEngineFixtures.clockID, entryPoint: "Test", features: [feature])
+        var kernel = PluginKernel(
+            capabilities: PluginHostCapabilities(sources: [], services: [], components: [], supportsFullscreen: true),
+            policy      : FixedHealthPolicy(answer: .quarantine)
+        )
+        _ = kernel.register(manifest, grants: [], at: PluginEngineFixtures.start)
+        let document = try PluginDocument(
+            root         : PluginNode(.button(action: "open"), id: "open"),
+            optionsRoot  : PluginNode(.button(action: fullscreen ? "undeclared" : "open"), id: "detail"),
+            optionsAction: "open"
+        )
+        let output = try PluginEngineFixtures.output("test", .widget, document)
+        let effects = kernel.complete(PluginEngineFixtures.clockID, token: 1, result: PluginEngineFixtures.result(output), at: PluginEngineFixtures.start)
+        #expect(kernel.state(of: PluginEngineFixtures.clockID) == .quarantined)
+        #expect(!effects.contains { if case .deliver = $0 { return true }; return false })
+    }
+
     private typealias Fixtures = PluginEngineFixtures
 
     private let clock    = PluginEngineFixtures.clockID

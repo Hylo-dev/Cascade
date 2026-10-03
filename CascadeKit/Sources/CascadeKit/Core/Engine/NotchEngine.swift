@@ -115,6 +115,18 @@ public final class NotchEngine {
 
     public func dismissOptions(leaseID: UUID) { coordinator.dismissOptions(leaseID: leaseID) }
 
+    public func capturePluginOptionsOrigin(
+        widgetID        : WidgetIdentifier,
+        publicationID   : PublicationID,
+        observedRevision: UInt64
+    ) -> AddonOptionsOrigin? {
+        coordinator.capturePluginOptionsOrigin(
+            widgetID        : widgetID,
+            publicationID   : publicationID,
+            observedRevision: observedRevision
+        )
+    }
+
     public func unregisterWidget(id: WidgetIdentifier) { coordinator.unregisterWidget(id: id) }
 
     public func setContextualPage(

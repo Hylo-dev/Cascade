@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import CascadeContracts
 
 /// WidgetHost is the layout workspace: the widget instances (deduplicated), the
 /// arrangement of page 0 on each display, and the rendering of the open
@@ -50,8 +51,27 @@ final class WidgetHost {
     /// canCaptureOptionsOrigin excludes redacted snapshots even when their tile
     /// still occupies a visible grid placement. A registered provider is not a permit.
     func canCaptureOptionsOrigin(_ id: WidgetIdentifier, revision: UInt64) -> Bool {
-        guard activeWidgets.contains(id), let widget = widgets[id] as? SnapshotWidget else { return false }
-        return widget.document.privacy == .publicContent && widget.observedRevision == revision
+        guard activeWidgets.contains(id) else { return false }
+        if let widget = widgets[id] as? SnapshotWidget {
+            return widget.document.privacy == .publicContent && widget.observedRevision == revision
+        }
+        if let widget = widgets[id] as? PluginWidget {
+            return widget.supportsFullscreen && widget.store.optionsRoot != nil && widget.store.revision == revision
+        }
+        return false
+    }
+
+    /// canCapturePluginOptionsOrigin keeps the compatibility seam restricted to
+    /// its genuine publication widget rather than accepting an arbitrary legacy tile.
+    func canCapturePluginOptionsOrigin(
+        _ id            : WidgetIdentifier,
+        publicationID   : PublicationID,
+        revision        : UInt64
+    ) -> Bool {
+        guard let widget = widgets[id] as? PluginWidget,
+              widget.store.key.plugin.rawValue == publicationID.addonID.rawValue
+        else { return false }
+        return canCaptureOptionsOrigin(id, revision: revision)
     }
     private var cachedViews  : [WidgetIdentifier: AnyView] = [:]
 

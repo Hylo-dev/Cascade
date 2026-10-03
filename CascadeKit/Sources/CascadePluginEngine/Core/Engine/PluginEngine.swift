@@ -26,19 +26,25 @@ public final class PluginEngine: Sendable {
     )
 
     public init(
-        executor  : any PluginExecutor,
-        sources   : [String: any PluginEventSource],
-        services  : Set<String> = [],
-        components: Set<String> = [],
-        sink      : any PluginPublicationSink,
-        policy    : any PluginHealthPolicy = StandardHealthPolicy()
+        executor          : any PluginExecutor,
+        sources           : [String: any PluginEventSource],
+        services          : Set<String> = [],
+        components        : Set<String> = [],
+        sink              : any PluginPublicationSink,
+        policy            : any PluginHealthPolicy = StandardHealthPolicy(),
+        supportsFullscreen: Bool = false
     ) {
         self.executor = executor
         self.sources  = sources
         self.sink     = sink
         kernel        = Mutex(
             PluginKernel(
-                capabilities: PluginHostCapabilities(sources: Set(sources.keys), services: services, components: components),
+                capabilities: PluginHostCapabilities(
+                    sources           : Set(sources.keys),
+                    services          : services,
+                    components        : components,
+                    supportsFullscreen: supportsFullscreen
+                ),
                 policy      : policy
             )
         )

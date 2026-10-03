@@ -28,6 +28,7 @@ public struct PluginNodeTable: Equatable, Sendable {
     }
 
     public let entries: [Entry]
+    public let optionsRoot: Entry?
 
     private let indices: [PluginNodeID: Int]
 
@@ -35,6 +36,12 @@ public struct PluginNodeTable: Equatable, Sendable {
         var entries = [Entry]()
         entries.reserveCapacity(PluginDocument.maximumNodes)
         Self.append(document.root, id: Self.identity(of: document.root, under: nil, at: "root"), into: &entries)
+        if let options = document.optionsRoot {
+            let index = Self.append(options, id: Self.identity(of: options, under: nil, at: "options"), into: &entries)
+            optionsRoot = entries[index]
+        } else {
+            optionsRoot = nil
+        }
 
         self.entries = entries
         indices      = Dictionary(uniqueKeysWithValues: entries.enumerated().map { index, entry in (entry.id, index) })

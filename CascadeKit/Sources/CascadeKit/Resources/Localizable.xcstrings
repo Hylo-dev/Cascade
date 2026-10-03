@@ -1,6 +1,9 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Options": {
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Opzioni" } } }
+    },
     "Add Widget": {
       "comment": "Button in the widget gallery that adds the widget at its first size.",
       "localizations": {

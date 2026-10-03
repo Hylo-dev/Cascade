@@ -125,3 +125,50 @@ do not prove physical input, hardware multi-display behavior or performance.
 External native launcher qualification remains on hold. This host-owned Debug
 composition is container evidence, not production transport, addon activation or
 launcher qualification.
+
+## Builtin Caffeinate compatibility
+
+The builtin PluginHost v2 adapter uses the same native container. A widget feature
+must declare `supportsFullscreen: true`; the host's `PluginEngine` capability
+defaults to false and is enabled by the app only when its container is composed.
+Legacy absent/false flags remain false and false is omitted from encoding. This
+compatibility bridge does not advertise the external `notch.options.v1` assembly
+or qualify its launcher.
+
+`PluginDocument.optionsRoot` carries the detail tree, and `optionsAction` names its
+ordinary opening button. The two roots share 256 nodes, depth 12, 64 KiB and one
+action authorization table. IDs must be unique across both roots. Every control
+action must be declared. Busy publications may retain passive detail without an
+opening action. One live store refreshes the compact and detail models together;
+removed models, revoked origins and stale broker revisions cannot dispatch.
+
+Click the Caffeinate title/disclosure to open options; at the icon-only size,
+right-click its widget and choose **Options**. The cup toggles the session.
+Duration offers indefinite, 15, 30, 60, 120, 240 and 480 minutes. Selecting a new
+duration while off stores the next session's preference; while active it replaces
+the deadline from selection, with indefinite removing the deadline. Changing
+**Keep display awake** reconfigures native assertions while preserving the current
+absolute deadline. **Stop** is inactive while off. **Credits** toggles the inline
+functional acknowledgments. Busy snapshots disable all detail actions.
+
+The opener captures a genuine mounted widget origin before broker submission.
+The acceptance callback retains that exact click, including when equal requests
+arrive out of order. Back/Escape, hiding, withdrawal/disable, display removal and
+termination revoke the origin. The underlying contextual slot and selection
+remain owned by the common container. No periodic options timer is introduced;
+the existing one-shot session deadline handles expiration.
+
+Automated package/controller checks establish these contracts. Native rendered
+input, multiple displays and runtime measurements still need their own evidence;
+the opt-in Caffeinate Debug preview is intended for that qualification.
+
+```sh
+/Applications/Cascade.app/Contents/MacOS/Cascade --preview-caffeinate-options
+/Applications/Cascade.app/Contents/MacOS/Cascade --check-caffeinate-options
+```
+
+The preview uses the real bundled source, a temporary widget grid and the user's
+Caffeinate preferences. The finite check drives rendered accessibility controls
+and native session changes, uses a unique isolated preference suite, cleans it
+on exit and terminates. An unavailable native control fails the check; a blocked
+AX or screen-capture session must be reported separately from package tests.

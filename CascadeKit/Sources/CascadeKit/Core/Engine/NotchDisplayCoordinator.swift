@@ -493,6 +493,27 @@ final class NotchDisplayCoordinator {
         observedRevision: UInt64
     ) -> AddonOptionsOrigin? {
         let widgetID = WidgetIdentifier("addon:\(publicationID.addonID.rawValue):\(publicationID.sessionID.uuidString):\(publicationID.instanceID.uuidString)")
+        return captureOptionsOrigin(widgetID: widgetID, publicationID: publicationID, observedRevision: observedRevision)
+    }
+
+    /// capturePluginOptionsOrigin uses the same host-owned display binding for the
+    /// compatibility adapter. The widget host still requires a mounted, granted widget.
+    func capturePluginOptionsOrigin(
+        widgetID        : WidgetIdentifier,
+        publicationID   : PublicationID,
+        observedRevision: UInt64
+    ) -> AddonOptionsOrigin? {
+        guard widgetID.rawValue.hasPrefix("plugin:"),
+              widgetHost.canCapturePluginOptionsOrigin(widgetID, publicationID: publicationID, revision: observedRevision)
+        else { return nil }
+        return captureOptionsOrigin(widgetID: widgetID, publicationID: publicationID, observedRevision: observedRevision)
+    }
+
+    private func captureOptionsOrigin(
+        widgetID        : WidgetIdentifier,
+        publicationID   : PublicationID,
+        observedRevision: UInt64
+    ) -> AddonOptionsOrigin? {
         guard isStarted, isVisible,
               let displayID = expandedDisplayID,
               let display = surfaces[displayID],

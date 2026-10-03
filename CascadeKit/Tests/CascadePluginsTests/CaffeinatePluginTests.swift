@@ -23,12 +23,14 @@ struct CaffeinatePluginTests {
         #expect(output.publications.first?.surface == .widget)
         #expect(output.wake == nil)
         #expect(nodes.contains { $0.kind == .button(action: "caffeinate.toggle") })
-        #expect(!nodes.contains { $0.kind == .button(action: "caffeinate.options") })
-        #expect(nodes.filter { if case .button = $0.kind { return true }; return false }.count == 2)
+        #expect(nodes.contains { $0.kind == .button(action: "caffeinate.options") })
+        #expect(nodes.contains { $0.kind == .button(action: "caffeinate.duration.15") })
+        #expect(nodes.contains { $0.kind == .toggle(isOn: true, action: "caffeinate.display") })
+        #expect(!nodes.contains { $0.kind == .button(action: "caffeinate.stop") })
         #expect(nodes.contains { $0.kind == .symbol(name: "cup.and.saucer") })
         #expect(nodes.contains { $0.kind == .viewThatFits(axes: .both) })
         #expect(!nodes.contains { $0.kind == .shape(.capsule) })
-        #expect(nodes.filter { if case .symbol = $0.kind { return true }; return false }.allSatisfy {
+        #expect(nodes.filter { ["#full.cup:symbol", "#compact.cup:symbol"].contains($0.id.rawValue) }.allSatisfy {
             $0.modifiers.contains(.contentTransition(.symbolEffect))
         })
         #expect(PluginCaffeinateState(try state.event()) == state)
@@ -46,9 +48,30 @@ struct CaffeinatePluginTests {
         let output = try plugin.handle(.source(busy.event()), context: PluginContext(plugin: owner))
         let document = try #require(output.publications.first?.document)
         #expect(!PluginNodeTable(document).entries.contains { if case .button = $0.kind { return true }; return false })
+        #expect(!PluginNodeTable(document).entries.contains { if case .toggle = $0.kind { return true }; return false })
         #expect(!PluginNodeTable(document).entries.contains { $0.kind == .text("Updating…") })
         let malformed = try PluginSourceEvent(source: "caffeinate", fields: ["isActive": .bool(true)])
         #expect(PluginCaffeinateState(malformed) == nil)
         #expect(try plugin.handle(.source(malformed), context: PluginContext(plugin: owner)).publications.isEmpty)
+    }
+
+    @Test
+    func activeOptionsExposeStopAndCreditsAndRejectMalformedPreferences() throws {
+        let owner = try #require(PluginID(rawValue: "com.cascade.caffeinate"))
+        let state = PluginCaffeinateState(isActive: true, keepDisplayAwake: false, minutes: 30, showsCredits: true)
+        let output = try CaffeinatePlugin().handle(.source(state.event()), context: PluginContext(plugin: owner))
+        let nodes = PluginNodeTable(try #require(output.publications.first?.document)).entries
+        #expect(nodes.contains { $0.kind == .button(action: "caffeinate.stop") })
+        #expect(nodes.contains { $0.kind == .toggle(isOn: false, action: "caffeinate.display") })
+        #expect(nodes.contains {
+            if case .text(let text) = $0.kind { return text.contains("Vorssaint") && text.contains("William Gustafson") }
+            return false
+        })
+        var fields = try state.event().fields
+        fields["minutes"] = .number(17)
+        #expect(PluginCaffeinateState(try PluginSourceEvent(source: "caffeinate", fields: fields)) == nil)
+        fields["minutes"] = .number(30)
+        fields["showsCredits"] = .number(1)
+        #expect(PluginCaffeinateState(try PluginSourceEvent(source: "caffeinate", fields: fields)) == nil)
     }
 }

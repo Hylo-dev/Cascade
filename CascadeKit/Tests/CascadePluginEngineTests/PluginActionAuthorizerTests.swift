@@ -11,6 +11,27 @@ import Testing
 @Suite
 struct PluginActionAuthorizerTests {
 
+    @Test
+    func optionsUseTheSameDeclaredControlAndRevisionAuthorization() throws {
+        let key = PluginPublicationKey(plugin: PluginEngineFixtures.clockID, feature: "test", surface: .widget)
+        let document = try PluginDocument(
+            root         : PluginNode(.button(action: "open"), id: "open"),
+            optionsRoot  : PluginNode(.toggle(isOn: true, action: "display"), id: "display"),
+            optionsAction: "open"
+        )
+        let feature = try PluginFeature(id: "test", surfaces: PluginSurfaces(widget: PluginWidgetSurface(sizes: [PluginWidgetSize(columns: 1, rows: 1)])), actions: ["open", "display"], supportsFullscreen: true)
+        var store = PluginPublicationStore()
+        _ = store.apply(document, staleAfter: nil, for: key, at: .now)
+        let request = PluginActionRequest(key: key, node: PluginNodeID(rawValue: "#display:toggle"), revision: 1, value: .bool(false))
+        #expect(PluginActionAuthorizer.event(for: request, entry: store[key], feature: feature) == (try PluginActionEvent(feature: "test", action: "display", value: .bool(false))))
+        let stale = PluginActionRequest(key: key, node: request.node, revision: 0, value: .bool(false))
+        #expect(PluginActionAuthorizer.event(for: stale, entry: store[key], feature: feature) == nil)
+        let wrongValue = PluginActionRequest(key: key, node: request.node, revision: 1, value: .number(0))
+        #expect(PluginActionAuthorizer.event(for: wrongValue, entry: store[key], feature: feature) == nil)
+        let undeclared = try PluginFeature(id: "test", surfaces: feature.surfaces, actions: ["open"], supportsFullscreen: true)
+        #expect(PluginActionAuthorizer.event(for: request, entry: store[key], feature: undeclared) == nil)
+    }
+
     private let key = PluginPublicationKey(plugin: PluginEngineFixtures.musicID, feature: "now-playing", surface: .activity)
 
     private func entry() throws -> PluginPublicationStore.Entry? {

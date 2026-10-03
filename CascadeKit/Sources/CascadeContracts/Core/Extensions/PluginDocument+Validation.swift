@@ -24,6 +24,15 @@ extension PluginDocument {
 
         var budget = ValidationBudget()
         try Self.visit(root, depth: 1, budget: &budget)
+        if let optionsRoot {
+            if let optionsAction {
+                try ContractValidation.require(ContractValidation.identifier(optionsAction), "Invalid options action")
+                try ContractValidation.require(budget.buttons.contains(optionsAction), "Options need an opening button in the widget")
+            }
+            try Self.visit(optionsRoot, depth: 1, budget: &budget)
+        } else {
+            try ContractValidation.require(optionsAction == nil, "Options action needs options content")
+        }
     }
 
     /// componentReferences lists the tier-2 components the document shows, for the kernel to
@@ -31,6 +40,7 @@ extension PluginDocument {
     public var componentReferences: Set<PluginComponentReference> {
         var references = Set<PluginComponentReference>()
         var pending    = [root]
+        if let optionsRoot { pending.append(optionsRoot) }
 
         while let node = pending.popLast() {
             if case .component(let id, let version, _) = node.kind,
@@ -79,6 +89,7 @@ extension PluginDocument {
         }
 
         try validate(kind: node.kind)
+        if case .button(let action) = node.kind { budget.buttons.insert(action) }
         for modifier in node.modifiers {
             try validate(modifier: modifier)
         }
@@ -253,4 +264,5 @@ private struct ValidationBudget {
 
     var nodes       = 0
     var explicitIDs = Set<String>()
+    var buttons     = Set<String>()
 }

@@ -16,18 +16,24 @@ public struct PluginDocument: Codable, Equatable, Sendable {
     public static let maximumDepth     = 12
     public static let maximumModifiers = 16
 
-    public let schema     : Int
-    public let root       : PluginNode
-    public let glassLights: [GlassLight]
+    public let schema       : Int
+    public let root         : PluginNode
+    public let glassLights  : [GlassLight]
+    public let optionsRoot  : PluginNode?
+    public let optionsAction: String?
 
     public init(
-        root       : PluginNode,
-        glassLights: [GlassLight] = [],
-        schema     : Int = PluginDocument.schemaVersion
+        root         : PluginNode,
+        glassLights  : [GlassLight] = [],
+        schema       : Int = PluginDocument.schemaVersion,
+        optionsRoot  : PluginNode? = nil,
+        optionsAction: String? = nil
     ) throws {
-        self.schema      = schema
-        self.root        = root
-        self.glassLights = glassLights
+        self.schema        = schema
+        self.root          = root
+        self.glassLights   = glassLights
+        self.optionsRoot   = optionsRoot
+        self.optionsAction = optionsAction
 
         try validate()
     }
@@ -39,6 +45,8 @@ public struct PluginDocument: Codable, Equatable, Sendable {
         schema        = try container.decode(Int.self, forKey: .schema)
         root          = try container.decode(PluginNode.self, forKey: .root)
         glassLights   = try container.decodeIfPresent([GlassLight].self, forKey: .glassLights) ?? []
+        optionsRoot   = try container.decodeIfPresent(PluginNode.self, forKey: .optionsRoot)
+        optionsAction = try container.decodeIfPresent(String.self, forKey: .optionsAction)
 
         try validateStructure()
     }
@@ -55,5 +63,7 @@ public struct PluginDocument: Codable, Equatable, Sendable {
         case schema
         case root
         case glassLights
+        case optionsRoot
+        case optionsAction
     }
 }

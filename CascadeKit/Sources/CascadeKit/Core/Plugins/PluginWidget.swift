@@ -18,6 +18,7 @@ final class PluginWidget: NotchWidget {
     let id   : WidgetIdentifier
     let sizes: [GridSpan]
     let store: PluginNodeStore
+    let supportsFullscreen: Bool
 
     var size: GridSpan { sizes[0] }
 
@@ -29,16 +30,28 @@ final class PluginWidget: NotchWidget {
         id        : WidgetIdentifier,
         sizes     : [GridSpan],
         store     : PluginNodeStore,
-        visibility: @escaping (Bool) -> Void
+        visibility: @escaping (Bool) -> Void,
+        supportsFullscreen: Bool = false
     ) {
         self.id         = id
         self.sizes      = sizes.isEmpty ? [GridSpan(columns: 4, rows: 1)] : sizes
         self.store      = store
         self.visibility = visibility
+        self.supportsFullscreen = supportsFullscreen
     }
 
     func makeContentView() -> AnyView {
-        AnyView(PluginDocumentView(store: store))
+        AnyView(PluginDocumentView(store: store).contextMenu {
+            if supportsFullscreen, store.optionsButton != nil {
+                Button(String(localized: "Options", bundle: .module), action: openOptions)
+            }
+        })
+    }
+
+    /// openOptions always reads the current opener, including at the icon-only size.
+    func openOptions() {
+        guard supportsFullscreen, let button = store.optionsButton else { return }
+        store.press(button)
     }
 
     func activate(in context: WidgetContext) {

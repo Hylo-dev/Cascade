@@ -66,9 +66,15 @@ public struct CaffeinatePlugin: PluginProvider {
             ],
             children: [
                 cup(state: state, compact: false, status: status),
-                // TODO: ADDON-NOTCH-OPTIONS in docs/TODO.md. Keep the details passive
-                // until the shared addon route can present options inside this notch.
-                details,
+                state.isBusy ? details : PluginNode(
+                    .button(action: "caffeinate.options"),
+                    id: "options." + state.token.uuidString,
+                    modifiers: [.accessibilityLabel("Caffeinate options")],
+                    children: [PluginNode(
+                        .hStack(alignment: .center, spacing: 4),
+                        children: [details, PluginNode(.symbol(name: "chevron.right"), modifiers: [.font(PluginFont(size: 9))])]
+                    )]
+                ),
             ]
         )
         let root = PluginNode(
@@ -82,8 +88,63 @@ public struct CaffeinatePlugin: PluginProvider {
         return try PluginOutput(publications: [PluginPublication(
             feature : Self.feature,
             surface : .widget,
-            document: PluginDocument(root: root)
+            document: PluginDocument(
+                root         : root,
+                optionsRoot  : options(state: state),
+                optionsAction: state.isBusy ? nil : "caffeinate.options"
+            )
         )])
+    }
+
+    /// options uses the ordinary control vocabulary and native freshness token.
+    /// Busy and stopped states publish passive labels instead of actionable controls.
+    private func options(state: PluginCaffeinateState) -> PluginNode {
+        let suffix = "." + state.token.uuidString
+        let durationNodes = [0, 15, 30, 60, 120, 240, 480].map { minutes in
+            let label = minutes == 0
+                ? String(localized: "Indefinite", table: "Plugins", bundle: .module)
+                : "\(minutes) min"
+            let text = PluginNode(.text(label), modifiers: [
+                .font(PluginFont(size: 11, weight: minutes == state.minutes ? .bold : .regular)),
+                .foregroundStyle(.color(minutes == state.minutes ? PluginColor(red: 1, green: 0.77, blue: 0.33) : .white)),
+            ])
+            return state.isBusy ? text : PluginNode(
+                .button(action: "caffeinate.duration.\(minutes)"),
+                id: "duration.\(minutes)" + suffix,
+                modifiers: [.accessibilityLabel(minutes == 0 ? "Duration: Indefinite" : "Duration: \(minutes) min")],
+                children: [text]
+            )
+        }
+        var rows = [
+            PluginNode(.text(String(localized: "Caffeinate", table: "Plugins", bundle: .module)), modifiers: [.font(PluginFont(size: 15, weight: .semibold))]),
+            PluginNode(.text(String(localized: "Duration", table: "Plugins", bundle: .module)), modifiers: [.font(PluginFont(size: 11)), .foregroundStyle(.hierarchical(.secondary))]),
+            PluginNode(.hStack(alignment: .center, spacing: 12), children: durationNodes),
+        ]
+        let displayLabel = PluginNode(.text(String(localized: "Keep display awake", table: "Plugins", bundle: .module)), modifiers: [.font(PluginFont(size: 12))])
+        rows.append(state.isBusy ? displayLabel : PluginNode(
+            .toggle(isOn: state.keepDisplayAwake, action: "caffeinate.display"),
+            id: "display" + suffix,
+            modifiers: [.accessibilityLabel("Keep display awake")],
+            children: [displayLabel]
+        ))
+        let stop = PluginNode(.text(String(localized: "Stop", table: "Plugins", bundle: .module)), modifiers: [.font(PluginFont(size: 12)), .opacity(state.isActive ? 1 : 0.4)])
+        let credits = PluginNode(.text(String(localized: "Credits", table: "Plugins", bundle: .module)), modifiers: [.font(PluginFont(size: 12))])
+        rows.append(PluginNode(.hStack(alignment: .center, spacing: 18), children: [
+            state.isActive && !state.isBusy ? PluginNode(.button(action: "caffeinate.stop"), id: "stop" + suffix, modifiers: [.accessibilityLabel("Stop Caffeinate")], children: [stop]) : stop,
+            state.isBusy ? credits : PluginNode(.button(action: "caffeinate.credits"), id: "credits" + suffix, modifiers: [.accessibilityLabel("Caffeinate credits")], children: [credits]),
+        ]))
+        if state.showsCredits {
+            rows.append(PluginNode(.text(String(localized: "Functional references: Vorssaint (2026, GPL-3.0-or-later) and Amphetamine by William Gustafson. Independently authored with Apple IOKit and SF Symbols; no third-party code or assets.", table: "Plugins", bundle: .module)), modifiers: [.font(PluginFont(size: 10)), .lineLimit(3), .foregroundStyle(.hierarchical(.secondary))]))
+        }
+        if let error = state.error {
+            rows.append(PluginNode(.text(error), modifiers: [.font(PluginFont(size: 10)), .lineLimit(2)]))
+        }
+        return PluginNode(
+            .vStack(alignment: .leading, spacing: 10),
+            id: "caffeinate.options.page",
+            modifiers: [.foregroundStyle(.color(.white)), .frame(width: nil, height: nil, maxWidth: .infinity, maxHeight: nil, alignment: .leading)],
+            children: rows
+        )
     }
 
     /// cup keeps the animated glyph's identity independent of an action's freshness token.

@@ -1,6 +1,24 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Duration": {
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Durata" } } }
+    },
+    "Indefinite": {
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Illimitata" } } }
+    },
+    "Keep display awake": {
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Mantieni lo schermo acceso" } } }
+    },
+    "Stop": {
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Interrompi" } } }
+    },
+    "Credits": {
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Riconoscimenti" } } }
+    },
+    "Functional references: Vorssaint (2026, GPL-3.0-or-later) and Amphetamine by William Gustafson. Independently authored with Apple IOKit and SF Symbols; no third-party code or assets.": {
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Riferimenti funzionali: Vorssaint (2026, GPL-3.0-or-later) e Amphetamine di William Gustafson. Implementazione indipendente con Apple IOKit e SF Symbols; nessun codice o risorsa di terze parti." } } }
+    },
     "Battery": {
       "comment": "Settings name of the battery widget plugin.",
       "localizations": {

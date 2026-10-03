@@ -518,6 +518,22 @@ struct PluginKernel: Sendable {
 
         let key = PluginPublicationKey(plugin: plugin, feature: feature.id, surface: publication.surface)
         guard let document = publication.document else { return store.withdraw(key) }
+        if document.optionsRoot != nil {
+            guard publication.surface == .widget, feature.supportsFullscreen,
+                  document.optionsAction.map(feature.actions.contains) ?? true
+            else { throw AddonFailure(code: .invalidPayload, reason: "Options outside widget declarations") }
+            let table = PluginNodeTable(document)
+            for entry in table.entries {
+                let action: String?
+                switch entry.kind {
+                    case .button(let name), .toggle(_, let name), .slider(_, _, _, _, let name): action = name
+                    default: action = nil
+                }
+                if let action, !feature.actions.contains(action) {
+                    throw AddonFailure(code: .invalidPayload, reason: "Undeclared options control")
+                }
+            }
+        }
 
         return store.apply(
             document,
@@ -637,6 +653,7 @@ struct PluginKernel: Sendable {
         capabilities.sources.isSuperset(of: feature.sources)
             && capabilities.services.isSuperset(of: feature.services)
             && capabilities.components.isSuperset(of: feature.components.map(\.id))
+            && (!feature.supportsFullscreen || capabilities.supportsFullscreen)
             && record.grants.isSuperset(of: feature.permissions)
     }
 

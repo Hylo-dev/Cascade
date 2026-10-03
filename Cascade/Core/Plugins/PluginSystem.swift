@@ -47,14 +47,14 @@ final class PluginSystem {
     /// start reads the bundled manifests and the app's signing team off the main thread, since
     /// both touch the disk, and composes the engine back on it. A second call while starting or
     /// started does nothing.
-    func start() {
+    func start(only plugin: PluginID? = nil) {
         guard engine == nil, !isStarting else { return }
 
         isStarting = true
 
         let serviceName = (Bundle.main.bundleIdentifier ?? "hylo.Cascade") + ".PluginHost"
         Task.detached(priority: .utility) { [weak self] in
-            let manifests   = FirstPartyPlugins.manifests()
+            let manifests   = FirstPartyPlugins.manifests().filter { plugin == nil || $0.id == plugin }
             let requirement = PluginHostSigning.requirement(identifier: serviceName, team: PluginHostSigning.currentTeam)
 
             await self?.compose(
@@ -125,7 +125,17 @@ final class PluginSystem {
                     }
                 })
             },
-            visibility: { [weak self] isVisible, key in self?.engine?.setVisible(isVisible, for: key) }
+            visibility: { [weak self] isVisible, key in self?.engine?.setVisible(isVisible, for: key) },
+            submitAccepted: { [weak self] request, accepted in
+                self?.engine?.submit(request, onAccepted: { [weak self] request in
+                    DispatchQueue.main.async {
+                        MainActor.assumeIsolated {
+                            self?.actionHandler(request)
+                            accepted()
+                        }
+                    }
+                })
+            }
         )
         let executor = SharedHostExecutor(transport: XPCPluginTransport(serviceName: serviceName, requirement: requirement))
         let hosted   = Dictionary(
@@ -143,7 +153,8 @@ final class PluginSystem {
             executor  : executor,
             sources   : sources,
             components: PluginSurfaceRouter.components,
-            sink      : surfaces.makeSink()
+            sink      : surfaces.makeSink(),
+            supportsFullscreen: true
         )
 
         for manifest in manifests {

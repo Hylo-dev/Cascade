@@ -18,6 +18,8 @@ public struct PluginCaffeinateState: Equatable, Sendable {
     public let keepDisplayAwake: Bool
     public let until           : Date?
     public let error           : String?
+    public let minutes         : Int
+    public let showsCredits    : Bool
 
     public init(
         token           : UUID = UUID(),
@@ -25,7 +27,9 @@ public struct PluginCaffeinateState: Equatable, Sendable {
         isBusy          : Bool = false,
         keepDisplayAwake: Bool = true,
         until           : Date? = nil,
-        error           : String? = nil
+        error           : String? = nil,
+        minutes         : Int = 0,
+        showsCredits    : Bool = false
     ) {
         self.token            = token
         self.isActive         = isActive
@@ -33,6 +37,8 @@ public struct PluginCaffeinateState: Equatable, Sendable {
         self.keepDisplayAwake = keepDisplayAwake
         self.until            = until
         self.error            = error
+        self.minutes          = minutes
+        self.showsCredits     = showsCredits
     }
 
     public init?(_ event: PluginSourceEvent) {
@@ -56,7 +62,26 @@ public struct PluginCaffeinateState: Equatable, Sendable {
             guard case .string(let text) = field else { return nil }
             error = text
         }
-        self.init(token: identifier, isActive: active, isBusy: busy, keepDisplayAwake: display, until: until, error: error)
+        var minutes = 0
+        if let field = event.fields["minutes"] {
+            guard case .number(let value) = field, [0.0, 15, 30, 60, 120, 240, 480].contains(value) else { return nil }
+            minutes = Int(value)
+        }
+        var credits = false
+        if let field = event.fields["showsCredits"] {
+            guard case .bool(let value) = field else { return nil }
+            credits = value
+        }
+        self.init(
+            token           : identifier,
+            isActive        : active,
+            isBusy          : busy,
+            keepDisplayAwake: display,
+            until           : until,
+            error           : error,
+            minutes         : minutes,
+            showsCredits    : credits
+        )
     }
 
     public func event() throws -> PluginSourceEvent {
@@ -65,6 +90,8 @@ public struct PluginCaffeinateState: Equatable, Sendable {
             "isActive"        : .bool(isActive),
             "isBusy"          : .bool(isBusy),
             "keepDisplayAwake": .bool(keepDisplayAwake),
+            "minutes"         : .number(Double(minutes)),
+            "showsCredits"    : .bool(showsCredits),
         ]
         if let until { fields["until"] = .number(until.timeIntervalSince1970) }
         if let error { fields["error"] = .string(String(error.prefix(512))) }

@@ -7,10 +7,11 @@
   "features": [
     {
       "id": "awake",
+      "supportsFullscreen": true,
       "surfaces": { "widget": { "sizes": ["2x2", "1x1"] } },
       "sources": ["caffeinate"],
       "permissions": ["power.keepAwake"],
-      "actions": ["caffeinate.toggle", "caffeinate.options"]
+      "actions": ["caffeinate.toggle", "caffeinate.options", "caffeinate.duration.0", "caffeinate.duration.15", "caffeinate.duration.30", "caffeinate.duration.60", "caffeinate.duration.120", "caffeinate.duration.240", "caffeinate.duration.480", "caffeinate.display", "caffeinate.stop", "caffeinate.credits"]
     }
   ],
   "resources": { "profile": "eventDriven" }

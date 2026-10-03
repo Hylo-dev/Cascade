@@ -44,6 +44,7 @@ final class CaffeinateController: NSObject {
         source.onReleased = { [weak self] in
             Task { await self?.shutdown() }
         }
+        publishPreferences()
     }
 
     /// handleAction checks the native state token as well as the broker's revision. A click
@@ -52,16 +53,36 @@ final class CaffeinateController: NSObject {
         guard source.isAvailable, !source.state.isBusy, !isShuttingDown,
               request.key.plugin.rawValue == CaffeinatePlugin.identifier,
               request.key.feature == CaffeinatePlugin.feature,
-              request.key.surface == .widget, request.value == nil
+              request.key.surface == .widget
         else { return }
 
         let suffix = "." + source.state.token.uuidString + ":button"
+        if request.node.rawValue == "#display." + source.state.token.uuidString + ":toggle",
+           case .bool(let display)? = request.value {
+            guard display != keepDisplayAwake else { return }
+            preferences.set(!display, forKey: "caffeinate.allowDisplaySleep")
+            if source.state.isActive { changeSession(start: true, until: source.state.until) }
+            else { publishPreferences() }
+            return
+        }
+        guard request.value == nil else { return }
+        if let minutes = [0, 15, 30, 60, 120, 240, 480].first(where: {
+            request.node.rawValue == "#duration.\($0)" + suffix
+        }) {
+            guard minutes != self.minutes else { return }
+            if source.state.isActive { start(minutes: minutes) }
+            else {
+                preferences.set(minutes, forKey: "caffeinate.minutes")
+                publishPreferences()
+            }
+            return
+        }
         switch request.node.rawValue {
             case "#toggle" + suffix, "#toggle.compact" + suffix: toggle()
-            case "#options" + suffix:
-                // TODO: ADDON-NOTCH-OPTIONS in docs/TODO.md. An external menu must not
-                // substitute for an addon-owned page covering the notch widget grid.
-                break
+            case "#stop" + suffix:
+                if source.state.isActive { changeSession(start: false, until: nil) }
+            case "#credits" + suffix:
+                publishPreferences(showsCredits: !source.state.showsCredits)
             default: break
         }
     }
@@ -91,7 +112,14 @@ final class CaffeinateController: NSObject {
         deadlineTimer?.invalidate()
         deadlineTimer = nil
         let state = source.state
-        source.update(PluginCaffeinateState(isActive: state.isActive, isBusy: true, keepDisplayAwake: keepDisplayAwake, until: state.until))
+        source.update(PluginCaffeinateState(
+            isActive        : state.isActive,
+            isBusy          : true,
+            keepDisplayAwake: keepDisplayAwake,
+            until           : state.until,
+            minutes         : minutes,
+            showsCredits    : state.showsCredits
+        ))
         let display = keepDisplayAwake
         operation = Task { [weak self, session] in
             var failure: String?
@@ -123,7 +151,9 @@ final class CaffeinateController: NSObject {
             isActive        : snapshot.isActive,
             keepDisplayAwake: snapshot.isActive ? snapshot.keepDisplayAwake : keepDisplayAwake,
             until           : snapshot.isActive ? snapshot.until : nil,
-            error           : error
+            error           : error,
+            minutes         : minutes,
+            showsCredits    : source.state.showsCredits
         ))
         if snapshot.isActive, let until = snapshot.until, !isShuttingDown {
             let timer = Timer(fire: until, interval: 0, repeats: false) { [weak self] _ in
@@ -132,6 +162,21 @@ final class CaffeinateController: NSObject {
             RunLoop.main.add(timer, forMode: .common)
             deadlineTimer = timer
         }
+    }
+
+    /// publishPreferences invalidates copied controls even when no native resource
+    /// changes. The active absolute deadline remains owned by the session and its timer.
+    private func publishPreferences(showsCredits: Bool? = nil) {
+        let state = source.state
+        source.update(PluginCaffeinateState(
+            isActive        : state.isActive,
+            isBusy          : state.isBusy,
+            keepDisplayAwake: keepDisplayAwake,
+            until           : state.until,
+            error           : state.error,
+            minutes         : minutes,
+            showsCredits    : showsCredits ?? state.showsCredits
+        ))
     }
 
     /// shutdown never waits on the UI thread. The operating system also releases all of

@@ -26,12 +26,15 @@ final class PluginNodeStore {
 
     let key: PluginPublicationKey
 
-    private(set) var revision   : UInt64 = 0
-    private(set) var root       : PluginNodeModel?
-    private(set) var glassLights: [GlassLight] = []
+    private(set) var revision     : UInt64 = 0
+    private(set) var root         : PluginNodeModel?
+    private(set) var glassLights  : [GlassLight] = []
+    private(set) var optionsRoot  : PluginNodeModel?
+    private(set) var optionsButton: PluginNodeModel?
 
     @ObservationIgnored private var models     : [PluginNodeID: PluginNodeModel] = [:]
     @ObservationIgnored private var generations: [PluginNodeID: UInt64] = [:]
+    @ObservationIgnored private var optionsNodes: Set<PluginNodeID> = []
 
     private let submit  : (PluginActionRequest) -> Void
     private let schedule: (Duration, @escaping @MainActor () -> Void) -> Void
@@ -54,6 +57,8 @@ final class PluginNodeStore {
         models[id]
     }
 
+    func isOptionsNode(_ id: PluginNodeID) -> Bool { optionsNodes.contains(id) }
+
     /// apply takes one change from the kernel. Removed nodes lose their models, inserted nodes
     /// get new ones, updated nodes have theirs refreshed, and every control but a dragged slider
     /// drops its optimistic value, because the publication is the source of truth.
@@ -62,14 +67,19 @@ final class PluginNodeStore {
 
         guard let content = change.content else {
             models.removeAll()
-            root        = nil
-            glassLights = []
+            generations.removeAll()
+            root          = nil
+            glassLights   = []
+            optionsRoot   = nil
+            optionsButton = nil
+            optionsNodes  = []
             return
         }
 
         let table = content.table
         for id in content.diff.removed {
             models.removeValue(forKey: id)
+            generations.removeValue(forKey: id)
         }
         for id in content.diff.inserted {
             if let index = table.index(of: id) {
@@ -90,6 +100,9 @@ final class PluginNodeStore {
         if root?.id != table.root.id {
             root = models[table.root.id]
         }
+        optionsRoot = table.optionsRoot.flatMap { models[$0.id] }
+        optionsNodes = table.optionsRoot.flatMap { table.index(of: $0.id) }.map { Set(table.entries[$0...].map(\.id)) } ?? []
+        optionsButton = table.entries.first { $0.kind == .button(action: content.document.optionsAction ?? "") }.flatMap { models[$0.id] }
         if glassLights != content.document.glassLights {
             glassLights = content.document.glassLights
         }
@@ -98,6 +111,7 @@ final class PluginNodeStore {
     /// press sends a button's action. A button holds no state: SwiftUI shows the press, and
     /// whatever the action changes arrives as the next publication.
     func press(_ model: PluginNodeModel) {
+        guard models[model.id] === model else { return }
         submit(PluginActionRequest(key: key, node: model.id, revision: revision))
     }
 
@@ -106,6 +120,7 @@ final class PluginNodeStore {
         _ value : PluginValue,
         on model: PluginNodeModel
     ) {
+        guard models[model.id] === model else { return }
         generations[model.id, default: 0] += 1
         let generation = generations[model.id]
 
@@ -115,7 +130,9 @@ final class PluginNodeStore {
         submit(PluginActionRequest(key: key, node: model.id, revision: revision, value: value))
 
         schedule(Self.confirmationTimeout) { [weak self, weak model] in
-            guard let self, let model, generations[model.id] == generation else { return }
+            guard let self, let model,
+                  models[model.id] === model, generations[model.id] == generation
+            else { return }
 
             revert(model)
         }

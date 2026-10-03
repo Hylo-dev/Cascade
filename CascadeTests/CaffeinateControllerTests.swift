@@ -97,6 +97,68 @@ struct CaffeinateControllerTests {
         #expect(!controller.needsShutdown)
     }
 
+    @Test
+    func optionsChangePreferencesAndActiveResourcesThroughFreshControls() async throws {
+        let source = CaffeinatePluginSource()
+        let backend = CaffeinateBackendFixture()
+        let session = CaffeinateSession(backend: backend)
+        let suite = "cascade.caffeinate.options." + UUID().uuidString
+        let preferences = try #require(UserDefaults(suiteName: suite))
+        defer { preferences.removePersistentDomain(forName: suite) }
+        let controller = CaffeinateController(source: source, session: session, preferences: preferences)
+        let channel = AsyncStream<PluginSourceEvent>.makeStream()
+        source.start { channel.continuation.yield($0) }
+        defer { channel.continuation.finish() }
+        let timeout = Task {
+            try? await Task.sleep(for: .seconds(8))
+            guard !Task.isCancelled else { return }
+            channel.continuation.finish()
+        }
+        defer { timeout.cancel() }
+        var events = channel.stream.makeAsyncIterator()
+        _ = try #require(await events.next())
+        let owner = try #require(PluginID(rawValue: "com.cascade.caffeinate"))
+        let key = PluginPublicationKey(plugin: owner, feature: "awake", surface: .widget)
+        func request(_ prefix: String, kind: String = "button", value: PluginValue? = nil) -> PluginActionRequest {
+            PluginActionRequest(key: key, node: PluginNodeID(rawValue: "#" + prefix + "." + source.state.token.uuidString + ":" + kind), revision: 1, value: value)
+        }
+
+        controller.handleAction(request("duration.15"))
+        try #require(controller.minutes == 15)
+        #expect(!source.state.isActive)
+        _ = try #require(await events.next())
+        controller.toggle()
+        _ = try #require(await events.next())
+        let active = try #require(await events.next().flatMap(PluginCaffeinateState.init))
+        let until = try #require(active.until)
+        let nativeUntil = try #require((await session.snapshot()).until)
+        let stale = request("display", kind: "toggle", value: .bool(false))
+        controller.handleAction(stale)
+        _ = try #require(await events.next())
+        let updated = try #require(await events.next().flatMap(PluginCaffeinateState.init))
+        #expect(updated.isActive && !updated.keepDisplayAwake)
+        #expect(updated.until == until)
+        #expect((await session.snapshot()).until == nativeUntil)
+        #expect(backend.storage.withLock { $0.owned.count } == 1)
+        controller.handleAction(stale)
+        #expect(source.state.token == updated.token)
+        controller.handleAction(request("duration.30"))
+        _ = try #require(await events.next())
+        let extended = try #require(await events.next().flatMap(PluginCaffeinateState.init))
+        #expect(try #require(extended.until).timeIntervalSince(until) > 850)
+        #expect(controller.minutes == 30)
+        controller.handleAction(request("credits"))
+        _ = try #require(await events.next())
+        #expect(source.state.showsCredits)
+        controller.handleAction(request("stop"))
+        _ = try #require(await events.next())
+        _ = try #require(await events.next())
+        #expect(!source.state.isActive)
+        #expect(backend.storage.withLock { $0.owned.isEmpty })
+        await controller.shutdown()
+        channel.continuation.finish()
+    }
+
     @Test(arguments: [false, true])
     func anOldAcceptedControlCannotToggleAReplacementSession(compact: Bool) async throws {
         let source = CaffeinatePluginSource()

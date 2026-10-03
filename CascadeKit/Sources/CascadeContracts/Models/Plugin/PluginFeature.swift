@@ -18,6 +18,7 @@ public struct PluginFeature: Codable, Equatable, Sendable {
     public let components : [PluginComponentReference]
     public let permissions: [String]
     public let actions    : [String]
+    public let supportsFullscreen: Bool
 
     public init(
         id         : String,
@@ -26,7 +27,8 @@ public struct PluginFeature: Codable, Equatable, Sendable {
         services   : [String] = [],
         components : [PluginComponentReference] = [],
         permissions: [String] = [],
-        actions    : [String] = []
+        actions    : [String] = [],
+        supportsFullscreen: Bool = false
     ) throws {
         self.id          = id
         self.surfaces    = surfaces
@@ -35,6 +37,7 @@ public struct PluginFeature: Codable, Equatable, Sendable {
         self.components  = components
         self.permissions = permissions
         self.actions     = actions
+        self.supportsFullscreen = supportsFullscreen
 
         try validate()
     }
@@ -50,11 +53,13 @@ public struct PluginFeature: Codable, Equatable, Sendable {
         components    = try container.decodeIfPresent([PluginComponentReference].self, forKey: .components) ?? []
         permissions   = try container.decodeIfPresent([String].self, forKey: .permissions) ?? []
         actions       = try container.decodeIfPresent([String].self, forKey: .actions) ?? []
+        supportsFullscreen = try container.decodeIfPresent(Bool.self, forKey: .supportsFullscreen) ?? false
 
         try validate()
     }
 
     public func validate() throws {
+        try ContractValidation.require(!supportsFullscreen || surfaces.widget != nil, "Fullscreen requires a widget")
         try ContractValidation.require(ContractValidation.identifier(id), "Invalid feature ID")
 
         try ContractValidation.unique(sources, "Duplicate sources")
@@ -87,5 +92,19 @@ public struct PluginFeature: Codable, Equatable, Sendable {
         case components
         case permissions
         case actions
+        case supportsFullscreen
+    }
+
+    /// encode preserves the legacy wire representation until fullscreen is explicitly granted.
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(surfaces, forKey: .surfaces)
+        try container.encode(sources, forKey: .sources)
+        try container.encode(services, forKey: .services)
+        try container.encode(components, forKey: .components)
+        try container.encode(permissions, forKey: .permissions)
+        try container.encode(actions, forKey: .actions)
+        if supportsFullscreen { try container.encode(true, forKey: .supportsFullscreen) }
     }
 }

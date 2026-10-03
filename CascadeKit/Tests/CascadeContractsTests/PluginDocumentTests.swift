@@ -12,6 +12,41 @@ import Testing
 struct PluginDocumentTests {
 
     @Test
+    func optionsControlsShareTheDocumentBudgetAndAuthorizationTable() throws {
+        let json = #"{"schema":2,"root":{"kind":{"button":{"action":"open"}},"id":"open"},"optionsAction":"open","optionsRoot":{"kind":{"button":{"action":"stop"}},"id":"stop"}}"#
+        let document = try PluginDocument.decode(Data(json.utf8))
+        #expect(PluginNodeTable(document).entries.contains { $0.id.rawValue == "#stop:button" })
+        let duplicate = json.replacingOccurrences(of: #""id":"stop""#, with: #""id":"open""#)
+        #expect(throws: AddonFailure.self) { try PluginDocument.decode(Data(duplicate.utf8)) }
+    }
+
+    @Test
+    func optionsCannotExceedTheAggregateNodeOrWireBudgetOrInventAnOpener() throws {
+        let full = PluginNodeFixtures.stack(of: PluginDocument.maximumNodes - 1)
+        #expect(throws: AddonFailure.self) {
+            try PluginDocument(root: full, optionsRoot: PluginNode(.text("One more")))
+        }
+        let large = PluginNode(.vStack(alignment: .leading, spacing: nil), children: Array(repeating: PluginNode(.text(String(repeating: "a", count: 4_000))), count: 17))
+        #expect(throws: AddonFailure.self) {
+            try PluginDocument(root: PluginNode(.text("Widget")), optionsRoot: large)
+        }
+        #expect(throws: AddonFailure.self) {
+            try PluginDocument(root: PluginNode(.text("Widget")), optionsRoot: PluginNode(.text("Options")), optionsAction: "missing")
+        }
+    }
+
+    @Test
+    func legacyFeaturesDoNotAcquireFullscreenPermission() throws {
+        let base = #"{"id":"test","surfaces":{"widget":{"sizes":["1x1"]}}}"#
+        let legacy = try JSONDecoder().decode(PluginFeature.self, from: Data(base.utf8))
+        let explicit = try JSONDecoder().decode(PluginFeature.self, from: Data(base.dropLast().appending(",\"supportsFullscreen\":false}").utf8))
+        #expect(legacy == explicit)
+        #expect(!String(decoding: try JSONEncoder().encode(legacy), as: UTF8.self).contains("supportsFullscreen"))
+        let enabled = try JSONDecoder().decode(PluginFeature.self, from: Data(base.dropLast().appending(",\"supportsFullscreen\":true}").utf8))
+        #expect(enabled != legacy)
+    }
+
+    @Test
     func roundTripsTheClockAndTheMusicRow() throws {
         for root in [PluginNodeFixtures.clock(), PluginNodeFixtures.musicRow()] {
             let document = try PluginDocument(root: root)
