@@ -191,31 +191,36 @@ enum AddonWidgetDetailChecks {
         remaining: inout Int,
         hitTestBudget: inout Int
     ) {
-        guard remaining > 0, depth <= 8 else { return }
+        guard remaining > 0 else { return }
         remaining -= 1
+        guard depth <= 8 else { return }
         print(
             "VIEW: depth=\(depth) class=\(NSStringFromClass(type(of: view))) hidden=\(view.isHidden) "
                 + "alpha=\(view.alphaValue) frame=\(NSStringFromRect(view.frame)) children=\(view.subviews.count)"
         )
-        if !view.isHidden, NSStringFromClass(type(of: view)).contains("NSHostingView"), let window = view.window {
-            for proxy in view.subviews where !proxy.isHidden && NSStringFromClass(type(of: proxy)).contains("KeyViewProxy") {
-                guard hitTestBudget > 0 else { break }
-                hitTestBudget -= 1
-                let center = proxy.convert(NSPoint(x: proxy.bounds.midX, y: proxy.bounds.midY), to: nil)
-                let screenPoint = window.convertPoint(toScreen: center)
-                let hit = view.accessibilityHitTest(screenPoint)
-                let role = hit.flatMap { diagnosticAttribute($0, name: "accessibilityRole") }
-                let label = hit.flatMap { diagnosticAttribute($0, name: "accessibilityLabel") }
-                let title = hit.flatMap { diagnosticAttribute($0, name: "accessibilityTitle") }
-                let children = hit.flatMap { diagnosticAttribute($0, name: "accessibilityChildren") } as? [Any]
-                let hitClass = hit.map { String(describing: type(of: $0)) } ?? "nil"
-                print(
-                    "AX-HIT: point=\(NSStringFromPoint(screenPoint)) class=\(hitClass) "
-                        + "role=\(diagnosticText(role)) label=\(diagnosticText(label)) "
-                        + "title=\(diagnosticText(title)) children=\(children?.count ?? 0)"
-                )
-            }
+        if hitTestBudget > 0,
+           !view.isHidden,
+           NSStringFromClass(type(of: view)).contains("KeyViewProxy"),
+           let hostingView = view.superview,
+           !hostingView.isHidden,
+           NSStringFromClass(type(of: hostingView)).contains("NSHostingView"),
+           let window = view.window {
+            hitTestBudget -= 1
+            let center = view.convert(NSPoint(x: view.bounds.midX, y: view.bounds.midY), to: nil)
+            let screenPoint = window.convertPoint(toScreen: center)
+            let hit = hostingView.accessibilityHitTest(screenPoint)
+            let role = hit.flatMap { diagnosticAttribute($0, name: "accessibilityRole") }
+            let label = hit.flatMap { diagnosticAttribute($0, name: "accessibilityLabel") }
+            let title = hit.flatMap { diagnosticAttribute($0, name: "accessibilityTitle") }
+            let children = hit.flatMap { diagnosticAttribute($0, name: "accessibilityChildren") } as? [Any]
+            let hitClass = hit.map { String(describing: type(of: $0)) } ?? "nil"
+            print(
+                "AX-HIT: point=\(NSStringFromPoint(screenPoint)) class=\(hitClass) "
+                    + "role=\(diagnosticText(role)) label=\(diagnosticText(label)) "
+                    + "title=\(diagnosticText(title)) children=\(children?.count ?? 0)"
+            )
         }
+        guard depth < 8 else { return }
         for child in view.subviews {
             guard remaining > 0 else { break }
             diagnoseView(child, depth: depth + 1, remaining: &remaining, hitTestBudget: &hitTestBudget)
@@ -228,11 +233,12 @@ enum AddonWidgetDetailChecks {
         remaining: inout Int,
         visited: inout Set<ObjectIdentifier>
     ) {
-        guard remaining > 0, depth <= 12 else { return }
+        guard remaining > 0 else { return }
+        remaining -= 1
+        guard depth <= 12 else { return }
         if let object = value as? NSObject {
             guard visited.insert(ObjectIdentifier(object)).inserted else { return }
         }
-        remaining -= 1
         let children = diagnosticAttribute(value, name: "accessibilityChildren") as? [Any] ?? []
         let role = diagnosticText(diagnosticAttribute(value, name: "accessibilityRole"))
         let label = diagnosticText(diagnosticAttribute(value, name: "accessibilityLabel"))
@@ -244,6 +250,7 @@ enum AddonWidgetDetailChecks {
                 + "protocol=\(value is any NSAccessibilityProtocol) role=\(role) label=\(label) "
                 + "title=\(title) value=\(content) identifier=\(identifier) children=\(children.count)"
         )
+        guard depth < 12 else { return }
         for child in children {
             guard remaining > 0 else { break }
             diagnoseAccessibility(child, depth: depth + 1, remaining: &remaining, visited: &visited)
