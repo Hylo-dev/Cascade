@@ -71,6 +71,7 @@ public struct AddonRequirement: Codable, Equatable, Sendable {
                         [
                             "cascade.activities", "cascade.scheduler", "cascade.widgets", "cascade.notices",
                             "cascade.storage",
+                            AddonOptionsRequest.capability,
                         ].contains(id ?? ""),
                         "Unknown mandatory host capability"
                     )

@@ -285,7 +285,7 @@ public struct ContentNode: Codable, Equatable, Sendable {
         return result
     }
 
-    var actionIdentifiers: [String] {
+    public var actionIdentifiers: [String] {
         (actionID.map { [$0] } ?? []) + (fileWorkspace?.actionIdentifiers ?? [])
             + (children?.flatMap(\.actionIdentifiers) ?? [])
     }

@@ -46,6 +46,13 @@ final class WidgetHost {
 
     private var contexts     : [WidgetIdentifier: WidgetContext] = [:]
     private var activeWidgets: Set<WidgetIdentifier> = []
+
+    /// canCaptureOptionsOrigin excludes redacted snapshots even when their tile
+    /// still occupies a visible grid placement. A registered provider is not a permit.
+    func canCaptureOptionsOrigin(_ id: WidgetIdentifier, revision: UInt64) -> Bool {
+        guard activeWidgets.contains(id), let widget = widgets[id] as? SnapshotWidget else { return false }
+        return widget.document.privacy == .publicContent && widget.observedRevision == revision
+    }
     private var cachedViews  : [WidgetIdentifier: AnyView] = [:]
 
     private let resolver: NotchLayoutResolver

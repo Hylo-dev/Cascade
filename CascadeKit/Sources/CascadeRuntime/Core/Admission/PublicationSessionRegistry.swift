@@ -167,7 +167,8 @@ struct PublicationSessionRegistry: Sendable {
         supportsAssetFrames         : Bool = false,
         supportsFileWorkspaceContent: Bool = false,
         serviceHost                 : Bool = false,
-        subscriptionHost            : Bool = false
+        subscriptionHost            : Bool = false,
+        optionsHost                 : Bool = false
     ) throws -> (
         connection     : PublicationConnection,
         additionalBytes: Int
@@ -201,7 +202,8 @@ struct PublicationSessionRegistry: Sendable {
             supportsAssetFrames         : supportsAssetFrames,
             supportsFileWorkspaceContent: supportsFileWorkspaceContent,
             serviceHost                 : serviceHost,
-            subscriptionHost            : subscriptionHost
+            subscriptionHost            : subscriptionHost,
+            optionsHost                 : optionsHost
         )
 
         let isNewConnection = connections[identity.addonID] == nil

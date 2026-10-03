@@ -19,6 +19,8 @@ final class PresentationSinkFixture: AddonPresentationSink {
     var presentedActivities  : [any NotchLiveActivity] = []
     var shownNotices         : [any NotchTransientNotice] = []
     var updatedNotices       : [any NotchTransientNotice] = []
+    var optionsPage          : (any NotchContextualPage)?
+    var optionsDismiss       : (@MainActor () -> Void)?
 
     func register(_ widget: any NotchWidget) { registeredWidgets.append(widget) }
 
@@ -33,4 +35,23 @@ final class PresentationSinkFixture: AddonPresentationSink {
     func dismissActivity(id: String) {}
 
     func dismissActivities(from sourceID: String) {}
+
+    func presentOptions(
+        page     : any NotchContextualPage,
+        leaseID  : UUID,
+        origin   : AddonOptionsOrigin,
+        onDismiss: @escaping @MainActor () -> Void
+    ) -> Bool {
+        guard origin.isValid else { return false }
+        optionsPage = page
+        optionsDismiss = onDismiss
+        return true
+    }
+
+    func dismissOptions(leaseID: UUID) {
+        optionsPage = nil
+        let callback = optionsDismiss
+        optionsDismiss = nil
+        callback?()
+    }
 }

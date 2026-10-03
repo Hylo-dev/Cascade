@@ -40,19 +40,22 @@ public enum ActionAuthorizer {
         public let featureID  : String
         public let publication: Publication?
         public let eligibility: Eligibility
+        public let authorizedDocument: ContentDocument?
 
         public init(
             installed  : InstalledAddon,
             resolution : Resolution,
             featureID  : String,
             publication: Publication?,
-            eligibility: Eligibility = .unavailable
+            eligibility: Eligibility = .unavailable,
+            authorizedDocument: ContentDocument? = nil
         ) {
             self.installed   = installed
             self.resolution  = resolution
             self.featureID   = featureID
             self.publication = publication
             self.eligibility = eligibility
+            self.authorizedDocument = authorizedDocument
         }
     }
 
@@ -155,14 +158,15 @@ public enum ActionAuthorizer {
             for child in node.children ?? [] { try visit(child) }
         }
 
-        for document in [
+        let documents = context.authorizedDocument.map { [$0] } ?? [
             presentation.widget,
             presentation.compactLeading,
             presentation.compactTrailing,
             presentation.minimal,
             presentation.expanded
-        ] {
-            if let document { try visit(document.root) }
+        ].compactMap { $0 }
+        for document in documents {
+            try visit(document.root)
         }
 
         guard let payload else { throw Failure.unpublishedAction }

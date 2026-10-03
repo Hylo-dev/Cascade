@@ -4,6 +4,7 @@
 //
 
 import AppKit
+import CascadeContracts
 
 /// NotchEngine wires one global coordinator to persistent fixed-display panels.
 /// The app shell owns this entry point; displays may come and go underneath it
@@ -46,11 +47,14 @@ public final class NotchEngine {
     }
 
     public init(
-        configuration     : NotchConfiguration = .default,
-        displayPreferences: DisplayPresentationPreferences = DisplayPresentationPreferences()
+        configuration             : NotchConfiguration = .default,
+        displayPreferences        : DisplayPresentationPreferences = DisplayPresentationPreferences(),
+        persistsWidgetArrangements: Bool = true
     ) {
         let activityHost = LiveActivityHost()
-        let widgetHost   = WidgetHost(store: UserDefaultsWidgetArrangementStore())
+        let widgetHost = WidgetHost(
+            store: persistsWidgetArrangements ? UserDefaultsWidgetArrangementStore() : nil
+        )
 
         // The saved arrangements arrive off the main thread; until they do, a
         // display shows the default arrangement, which costs nothing to replace.
@@ -87,6 +91,29 @@ public final class NotchEngine {
     }
 
     public func register(_ widget: NotchWidget) { coordinator.register(widget) }
+
+    public func captureOptionsOrigin(
+        publicationID   : PublicationID,
+        observedRevision: UInt64
+    ) -> AddonOptionsOrigin? {
+        coordinator.captureOptionsOrigin(publicationID: publicationID, observedRevision: observedRevision)
+    }
+
+    public func presentOptions(
+        page     : any NotchContextualPage,
+        leaseID  : UUID,
+        origin   : AddonOptionsOrigin,
+        onDismiss: @escaping @MainActor () -> Void
+    ) -> Bool {
+        coordinator.presentOptions(
+            page     : page,
+            leaseID  : leaseID,
+            origin   : origin,
+            onDismiss: onDismiss
+        )
+    }
+
+    public func dismissOptions(leaseID: UUID) { coordinator.dismissOptions(leaseID: leaseID) }
 
     public func unregisterWidget(id: WidgetIdentifier) { coordinator.unregisterWidget(id: id) }
 

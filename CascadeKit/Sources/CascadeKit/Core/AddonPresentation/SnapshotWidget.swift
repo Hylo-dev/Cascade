@@ -17,6 +17,7 @@ final class SnapshotWidget: NotchWidget {
 
     private(set) var document          : ContentDocument
     private(set) var accessibilityLabel: String
+    private(set) var observedRevision  : UInt64
 
     private var assets : any ContentAssetResolving
     private var actions: ActionLease
@@ -24,15 +25,17 @@ final class SnapshotWidget: NotchWidget {
     private var context: WidgetContext?
 
     init(
-        id      : String,
-        document: ContentDocument,
-        assets  : any ContentAssetResolving,
-        actions : ActionLease
+        id              : String,
+        document        : ContentDocument,
+        assets          : any ContentAssetResolving,
+        actions         : ActionLease,
+        observedRevision: UInt64 = 1
     ) {
-        self.id            = WidgetIdentifier(id)
-        self.document      = document
-        self.assets        = assets
-        self.actions       = actions
+        self.id               = WidgetIdentifier(id)
+        self.document         = document
+        self.assets           = assets
+        self.actions          = actions
+        self.observedRevision = observedRevision
         accessibilityLabel = document.privacy == .sensitive
             ? String(localized: "Sensitive content hidden", bundle: .module)
             : document.accessibilityLabel
@@ -64,15 +67,17 @@ final class SnapshotWidget: NotchWidget {
     }
 
     func update(
-        document: ContentDocument,
-        assets  : any ContentAssetResolving,
-        actions : ActionLease
+        document        : ContentDocument,
+        assets          : any ContentAssetResolving,
+        actions         : ActionLease,
+        observedRevision: UInt64
     ) {
         permit?.revoke()
 
-        self.document      = document
-        self.assets        = assets
-        self.actions       = actions
+        self.document         = document
+        self.assets           = assets
+        self.actions          = actions
+        self.observedRevision = observedRevision
         accessibilityLabel = document.privacy == .sensitive
             ? String(localized: "Sensitive content hidden", bundle: .module)
             : document.accessibilityLabel

@@ -441,6 +441,10 @@ extension ResolutionPlanner {
                     let checkpoint = self
                     var failure   : AddonFailure?
                     do {
+                        if feature.supportsFullscreen,
+                           environment.hostCapabilities[AddonOptionsRequest.capability] == nil {
+                            throw AddonFailure(code: .dependencyUnavailable, reason: "Widget options host is unavailable.")
+                        }
                         let outcome = try satisfyAll(
                             feature.requires,
                             consumer : addon,

@@ -120,7 +120,8 @@ struct PublicationState: Sendable {
         supportsAssetFrames         : Bool = false,
         supportsFileWorkspaceContent: Bool = false,
         serviceHost                 : Bool = false,
-        subscriptionHost            : Bool = false
+        subscriptionHost            : Bool = false,
+        optionsHost                 : Bool = false
     ) throws -> PublicationConnection {
         let admission = try sessions.open(
             identity                    : identity,
@@ -134,7 +135,8 @@ struct PublicationState: Sendable {
             supportsAssetFrames         : supportsAssetFrames,
             supportsFileWorkspaceContent: supportsFileWorkspaceContent,
             serviceHost                 : serviceHost,
-            subscriptionHost            : subscriptionHost
+            subscriptionHost            : subscriptionHost,
+            optionsHost                 : optionsHost
         )
 
         retainedBytes += admission.additionalBytes
@@ -242,6 +244,12 @@ struct PublicationState: Sendable {
 
         guard output.operations.allSatisfy({
             if case .endPublication = $0 { return true }
+            if session.connection.negotiatedProtocol.supportsOptions {
+                switch $0 {
+                    case .presentOptions, .dismissOptions: return true
+                    default: break
+                }
+            }
             return false
         })
         else {
@@ -279,7 +287,8 @@ struct PublicationState: Sendable {
             authenticatedAddonID: session.identity.addonID,
             expectedCompletion  : expectedCompletion,
             previousRevisions   : previousRevisions,
-            contentSchemas      : session.connection.negotiatedProtocol.contentSchemas
+            contentSchemas      : session.connection.negotiatedProtocol.contentSchemas,
+            supportsOptions     : session.connection.negotiatedProtocol.supportsOptions
         )
 
         let instant = now()

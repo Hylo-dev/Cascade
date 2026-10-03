@@ -3,6 +3,8 @@
 //  CascadeKit
 //
 
+import Foundation
+
 /// DisplayPresentation is the complete content projection for one fixed panel.
 /// Provider references are shared, while each surface creates its own local view.
 struct DisplayPresentation {
@@ -19,6 +21,8 @@ struct DisplayPresentation {
     let showsWidgets            : Bool
     let contextualPage          : (any NotchContextualPage)?
     let contextualPageIsSelected: Bool
+    let optionsPage             : (any NotchContextualPage)?
+    let optionsLeaseID          : UUID?
     let widgetContentRevision   : UInt64
     let style                   : ExternalNotchStyle
 
@@ -32,7 +36,9 @@ struct DisplayPresentation {
         contextualPage          : (any NotchContextualPage)? = nil,
         contextualPageIsSelected: Bool = false,
         widgetContentRevision   : UInt64,
-        style                   : ExternalNotchStyle
+        style                   : ExternalNotchStyle,
+        optionsPage             : (any NotchContextualPage)? = nil,
+        optionsLeaseID          : UUID? = nil
     ) {
         self.primary                  = primary
         self.secondary                = secondary
@@ -44,16 +50,19 @@ struct DisplayPresentation {
         self.contextualPageIsSelected = contextualPageIsSelected
         self.widgetContentRevision    = widgetContentRevision
         self.style                    = style
+        self.optionsPage              = optionsPage
+        self.optionsLeaseID           = optionsLeaseID
     }
 
     var isExpanded: Bool {
-        expanded != nil || showsWidgets || contextualPageIsSelected
+        expanded != nil || showsWidgets || contextualPageIsSelected || optionsPage != nil
     }
 
     /// visibleActivityRoots mirrors the renderer's real mounted roots. An owner
     /// presents only its expanded root, a notice replaces compact roots locally,
     /// and a compact surface may mount primary plus its detached secondary.
     var visibleActivityRoots: [any NotchActivity] {
+        if optionsPage != nil { return [] }
         if let expanded {
             return [expanded]
         }
@@ -105,7 +114,9 @@ struct DisplayPresentation {
             contextualPage          : contextualPage,
             contextualPageIsSelected: contextualPageIsSelected,
             widgetContentRevision   : widgetContentRevision,
-            style                   : style
+            style                   : style,
+            optionsPage             : optionsPage,
+            optionsLeaseID          : optionsLeaseID
         )
     }
 }

@@ -8,18 +8,21 @@ import Foundation
 /// AddonFeature is a validated value in the version 1 addon protocol.
 public struct AddonFeature: Codable, Equatable, Sendable {
 
-    public let id      : String
-    public let requires: [AddonRequirement]
-    public let actions : [String]?
+    public let id                : String
+    public let requires          : [AddonRequirement]
+    public let actions           : [String]?
+    public let supportsFullscreen: Bool
 
     public init(
-        id      : String,
-        requires: [AddonRequirement],
-        actions : [String]?
+        id                : String,
+        requires          : [AddonRequirement],
+        actions           : [String]?,
+        supportsFullscreen: Bool = false
     ) throws {
-        self.id       = id
-        self.requires = requires
-        self.actions  = actions
+        self.id                 = id
+        self.requires           = requires
+        self.actions            = actions
+        self.supportsFullscreen = supportsFullscreen
 
         try validate()
     }
@@ -32,9 +35,10 @@ public struct AddonFeature: Codable, Equatable, Sendable {
         )
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id            = try container.decode(String.self, forKey: .id)
-        requires      = try container.decode([AddonRequirement].self, forKey: .requires)
-        actions       = try container.decodeIfPresent([String].self, forKey: .actions)
+        id                 = try container.decode(String.self, forKey: .id)
+        requires           = try container.decode([AddonRequirement].self, forKey: .requires)
+        actions            = try container.decodeIfPresent([String].self, forKey: .actions)
+        supportsFullscreen = try container.decodeIfPresent(Bool.self, forKey: .supportsFullscreen) ?? false
 
         try validate()
     }
@@ -51,10 +55,20 @@ public struct AddonFeature: Codable, Equatable, Sendable {
         )
     }
 
+    /// encode preserves the legacy closed manifest shape unless this feature opts in.
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(requires, forKey: .requires)
+        try container.encodeIfPresent(actions, forKey: .actions)
+        if supportsFullscreen { try container.encode(true, forKey: .supportsFullscreen) }
+    }
+
     private enum CodingKeys: String, CodingKey, CaseIterable {
 
         case id
         case requires = "REQUIRES"
         case actions
+        case supportsFullscreen
     }
 }

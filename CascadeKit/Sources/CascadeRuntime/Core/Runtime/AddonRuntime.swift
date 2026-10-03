@@ -274,6 +274,8 @@ actor AddonRuntime {
         let command : ResourceReservation
         var job     : ResourceReservation?
         var delivery: ActionDispatcher.Delivery?
+        var optionsOrigin : AddonOptionsOrigin?
+        var optionsLeaseID: UUID?
     }
 
     private struct ActionKey: Hashable, Sendable {
@@ -449,6 +451,7 @@ actor AddonRuntime {
     private let broker               : ServiceBroker
     private let serviceDecisionAccess: any RuntimeServiceDecisionAccess
     private let adapter              : any AddonRuntimeAdapter
+    private let optionsAdapter       : (any AddonRuntimeOptionsAdapter)?
     private let clock                : any RuntimeClock
     private let cpuAttributionLedger : ServiceCPUAttributionLedger
     private let processMetrics       : ProcessMetricsCoordinator
@@ -504,6 +507,7 @@ actor AddonRuntime {
 
     private var publicationState: PublicationState
     private var dispatcher       = ActionDispatcher()
+    private var optionsState      = RuntimeOptionsState()
     private var deadlines        = DeadlineQueue(maximumEntries: 5)
 
     private let publicationDeadlineKey = UUID()
@@ -584,7 +588,8 @@ actor AddonRuntime {
         storageFramesEnabled       : Bool,
         assetFramesEnabled         : Bool,
         serviceFramesEnabled       : Bool,
-        serviceSubscriptionsEnabled: Bool
+        serviceSubscriptionsEnabled: Bool,
+        optionsAdapter             : (any AddonRuntimeOptionsAdapter)?
     ) {
         precondition(resourceAccess.resourceGovernorTarget === governor)
 
@@ -611,6 +616,7 @@ actor AddonRuntime {
         self.broker               = broker
         serviceDecisionAccess     = decisionAccess
         self.adapter              = adapter
+        self.optionsAdapter       = optionsAdapter
         self.clock                = clock
         self.cpuAttributionLedger = cpuAttributionLedger
 
@@ -632,7 +638,8 @@ actor AddonRuntime {
         clock               : any RuntimeClock = SystemRuntimeClock(),
         metricRead          : @escaping ProcessMetricsCoordinator.Read = { ProcessMetricsReader().read($0) },
         maximumEnvelopeBytes: Int = 512 * 1_024,
-        storageCoordinator  : AddonStorageCoordinator? = nil
+        storageCoordinator  : AddonStorageCoordinator? = nil,
+        optionsAdapter      : (any AddonRuntimeOptionsAdapter)? = nil
     ) async throws -> AddonRuntime {
         try await make(
             catalog               : catalog,
@@ -644,7 +651,8 @@ actor AddonRuntime {
             clock                 : clock,
             metricRead            : metricRead,
             maximumEnvelopeBytes  : maximumEnvelopeBytes,
-            storageCoordinator    : storageCoordinator
+            storageCoordinator    : storageCoordinator,
+            optionsAdapter        : optionsAdapter
         )
     }
 
@@ -659,7 +667,8 @@ actor AddonRuntime {
         clock                 : any RuntimeClock,
         metricRead            : @escaping ProcessMetricsCoordinator.Read = { ProcessMetricsReader().read($0) },
         maximumEnvelopeBytes  : Int = 512 * 1_024,
-        storageCoordinator    : AddonStorageCoordinator? = nil
+        storageCoordinator    : AddonStorageCoordinator? = nil,
+        optionsAdapter        : (any AddonRuntimeOptionsAdapter)? = nil
     ) async throws -> AddonRuntime {
         guard
             storageCoordinator == nil
@@ -689,9 +698,16 @@ actor AddonRuntime {
             && environment.protocolVersion.minor >= 4
             && maximumEnvelopeBytes >= ServiceSubscriptionFrameCodec.maximumEncodedBytes
 
+        let optionsEnabled = serviceSubscriptionsEnabled
+            && environment.protocolVersion.minor >= 5
+            && optionsAdapter != nil
+        var capabilities = environment.hostCapabilities
+        capabilities.removeValue(forKey: AddonOptionsRequest.capability)
+        if optionsEnabled { capabilities[AddonOptionsRequest.capability] = SemanticVersion(1, 0, 0) }
+
         let effectiveEnvironment = HostEnvironment(
             osVersion          : environment.osVersion,
-            hostCapabilities   : environment.hostCapabilities,
+            hostCapabilities   : capabilities,
             applications       : environment.applications,
             grants             : environment.grants,
             explicitBindings   : environment.explicitBindings,
@@ -701,7 +717,7 @@ actor AddonRuntime {
                     environment.protocolVersion.minor,
                     storageCoordinator == nil
                         ? 0
-                        : (assetFramesEnabled ? (serviceFramesEnabled ? (serviceSubscriptionsEnabled ? 4 : 3) : 2) : 1)
+                        : (assetFramesEnabled ? (serviceFramesEnabled ? (serviceSubscriptionsEnabled ? (optionsEnabled ? 5 : 4) : 3) : 2) : 1)
                 )
             ),
             serviceAccessGrants: environment.serviceAccessGrants
@@ -738,7 +754,8 @@ actor AddonRuntime {
             storageFramesEnabled       : storageFramesEnabled,
             assetFramesEnabled         : assetFramesEnabled,
             serviceFramesEnabled       : serviceFramesEnabled,
-            serviceSubscriptionsEnabled: serviceSubscriptionsEnabled
+            serviceSubscriptionsEnabled: serviceSubscriptionsEnabled,
+            optionsAdapter             : optionsEnabled ? optionsAdapter : nil
         )
         try await runtime.install(catalog: catalog, environment: effectiveEnvironment)
 
@@ -1561,7 +1578,8 @@ actor AddonRuntime {
                 supportsKeyedStorageFrames: storageFramesEnabled,
                 supportsAssetFrames       : assetFramesEnabled,
                 serviceHost               : serviceFramesEnabled,
-                subscriptionHost          : serviceSubscriptionsEnabled
+                subscriptionHost          : serviceSubscriptionsEnabled,
+                optionsHost               : optionsAdapter != nil
             )
             publicationConnection = openedConnection
 
@@ -2971,10 +2989,13 @@ actor AddonRuntime {
                   output.checkpoint == nil,
                   output.publications.allSatisfy({ assignments[$0.id]?.owner == owner }),
                   output.operations.allSatisfy({ outputOperation in
-                      if case .endPublication(let id) = outputOperation {
-                          return assignments[id]?.owner == owner
+                      switch outputOperation {
+                          case .endPublication(let id): return assignments[id]?.owner == owner
+                          case .presentOptions(let request):
+                              return optionsAdapter != nil && assignments[request.publicationID]?.owner == owner
+                          case .dismissOptions: return optionsAdapter != nil
+                          default: return false
                       }
-                      return false
                   })
             else { throw failure(.invalidPayload) }
 
@@ -3003,11 +3024,19 @@ actor AddonRuntime {
 
             let assetPreparationBytes = try assetState.preparationBytes(prepared)
             let estimatedGrowth       = max(0, prepared.retainedBytesAfter - publicationState.retainedBytes)
-            try await growPool(owner: owner, by: estimatedGrowth + assetPreparationBytes)
+            let preparedOptions = try prepareOptions(output, connection: connection, at: try currentInstant().wall)
+            let optionsBytes = preparedOptions.map { optionsState.preparationBytes($0) } ?? 0
+            guard prepared.retainedBytesAfter + optionsState.retainedBytes + optionsBytes <= PublicationState.maximumStateBytes else {
+                throw failure(.resourceDenied)
+            }
+            try await growPool(owner: owner, by: estimatedGrowth + assetPreparationBytes + optionsBytes)
             try validateOperation(operation, owner: owner)
 
             let finalInstant = try currentInstant()
             try publicationState.validatePreparedOutput(prepared, at: finalInstant.wall)
+            if preparedOptions != nil {
+                _ = try prepareOptions(output, connection: connection, at: finalInstant.wall)
+            }
             if case .action(_, let delivery, let outcome) = completion {
                 guard try dispatcher.canComplete(
                     delivery,
@@ -3018,6 +3047,9 @@ actor AddonRuntime {
                 ) else { throw failure(.sessionRevoked) }
             }
 
+            if let preparedOptions, optionsAdapter?.present(preparedOptions) != true {
+                throw failure(.sessionRevoked)
+            }
             let admission = try commitPublicationAndAssets(
                 prepared,
                 connection: connection,
@@ -3029,6 +3061,13 @@ actor AddonRuntime {
             for publication in output.publications {
                 assignments[publication.id]?.hasPublished = true
             }
+            if let preparedOptions { optionsState.commit(preparedOptions) }
+            for operation in output.operations {
+                if case .dismissOptions(let leaseID) = operation {
+                    revokeOptionsLease(leaseID: leaseID, owner: owner)
+                }
+            }
+            reconcileOptions(at: finalInstant.wall)
 
             var completedActionResources: ActionResources?
             if case .action(let key, let delivery, let outcome) = completion {
@@ -3286,9 +3325,13 @@ actor AddonRuntime {
     }
 
     /// submitAction returns exact recovery before touching the admission lane or governor.
-    func submitAction(_ request: ActionRequest) async throws -> ActionJournal.Admission {
+    func submitAction(
+        _ request     : ActionRequest,
+        origin        : AddonOptionsOrigin? = nil,
+        optionsLeaseID: UUID? = nil
+    ) async throws -> ActionJournal.Admission {
         let now     = try currentInstant()
-        let context = try actionContext(request.publicationID, at: now.wall)
+        let context = try optionsActionContext(request, leaseID: optionsLeaseID, at: now.wall)
 
         switch try dispatcher.classify(
             request: request,
@@ -3322,13 +3365,20 @@ actor AddonRuntime {
                     let fresh     = try currentInstant()
                     let admission = try dispatcher.submit(
                         request,
-                        context: try actionContext(request.publicationID, at: fresh.wall),
+                        context: try optionsActionContext(request, leaseID: optionsLeaseID, at: fresh.wall),
                         at     : fresh
                     )
                     actionResources[ActionKey(
                         owner    : quote.owner,
                         requestID: quote.requestID
-                    )] = ActionResources(command: admittedCommand)
+                    )] = ActionResources(
+                        command       : admittedCommand,
+                        optionsOrigin : optionsLeaseID == nil && origin?.isValid == true
+                            && origin?.publicationID == request.publicationID
+                            && origin?.observedRevision == request.observedRevision
+                            && origin.map({ optionsAdapter?.accepts($0) == true }) == true ? origin : nil,
+                        optionsLeaseID: optionsLeaseID
+                    )
                     await shrinkAllPools()
                     await finishAdmissionAndDrain(operation)
 
@@ -3400,7 +3450,11 @@ actor AddonRuntime {
             guard let ticket = dispatcher.takeReady(expectedJobID: job.id, at: fresh.monotonic),
                   let delivery = try dispatcher.consume(
                       ticket,
-                      context   : actionContext(request.publicationID, at: fresh.wall),
+                      context   : optionsActionContext(
+                          request,
+                          leaseID: actionResources[ActionKey(owner: owner, requestID: request.requestID)]?.optionsLeaseID,
+                          at     : fresh.wall
+                      ),
                       generation: connection.publicationConnection.generation,
                       at        : fresh
                   )
@@ -6277,6 +6331,11 @@ actor AddonRuntime {
         guard let pair = processes.first(where: { $0.value.incarnation == incarnation }) else { return }
 
         let owner        = pair.key
+        revokeOptions(owner: owner)
+        if let generation = connection(from: pair.value.phase)?.publicationConnection.generation {
+            optionsState.invalidateGeneration(owner: owner, generation: generation)
+            deferredPoolOwners.insert(owner)
+        }
         let crashSession = cause == .unexpected
             ? pair.value.healthSession ?? pair.value.pendingCrashSession
             : nil
@@ -6379,6 +6438,7 @@ actor AddonRuntime {
         }
 
         publicationState.expire(at: instant.wall)
+        reconcileOptions(at: instant.wall)
         assetState.reconcile(publications: publicationState, at: instant.wall)
         // A canonical publication end or expiry revokes the exact bound transfer immediately,
         // without waiting for process exit or the 30-second assembler deadline.
@@ -6500,7 +6560,8 @@ actor AddonRuntime {
             try refreshDeadline(
                 publicationDeadlineKey,
                 owner   : owner,
-                deadline: publicationState.nextDeadline(after: fresh.wall).map(DeadlineQueue.Deadline.wall)
+                deadline: [publicationState.nextDeadline(after: fresh.wall), optionsState.active?.expiresAt]
+                    .compactMap { $0 }.min().map(DeadlineQueue.Deadline.wall)
             )
 
             let coldStart = processes.values.compactMap { process -> Duration? in
@@ -6613,6 +6674,7 @@ actor AddonRuntime {
 
         let ticket = ArchiveQuiescence(nonce: UUID(), deadline: deadline)
         archiveQuiescence = ticket
+        for owner in ownerPools.keys { revokeOptions(owner: owner) }
         advanceAuthority()
         guard !stopped else { throw failure(.resourceDenied) }
 
@@ -8734,6 +8796,147 @@ actor AddonRuntime {
         }) else { throw failure(.sessionRevoked) }
     }
 
+    /// prepareOptions quotes one mutation before retaining or projecting it. The
+    /// original opening must be a delivery from this exact live generation.
+    private func prepareOptions(
+        _ output  : ProviderOutput,
+        connection: RuntimeConnection,
+        at instant: Date
+    ) throws -> AddonOptionsPresentation? {
+        let operations = output.operations.filter {
+            switch $0 {
+                case .presentOptions, .dismissOptions: return true
+                default: return false
+            }
+        }
+        guard operations.count <= 1 else { throw failure(.invalidPayload) }
+        if let active = optionsState.active,
+           let source = output.publications.first(where: { $0.id == active.request.publicationID }),
+           !operations.contains(where: {
+               switch $0 {
+                   case .presentOptions: return true
+                   case .dismissOptions(let leaseID): return leaseID == active.request.leaseID
+                   default: return false
+               }
+           }) {
+            try RuntimeOptionsState.validateAggregateBudget(source: source, document: active.request.document, at: instant)
+        }
+        guard let operation = operations.first else { return nil }
+        guard connection.publicationConnection.negotiatedProtocol.supportsOptions,
+              optionsAdapter != nil
+        else { throw failure(.permissionDenied) }
+        try requireFreshAdmissionOpen(owner: connection.identity.addonID)
+        switch operation {
+            case .presentOptions(let request):
+                guard !output.operations.contains(.endPublication(request.publicationID)) else {
+                    throw failure(.sessionRevoked)
+                }
+                let context = try actionContext(request.publicationID, at: instant)
+                let source = output.publications.first { $0.id == request.publicationID } ?? context.publication
+                let proposedContext = ActionAuthorizer.Context(
+                    installed  : context.installed,
+                    resolution : context.resolution,
+                    featureID  : context.featureID,
+                    publication: source,
+                    eligibility: context.eligibility
+                )
+                let key = ActionKey(owner: connection.identity.addonID, requestID: request.actionRequestID)
+                let resources = actionResources[key]
+                let delivery = resources?.delivery
+                let isCurrentDelivery = delivery?.generation == connection.publicationConnection.generation
+                let candidate = try optionsState.prepare(
+                    request,
+                    context        : proposedContext,
+                    action         : isCurrentDelivery ? delivery?.ticket.request : nil,
+                    origin         : isCurrentDelivery ? resources?.optionsOrigin : nil,
+                    generation     : connection.publicationConnection.generation,
+                    supportsOptions: true,
+                    at             : instant
+                )
+                guard optionsAdapter?.accepts(candidate.origin) == true else { throw failure(.sessionRevoked) }
+                return candidate
+            case .dismissOptions(let leaseID):
+                if optionsState.active?.request.leaseID == leaseID,
+                   optionsState.active?.request.publicationID.addonID != connection.identity.addonID {
+                    throw failure(.permissionDenied)
+                }
+                return nil
+            default: return nil
+        }
+    }
+
+    /// dismissOptions is the host callback lane; another owner's lease grants no
+    /// authority, and a repeated or superseded dismissal is harmless.
+    func dismissOptions(
+        leaseID: UUID,
+        owner  : AddonID,
+        origin : AddonOptionsOrigin
+    ) async {
+        guard optionsState.active?.origin === origin else { return }
+        revokeOptionsLease(leaseID: leaseID, owner: owner)
+        await drainIfNoActiveAdmission()
+    }
+
+    private func revokeOptionsLease(
+        leaseID: UUID,
+        owner  : AddonID
+    ) {
+        guard let active = optionsState.active,
+              active.request.publicationID.addonID == owner,
+              optionsState.dismiss(leaseID)
+        else { return }
+        optionsAdapter?.dismiss(leaseID: leaseID, origin: active.origin)
+        deferredPoolOwners.insert(owner)
+    }
+
+    private func revokeOptions(owner: AddonID) {
+        if let active = optionsState.active, active.request.publicationID.addonID == owner {
+            revokeOptionsLease(leaseID: active.request.leaseID, owner: owner)
+        }
+        for (key, resources) in actionResources where key.owner == owner {
+            resources.optionsOrigin?.revoke()
+        }
+    }
+
+    private func reconcileOptions(at instant: Date) {
+        guard let active = optionsState.active else { return }
+        let id = active.request.publicationID
+        guard active.origin.isValid,
+              active.expiresAt > instant,
+              let context = try? actionContext(id, at: instant),
+              let publication = context.publication,
+              (publication.content ?? publication.timeline?.last { $0.date <= instant }?.content)?.widget?.privacy == .publicContent,
+              context.eligibility == .available,
+              let process = processes[id.addonID],
+              case .connected(let connection) = process.phase,
+              connection.publicationConnection.generation == active.generation
+        else {
+            revokeOptionsLease(leaseID: active.request.leaseID, owner: id.addonID)
+            return
+        }
+        if !optionsState.controlsAvailable(context: context, generation: active.generation, at: instant) {
+            optionsAdapter?.invalidateControls(leaseID: active.request.leaseID, origin: active.origin)
+        }
+    }
+
+    private func optionsActionContext(
+        _ request : ActionRequest,
+        leaseID   : UUID?,
+        at instant: Date
+    ) throws -> ActionAuthorizer.Context {
+        let context = try actionContext(request.publicationID, at: instant)
+        guard let leaseID else { return context }
+        guard let process = processes[request.publicationID.addonID],
+              case .connected(let connection) = process.phase
+        else { throw failure(.sessionRevoked) }
+        return try optionsState.actionContext(
+            context   : context,
+            leaseID   : leaseID,
+            generation: connection.publicationConnection.generation,
+            at        : instant
+        )
+    }
+
     private func actionContext(
         _ id   : PublicationID,
         at date: Date
@@ -8808,6 +9011,7 @@ actor AddonRuntime {
         guard let pool = ownerPools[owner] else { return 0 }
 
         var total = pool.baseBytes
+        total += optionsState.retainedBytes(owner: owner)
         total += assetState.retainedBytes(owner: owner)
         if activeOperation?.owner == owner {
             total += pendingAssetMetadataBytes + pendingArchiveMetadataBytes + pendingServiceMetadataBytes
@@ -9218,6 +9422,7 @@ actor AddonRuntime {
         owner : AddonID,
         reason: RuntimeStopReason
     ) {
+        revokeOptions(owner: owner)
         if reason != .connectionLost {
             let unresolved = pendingCrashDecisions.removeValue(forKey: owner)
             if unresolved != nil || processes[owner]?.pendingCrashSession != nil {
@@ -9227,6 +9432,11 @@ actor AddonRuntime {
         }
 
         guard var process = processes[owner], !process.stopRequested else { return }
+
+        if let generation = connection(from: process.phase)?.publicationConnection.generation {
+            optionsState.invalidateGeneration(owner: owner, generation: generation)
+            deferredPoolOwners.insert(owner)
+        }
 
         revokeMetricProcess(
             owner               : owner,

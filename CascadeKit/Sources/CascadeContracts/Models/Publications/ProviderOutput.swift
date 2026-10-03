@@ -80,7 +80,8 @@ public struct ProviderOutput: Codable, Equatable, Sendable {
         authenticatedAddonID: AddonID,
         expectedCompletion  : CompletionExpectation?,
         previousRevisions   : [PublicationID: UInt64],
-        contentSchemas      : [Int] = [1]
+        contentSchemas      : [Int] = [1],
+        supportsOptions     : Bool = false
     ) throws {
         try ContractValidation.require(
             !contentSchemas.isEmpty && contentSchemas.count <= 3
@@ -112,6 +113,17 @@ public struct ProviderOutput: Codable, Equatable, Sendable {
 
         for operation in operations {
             if case .endPublication(let id) = operation { try id.validateOwner(authenticatedAddonID) }
+            switch operation {
+                case .presentOptions(let request):
+                    try request.publicationID.validateOwner(authenticatedAddonID)
+                    try ContractValidation.require(
+                        supportsOptions && contentSchemas.contains(request.document.schemaVersion),
+                        "Options capability and content schema must be negotiated"
+                    )
+                case .dismissOptions:
+                    try ContractValidation.require(supportsOptions, "Options capability was not negotiated")
+                default: break
+            }
         }
 
         if let completion {

@@ -12,6 +12,8 @@ public enum OperationRequest: Codable, Equatable, Sendable {
     case schedule      (deadline: Date, eventID: String)
     case releaseLease  (leaseID: UUID)
     case endPublication(PublicationID)
+    case presentOptions(AddonOptionsRequest)
+    case dismissOptions(UUID)
 
     /// validate checks values constructed in Swift before envelope admission.
     public func validate() throws {
@@ -30,7 +32,8 @@ public enum OperationRequest: Codable, Equatable, Sendable {
                     "Invalid event ID"
                 )
 
-            case .releaseLease, .endPublication: break
+            case .presentOptions(let request): try request.validate()
+            case .releaseLease, .endPublication, .dismissOptions: break
         }
     }
 
@@ -44,6 +47,8 @@ public enum OperationRequest: Codable, Equatable, Sendable {
             case .schedule      : allowed = ["kind", "deadline", "eventID"]
             case .releaseLease  : allowed = ["kind", "leaseID"]
             case .endPublication: allowed = ["kind", "publicationID"]
+            case .presentOptions: allowed = ["kind", "options"]
+            case .dismissOptions: allowed = ["kind", "leaseID"]
         }
         try ContractValidation.require(
             Set(fields.allKeys.map(\.stringValue)) == allowed,
@@ -79,6 +84,10 @@ public enum OperationRequest: Codable, Equatable, Sendable {
 
             case .endPublication:
                 self = .endPublication(try values.decode(PublicationID.self, forKey: .publicationID))
+            case .presentOptions:
+                self = .presentOptions(try values.decode(AddonOptionsRequest.self, forKey: .options))
+            case .dismissOptions:
+                self = .dismissOptions(try values.decode(UUID.self, forKey: .leaseID))
         }
     }
 
@@ -102,16 +111,22 @@ public enum OperationRequest: Codable, Equatable, Sendable {
             case .endPublication(let identifier):
                 try values.encode(Kind.endPublication, forKey: .kind)
                 try values.encode(identifier, forKey: .publicationID)
+            case .presentOptions(let request):
+                try values.encode(Kind.presentOptions, forKey: .kind)
+                try values.encode(request, forKey: .options)
+            case .dismissOptions(let identifier):
+                try values.encode(Kind.dismissOptions, forKey: .kind)
+                try values.encode(identifier, forKey: .leaseID)
         }
     }
 
     private enum Kind: String, Codable {
 
-        case requestService, schedule, releaseLease, endPublication
+        case requestService, schedule, releaseLease, endPublication, presentOptions, dismissOptions
     }
 
     private enum CodingKeys: String, CodingKey, CaseIterable {
 
-        case kind, requirementID, scope, deadline, eventID, leaseID, publicationID
+        case kind, requirementID, scope, deadline, eventID, leaseID, publicationID, options
     }
 }

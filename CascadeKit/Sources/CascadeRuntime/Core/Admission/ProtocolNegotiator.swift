@@ -23,6 +23,7 @@ public struct NegotiatedProtocol: Equatable, Sendable {
     public var serviceInvocationFrameProfile: ServiceInvocationFrameProfile? { minor >= 3 ? .v1_3 : nil }
 
     public var serviceSubscriptionFrameProfile: ServiceSubscriptionFrameProfile? { minor >= 4 ? .v1_4 : nil }
+    public var supportsOptions: Bool { minor >= 5 }
 
     fileprivate init(
         minor         : Int,
@@ -70,7 +71,8 @@ public enum ProtocolNegotiator {
         supportsAssetFrames         : Bool,
         supportsFileWorkspaceContent: Bool = false,
         serviceHost                 : Bool,
-        subscriptionHost            : Bool = false
+        subscriptionHost            : Bool = false,
+        optionsHost                 : Bool = false
     ) throws -> NegotiatedProtocol {
         try offer.validate()
         try manifestProtocol.validate()
@@ -96,7 +98,7 @@ public enum ProtocolNegotiator {
         let lower = max(offer.minimumMinor, manifestProtocol.minimumMinor)
         let upper = min(
             offer.maximumMinor,
-            supportsKeyedStorageFrames ? (supportsAssetFrames ? (serviceHost ? (subscriptionHost ? 4 : 3) : 2) : 1) : 0
+            supportsKeyedStorageFrames ? (supportsAssetFrames ? (serviceHost ? (subscriptionHost ? (optionsHost ? 5 : 4) : 3) : 2) : 1) : 0
         )
         guard lower <= upper else {
             throw AddonFailure(

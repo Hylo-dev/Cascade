@@ -259,6 +259,9 @@ final class NotchController: NotchDisplayPresenting {
         let contextualPageID        : String?
         let contextualPageRevision  : UInt64?
         let contextualPageIsSelected: Bool
+        let optionsPageIdentity     : ObjectIdentifier?
+        let optionsPageRevision     : UInt64?
+        let optionsLeaseID          : UUID?
         let widgetContentRevision   : UInt64
         let style                   : ExternalNotchStyle
     }
@@ -454,6 +457,7 @@ final class NotchController: NotchDisplayPresenting {
             isVisible: false
         )
         hostView.clearActivityContent()
+        hostView.clearOptionsContent()
         hostView.setSettingsButton(frame: .zero, isVisible: false)
         hostView.setFileDropIntakeFrame(nil)
         onExpandedFrameChanged?(nil)
@@ -574,6 +578,9 @@ final class NotchController: NotchDisplayPresenting {
             contextualPageID        : presentation.contextualPage?.id,
             contextualPageRevision  : presentation.contextualPage?.contentRevision,
             contextualPageIsSelected: presentation.contextualPageIsSelected,
+            optionsPageIdentity     : presentation.optionsPage.map(ObjectIdentifier.init),
+            optionsPageRevision     : presentation.optionsPage?.contentRevision,
+            optionsLeaseID          : presentation.optionsLeaseID,
             widgetContentRevision   : presentation.widgetContentRevision,
             style                   : presentation.style
         )
@@ -730,6 +737,10 @@ final class NotchController: NotchDisplayPresenting {
         guard state.isClosed, displayPresentation.notice == nil else { return nil }
 
         return displayPresentation.secondary
+    }
+
+    func setOptionsDismissHandler(_ handler: (@MainActor () -> Void)?) {
+        hostView.onOptionsDismissed = handler
     }
 
     private var displayedContextualPage: (any NotchContextualPage)? {
@@ -1950,6 +1961,9 @@ final class NotchController: NotchDisplayPresenting {
 
     private func expandedTargetHeight(for display: ActiveDisplay) -> CGFloat {
         let resting = restingSize(for: display)
+        if displayPresentation?.optionsPage != nil {
+            return max(resting.height, normalizedMaximumExpandedHeight())
+        }
         if let page = displayedContextualPage {
             let declared            = page.contentHeight
             let contentHeight       = declared.isFinite ? max(0, declared) : 0
@@ -2029,6 +2043,12 @@ final class NotchController: NotchDisplayPresenting {
         updatePreferredCompactSideWidth()
         onExpandedFrameChanged?(expandedFrame)
         hostView.setSettingsButton(frame: .zero, isVisible: false)
+        hostView.setBackButton(frame: .zero, isVisible: false)
+        defer {
+            if displayPresentation?.optionsPage == nil, !state.isClosed {
+                hostView.setOptionsContent(nil, identity: nil, revision: 0, frame: .zero, reducesMotion: reducesMotion())
+            }
+        }
 
         guard isStarted,
               isPanelVisible,
@@ -2042,6 +2062,7 @@ final class NotchController: NotchDisplayPresenting {
                 isVisible: false
             )
             hostView.clearActivityContent()
+            hostView.clearOptionsContent()
             return
         }
 
@@ -2090,6 +2111,7 @@ final class NotchController: NotchDisplayPresenting {
         }
 
         if state.isClosed {
+            hostView.clearOptionsContent()
             hostView.setContent(
                 AnyView(EmptyView()),
                 frame    : .zero,
@@ -2164,6 +2186,33 @@ final class NotchController: NotchDisplayPresenting {
         }
 
         if !isAttachingSecondary { hostView.clearDetachedActivityContent() }
+
+        if let page = displayPresentation?.optionsPage,
+           let leaseID = displayPresentation?.optionsLeaseID {
+            let height = expandedTargetHeight(for: display)
+            let halfWidth = effectiveExpandedHalfWidth(for: display)
+            let headerHeight = max(hardwareNotchHeight, 28) + expandedTopInset
+            let frame = CGRect(
+                x     : centerX - halfWidth + expandedHorizontalInset,
+                y     : contentTopY - height + expandedBottomInset,
+                width : max(0, halfWidth * 2 - expandedHorizontalInset * 2),
+                height: max(0, height - headerHeight - expandedBottomInset)
+            )
+            hostView.setBackButton(
+                frame    : CGRect(x: centerX - halfWidth + 12, y: contentTopY - max(hardwareNotchHeight, 28), width: 28, height: 28),
+                isVisible: centerX - halfWidth + 40 <= centerX - hardwareNotchWidth / 2
+            )
+            hostView.setOptionsContent(
+                page.makeContentView(in: NotchContextualPageContext(availableSize: frame.size, centerObstructionFrame: .zero)),
+                identity     : leaseID,
+                revision     : page.contentRevision,
+                frame        : frame,
+                reducesMotion: reducesMotion()
+            )
+            hostView.setContent(AnyView(EmptyView()), frame: .zero, isVisible: false)
+            hostView.clearActivityContent()
+            return
+        }
 
         if let page = displayedContextualPage {
             hostView.clearActivityContent()

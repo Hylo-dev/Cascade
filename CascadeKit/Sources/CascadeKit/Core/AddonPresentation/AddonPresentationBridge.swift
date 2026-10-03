@@ -14,6 +14,8 @@ import Foundation
 public final class AddonPresentationBridge {
 
     public typealias ActionHandler = @MainActor @Sendable (PublicationID, UInt64, ActionDescriptor) -> Void
+    public typealias WidgetActionHandler = @MainActor @Sendable (PublicationID, UInt64, ActionDescriptor, AddonOptionsOrigin) -> Void
+    public typealias OptionsActionHandler = @MainActor @Sendable (UUID, PublicationID, UInt64, ActionDescriptor) -> Void
 
     private struct Presented {
 
@@ -38,6 +40,13 @@ public final class AddonPresentationBridge {
     private let assets       : any AddonPresentationAssetResolving
     private let now          : () -> Date
     private let actionHandler: ActionHandler
+    private let widgetActionHandler: WidgetActionHandler?
+    private let optionsActionHandler: OptionsActionHandler?
+
+    private var optionsPresentation: AddonOptionsPresentation?
+    private var optionsPage: SnapshotOptionsPage?
+    private var optionsDismiss: (@MainActor () -> Void)?
+    private var optionsExpiryTask: Task<Void, Never>?
 
     private var presented           : [PublicationID: Presented] = [:]
     private var pending             : [PublicationID: Pending] = [:]
@@ -47,13 +56,17 @@ public final class AddonPresentationBridge {
     public convenience init(
         engine  : NotchEngine,
         assets  : (any AddonPresentationAssetResolving)? = nil,
-        onAction: @escaping ActionHandler = { _, _, _ in }
+        onAction: @escaping ActionHandler = { _, _, _ in },
+        onWidgetAction: WidgetActionHandler? = nil,
+        onOptionsAction: OptionsActionHandler? = nil
     ) {
         self.init(
             sink    : engine,
             assets  : assets ?? EmptyAddonAssetResolver(),
             now     : Date.init,
-            onAction: onAction
+            onAction: onAction,
+            onWidgetAction: onWidgetAction,
+            onOptionsAction: onOptionsAction
         )
     }
 
@@ -61,12 +74,16 @@ public final class AddonPresentationBridge {
         sink    : any AddonPresentationSink,
         assets  : (any AddonPresentationAssetResolving)? = nil,
         now     : @escaping () -> Date = Date.init,
-        onAction: @escaping ActionHandler = { _, _, _ in }
+        onAction: @escaping ActionHandler = { _, _, _ in },
+        onWidgetAction: WidgetActionHandler? = nil,
+        onOptionsAction: OptionsActionHandler? = nil
     ) {
         self.sink     = sink
         self.assets   = assets ?? EmptyAddonAssetResolver()
         self.now      = now
         actionHandler = onAction
+        widgetActionHandler = onWidgetAction
+        optionsActionHandler = onOptionsAction
     }
 
     public func apply(_ publications: [Publication]) {
@@ -79,6 +96,14 @@ public final class AddonPresentationBridge {
 
         for id in Set(presented.keys).union(pending.keys).subtracting(incoming.keys) {
             retire(id)
+        }
+        if let optionsPresentation {
+            let request = optionsPresentation.request
+            if incoming[request.publicationID].flatMap({ resolvedContent(of: $0, at: instant) })?.widget?.privacy != .publicContent {
+                dismissOptions(leaseID: request.leaseID)
+            } else if incoming[request.publicationID]?.revision != request.observedRevision {
+                invalidateOptionsControls(leaseID: request.leaseID)
+            }
         }
 
         for publication in incoming.values.sorted(by: stableOrder) {
@@ -117,8 +142,14 @@ public final class AddonPresentationBridge {
         let lease = ActionLease(
             expiresAt: publication.expiresAt,
             now      : now
-        ) { [publicationID = publication.id, wireRevision = publication.revision, actionHandler] action in
-            actionHandler(publicationID, wireRevision, action)
+        ) { [publicationID = publication.id, wireRevision = publication.revision, actionHandler, widgetActionHandler, sink] action in
+            if publication.kind == .widget,
+               let widgetActionHandler,
+               let origin = sink.captureOptionsOrigin(publicationID: publicationID, observedRevision: wireRevision) {
+                widgetActionHandler(publicationID, wireRevision, action, origin)
+            } else {
+                actionHandler(publicationID, wireRevision, action)
+            }
         }
         let resolver = ScopedAssetResolver(
             base               : assets,
@@ -136,7 +167,8 @@ public final class AddonPresentationBridge {
                     widget.update(
                         document: document,
                         assets  : resolver,
-                        actions : lease
+                        actions : lease,
+                        observedRevision: publication.revision
                     )
                     widgetID       = widget.id
                     snapshotWidget = widget
@@ -145,7 +177,8 @@ public final class AddonPresentationBridge {
                         id      : engineID,
                         document: document,
                         assets  : resolver,
-                        actions : lease
+                        actions : lease,
+                        observedRevision: publication.revision
                     )
                     widgetID       = widget.id
                     snapshotWidget = widget
@@ -233,6 +266,100 @@ public final class AddonPresentationBridge {
             sessionStartedAt    : old?.sessionStartedAt ?? waiting?.sessionStartedAt ?? instant,
             wasPresented        : old != nil || waiting?.wasPresented == true
         )
+    }
+
+    /// presentOptions rechecks the source and opaque origin after an actor hop. This
+    /// common presenter also serves host-owned Debug fixtures without provider code.
+    @discardableResult
+    public func presentOptions(
+        _ presentation: AddonOptionsPresentation,
+        onDismiss     : @escaping @MainActor () -> Void
+    ) -> Bool {
+        let request = presentation.request
+        guard presentation.origin.isValid,
+              presentation.expiresAt > now(),
+              let source = presented[request.publicationID],
+              source.publication.kind == .widget,
+              source.publication.revision == request.observedRevision,
+              source.publication.expiresAt >= presentation.expiresAt,
+              (try? request.validate()) != nil
+        else { return false }
+        if let current = optionsPresentation, current.request.leaseID == request.leaseID {
+            guard current.origin === presentation.origin,
+                  current.generation == presentation.generation,
+                  current.request.actionRequestID == request.actionRequestID,
+                  presentation.expiresAt <= current.expiresAt
+            else { return false }
+        } else if let current = optionsPresentation, current.origin === presentation.origin {
+            return false
+        }
+        let actions = ActionLease(expiresAt: presentation.expiresAt, now: now) {
+            [weak self, origin = presentation.origin] action in
+            guard origin.isValid,
+                  self?.optionsPresentation?.request.leaseID == request.leaseID
+            else { return }
+            self?.optionsActionHandler?(request.leaseID, request.publicationID, request.observedRevision, action)
+        }
+        let page = SnapshotOptionsPage(
+            id      : "options:\(request.leaseID.uuidString)",
+            document: request.document,
+            assets  : ScopedAssetResolver(base: assets, publicationID: request.publicationID, publicationRevision: request.observedRevision),
+            actions : actions,
+            revision: (optionsPage?.contentRevision ?? 0) &+ 1
+        )
+        guard sink.presentOptions(page: page, leaseID: request.leaseID, origin: presentation.origin, onDismiss: { [weak self, origin = presentation.origin] in
+            guard self?.optionsPresentation?.origin === origin else { return }
+            self?.finishOptionsDismissal(leaseID: request.leaseID)
+        }) else {
+            actions.revoke()
+            return false
+        }
+        optionsPage?.actions.revoke()
+        optionsExpiryTask?.cancel()
+        optionsPresentation = presentation
+        optionsPage = page
+        optionsDismiss = onDismiss
+        let duration = max(0, presentation.expiresAt.timeIntervalSince(now()))
+        optionsExpiryTask = Task { [weak self, origin = presentation.origin] in
+            do { try await Task.sleep(for: .seconds(duration)) } catch { return }
+            guard self?.optionsPresentation?.origin === origin else { return }
+            self?.dismissOptions(leaseID: request.leaseID)
+        }
+        return true
+    }
+
+    public func invalidateOptionsControls(leaseID: UUID, origin: AddonOptionsOrigin? = nil) {
+        guard let presentation = optionsPresentation,
+              presentation.request.leaseID == leaseID,
+              origin == nil || presentation.origin === origin,
+              let optionsPage
+        else { return }
+        optionsPage.invalidateControls()
+        _ = sink.presentOptions(page: optionsPage, leaseID: leaseID, origin: presentation.origin, onDismiss: { [weak self, origin = presentation.origin] in
+            guard self?.optionsPresentation?.origin === origin else { return }
+            self?.finishOptionsDismissal(leaseID: leaseID)
+        })
+    }
+
+    public func dismissOptions(leaseID: UUID, origin: AddonOptionsOrigin? = nil) {
+        guard optionsPresentation?.request.leaseID == leaseID,
+              origin == nil || optionsPresentation?.origin === origin
+        else { return }
+        finishOptionsDismissal(leaseID: leaseID)
+        sink.dismissOptions(leaseID: leaseID)
+    }
+
+    private func finishOptionsDismissal(leaseID: UUID) {
+        guard optionsPresentation?.request.leaseID == leaseID else { return }
+        optionsPresentation?.origin.revoke()
+        optionsPage?.actions.revoke()
+        optionsExpiryTask?.cancel()
+        optionsExpiryTask = nil
+        optionsPage = nil
+        optionsPresentation = nil
+        let callback = optionsDismiss
+        optionsDismiss = nil
+        callback?()
     }
 
     private func resolvedContent(
