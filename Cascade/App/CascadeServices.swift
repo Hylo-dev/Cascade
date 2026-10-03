@@ -244,14 +244,29 @@ final class CascadeServices {
     init(preferences: UserDefaults = .standard) {
         #if DEBUG
         let isAddonWidgetDetailPreview = AddonWidgetDetailFixture.isRequested
+            || CaffeinateOptionsCheck.isRequested
         #else
         let isAddonWidgetDetailPreview = false
+        #endif
+        let caffeinatePreferences: UserDefaults
+        #if DEBUG
+        if CaffeinateOptionsCheck.shouldRun {
+            guard let isolated = CaffeinateOptionsCheck.isolatedPreferences() else {
+                print("FAIL: could not create isolated Caffeinate check preferences")
+                exit(EXIT_FAILURE)
+            }
+            caffeinatePreferences = isolated
+        } else {
+            caffeinatePreferences = preferences
+        }
+        #else
+        caffeinatePreferences = preferences
         #endif
         screenshotPage = ScreenshotPage(preferences: preferences)
         caffeinate = CaffeinateController(
             source     : caffeinateSource,
             session    : CaffeinateSession(backend: IOKitCaffeinateAssertions()),
-            preferences: preferences
+            preferences: caffeinatePreferences
         )
         let displayPreferencesStore = DisplayPresentationPreferencesStore(defaults: preferences)
         let notch = NotchEngine(
@@ -512,6 +527,34 @@ final class CascadeServices {
                 )
             } catch {
                 print("FAIL: addon widget detail fixture startup: \(error)")
+                exit(EXIT_FAILURE)
+            }
+            return
+        }
+        if CaffeinateOptionsCheck.isRequested {
+            if let identifier = PluginID(rawValue: CaffeinatePlugin.identifier) {
+                plugins.start(only: identifier)
+                notch.start()
+                notch.open()
+                notch.setSettingsFocused(true)
+                if CaffeinateOptionsCheck.shouldRun {
+                    Task { [self] in
+                        let exitCode: Int32
+                        do {
+                            try await CaffeinateOptionsCheck.run(controller: caffeinate, engine: notch)
+                            print("PASS: compiled-app Caffeinate options check")
+                            exitCode = EXIT_SUCCESS
+                        } catch {
+                            print("FAIL: compiled-app Caffeinate options check: \(error)")
+                            exitCode = EXIT_FAILURE
+                        }
+                        await finishResourcesBeforeTermination()
+                        CaffeinateOptionsCheck.removePreferences()
+                        exit(exitCode)
+                    }
+                }
+            } else {
+                print("FAIL: invalid bundled Caffeinate preview identifier")
                 exit(EXIT_FAILURE)
             }
             return
