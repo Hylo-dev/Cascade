@@ -41,6 +41,7 @@ final class NotchHostView: NSView {
 
     private let settingsButton = NSButton()
     private let backButton = OptionsBackButton()
+    private let optionsKeyboardTarget = OptionsKeyboardTarget()
     private let optionsHost = NSHostingView(rootView: AnyView(EmptyView()))
     private let outgoingOptionsHost = NSHostingView(rootView: AnyView(EmptyView()))
     private var optionsIdentity: UUID?
@@ -161,6 +162,8 @@ final class NotchHostView: NSView {
         )
         settingsButton.imagePosition    = .imageOnly
         settingsButton.isBordered       = false
+        settingsButton.refusesFirstResponder = true
+        settingsButton.focusRingType    = .none
         settingsButton.contentTintColor = .lightGray
         settingsButton.toolTip          = String(localized: "Settings…", bundle: .module)
         settingsButton.setAccessibilityIdentifier("notch.settings")
@@ -170,11 +173,13 @@ final class NotchHostView: NSView {
         contentContainer.addSubview(settingsButton)
 
         backButton.image = NSImage(
-            systemSymbolName        : "arrowtriangle.left.fill",
+            systemSymbolName        : "chevron.left",
             accessibilityDescription: String(localized: "Back", bundle: .module)
         )
         backButton.imagePosition    = .imageOnly
         backButton.isBordered       = false
+        backButton.refusesFirstResponder = true
+        backButton.focusRingType    = .none
         backButton.contentTintColor = settingsButton.contentTintColor
         backButton.toolTip          = String(localized: "Back", bundle: .module)
         backButton.setAccessibilityLabel(String(localized: "Back", bundle: .module))
@@ -282,7 +287,8 @@ final class NotchHostView: NSView {
         if isPresented && !wasPresented {
             previousOptionsResponder = window?.firstResponder
             installOptionsKeyboardRoute()
-            window?.makeFirstResponder(backButton)
+            optionsKeyboardTarget.nextResponder = self
+            window?.makeFirstResponder(optionsKeyboardTarget)
             window?.makeKey()
         } else if !isPresented {
             removeOptionsKeyboardRoute()
@@ -346,7 +352,7 @@ final class NotchHostView: NSView {
         }
         backButton.isHidden = true
         removeOptionsKeyboardRoute()
-        if window?.firstResponder === backButton {
+        if window?.firstResponder === optionsKeyboardTarget {
             window?.makeFirstResponder(previousOptionsResponder)
         }
         previousOptionsResponder = nil

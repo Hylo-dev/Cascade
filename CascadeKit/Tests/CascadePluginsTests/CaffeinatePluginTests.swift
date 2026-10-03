@@ -29,7 +29,7 @@ struct CaffeinatePluginTests {
         #expect(!nodes.contains { $0.kind == .button(action: "caffeinate.stop") })
         #expect(nodes.contains { $0.kind == .symbol(name: "cup.and.saucer") })
         #expect(nodes.contains { $0.kind == .viewThatFits(axes: .both) })
-        #expect(!nodes.contains { $0.kind == .shape(.capsule) })
+        #expect(!PluginNodeTable(try PluginDocument(root: document.root)).entries.contains { $0.kind == .shape(.capsule) })
         #expect(nodes.filter { ["#full.cup:symbol", "#compact.cup:symbol"].contains($0.id.rawValue) }.allSatisfy {
             $0.modifiers.contains(.contentTransition(.symbolEffect))
         })
@@ -49,7 +49,7 @@ struct CaffeinatePluginTests {
         let document = try #require(output.publications.first?.document)
         #expect(!PluginNodeTable(document).entries.contains { if case .button = $0.kind { return true }; return false })
         #expect(!PluginNodeTable(document).entries.contains { if case .toggle = $0.kind { return true }; return false })
-        #expect(!PluginNodeTable(document).entries.contains { $0.kind == .text("Updating…") })
+        #expect(PluginNodeTable(document).entries.contains { $0.kind == .text("Updating…") })
         let malformed = try PluginSourceEvent(source: "caffeinate", fields: ["isActive": .bool(true)])
         #expect(PluginCaffeinateState(malformed) == nil)
         #expect(try plugin.handle(.source(malformed), context: PluginContext(plugin: owner)).publications.isEmpty)

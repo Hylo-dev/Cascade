@@ -5,9 +5,16 @@
 
 import AppKit
 
-/// OptionsBackButton permits keyboard focus in the nonactivating notch panel.
-/// It inherits the same native hover and pressed feedback as the settings button.
-final class OptionsBackButton: NSButton, NotchKeyboardFocusTarget {
+/// OptionsBackButton keeps native click feedback without becoming a keyboard target.
+/// Navigation chrome must never display a selection or focus ring.
+final class OptionsBackButton: NSButton {
+
+    override var acceptsFirstResponder: Bool { false }
+}
+
+/// OptionsKeyboardTarget receives Escape in the nonactivating panel without
+/// selecting a visible control. Its lifetime is bounded by its owning host.
+final class OptionsKeyboardTarget: NSResponder, NotchKeyboardFocusTarget {
 
     override var acceptsFirstResponder: Bool { true }
 }

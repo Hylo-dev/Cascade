@@ -260,7 +260,15 @@ struct NotchOptionsNavigationTests {
             frame        : CGRect(x: 20, y: 20, width: 600, height: 180),
             reducesMotion: true
         )
-        #expect(panel.firstResponder is OptionsBackButton)
+        #expect(panel.firstResponder is any NotchKeyboardFocusTarget)
+        #expect(!(panel.firstResponder is NSView))
+        let buttons = host.subviews.flatMap(\.subviews).compactMap { $0 as? NSButton }
+        #expect(buttons.count == 2)
+        for button in buttons {
+            #expect(!button.acceptsFirstResponder)
+            #expect(button.refusesFirstResponder)
+            #expect(button.focusRingType == .none)
+        }
         #expect(panel.canBecomeKey)
         host.clearOptionsContent()
         panel.close()
