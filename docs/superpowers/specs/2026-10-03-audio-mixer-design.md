@@ -1,8 +1,9 @@
 # Native audio mixer widget
 
 Date: 3 October 2026. Branch: `cava/audio`, based on `988812a`.
-Status: architecture approved in chat; this written specification and its new
-quality thresholds require review before an implementation plan is written.
+Status: specification approved in chat, including the conditional shared liveness
+watchdog. Public and private system API investigation is authorized. Runtime and
+hardware qualification remain open; approval is not evidence of implementation.
 
 ## Intent and scope
 
@@ -23,12 +24,23 @@ is included. These exclusions remove entire DSP and clock-management paths.
 
 ## Existing contracts and integration
 
-Reuse the plugin publication/action path: `FirstPartyPlugins` manifests,
-`PluginSystem`, `PluginSurfaceRouter`, broker grants and revision validation.
+Use the implemented public `CascadeAddonSDK`: `AddonProvider.handle`,
+`AddonContext.services`, `AddonManifest.REQUIRES`, explicit permissions, bounded
+publications and generation-bound grants checked by `ServiceBroker`/`AddonRuntime`.
+Audio is a bundled external addon, not a new legacy `PluginProvider` or a concrete
+widget registered in `NotchEngine`. Bundled origin grants no exception. Native
+audio ownership is a shared system service obtained through that same broker.
 `CoreAudioSystemVolume` already observes and changes hardware master volume;
 `OutputDeviceAccess` already resolves device UIDs and changes the default output
-on a background actor. Reuse their shared operations where applicable rather
-than making a second independent controller for the same device state.
+on a background actor. Extract/reuse their operations behind the shared service
+where applicable rather than introducing independent competing controllers.
+
+The SDK contracts/runtime exist, but production external activation is not yet
+qualified. On 3 October `scripts/test-addon-managed-death.sh` returned 78:
+`C0d native execution is on HOLD: the pre-trace parent-selection safety gate is unresolved.`
+There is no Audio-specific in-host fallback or removal of this hold. Audio service,
+provider and renderer work can be tested independently while activation remains
+conditional on the separately reviewed launcher qualification.
 
 The build configuration currently targets macOS 15.0. The style document's older
 macOS 14 floor must not be assumed to describe this build; annotate tap availability
@@ -108,7 +120,7 @@ still retained; stop/quiescence must precede reclamation.
 
 Recovery attempts are bounded: immediate attempt and event-coalesced one-shot
 retries at 100, 300 and 1000 ms, ending in a failed state after 3 seconds of a
-continuously available route. These are proposed initial limits, not measurements.
+continuously available route. These are approved initial limits, not measurements.
 A real topology/configuration change, explicit retry, wake episode or demonstrated
 healthy render progress starts a new bounded episode. Repeated identical
 notifications do not replenish an exhausted budget. There is no
@@ -116,8 +128,8 @@ always-running refresh timer or signal-amplitude watchdog. Digital silence is a
 valid signal. First callback readiness and ongoing liveness are separate states.
 
 Events and finite deadlines cannot guarantee detection of a spontaneous stalled
-callback with no HAL notification. A proposed amendment, awaiting the user's
-choice, adds one shared 1 Hz liveness watchdog only while a controlled session is
+callback with no HAL notification. The approved exception adds one shared 1 Hz
+liveness watchdog only while a controlled session is
 expected to render. It reads an atomic callback sequence, never signal energy;
 two consecutive checks without progress request bounded recovery. Dormant,
 paused, starting and stopped sessions use their own transition state/deadline;
@@ -188,10 +200,10 @@ the UI must not imply otherwise. Do not reduce every application's master volume
 to conceal a per-app failure. A stronger all-samples guarantee requires a
 separate system-integration design and is outside this driverless scope.
 
-## Proposed release thresholds
+## Release thresholds
 
-These are proposed engineering gates for review, not previously supplied user
-budgets and not verified results. Measure before/after on the same driven app,
+These engineering gates were proposed and then approved, not measured results.
+Measure before/after on the same driven app,
 hardware, route, signal and system-load scenarios; report deltas separately from
 the host app's existing baseline.
 
@@ -201,7 +213,7 @@ the host app's existing baseline.
 | Callback ownership | 0 allocations, 0 locks, 0 logging, 0 invalid buffer reads/writes |
 | Callback timing | p99.9 below 10% of the hardware buffer interval; no missed render deadlines in the driven test |
 | Incremental CPU | Under 1% for one controlled stereo app at 48 kHz; under 3% for ten, notch closed, averaged over 60 s |
-| Idle work | 0 periodic mixer timers and 0 render callbacks without eligible controlled sessions; the proposed active-only watchdog is separately counted |
+| Idle work | 0 periodic mixer timers and 0 render callbacks without eligible controlled sessions; the approved active-only watchdog is separately counted |
 | Incremental private resident memory | At most 16 MiB for one session, 48 MiB for ten; report host and coreaudiod separately |
 | Added wired playback latency | At most one measured device-buffer interval plus 2 ms against native bypass |
 | Added Bluetooth latency | At most 20 ms against the same profile in native bypass; profile transitions qualify separately |
@@ -223,6 +235,15 @@ format and timing counters outside the callback; never save captured audio.
 
 ## Delivery order and review boundary
 
+Private APIs may be investigated and tested where they improve public capability.
+Require a verified ABI, runtime availability, actual authorization/effect and
+sleep/wake evidence before selecting one as a production backend. Isolate it
+behind the same service protocol and grants, with an explicit unavailable state
+or qualified public fallback. Exported symbols alone do not prove per-app control.
+Never expose an arbitrary HAL selector, symbol lookup or shell proxy to providers.
+The initial capability probe is `Prototypes/AudioSystemProbe`; it is not product
+code and does not measure audible effect or wake retention.
+
 Implement the audio service, signal kernel and recovery checks before the UI.
 Then implement the shared options route and Audio provider, verify action leases,
 and qualify physical playback/performance. Each claim names its verified hardware
@@ -234,6 +255,5 @@ Supporting investigation:
 - `docs/wayfinder/research/2026-10-03-audio-lifecycle.md`.
 - Current project `CODE_STYLE.md`, `PRODUCT.md` and `docs/TODO.md`.
 
-The next review covers this specification, especially the numerical thresholds
-and the limits of quiet recovery. An implementation plan follows only after that
-review; this document is not evidence of an implemented widget.
+The implementation plan follows the approved specification. This document and
+standalone probes are not evidence of an implemented or qualified widget.
