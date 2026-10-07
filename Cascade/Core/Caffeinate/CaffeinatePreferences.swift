@@ -7,15 +7,19 @@ import CascadeContracts
 import Foundation
 
 /// CaffeinatePreferences is what Caffeinate remembers between launches: the length of the next
-/// session, whether a session also keeps the display awake, and the glyph. The service reads them
-/// once when it is created and writes one only when the user changes it, so the store is never
-/// touched while a session just runs. It is a class-bound protocol so the service can keep one
+/// session, whether a session also keeps the display awake, the glyph and the global shortcut. The
+/// service reads them once when it is created and writes one only when the user changes it, so the
+/// store is never touched while a session just runs. It is a class-bound protocol so the service can keep one
 /// instance and write through it, and the service calls it only from its own queue.
 nonisolated protocol CaffeinatePreferences: AnyObject, Sendable {
 
-    var nextDuration     : CaffeinateDuration { get set }
-    var keepsDisplayAwake: Bool               { get set }
-    var glyph            : CaffeinateGlyph    { get set }
+    var nextDuration     : CaffeinateDuration  { get set }
+    var keepsDisplayAwake: Bool                { get set }
+    var glyph            : CaffeinateGlyph     { get set }
+
+    /// The global shortcut. `nil` means the user turned it off, which is not the same as never
+    /// having chosen one (that is `CaffeinateShortcut.default`).
+    var shortcut         : CaffeinateShortcut? { get set }
 }
 
 /// UserDefaultsCaffeinatePreferences keeps the preferences in `UserDefaults`. The next duration
@@ -32,6 +36,7 @@ nonisolated final class UserDefaultsCaffeinatePreferences: CaffeinatePreferences
         static let nextDuration      = "caffeinate.nextDuration"
         static let keepsDisplayAwake = "caffeinate.keepsDisplayAwake"
         static let glyph             = "caffeinate.glyph"
+        static let shortcut          = "caffeinate.shortcut"
     }
 
     /// UserDefaults is documented as thread-safe but not marked Sendable by the SDK.
@@ -63,5 +68,22 @@ nonisolated final class UserDefaultsCaffeinatePreferences: CaffeinatePreferences
     var glyph: CaffeinateGlyph {
         get { defaults.string(forKey: Key.glyph).flatMap(CaffeinateGlyph.init(rawValue:)) ?? .cupHeatWaves }
         set { defaults.set(newValue.rawValue, forKey: Key.glyph) }
+    }
+
+    /// The shortcut is JSON in a `Data`. Three states share one key: absent means never chosen
+    /// (the default), empty data means switched off, anything else is the encoded shortcut, and
+    /// data that no longer decodes falls back to the default rather than silently disabling it.
+    var shortcut: CaffeinateShortcut? {
+        get {
+            guard let data = defaults.data(forKey: Key.shortcut) else { return .default }
+            guard !data.isEmpty else { return nil }
+
+            return (try? JSONDecoder().decode(CaffeinateShortcut.self, from: data)) ?? .default
+        }
+        set {
+            let data = newValue.flatMap { try? JSONEncoder().encode($0) } ?? Data()
+
+            defaults.set(data, forKey: Key.shortcut)
+        }
     }
 }

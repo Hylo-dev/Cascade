@@ -154,10 +154,11 @@ nonisolated final class InMemoryCaffeinatePreferences: CaffeinatePreferences {
 
     private struct Values {
 
-        var nextDuration     : CaffeinateDuration = .minutes(60)
-        var keepsDisplayAwake: Bool               = true
-        var glyph            : CaffeinateGlyph    = .cupHeatWaves
-        var writes           : Int                = 0
+        var nextDuration     : CaffeinateDuration  = .minutes(60)
+        var keepsDisplayAwake: Bool                = true
+        var glyph            : CaffeinateGlyph     = .cupHeatWaves
+        var shortcut         : CaffeinateShortcut? = .default
+        var writes           : Int                 = 0
     }
 
     private let values = Mutex(Values())
@@ -177,6 +178,11 @@ nonisolated final class InMemoryCaffeinatePreferences: CaffeinatePreferences {
     var glyph: CaffeinateGlyph {
         get { values.withLock { $0.glyph } }
         set { values.withLock { $0.glyph = newValue; $0.writes += 1 } }
+    }
+
+    var shortcut: CaffeinateShortcut? {
+        get { values.withLock { $0.shortcut } }
+        set { values.withLock { $0.shortcut = newValue; $0.writes += 1 } }
     }
 }
 
