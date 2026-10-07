@@ -16,6 +16,7 @@ final class RecordingSurfaceHost: PluginSurfaceHosting {
     private(set) var updated      : [UInt64] = []
     private(set) var presented    : [any NotchLiveActivity] = []
     private(set) var ended        : [String] = []
+    private(set) var activityCalls: [String] = []
 
     func register(_ widget: NotchWidget) {
         registrations += 1
@@ -40,9 +41,11 @@ final class RecordingSurfaceHost: PluginSurfaceHosting {
 
     func present(_ activity: any NotchLiveActivity) {
         presented.append(activity)
+        activityCalls.append("present")
     }
 
     func endActivity(id: String) {
         ended.append(id)
+        activityCalls.append("end")
     }
 }

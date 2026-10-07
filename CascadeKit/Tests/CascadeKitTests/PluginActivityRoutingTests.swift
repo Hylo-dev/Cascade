@@ -96,14 +96,27 @@ struct PluginActivityRoutingTests {
         let rig = Rig()
         rig.surfaces.apply([try publish(rig)], rejected: [])
 
-        rig.surfaces.apply([try publish(rig, document: regions("Changed"), relevance: 0.6)], rejected: [])
+        rig.surfaces.apply([try publish(rig, document: regions("Changed"))], rejected: [])
 
         let presented = try #require(rig.host.presented.first)
-        #expect(rig.host.presented.count == 1)
+        #expect(rig.host.activityCalls == ["present"])
         #expect(presented.contentRevision == 2)
+    }
+
+    @Test
+    func aChangedRelevancePresentsAgainWithoutEnding() throws {
+        let rig = Rig()
+        rig.surfaces.apply([try publish(rig)], rejected: [])
+
+        rig.surfaces.apply([try publish(rig, relevance: 0.6)], rejected: [])
+
+        let presented = try #require(rig.host.presented.first)
+        #expect(rig.host.activityCalls == ["present", "present"])
         #expect(presented.relevanceScore == 0.6)
     }
 
+    /// aRenewedStartPresentsAgain checks the order too: the host keeps an old entry's session
+    /// deadline, so the old session must end before the renewed one is presented.
     @Test
     func aRenewedStartPresentsAgain() throws {
         let rig     = Rig()
@@ -112,9 +125,55 @@ struct PluginActivityRoutingTests {
 
         rig.surfaces.apply([try publish(rig, startedAt: renewed)], rejected: [])
 
-        #expect(rig.host.presented.count == 2)
+        #expect(rig.host.activityCalls == ["present", "end", "present"])
+        #expect(rig.host.ended == ["plugin:com.cascade.caffeinate/caffeinate"])
         #expect(rig.host.presented[0] === rig.host.presented[1])
         #expect(rig.host.presented[1].lifetime == NotchActivityLifetime(startedAt: renewed))
+    }
+
+    /// LiveHost forwards the activity calls to a real LiveActivityHost, whose clock the test drives.
+    @MainActor
+    private final class LiveHost: PluginSurfaceHosting {
+
+        let live: LiveActivityHost
+
+        init(live: LiveActivityHost) { self.live = live }
+
+        func register(_ widget: NotchWidget) {}
+        func unregisterWidget(id: WidgetIdentifier) {}
+        func showNotice(_ notice: any NotchTransientNotice) {}
+        func updateNotice(_ notice: any NotchTransientNotice) {}
+        func dismissActivity(id: String) {}
+        func present(_ activity: any NotchLiveActivity) { live.present(activity) }
+        func endActivity(id: String) { live.end(id: id) }
+    }
+
+    @Test
+    func aRenewedStartGetsAFreshSessionDeadlineInTheRealHost() throws {
+        var now        = start
+        let live       = LiveActivityHost(now: { now })
+        let surfaces   = PluginSurfaceRouter(host: LiveHost(live: live), manifests: [], submit: { _ in }, visibility: { _, _ in })
+        var publisher  = PluginPublicationStore()
+        let id         = "plugin:com.cascade.caffeinate/caffeinate"
+        func publish(startedAt: Date) throws {
+            let attributes = try PluginActivityAttributes(startedAt: startedAt, relevance: 0.3, accessibilityLabel: "Keeping awake")
+            let change     = publisher.apply(try regions(), staleAfter: nil, for: key, at: now, activity: attributes)
+            surfaces.apply([try #require(change)], rejected: [])
+        }
+
+        try publish(startedAt: start)
+        now = start.addingTimeInterval(7 * 60 * 60)
+        live.expireNotices()
+        #expect(live.selection.primary?.id == id)
+
+        try publish(startedAt: now)
+        now = start.addingTimeInterval(8 * 60 * 60 + 60)
+        live.expireNotices()
+        #expect(live.selection.primary?.id == id)
+
+        now = start.addingTimeInterval(15 * 60 * 60 + 60)
+        live.expireNotices()
+        #expect(live.selection.primary == nil)
     }
 
     @Test

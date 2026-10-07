@@ -18,9 +18,10 @@ public typealias PluginAcceptedAction = @MainActor @Sendable (_ nativeEffect: @M
 /// only update the store. A notice gets one store and one `PluginNotice`, shown again for every
 /// publication, or only enriched in place when the publication asks to update, and dismissed with
 /// its withdrawal. An activity gets one store and one `PluginActivity`, presented with its first
-/// content and kept in place by later ones; it is presented again only when its start changes,
-/// which is a new lifetime after the activity host ended the old one at its cap, and ended with
-/// its withdrawal. An activity's controls submit through the same broker as a widget's, with no
+/// content and kept in place by later ones. A change of its attributes is presented again, so the
+/// host sees the new relevance; a renewed start ends the old session first and presents it
+/// anew, because the host keeps an existing session's deadline and only a new session gets a
+/// fresh eight hours. It is ended with its withdrawal. An activity's controls submit through the same broker as a widget's, with no
 /// options origin: only a widget's options page has one.
 ///
 /// A widget whose feature supports fullscreen may also publish an options page. Pressing its
@@ -162,9 +163,10 @@ public final class PluginSurfaceRouter {
     }
 
     /// route presents an activity with its first content, updates it in place after, and ends it
-    /// with its withdrawal. The host reads the content through the store, so an update needs no
-    /// new presentation; only a renewed start does, because the host's entry carries the old
-    /// lifetime and may have dropped the activity at its cap.
+    /// with its withdrawal. The host reads the content through the store, so a content update
+    /// calls it for nothing. Attributes the host snapshots, such as relevance, are presented
+    /// again; a renewed start is ended and then presented, since the host's entry would keep the
+    /// old session's deadline and the cap would end the activity early.
     private func route(activity change: PluginPublicationChange) {
         let key = change.key
         guard let content = change.content else {
@@ -181,9 +183,14 @@ public final class PluginSurfaceRouter {
         store.apply(change)
 
         if let activity = activities[key] {
-            let isRenewed = activity.attributes.startedAt != attributes.startedAt
+            let previous = activity.attributes
             activity.update(attributes)
-            if isRenewed { host.present(activity) }
+            if previous.startedAt != attributes.startedAt {
+                host.endActivity(id: activity.id)
+                host.present(activity)
+            } else if previous != attributes {
+                host.present(activity)
+            }
             return
         }
 

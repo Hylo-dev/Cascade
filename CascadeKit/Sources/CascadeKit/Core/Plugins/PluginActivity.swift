@@ -8,11 +8,12 @@ import SwiftUI
 
 /// PluginActivity shows one plugin's live activity on the notch through today's activity host.
 /// It lives as long as its publication: the router keeps the same instance across updates, so
-/// the host sees one activity whose content revision moves, and presents it again only when the
-/// plugin renews the activity's start, which is a new lifetime. The three compact regions fill
-/// their slots as a notice's do, the leading one from the leading edge, the trailing one from the
-/// trailing edge, the minimal one centred; the fourth is the expanded content, which lays itself
-/// out in the room the host gives it.
+/// the host sees one activity whose content revision moves. The router presents it again when
+/// its attributes change, and when the plugin renews its start it ends the old session and
+/// presents the activity anew, which is what gives the renewed lifetime a fresh session cap.
+/// The three compact regions fill their slots as a notice's do, the leading one from the leading
+/// edge, the trailing one from the trailing edge, the minimal one centred; the fourth is the
+/// expanded content, which lays itself out in the room the host gives it.
 ///
 /// Whether the activity is on screen is reported as it is activated and suspended, so the kernel
 /// can ask the plugin for one refresh when stale content becomes visible, and never otherwise.
