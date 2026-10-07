@@ -80,7 +80,7 @@ A `nonisolated final class`, `Sendable`, holding `Mutex<CaffeinateSession?>` and
 
 **Time.** One `DispatchSourceTimer` on a `wallDeadline` at `endsAt`, so it honours sleep and clock changes; at expiry it publishes off and releases the expired identifiers. With no timed session it is disarmed. `NSWorkspace.didWakeNotification` re-checks `endsAt` on wake.
 
-**Lifecycle.** The `caffeinate` source is leased while the plugin is enabled. When the lease ends (the user disables the plugin, or the kernel quarantines it) the service stops the session: no orphaned assertion without UI. A session survives a PluginHost restart, since the service owns it and the kernel keeps the publication. Quitting Cascade waits on nothing.
+**Lifecycle.** Whether a session may run follows the plugin's state, not the source's lease. Cascade reads the engine's status and tells the service `setSessionsAllowed(true)` while Caffeinate is `active`, `false` otherwise (switched off by the user, quarantined, disabled after a hang); PluginHost's own state does not enter, since the assertion needs no PluginHost. Withdrawing the permission stops the session, publishing off if the source is still leased: no orphaned assertion without UI. While sessions are not allowed, session commands are ignored, preference commands still run, and the global hot key is not registered. The `caffeinate` source is leased while the plugin is enabled, but the kernel also ends every lease when PluginHost goes away (another plugin's crash, a memory kill, Settings › Restart): a lease ending only detaches the emitter, the session goes on, and the next lease hands the plugin the current snapshot, so it catches up. A session therefore survives a PluginHost restart, since the service owns it and the kernel keeps the publication. Quitting Cascade waits on nothing.
 
 **Preferences.** `nextDuration`, `keepsDisplayAwake`, `glyph` and the shortcut are read once at `init` and written only when they change.
 
@@ -103,7 +103,7 @@ At rest: no awake thread, no armed timer, one Carbon handler, one notification o
 About 400 × 86 points below Cascade's Back control, two rows:
 
 1. The disc, "Caffeinate" and the state in words: "Your Mac sleeps normally", "Awake until 16:30", "Awake until you stop it". Trailing, one prominent **Start** pill in the tint, or a neutral **Stop** pill.
-2. The stepper `− 1h 30m +` with "until 16:30" beside it, and the "Keep display awake" switch trailing. The value is always visible next to the stepper; at the limits (∞, 24h) the matching button is disabled, not hidden. The kernel formats the end time in the user's locale.
+2. The stepper `− 1h 30m +` with "until 16:30" beside it, and the "Keep display awake" switch trailing. The value is always visible next to the stepper, the time left in hours and minutes (rounded up) while a session runs; at the limits (∞, 24h) the matching button is disabled, not hidden. The kernel formats the end time in the user's locale.
 
 ### Live activity
 
@@ -142,7 +142,7 @@ Feature `awake`: `surfaces` widget (`2x1`, `1x1`) and `activity`; source `caffei
 
 ## 7. Countdown node and rolling digits
 
-**Node.** `PluginNodeKind.countdown(end: Date, style: .compact)`, built with `Text(countdownTo:style:)`, formats `2h`, `24m`, `4:59`, `0:00`: whole hours (floored) from one hour, whole minutes (floored) from five minutes, `m:ss` below, through the system's `Duration` formatting. Elapsed and large times reuse `.timer(start:end:countsDown:)`.
+**Node.** `PluginNodeKind.countdown(end: Date, style: .compact)`, built with `Text(countdownTo:style:)`, formats `2h`, `24m`, `4:59`, `0:00`: whole hours (floored) from one hour, whole minutes (floored) from five minutes, `m:ss` below, through the system's `Duration` formatting. A second style, `.hoursMinutes`, is the options stepper's value while a session runs: the time left rounded up to whole minutes, as `2h`, `1h 5m`, `45m`, `1m`, `0m`, so a 15-minute step always moves it (the compact `1h` would not), redrawn at minute boundaries only. Elapsed and large times reuse `.timer(start:end:countsDown:)`; an indefinite session counts up in an interval of a year from its start, so "active for" never freezes.
 
 **Drawing.** A `TimelineView` with a custom `TimelineSchedule` that yields only the instants at which the text changes: hour or minute boundaries above five minutes, every second below. SwiftUI suspends the timeline while the view is not visible, so no timer of ours runs.
 
@@ -153,13 +153,13 @@ Feature `awake`: `surfaces` widget (`2x1`, `1x1`) and `activity`; source `caffei
 | Case | Behaviour |
 |---|---|
 | IOKit refuses at start | Stays off, publishes `failure`. The widget shows a warning glyph and "Couldn't prevent sleep"; the options page adds the code. Cleared by the next gesture. No activity. |
-| Extension refused | The session and its end stay as they were; `failure` is published. The fallback never touches the old assertion before the new one exists. |
+| Extension refused | A refusal leaves the session and its end unchanged (any timeout already moved is put back) and publishes `extensionRefused`. No assertion is released or acquired. |
 | Release fails | The identifier is kept and retried. Published state is off: the assertion has its own IOKit timeout. |
 | Lid closed past the end | The wall-clock timer and the wake check end the session; nothing is replayed. |
 | Clock or time zone change | `endsAt` is absolute; the end time redraws in the new locale, the time left stays right. |
 | Past 8 hours | The activity is withdrawn, the session continues, the widget shows it; a gesture opens a new activity. |
-| PluginHost restart | The session continues; the kernel keeps the publication; a `refresh` follows the restart. |
-| Plugin disabled or quarantined | The lease ends, the service stops the session, the UI goes. |
+| PluginHost restart | The lease ends, which only detaches the emitter: the session continues, the kernel keeps the publication, and the new lease sends the current snapshot. |
+| Plugin disabled or quarantined | The plugin is no longer `active`: sessions are disallowed, the service stops the session, the hot key is released, the UI goes. |
 | Late or repeated action | Start, stop, steps and display are absolute or idempotent; a stale extend is dropped by the broker's revision. |
 | Stepper at a limit | The button is disabled; the service rejects an off-scale value anyway. |
 | Shortcut taken | `RegisterEventHotKey` fails; Settings say "Shortcut unavailable"; no silent fallback. |
@@ -169,7 +169,7 @@ Feature `awake`: `surfaces` widget (`2x1`, `1x1`) and `activity`; source `caffei
 
 **Unit tests (Swift Testing, test first).**
 
-- `CaffeinateServiceTests` with fake assertions, a test clock and in-memory preferences: start, stop, indefinite; extend and step without a gap; steps while off; display during a session; refused start and rollback; failed release retried; expiry and wake; lease end; shortcut toggle; no call made while the lock is held.
+- `CaffeinateServiceTests` with fake assertions, a test clock and in-memory preferences: start, stop, indefinite; extend and step without a gap; steps while off; display during a session; refused start and rollback; failed release retried; expiry and wake; session permission and a lease ending; shortcut toggle; no call made while the lock is held.
 - `CaffeinateDurationTests`: the scale, steps and limits.
 - `PluginCaffeinateStateTests`: event round trip, rejection of invalid fields.
 - `CaffeinatePluginTests`: documents for off, timed, indefinite and failure; no publication for an unchanged snapshot; activity withdrawn when off; no ＋15m for indefinite; stable node identities across publications.

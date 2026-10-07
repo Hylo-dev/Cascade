@@ -21,8 +21,8 @@ public typealias PluginAcceptedAction = @MainActor @Sendable (_ nativeEffect: @M
 /// content and kept in place by later ones. A change of its attributes is presented again, so the
 /// host sees the new relevance; a renewed start ends the old session first and presents it
 /// anew, because the host keeps an existing session's deadline and only a new session gets a
-/// fresh eight hours. It is ended with its withdrawal. An activity's controls submit through the same broker as a widget's, with no
-/// options origin: only a widget's options page has one.
+/// fresh eight hours. It is ended with its withdrawal. An activity's controls submit through the
+/// same broker as a widget's, with no options origin: only a widget's options page has one.
 ///
 /// A widget whose feature supports fullscreen may also publish an options page. Pressing its
 /// opener captures a host-owned origin first, then asks the broker; only the accepted click

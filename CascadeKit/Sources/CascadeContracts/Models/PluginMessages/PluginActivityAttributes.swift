@@ -8,10 +8,11 @@ import Foundation
 /// PluginActivityAttributes is what an activity says about itself beside its regions: when it
 /// started, how relevant it is from zero to one, and the sentence VoiceOver reads for it.
 ///
-/// `startedAt` is the activity's identity over time: the kernel presents an activity again only
-/// when it changes, so a plugin renews a lifetime by publishing a new start and keeps the
-/// current one by repeating it. `relevance` is the plugin's own say in the order of competing
-/// activities; the arbitration weighs it, it does not command it.
+/// `startedAt` is the activity's identity over time: a new start ends the current activity and
+/// presents it again with a fresh lifetime, so a plugin renews a lifetime by publishing a new
+/// start and keeps the current one by repeating it. A change of `relevance` or of the label
+/// updates the activity in place, with its lifetime untouched. `relevance` is the plugin's own say
+/// in the order of competing activities; the arbitration weighs it, it does not command it.
 public struct PluginActivityAttributes: Codable, Hashable, Sendable {
 
     public static let relevances = 0.0...1.0

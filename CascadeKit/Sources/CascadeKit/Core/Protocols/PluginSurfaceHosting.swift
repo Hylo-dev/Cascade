@@ -7,7 +7,8 @@ import Foundation
 
 /// PluginSurfaceHosting is the part of the notch plugin surfaces need: placing a widget on the
 /// grid and taking it off, showing a notice, enriching it and dismissing it, presenting a live
-/// activity and ending it, and opening a widget's options page over the grid. The notch engine provides it; tests record it.
+/// activity and ending it, and opening a widget's options page over the grid. The notch engine
+/// provides it; tests record it.
 @MainActor
 public protocol PluginSurfaceHosting: AnyObject {
 
