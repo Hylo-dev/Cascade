@@ -56,10 +56,13 @@ nonisolated enum CompactCountdown {
     /// nextChange is the first instant after `now` at which the text for `end` differs from the
     /// text at `now`, nudged just past the boundary, or nil once `end` has been reached.
     ///
-    /// The text changes whenever the time left drops below a boundary: a multiple of an hour,
-    /// a multiple of a minute from five up to fifty-nine, or a whole second under five
-    /// minutes. The answer is the largest boundary strictly below the time left, which is
-    /// computed with a `ceil`, so there is no loop and no allocation.
+    /// The text is the floor of the time left in the current unit, so it flips the moment the
+    /// time left drops below that floored multiple: the largest boundary at or below the time
+    /// left. A boundary is a multiple of an hour from an hour up, a multiple of a minute from
+    /// five minutes up, a whole second below. When the time left is exactly a multiple the flip
+    /// is immediate (the next change of `2h` at 7200 s is 7200 s itself), which is why it is a
+    /// `floor` and not a `ceil`. The boundary never exceeds the time left and the nudge is
+    /// positive, so the answer is always after `now`: no loop, no allocation, no skipped value.
     static func nextChange(
         after now: Date,
         end      : Date
@@ -72,12 +75,12 @@ nonisolated enum CompactCountdown {
 
         let boundary: TimeInterval
 
-        if remaining > 3_600 {
-            boundary = (remaining / 3_600).rounded(.up) * 3_600 - 3_600
-        } else if remaining > 300 {
-            boundary = max(300, (remaining / 60).rounded(.up) * 60 - 60)
+        if remaining >= 3_600 {
+            boundary = (remaining / 3_600).rounded(.down) * 3_600
+        } else if remaining >= 300 {
+            boundary = (remaining / 60).rounded(.down) * 60
         } else {
-            boundary = remaining.rounded(.up) - 1
+            boundary = remaining.rounded(.down)
         }
 
         return end.addingTimeInterval(nudge - boundary)
