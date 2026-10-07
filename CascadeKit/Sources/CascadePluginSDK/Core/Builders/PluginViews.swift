@@ -137,9 +137,10 @@ public func Text(
     )
 }
 
-/// Text(countdownTo:style:) is the time left until `end` in the Dynamic Island's compact
-/// format (`2h`, `24m`, `4:59`), drawn by the kernel, which redraws it only when the text
-/// changes, so the plugin never wakes to tick it.
+/// Text(countdownTo:style:) is the time left until `end`, drawn by the kernel, which redraws it
+/// only when the text changes, so the plugin never wakes to tick it. `.compact` is the Dynamic
+/// Island's format (`2h`, `24m`, `4:59`); `.hoursMinutes` rounds up to whole minutes and shows
+/// both units (`1h 5m`, `45m`), as a stepper's value.
 public func Text(
     countdownTo end: Date,
     style          : PluginCountdownStyle = .compact

@@ -222,6 +222,28 @@ struct RollingDigitsLabelTests {
         #expect(text(countsDown: false, at: -30) == "0:00")
     }
 
+    /// aCountUpPastADayKeepsCounting is an indefinite session's elapsed time: the hours keep
+    /// growing past 24 and past 99 instead of wrapping or freezing.
+    @Test
+    func aCountUpPastADayKeepsCounting() {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000_000)
+        let end   = start.addingTimeInterval(365 * 86_400)
+
+        func text(at offset: TimeInterval) -> String {
+            TimerText.text(
+                start     : start,
+                end       : end,
+                countsDown: false,
+                at        : start.addingTimeInterval(offset),
+                locale    : Locale(identifier: "en_US")
+            )
+        }
+
+        #expect(text(at: 30 * 3_600) == "30:00:00")
+        #expect(text(at: 30 * 3_600 + 61) == "30:01:01")
+        #expect(text(at: 100 * 3_600) == "100:00:00")
+    }
+
     @Test
     func theTimerScheduleTicksWholeSecondsAndStopsAtTheEnd() {
         let start    = Date(timeIntervalSinceReferenceDate: 1_000_000)

@@ -55,7 +55,6 @@ enum CaffeinateStyle {
         static let ink       = PluginColor(red: 0.15, green: 0.13, blue: 0.10)
         static let warning   = PluginColor(red: 1, green: 0.55, blue: 0.45)
         static let secondary = PluginColor(red: 0.70, green: 0.70, blue: 0.74)
-        static let fill      = PluginColor.white.opacity(0.08)
         static let disc      = PluginColor.white.opacity(0.14)
         static let button    = PluginColor.white.opacity(0.16)
         static let track     = PluginColor.white.opacity(0.22)
@@ -160,11 +159,16 @@ extension PluginCaffeinateState {
         return startedAt...max(startedAt, endsAt)
     }
 
-    /// countUp is the day-long interval an indefinite session's elapsed time counts up in.
+    /// countUpLength is how long an indefinite session's elapsed time may count. A timer node
+    /// needs an end, and an indefinite session has none: a year is far past any real session, so
+    /// the count never freezes, while the kernel's schedule still has an end to stop at.
+    static let countUpLength: TimeInterval = 365 * 86_400
+
+    /// countUp is the interval an indefinite session's elapsed time counts up in.
     var countUp: ClosedRange<Date>? {
         guard let startedAt, endsAt == nil else { return nil }
 
-        return startedAt...startedAt.addingTimeInterval(86_400)
+        return startedAt...startedAt.addingTimeInterval(Self.countUpLength)
     }
 
     /// remaining is the time a timed session has left when the document is built, nil for an

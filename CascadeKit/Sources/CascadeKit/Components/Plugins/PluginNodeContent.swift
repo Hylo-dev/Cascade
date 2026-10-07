@@ -12,7 +12,8 @@ import SwiftUI
 /// relative date costs the plugin nothing, and a clock redraws itself at every minute boundary,
 /// only while it is on screen. A timer and a countdown roll the digits that change with
 /// `RollingDigitsLabel`, in the font and color of the node's own modifiers, redrawn only when
-/// their text changes. Controls read their optimistic value first and hand
+/// their text changes; the font and color are resolved once per body, outside the timeline's
+/// closure, so a tick builds no `NSFont`. Controls read their optimistic value first and hand
 /// every change to the store; a toggle with two children shows the first while off and the
 /// second while on. An asset reserves its frame and draws nothing until the asset pipeline
 /// exists; a tier-2 component draws through `PluginComponentView`.
@@ -82,6 +83,9 @@ struct PluginNodeContent: View {
                 }
 
             case .timer(let start, let end, let countsDown):
+                let font  = timeFont
+                let color = timeColor
+
                 TimelineView(TimerTimelineSchedule(start: start, end: end)) { context in
                     RollingDigitsLabel(
                         text      : TimerText.text(
@@ -90,18 +94,34 @@ struct PluginNodeContent: View {
                             countsDown: countsDown,
                             at        : context.date
                         ),
-                        font      : timeFont,
-                        color     : timeColor,
+                        font      : font,
+                        color     : color,
                         countsDown: countsDown
                     )
                 }
 
-            case .countdown(let end, _):
+            case .countdown(let end, .compact):
+                let font  = timeFont
+                let color = timeColor
+
                 TimelineView(CompactCountdownSchedule(end: end)) { context in
                     RollingDigitsLabel(
                         text      : CompactCountdown.text(remaining: end.timeIntervalSince(context.date)),
-                        font      : timeFont,
-                        color     : timeColor,
+                        font      : font,
+                        color     : color,
+                        countsDown: true
+                    )
+                }
+
+            case .countdown(let end, .hoursMinutes):
+                let font  = timeFont
+                let color = timeColor
+
+                TimelineView(HoursMinutesCountdownSchedule(end: end)) { context in
+                    RollingDigitsLabel(
+                        text      : HoursMinutesCountdown.text(remaining: end.timeIntervalSince(context.date)),
+                        font      : font,
+                        color     : color,
                         countsDown: true
                     )
                 }

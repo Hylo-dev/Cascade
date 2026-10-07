@@ -252,9 +252,49 @@ struct CaffeinatePluginTests {
 
         #expect(root.children[1].kind == .spacer(minLength: 0))
         #expect(!entries.contains { $0.kind == .button(action: "caffeinate.extend") })
-        #expect(entries.contains { $0.kind == .timer(start: started, end: started.addingTimeInterval(86_400), countsDown: false) })
+        #expect(entries.contains { $0.kind == .timer(start: started, end: started.addingTimeInterval(365 * 86_400), countsDown: false) })
         #expect(texts(entries).contains("active for"))
         #expect(!entries.contains { if case .countdown = $0.kind { true } else { false } })
+    }
+
+    /// kinds lists a subtree's node kinds, depth first, the node itself included.
+    private func kinds(_ node: PluginNode) -> [PluginNodeKind] {
+        [node.kind] + node.children.flatMap(kinds)
+    }
+
+    /// countUpLengths are the lengths of the count-up timers in a subtree.
+    private func countUpLengths(_ node: PluginNode) -> [TimeInterval] {
+        kinds(node).compactMap { kind in
+            if case .timer(let start, let end, false) = kind { end.timeIntervalSince(start) } else { nil }
+        }
+    }
+
+    /// anIndefiniteCountUpRunsPastADay keeps "active for" counting after 24 hours: the 2x1 face
+    /// and the expanded activity both count in an interval far longer than a day.
+    @Test
+    func anIndefiniteCountUpRunsPastADay() throws {
+        let output = try send(indefinite(), to: plugin())
+        let face   = try #require(widget(output)?.document?.root)
+        let island = try #require(activity(output)?.document?.root)
+        let large  = try #require(face.children.first)
+
+        #expect(!countUpLengths(large).isEmpty)
+        #expect(countUpLengths(large).allSatisfy { $0 > 86_400 })
+        #expect(!countUpLengths(island.children[3]).isEmpty)
+        #expect(countUpLengths(island.children[3]).allSatisfy { $0 > 86_400 })
+    }
+
+    @Test
+    func theOptionsStepperShowsTheTimeLeftInHoursAndMinutes() throws {
+        let state   = timed(minutesLeft: 110)
+        let ends    = try #require(state.endsAt)
+        let output  = try send(state, to: plugin())
+        let options = try #require(widget(output)?.document?.optionsRoot)
+        let face    = try #require(widget(output)?.document?.root)
+
+        #expect(kinds(options).contains(.countdown(end: ends, style: .hoursMinutes)))
+        #expect(!kinds(options).contains(.countdown(end: ends, style: .compact)))
+        #expect(kinds(face).contains(.countdown(end: ends, style: .compact)))
     }
 
     @Test

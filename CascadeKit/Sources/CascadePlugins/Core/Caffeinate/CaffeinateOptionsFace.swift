@@ -15,8 +15,9 @@ import Foundation
 /// in the tint while off and a neutral Stop pill while on. The second is the stepper, whose
 /// value is always visible beside it, the end time of a running session, and the display
 /// switch. While off the value is the next session's length; while a session runs it is the
-/// time left, which the kernel draws and keeps current, so the page ticks without waking the
-/// plugin. At the limits the matching button is dimmed, never hidden: it stays a button and the
+/// time left in hours and minutes, rounded up, which the kernel draws and keeps current, so the
+/// page ticks without waking the plugin. It is not the compact countdown: `1h` for anything
+/// between one and two hours would not move when a step takes fifteen minutes off. At the limits the matching button is dimmed, never hidden: it stays a button and the
 /// native owner ignores a step off the scale.
 enum CaffeinateOptionsFace {
 
@@ -216,7 +217,7 @@ enum CaffeinateOptionsFace {
         let font = PluginFont.system(size: 15, weight: .semibold, design: .rounded).monospacedDigit()
 
         if state.isActive, let endsAt = state.endsAt {
-            return Text(countdownTo: endsAt)
+            return Text(countdownTo: endsAt, style: .hoursMinutes)
                 .font(font)
                 .foregroundStyle(Palette.amber)
                 .frame(width: 58)
