@@ -3,13 +3,16 @@
 //  CascadeKit
 //
 
+import AppKit
 import CascadeContracts
 import SwiftUI
 
 /// PluginNodeContent draws a node without its modifiers: a `switch` over the tier-1 vocabulary,
-/// with children drawn as `PluginNodeView`s. Time is drawn by SwiftUI itself, so a timer or a
+/// with children drawn as `PluginNodeView`s. Time is drawn by the kernel, so a timer or a
 /// relative date costs the plugin nothing, and a clock redraws itself at every minute boundary,
-/// only while it is on screen. Controls read their optimistic value first and hand
+/// only while it is on screen. A timer and a countdown roll the digits that change with
+/// `RollingDigitsLabel`, in the font and color of the node's own modifiers, redrawn only when
+/// their text changes. Controls read their optimistic value first and hand
 /// every change to the store; a toggle with two children shows the first while off and the
 /// second while on. An asset reserves its frame and draws nothing until the asset pipeline
 /// exists; a tier-2 component draws through `PluginComponentView`.
@@ -79,11 +82,28 @@ struct PluginNodeContent: View {
                 }
 
             case .timer(let start, let end, let countsDown):
-                Text(timerInterval: start...end, countsDown: countsDown)
+                TimelineView(TimerTimelineSchedule(start: start, end: end)) { context in
+                    RollingDigitsLabel(
+                        text      : TimerText.text(
+                            start     : start,
+                            end       : end,
+                            countsDown: countsDown,
+                            at        : context.date
+                        ),
+                        font      : timeFont,
+                        color     : timeColor,
+                        countsDown: countsDown
+                    )
+                }
 
             case .countdown(let end, _):
                 TimelineView(CompactCountdownSchedule(end: end)) { context in
-                    Text(CompactCountdown.text(remaining: end.timeIntervalSince(context.date)))
+                    RollingDigitsLabel(
+                        text      : CompactCountdown.text(remaining: end.timeIntervalSince(context.date)),
+                        font      : timeFont,
+                        color     : timeColor,
+                        countsDown: true
+                    )
                 }
 
             case .timerProgress(let start, let end):
@@ -136,6 +156,27 @@ struct PluginNodeContent: View {
             case .component(let id, let version, let parameters):
                 PluginComponentView(id: id, version: version, parameters: parameters)
         }
+    }
+
+    /// timeFont is the font of the node's own `.font` modifier, the innermost one winning as in
+    /// SwiftUI, always with monospaced digits: a rolling label must not shift when a digit
+    /// changes. An ancestor's font does not reach an AppKit label, so a time node carries its own.
+    private var timeFont: NSFont {
+        let described = model.modifiers.lazy.compactMap { modifier -> PluginFont? in
+            if case .font(let font) = modifier { font } else { nil }
+        }.first
+
+        return (described?.nsFont ?? .monospacedDigitSystemFont(ofSize: 11, weight: .regular)).monospacingDigits
+    }
+
+    /// timeColor is the color of the node's own `.foregroundStyle(.color)` modifier, white
+    /// when it has none or a style that is not a plain color.
+    private var timeColor: NSColor {
+        let described = model.modifiers.lazy.compactMap { modifier -> PluginColor? in
+            if case .foregroundStyle(.color(let color)) = modifier { color } else { nil }
+        }.first
+
+        return described?.nsColor ?? .white
     }
 
     @ViewBuilder

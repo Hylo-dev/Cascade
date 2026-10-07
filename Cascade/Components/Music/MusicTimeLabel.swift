@@ -4,41 +4,29 @@
 //
 
 import AppKit
+import CascadeKit
 import SwiftUI
 
-/// MusicTimeLabel rolls only the digits that change, the way SwiftUI's
-/// `numericText` does, but in the render server. That content transition
-/// re-laid the text out on every display frame of each roll: measured at ~16 %
-/// of a core for the two progress labels ticking once a second, against
-/// ~0.2 % for static text. Here a tick sets the string of the one or two
-/// digit layers that changed and a push transition moves the old digit out and
-/// the new one in; the app does nothing in between.
-struct MusicTimeLabel: NSViewRepresentable {
+/// MusicTimeLabel is Music's progress label: `RollingDigitsLabel` in Music's own font and
+/// color, rolling only the digits that change. The rationale (and the measurement against
+/// SwiftUI's `numericText`) lives with the label, in CascadeKit. `animates` is Music's own
+/// reason to hold the roll, while the user scrubs.
+struct MusicTimeLabel: View {
 
     let text      : String
     let countsDown: Bool
     let animates  : Bool
 
-    func makeNSView(context: Context) -> MusicTimeLabelView {
-        MusicTimeLabelView(font: .monospacedDigitSystemFont(ofSize: 11, weight: .regular))
-    }
+    private static let font  = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
+    private static let color = NSColor.white.withAlphaComponent(0.55)
 
-    func updateNSView(
-        _ view : MusicTimeLabelView,
-        context: Context
-    ) {
-        view.show(
-            text,
+    var body: some View {
+        RollingDigitsLabel(
+            text      : text,
+            font      : Self.font,
+            color     : Self.color,
             countsDown: countsDown,
             animates  : animates
         )
-    }
-
-    func sizeThatFits(
-        _ proposal: ProposedViewSize,
-        nsView    : MusicTimeLabelView,
-        context   : Context
-    ) -> CGSize? {
-        nsView.intrinsicContentSize
     }
 }

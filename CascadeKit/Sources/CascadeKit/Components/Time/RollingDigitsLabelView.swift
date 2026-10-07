@@ -1,20 +1,26 @@
 //
-//  MusicTimeLabelView.swift
-//  Cascade
+//  RollingDigitsLabelView.swift
+//  CascadeKit
 //
 
 import AppKit
 import QuartzCore
-import SwiftUI
 
-/// MusicTimeLabelView lays one text layer per character side by side.
-/// Digits share one width, so a roll never moves its neighbours; a string of a
-/// new length is laid out again without animation.
+/// RollingDigitsLabelView rolls only the digits that change, the way SwiftUI's `numericText`
+/// does, but in the render server. That content transition re-laid the text out on every
+/// display frame of each roll: measured at ~16 % of a core for Music's two progress labels
+/// ticking once a second, against ~0.2 % for static text. Here a tick sets the string of the
+/// one or two digit layers that changed and a push transition moves the old digit out and the
+/// new one in; the app does nothing in between.
+///
+/// It lays one text layer per character side by side. Digits share one width, so a roll never
+/// moves its neighbours (a font that does not draw equal digits must be given
+/// `monospacingDigits`); a string of a new length is laid out again without animation.
 @MainActor
-final class MusicTimeLabelView: NSView {
+public final class RollingDigitsLabelView: NSView {
 
-    private let font : NSFont
-    private let color = NSColor.white.withAlphaComponent(0.55).cgColor
+    private var font : NSFont
+    private var color: NSColor
 
     private var glyphs: [CATextLayer] = []
     private var text   = ""
@@ -22,8 +28,12 @@ final class MusicTimeLabelView: NSView {
 
     private var lineHeight: CGFloat { ceil(font.ascender - font.descender) }
 
-    init(font: NSFont) {
-        self.font = font
+    public init(
+        font : NSFont,
+        color: NSColor
+    ) {
+        self.font  = font
+        self.color = color
         super.init(frame: .zero)
 
         wantsLayer = true
@@ -32,27 +42,29 @@ final class MusicTimeLabelView: NSView {
         layer?.masksToBounds = true
     }
 
-    required init?(coder: NSCoder) { nil }
+    public required init?(coder: NSCoder) { nil }
 
-    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    public override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
-    override var intrinsicContentSize: NSSize {
+    public override var intrinsicContentSize: NSSize {
         NSSize(width: ceil(text.reduce(0) { $0 + width(of: $1) }), height: lineHeight)
     }
 
-    override func viewDidChangeBackingProperties() {
+    public override func viewDidChangeBackingProperties() {
         super.viewDidChangeBackingProperties()
 
         let scale = window?.backingScaleFactor ?? 2
         glyphs.forEach { $0.contentsScale = scale }
     }
 
-    override func layout() {
+    public override func layout() {
         super.layout()
         placeGlyphs()
     }
 
-    func show(
+    /// show makes `text` the label's text. Only the characters that differ roll, and only when
+    /// `animates` is set and the length did not change.
+    public func show(
         _ text    : String,
         countsDown: Bool,
         animates  : Bool
@@ -97,6 +109,39 @@ final class MusicTimeLabelView: NSView {
         }
     }
 
+    /// restyle gives the label another font or color, without a roll: a node whose modifiers
+    /// changed keeps its label, and the glyphs, their measured widths and the label's size
+    /// follow. Calling it with the style the label already has does nothing.
+    public func restyle(
+        font : NSFont,
+        color: NSColor
+    ) {
+        guard font != self.font || color != self.color else { return }
+
+        let isResized = font != self.font
+
+        self.font  = font
+        self.color = color
+
+        if isResized {
+            widths.removeAll(keepingCapacity: true)
+        }
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for glyph in glyphs {
+            glyph.font            = font
+            glyph.fontSize        = font.pointSize
+            glyph.foregroundColor = color.cgColor
+        }
+        CATransaction.commit()
+
+        if isResized {
+            invalidateIntrinsicContentSize()
+            needsLayout = true
+        }
+    }
+
     private func placeGlyphs() {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
@@ -116,7 +161,7 @@ final class MusicTimeLabelView: NSView {
         let glyph = CATextLayer()
         glyph.font            = font
         glyph.fontSize        = font.pointSize
-        glyph.foregroundColor = color
+        glyph.foregroundColor = color.cgColor
         glyph.alignmentMode   = .center
         glyph.contentsScale   = window?.backingScaleFactor ?? 2
 
