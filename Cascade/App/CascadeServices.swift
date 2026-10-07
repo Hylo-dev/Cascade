@@ -49,24 +49,18 @@ final class CascadeServices {
 
     var spotlightStatus: String { spotlight.status }
 
-    /// The Caffeinate settings are mirrored here, not read from the service: the service applies
-    /// a command on its own queue, so its `state` would still show the old value in the render
-    /// that follows the user's click. The setters forward to the service, which persists them;
-    /// the mirrors are read once at launch and change only through these setters.
+    /// The Caffeinate settings forward to a mirror (see `CaffeinateSettingsMirror`): a write by
+    /// the user sends the service a command, and a state the service published updates the
+    /// mirror without sending one, so the options page and a refused display assertion show in
+    /// Settings too.
     var caffeinateGlyph: CaffeinateGlyph {
-        didSet {
-            guard caffeinateGlyph != oldValue else { return }
-
-            caffeinateService.perform(.setGlyph(caffeinateGlyph))
-        }
+        get { caffeinateSettings.glyph }
+        set { caffeinateSettings.glyph = newValue }
     }
 
     var caffeinateKeepsDisplayAwake: Bool {
-        didSet {
-            guard caffeinateKeepsDisplayAwake != oldValue else { return }
-
-            caffeinateService.perform(.setKeepsDisplayAwake(caffeinateKeepsDisplayAwake))
-        }
+        get { caffeinateSettings.keepsDisplayAwake }
+        set { caffeinateSettings.keepsDisplayAwake = newValue }
     }
 
     private(set) var caffeinateShortcut: CaffeinateShortcut?
@@ -74,6 +68,17 @@ final class CascadeServices {
     /// True when the system refused the shortcut the user chose, because another app owns it.
     /// The choice stays persisted so Settings shows what the user picked.
     private(set) var caffeinateShortcutUnavailable = false
+
+    /// setCaffeinateShortcutRecording frees the global combination while the recorder listens, so
+    /// pressing the current shortcut records it instead of toggling Caffeinate, and registers the
+    /// current one again when recording ends.
+    func setCaffeinateShortcutRecording(_ isRecording: Bool) {
+        if isRecording {
+            caffeinateHotKey.register(nil)
+        } else {
+            caffeinateShortcutUnavailable = !caffeinateHotKey.register(caffeinateShortcut)
+        }
+    }
 
     /// setCaffeinateShortcut persists the shortcut and registers it, `nil` meaning off. The
     /// preferences are written from the main actor: a single `UserDefaults` set, never on the
@@ -208,6 +213,8 @@ final class CascadeServices {
     private let caffeinatePreferences: UserDefaultsCaffeinatePreferences
     @ObservationIgnored
     private let caffeinateHotKey     : CaffeinateHotKey
+    @ObservationIgnored
+    private let caffeinateSettings   : CaffeinateSettingsMirror
 
     @ObservationIgnored
     private let suppressor    = AccessibilityBluetoothNoticeSuppressor()
@@ -271,8 +278,12 @@ final class CascadeServices {
         caffeinateHotKey            = CaffeinateHotKey(
             onPress: { [caffeinateService] in caffeinateService.perform(.toggle) }
         )
-        caffeinateGlyph             = caffeinatePreferences.glyph
-        caffeinateKeepsDisplayAwake = caffeinatePreferences.keepsDisplayAwake
+        let caffeinateSettings      = CaffeinateSettingsMirror(
+            glyph            : caffeinatePreferences.glyph,
+            keepsDisplayAwake: caffeinatePreferences.keepsDisplayAwake,
+            send             : { [caffeinateService] in caffeinateService.perform($0) }
+        )
+        self.caffeinateSettings     = caffeinateSettings
         caffeinateShortcut          = caffeinatePreferences.shortcut
 
         self.notch                   = notch
@@ -373,6 +384,16 @@ final class CascadeServices {
 
             DispatchQueue.main.async { [weak self] in
                 MainActor.assumeIsolated { self?.receiveBluetooth(state) }
+            }
+        }
+
+        // Every state the service publishes reaches Settings' mirror, whoever caused it: the
+        // widget, the options page, the shortcut or a refused assertion.
+        plugins.observe(PluginCaffeinateState.source) { @Sendable [caffeinateSettings] event in
+            guard let state = PluginCaffeinateState(event) else { return }
+
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated { caffeinateSettings.apply(state) }
             }
         }
 

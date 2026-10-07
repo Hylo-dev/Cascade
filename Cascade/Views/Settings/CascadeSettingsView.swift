@@ -214,7 +214,8 @@ struct CascadeSettingsView: View {
                     CaffeinateShortcutRecorder(
                         shortcut     : services.caffeinateShortcut,
                         isUnavailable: services.caffeinateShortcutUnavailable,
-                        onChange     : { services.setCaffeinateShortcut($0) }
+                        onChange     : { services.setCaffeinateShortcut($0) },
+                        onRecording  : { services.setCaffeinateShortcutRecording($0) }
                     )
                 } label: {
                     Text(setting.title)

@@ -15,46 +15,102 @@ import SwiftUI
 /// registration wants, which SwiftUI's `onKeyPress` does not.
 ///
 /// While it listens it swallows every key down, so a stray letter does not beep or reach another
-/// control in the Settings window.
+/// control in the Settings window. It also stops listening, as a backstop to the view's own
+/// `onDisappear`, when the Settings window closes or the app resigns active, and in `deinit`:
+/// a monitor that outlived its recorder would swallow keys for good, so if the recorder is gone
+/// the closure hands the event on untouched.
+///
+/// `onActiveChanged` tells the owner when listening starts and ends, so it can free the global
+/// hot key meanwhile (pressing the current combination must record it, not toggle Caffeinate).
 @MainActor
 @Observable
 final class CaffeinateShortcutRecording {
 
     private(set) var isRecording = false
 
+    /// The monitor and the observer tokens are written only on the main actor and read again by
+    /// `deinit`, when no one else holds the object; `deinit` is nonisolated on the macOS 15
+    /// floor, hence `nonisolated(unsafe)`.
     @ObservationIgnored
-    private var monitor: Any?
+    nonisolated(unsafe) private var monitor: Any?
+
+    @ObservationIgnored
+    nonisolated(unsafe) private var observers: [any NSObjectProtocol] = []
 
     @ObservationIgnored
     private var onRecorded: ((CaffeinateShortcut) -> Void)?
 
-    func begin(onRecorded: @escaping (CaffeinateShortcut) -> Void) {
+    @ObservationIgnored
+    private var onActiveChanged: ((Bool) -> Void)?
+
+    deinit {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        for observer in observers { NotificationCenter.default.removeObserver(observer) }
+    }
+
+    func begin(
+        onRecorded    : @escaping (CaffeinateShortcut) -> Void,
+        onActiveChanged: @escaping (Bool) -> Void
+    ) {
         guard !isRecording else { return }
 
-        isRecording     = true
-        self.onRecorded = onRecorded
-        monitor         = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        isRecording          = true
+        self.onRecorded      = onRecorded
+        self.onActiveChanged = onActiveChanged
+        onActiveChanged(true)
+
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             // The event is not Sendable, so only its two values cross into the main actor.
             let keyCode = event.keyCode
             let flags   = event.modifierFlags
 
-            MainActor.assumeIsolated {
-                self?.receive(
+            let handled = MainActor.assumeIsolated {
+                guard let self else { return false }
+
+                self.receive(
                     keyCode: keyCode,
                     flags  : flags
                 )
+
+                return true
             }
 
-            return nil
+            return handled ? nil : event
         }
+
+        let center = NotificationCenter.default
+        observers  = [
+            center.addObserver(
+                forName: NSWindow.willCloseNotification,
+                object : NSApp.keyWindow,
+                queue  : .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated { self?.cancel() }
+            },
+            center.addObserver(
+                forName: NSApplication.didResignActiveNotification,
+                object : nil,
+                queue  : .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated { self?.cancel() }
+            },
+        ]
     }
 
     func cancel() {
+        guard isRecording else { return }
+
         isRecording = false
-        onRecorded  = nil
 
         if let monitor { NSEvent.removeMonitor(monitor) }
         monitor = nil
+        for observer in observers { NotificationCenter.default.removeObserver(observer) }
+        observers = []
+
+        let onActiveChanged = self.onActiveChanged
+        onRecorded          = nil
+        self.onActiveChanged = nil
+        onActiveChanged?(false)
     }
 
     private func receive(
@@ -87,6 +143,7 @@ struct CaffeinateShortcutRecorder: View {
     let shortcut     : CaffeinateShortcut?
     let isUnavailable: Bool
     let onChange     : (CaffeinateShortcut?) -> Void
+    let onRecording  : (Bool) -> Void
 
     @State
     private var recording = CaffeinateShortcutRecording()
@@ -100,7 +157,10 @@ struct CaffeinateShortcutRecorder: View {
                     if recording.isRecording {
                         recording.cancel()
                     } else {
-                        recording.begin(onRecorded: onChange)
+                        recording.begin(
+                            onRecorded     : onChange,
+                            onActiveChanged: onRecording
+                        )
                     }
                 } label: {
                     Text(label)

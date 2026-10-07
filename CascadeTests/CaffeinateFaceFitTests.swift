@@ -30,24 +30,27 @@ struct CaffeinateFaceFitTests {
     private static let owner = PluginID(rawValue: "com.cascade.caffeinate")!
     private static let key   = PluginPublicationKey(plugin: owner, feature: "awake", surface: .widget)
 
-    private static let moment = Date(timeIntervalSince1970: 1_800_000_000)
-
+    /// The states are built from the present moment, so the kernel-drawn time nodes show a
+    /// plausible countdown: a session 36 minutes old with 24 minutes left.
     private static var states: [(name: String, state: PluginCaffeinateState)] {
-        [
+        let now     = Date.now
+        let started = now.addingTimeInterval(-36 * 60)
+
+        return [
             ("off", PluginCaffeinateState()),
             (
                 "timed",
                 PluginCaffeinateState(
-                    startedAt        : moment,
-                    endsAt           : moment.addingTimeInterval(1_440 * 60),
-                    activityStartedAt: moment
+                    startedAt        : started,
+                    endsAt           : now.addingTimeInterval(24 * 60),
+                    activityStartedAt: started
                 )
             ),
             (
                 "indefinite",
                 PluginCaffeinateState(
-                    startedAt        : moment,
-                    activityStartedAt: moment
+                    startedAt        : started,
+                    activityStartedAt: started
                 )
             ),
         ]
@@ -78,8 +81,12 @@ struct CaffeinateFaceFitTests {
 
             let large     = try tile(widget.sizes[0], of: widget.id)
             let small     = try tile(widget.sizes[1], of: widget.id)
-            let largeFace = idealSize(of: try PluginDocument(root: faces[0]))
-            let smallFace = idealSize(of: try PluginDocument(root: faces[1]))
+            let largeFace = try idealSize(of: PluginDocument(root: faces[0]))
+            let smallFace = try idealSize(of: PluginDocument(root: faces[1]))
+
+            // A measurement that came back empty would satisfy every upper bound below.
+            #expect(largeFace.width > 60, "\(name): the large face measured \(largeFace.width) points wide")
+            #expect(smallFace.width > 10, "\(name): the small face measured \(smallFace.width) points wide")
 
             #expect(largeFace.width <= large.width, "\(name): the large face is wider than its 2x1 tile")
             #expect(largeFace.height <= large.height, "\(name): the large face is taller than its 2x1 tile")
@@ -99,10 +106,12 @@ struct CaffeinateFaceFitTests {
             let options  = try #require(document.optionsRoot)
             let page     = try PluginDocument(root: options)
 
-            let natural = idealSize(of: page)
+            let natural = try idealSize(of: page)
+            #expect(natural.width > 200, "\(name): the options page measured \(natural.width) points wide")
+            #expect(natural.height > 40, "\(name): the options page measured \(natural.height) points high")
             #expect(natural.width <= Self.optionsFrame.width, "\(name): the options page asks for \(natural.width) points of width")
 
-            let fitted = idealSize(of: page, width: Self.optionsFrame.width)
+            let fitted = try idealSize(of: page, width: Self.optionsFrame.width)
             #expect(fitted.height <= Self.optionsFrame.height, "\(name): the options page needs \(fitted.height) points of height")
         }
     }
@@ -142,13 +151,13 @@ struct CaffeinateFaceFitTests {
     private func idealSize(
         of document: PluginDocument,
         width      : CGFloat? = nil
-    ) -> CGSize {
-        let store    = (try? nodeStore(document)) ?? PluginNodeStore(key: Self.key, submit: { _ in })
+    ) throws -> CGSize {
+        let store    = try nodeStore(document)
         let renderer = ImageRenderer(content: PluginDocumentView(store: store).environment(\.colorScheme, .dark))
         renderer.proposedSize = ProposedViewSize(width: width, height: nil)
         renderer.scale        = 1
 
-        return renderer.nsImage?.size ?? CGSize(width: CGFloat.infinity, height: .infinity)
+        return try #require(renderer.nsImage).size
     }
 
     private func tile(
