@@ -100,7 +100,7 @@ struct PluginKernelTests {
             return
         }
         #expect(changes.map(\.revision) == [1])
-        #expect(changes.first?.content?.diff.inserted == [PluginNodeID(rawValue: "root:text")])
+        #expect(changes.first?.content?.diff.inserted.contains(PluginNodeID(rawValue: "root:regions/0:text")) == true)
 
         _ = kernel.receive(try Fixtures.nowPlaying("Song"), at: start)
         let second = kernel.complete(music, token: 2, result: Fixtures.result(try Fixtures.output("now-playing", .activity, song)), at: start)
@@ -330,7 +330,7 @@ struct PluginKernelTests {
         _ = kernel.register(try Fixtures.clock(), grants: [], at: start)
         let output = try PluginOutput(
             publications: [
-                PluginPublication(feature: "time", surface: .activity, document: Fixtures.text("Wrong")),
+                Fixtures.publication("time", .activity, Fixtures.text("Wrong")),
                 PluginPublication(feature: "time", surface: .widget, document: Fixtures.text("12:00")),
             ]
         )

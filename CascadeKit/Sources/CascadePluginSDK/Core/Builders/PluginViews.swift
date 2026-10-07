@@ -53,8 +53,9 @@ public func Spacer(minLength: Double? = nil) -> PluginNode {
     PluginNode(.spacer(minLength: minLength))
 }
 
-/// Regions is a notice's root: its children are the compact leading, the compact trailing and
-/// the minimal region, in that order.
+/// Regions is a notice's or an activity's root: its children are the compact leading, the
+/// compact trailing and the minimal region, in that order, and for an activity a fourth, the
+/// expanded one. A notice takes three, an activity four.
 public func Regions(@PluginNodeBuilder content: () -> [PluginNode]) -> PluginNode {
     PluginNode(.regions, children: content())
 }

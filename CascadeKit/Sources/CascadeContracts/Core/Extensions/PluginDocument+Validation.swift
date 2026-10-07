@@ -69,8 +69,8 @@ extension PluginDocument {
             "A \(node.kind.name) node takes no children"
         )
         try ContractValidation.require(
-            node.kind != .regions || depth == 1 && node.children.count == 3,
-            "Regions are a document's root, with three regions"
+            node.kind != .regions || depth == 1 && (3...4).contains(node.children.count),
+            "Regions are a document's root, with three regions or four"
         )
         if case .viewThatFits = node.kind {
             try ContractValidation.require(!node.children.isEmpty, "A view that fits needs an alternative")

@@ -119,8 +119,29 @@ enum PluginEngineFixtures {
         _ document: PluginDocument?,
         staleAfter: Double? = nil
     ) throws -> PluginOutput {
-        try PluginOutput(
-            publications: [PluginPublication(feature: feature, surface: surface, document: document, staleAfter: staleAfter)]
+        try PluginOutput(publications: [publication(feature, surface, document, staleAfter: staleAfter)])
+    }
+
+    /// publication builds one publication, giving an activity the shape the contract demands: its
+    /// document becomes the first of four regions, and the attributes ride along.
+    static func publication(
+        _ feature : String,
+        _ surface : PluginSurfaceKind,
+        _ document: PluginDocument?,
+        staleAfter: Double? = nil
+    ) throws -> PluginPublication {
+        guard surface == .activity, let document else {
+            return try PluginPublication(feature: feature, surface: surface, document: document, staleAfter: staleAfter)
+        }
+
+        let regions = PluginNode(.regions, children: [document.root] + (1..<4).map { PluginNode(.text("region \($0)")) })
+
+        return try PluginPublication(
+            feature   : feature,
+            surface   : surface,
+            document  : PluginDocument(root: regions),
+            staleAfter: staleAfter,
+            activity  : PluginActivityAttributes(startedAt: start.wall, relevance: 0.5, accessibilityLabel: "Activity")
         )
     }
 
