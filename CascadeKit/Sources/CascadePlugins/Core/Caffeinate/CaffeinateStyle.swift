@@ -81,16 +81,16 @@ enum CaffeinateStyle {
         static var start            : String { String(localized: "Start", table: "CaffeinateWidget", bundle: .module) }
         static var stop             : String { String(localized: "Stop", table: "CaffeinateWidget", bundle: .module) }
         static var sleepsNormally   : String { String(localized: "Your Mac sleeps normally", table: "CaffeinateWidget", bundle: .module) }
+        static var awakeUntil       : String { String(localized: "Awake until", table: "CaffeinateWidget", bundle: .module) }
         static var awakeIndefinitely: String { String(localized: "Awake until you stop it", table: "CaffeinateWidget", bundle: .module) }
         static var keepDisplayAwake : String { String(localized: "Keep display awake", table: "CaffeinateWidget", bundle: .module) }
         static var until            : String { String(localized: "until", table: "CaffeinateWidget", bundle: .module) }
         static var activeFor        : String { String(localized: "active for", table: "CaffeinateWidget", bundle: .module) }
-        static var refused          : String { String(localized: "Couldn't prevent sleep", table: "CaffeinateWidget", bundle: .module) }
+        static var error            : String { String(localized: "Error", table: "CaffeinateWidget", bundle: .module) }
 
-        static func awakeUntil(_ end: Date) -> String {
-            String(localized: "Awake until \(Format.clock(end))", table: "CaffeinateWidget", bundle: .module)
-        }
-
+        /// activityLabel is the activity's spoken sentence. It is a string the plugin formats, so
+        /// its time is fixed at publication: the SDK has no kernel-drawn time for an accessibility
+        /// label, and a locale change shows in it at the next publication.
         static func activityLabel(endsAt: Date?) -> String {
             guard let endsAt else {
                 return String(localized: "Caffeinate, awake until you stop it", table: "CaffeinateWidget", bundle: .module)
@@ -99,14 +99,16 @@ enum CaffeinateStyle {
             return String(localized: "Caffeinate, awake until \(Format.clock(endsAt))", table: "CaffeinateWidget", bundle: .module)
         }
 
-        /// refusedWithCode is the options page's longer line: the code is for diagnosis, so it
-        /// stays out of the widget.
+        /// refusedWithCode is the options page's longer line: the code is for diagnosis, so the
+        /// tile only says "Error". The code is written as a string, so no digit grouping splits it.
         static func refusedWithCode(_ failure: CaffeinateFailure) -> String {
-            let code: Int32 = switch failure {
-                case .assertionRefused(let code), .extensionRefused(let code): code
-            }
+            switch failure {
+                case .assertionRefused(let code):
+                    String(localized: "Couldn't prevent sleep (error \(String(code)))", table: "CaffeinateWidget", bundle: .module)
 
-            return String(localized: "Couldn't prevent sleep (error \(String(code)))", table: "CaffeinateWidget", bundle: .module)
+                case .extensionRefused(let code):
+                    String(localized: "Couldn't extend (error \(String(code)))", table: "CaffeinateWidget", bundle: .module)
+            }
         }
     }
 
@@ -136,6 +138,18 @@ extension PluginCaffeinateState {
     /// symbol is the glyph's look: filled while a session runs, its outline while off.
     var symbol: String {
         isActive ? glyph.filledSymbol : glyph.outlineSymbol
+    }
+
+    /// refusedToStart says the system would not hold the assertion: the session is not running,
+    /// so the widget says so instead of its state.
+    var refusedToStart: Bool {
+        if case .assertionRefused? = failure { true } else { false }
+    }
+
+    /// refusedToExtend says a lengthening was refused: the session is as it was, so the widget
+    /// keeps drawing it and only adds a warning beside it.
+    var refusedToExtend: Bool {
+        if case .extensionRefused? = failure { true } else { false }
     }
 
     /// elapsed is the start-to-end interval of a timed session, which a kernel timer counts down.

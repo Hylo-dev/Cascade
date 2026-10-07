@@ -28,12 +28,23 @@ final class CaffeinatePlugin: PluginProvider {
     static let id      = PluginID(rawValue: "com.cascade.caffeinate")!
     static let feature = "awake"
 
+    /// Activity is what the plugin knows of its live activity. A fresh plugin, such as one
+    /// PluginHost just restarted, cannot know: the kernel may still hold the activity of a
+    /// session that ended in the gap, so the first snapshot without a session withdraws it once.
+    /// Withdrawing what is not there costs nothing.
+    fileprivate enum Activity {
+
+        case unknown
+        case out(PluginPublication)
+        case withdrawn
+    }
+
     /// Memory is what the plugin keeps between events.
     private struct Memory {
 
         var state   : PluginCaffeinateState?
         var widget  : PluginPublication?
-        var activity: PluginPublication?
+        var activity: Activity = .unknown
     }
 
     private let memory = Mutex(Memory())
@@ -84,18 +95,29 @@ final class CaffeinatePlugin: PluginProvider {
             }
 
             if let live {
-                if force || memory.activity != live {
+                if force || !memory.activity.isOut(live) {
                     out.append(live)
-                    memory.activity = live
+                    memory.activity = .out(live)
                 }
-            } else if memory.activity != nil {
+            } else if !memory.activity.isWithdrawn {
                 out.append(ended)
-                memory.activity = nil
+                memory.activity = .withdrawn
             }
 
             return out
         }
 
         return try PluginOutput(publications: publications)
+    }
+}
+
+private extension CaffeinatePlugin.Activity {
+
+    func isOut(_ publication: PluginPublication) -> Bool {
+        if case .out(let out) = self { out == publication } else { false }
+    }
+
+    var isWithdrawn: Bool {
+        if case .withdrawn = self { true } else { false }
     }
 }

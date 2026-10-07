@@ -96,24 +96,44 @@ enum CaffeinateWidgetFace {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// caption is the second line: a refusal, the time left, the elapsed time of an indefinite
-    /// session, or the next session's length. Each time node carries its own font and colour,
-    /// because the kernel reads them from the node and never from a parent.
+    /// caption is the second line. A refusal to start says "Error" in the warning colour, a
+    /// word that fits the tile at its natural size, and the options page carries the sentence
+    /// and the code. A refused extension leaves the session as it was, so the normal line stays
+    /// and a small warning symbol sits beside it.
     private static func caption(_ state: PluginCaffeinateState) -> PluginNode {
-        if state.failure != nil {
+        if state.refusedToStart {
             return HStack(spacing: 2) {
 
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 8, weight: .semibold))
+                warningSymbol()
 
-                Text(Copy.refused)
+                Text(Copy.error)
                     .font(.system(size: 10, weight: .medium))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.5)
+                    .minimumScaleFactor(0.8)
             }
             .foregroundStyle(Palette.warning)
         }
 
+        guard state.refusedToExtend else { return status(state) }
+
+        return HStack(spacing: 3) {
+
+            status(state)
+
+            warningSymbol()
+                .foregroundStyle(Palette.warning)
+        }
+    }
+
+    private static func warningSymbol() -> PluginNode {
+        Image(systemName: "exclamationmark.triangle.fill")
+            .font(.system(size: 8, weight: .semibold))
+    }
+
+    /// status is the time left, the elapsed time of an indefinite session, or the next session's
+    /// length. Each time node carries its own font and colour, because the kernel reads them
+    /// from the node and never from a parent.
+    private static func status(_ state: PluginCaffeinateState) -> PluginNode {
         if state.isActive, let endsAt = state.endsAt {
             return Text(countdownTo: endsAt)
                 .font(.system(size: 11, weight: .semibold, design: .rounded).monospacedDigit())

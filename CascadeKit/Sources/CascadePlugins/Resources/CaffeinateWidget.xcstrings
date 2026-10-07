@@ -41,10 +41,6 @@
       "comment": "Options page status while no session runs.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Il Mac va in stop normalmente" } } }
     },
-    "Awake until %@": {
-      "comment": "Options page status of a timed session. %@ is the time the session ends, such as 16:30.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Sveglio fino alle %@" } } }
-    },
     "Awake until you stop it": {
       "comment": "Options page status for a session without a time limit.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Sveglio finché non lo fermi" } } }
@@ -61,10 +57,6 @@
       "comment": "Small label above the elapsed time of a session without a time limit.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "attivo da" } } }
     },
-    "Couldn't prevent sleep": {
-      "comment": "Widget line when the system refused to keep the Mac awake.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Impossibile impedire lo stop" } } }
-    },
     "Couldn't prevent sleep (error %@)": {
       "comment": "Options page line when the system refused to keep the Mac awake. %@ is the system's error code, written without digit grouping.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Impossibile impedire lo stop (errore %@)" } } }
@@ -76,6 +68,18 @@
     "Caffeinate, awake until you stop it": {
       "comment": "Spoken sentence of the live activity of a session without a time limit.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Caffeinate, sveglio finché non lo fermi" } } }
+    },
+    "Awake until": {
+      "comment": "Options page status of a timed session, followed by the time the session ends, which the kernel draws.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Sveglio fino alle" } } }
+    },
+    "Error": {
+      "comment": "Widget tile line when the system refused to keep the Mac awake; the options page has the sentence and the code.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Errore" } } }
+    },
+    "Couldn't extend (error %@)": {
+      "comment": "Options page line when the system refused to lengthen a running session. %@ is the system's error code.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Impossibile estendere (errore %@)" } } }
     }
   },
   "version": "1.0"

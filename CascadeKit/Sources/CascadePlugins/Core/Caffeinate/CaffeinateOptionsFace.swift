@@ -53,9 +53,7 @@ enum CaffeinateOptionsFace {
 
             VStack(alignment: .leading, spacing: 1) {
 
-                Text(Copy.title)
-                    .font(.system(size: 13, weight: .semibold))
-                    .lineLimit(1)
+                title(state)
 
                 status(state)
             }
@@ -74,35 +72,57 @@ enum CaffeinateOptionsFace {
         .frame(height: 32)
     }
 
-    /// status says what the Mac will do, in words: sleep normally, stay awake until a time, or
-    /// until stopped; or why it could not, with the code.
+    /// status says what the Mac will do, in words: sleep normally, stay awake until a time the
+    /// kernel draws in the user's locale, or until stopped; or why it could not start, with the
+    /// code. A refused extension leaves the session as it was, so its line stays and the refusal
+    /// sits beside the title, in the warning colour.
     private static func status(_ state: PluginCaffeinateState) -> PluginNode {
-        if let failure = state.failure {
-            return HStack(spacing: 4) {
+        if state.refusedToStart, let failure = state.failure {
+            return warning(failure)
+        }
 
-                Image(systemName: "exclamationmark.triangle.fill")
+        return HStack(spacing: 3) {
 
-                Text(Copy.refusedWithCode(failure))
+            if !state.isActive {
+                Text(Copy.sleepsNormally)
+            } else if let endsAt = state.endsAt {
+                Text(Copy.awakeUntil)
+
+                Text(endsAt, style: .time)
+            } else {
+                Text(Copy.awakeIndefinitely)
             }
-            .font(.system(size: 11))
-            .foregroundStyle(Palette.warning)
-            .lineLimit(1)
-            .minimumScaleFactor(0.85)
         }
+        .font(.system(size: 11))
+        .foregroundStyle(state.isActive ? Palette.amber : Palette.secondary)
+        .lineLimit(1)
+        .minimumScaleFactor(0.85)
+    }
 
-        let text = if !state.isActive {
-            Copy.sleepsNormally
-        } else if let endsAt = state.endsAt {
-            Copy.awakeUntil(endsAt)
-        } else {
-            Copy.awakeIndefinitely
+    private static func title(_ state: PluginCaffeinateState) -> PluginNode {
+        HStack(spacing: 6) {
+
+            Text(Copy.title)
+                .font(.system(size: 13, weight: .semibold))
+                .lineLimit(1)
+
+            if state.refusedToExtend, let failure = state.failure {
+                warning(failure)
+            }
         }
+    }
 
-        return Text(text)
-            .font(.system(size: 11))
-            .foregroundStyle(state.isActive ? Palette.amber : Palette.secondary)
-            .lineLimit(1)
-            .minimumScaleFactor(0.85)
+    private static func warning(_ failure: CaffeinateFailure) -> PluginNode {
+        HStack(spacing: 4) {
+
+            Image(systemName: "exclamationmark.triangle.fill")
+
+            Text(Copy.refusedWithCode(failure))
+        }
+        .font(.system(size: 11))
+        .foregroundStyle(Palette.warning)
+        .lineLimit(1)
+        .minimumScaleFactor(0.85)
     }
 
     /// pill is the main switch's label: Start in the tint while off, Stop in neutral while on.

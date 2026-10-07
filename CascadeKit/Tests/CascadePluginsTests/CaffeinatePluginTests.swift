@@ -97,9 +97,9 @@ struct CaffeinatePluginTests {
     func offPublishesTheWidgetAndNoActivity() throws {
         let output = try send(off(), to: plugin())
 
-        #expect(output.publications.count == 1)
         #expect(widget(output)?.feature == CaffeinatePlugin.feature)
-        #expect(activity(output) == nil)
+        #expect(activity(output)?.document == nil)
+        #expect(output.publications.count == 2)
         #expect(widget(output)?.staleAfter == nil)
         #expect(widget(output)?.document?.optionsAction == "caffeinate.options")
         #expect(widget(output)?.document?.optionsRoot != nil)
@@ -120,11 +120,8 @@ struct CaffeinatePluginTests {
     }
 
     @Test
-    func stoppingWithdrawsTheActivityOnceAndOnlyIfOneWasOut() throws {
+    func stoppingWithdrawsTheActivityOnce() throws {
         let plugin = plugin()
-
-        let neverOut = try send(off(), to: plugin)
-        #expect(activity(neverOut) == nil)
 
         _ = try send(timed(), to: plugin)
 
@@ -136,6 +133,25 @@ struct CaffeinatePluginTests {
         let again = try send(off(nextDuration: .minutes(30)), to: plugin)
         #expect(activity(again) == nil)
         #expect(widget(again) != nil)
+
+        _ = try send(timed(), to: plugin)
+        #expect(activity(try send(off(), to: plugin))?.document == nil)
+    }
+
+    /// A restarted PluginHost has no memory, and the kernel may still hold the activity of a
+    /// session that ended while it was down: the first snapshot without a session withdraws it.
+    @Test
+    func aFreshPluginWithdrawsAStrandedActivity() throws {
+        let plugin = plugin()
+
+        let first       = try send(off(), to: plugin)
+        let withdrawals = first.publications.filter { $0.surface == .activity }
+        #expect(withdrawals.count == 1)
+        #expect(withdrawals.first?.document == nil)
+
+        let second = try send(off(), to: plugin)
+        #expect(second.publications.isEmpty)
+        #expect(activity(try send(off(nextDuration: .minutes(30)), to: plugin)) == nil)
     }
 
     @Test
@@ -147,6 +163,10 @@ struct CaffeinatePluginTests {
         #expect(try send(state, to: plugin).publications.isEmpty)
         #expect(try send(off(), to: plugin).publications.count == 2)
         #expect(try send(off(), to: plugin).publications.isEmpty)
+
+        let fresh = self.plugin()
+        #expect(try send(off(), to: fresh).publications.count == 2)
+        #expect(try send(off(), to: fresh).publications.isEmpty)
     }
 
     @Test
@@ -396,14 +416,46 @@ struct CaffeinatePluginTests {
     }
 
     @Test
-    func aFailureShowsTheWarningAndTheCodeOnTheOptionsPage() throws {
+    func aRefusedStartSaysErrorOnTheTileAndGivesTheSentenceAndCodeOnTheOptionsPage() throws {
         let state   = PluginCaffeinateState(failure: .assertionRefused(-536_870_212))
         let entries = try nodes(widget(try send(state, to: plugin())))
         let page    = texts(entries)
 
-        #expect(page.contains("Couldn't prevent sleep"))
-        #expect(page.contains { $0.contains("Couldn't prevent sleep") && $0.contains("536870212") })
+        #expect(page.contains("Error"))
+        #expect(page.contains("Couldn't prevent sleep (error -536870212)"))
+        #expect(!page.contains("Couldn't prevent sleep"))
         #expect(symbols(entries).contains("exclamationmark.triangle.fill"))
+    }
+
+    @Test
+    func aRefusedExtensionKeepsTheRunningPresentationAndAddsTheWarning() throws {
+        let state   = PluginCaffeinateState(
+            startedAt        : Self.started,
+            endsAt           : Self.now.addingTimeInterval(1_440),
+            activityStartedAt: Self.started,
+            failure          : .extensionRefused(5)
+        )
+        let ends    = try #require(state.endsAt)
+        let entries = try nodes(widget(try send(state, to: plugin())))
+        let page    = texts(entries)
+
+        #expect(entries.contains { $0.kind == .countdown(end: ends, style: .compact) })
+        #expect(entries.contains { $0.kind == .date(ends, style: .time) })
+        #expect(page.contains("Awake until"))
+        #expect(page.contains("Couldn't extend (error 5)"))
+        #expect(!page.contains("Error"))
+        #expect(!page.contains { $0.hasPrefix("Couldn't prevent sleep") })
+        #expect(symbols(entries).contains("exclamationmark.triangle.fill"))
+    }
+
+    @Test
+    func theOptionsPageDrawsTheEndTimeWithTheKernel() throws {
+        let state   = timed()
+        let ends    = try #require(state.endsAt)
+        let entries = try nodes(widget(try send(state, to: plugin())))
+
+        #expect(texts(entries).contains("Awake until"))
+        #expect(entries.filter { $0.kind == .date(ends, style: .time) }.count >= 2)
     }
 
     @Test
@@ -421,7 +473,7 @@ struct CaffeinatePluginTests {
         for state in states {
             let output = try send(state, to: plugin())
 
-            for publication in output.publications {
+            for publication in output.publications where publication.document != nil {
                 for entry in try nodes(publication) {
                     switch entry.kind {
                         case .button(let action), .toggle(_, let action):
