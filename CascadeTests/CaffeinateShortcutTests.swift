@@ -65,6 +65,29 @@ struct CaffeinateShortcutTests {
         #expect(!CaffeinateHotKey.isOurs(EventHotKeyID(signature: 0x4361_6653, id: 2)))
     }
 
+    /// aRecorderFreedWhileListeningSaysRecordingEnded covers a recorder released without the
+    /// view's `onDisappear`: its owner must still hear the end, on main, or the hot key it freed
+    /// for recording would stay unregistered.
+    @Test
+    func aRecorderFreedWhileListeningSaysRecordingEnded() async {
+        var changes  = [Bool]()
+        var recorder: CaffeinateShortcutRecording? = CaffeinateShortcutRecording()
+
+        recorder?.begin(
+            onRecorded     : { _ in },
+            onActiveChanged: { changes.append($0) }
+        )
+        #expect(changes == [true])
+
+        recorder = nil
+        #expect(changes == [true])
+
+        await withCheckedContinuation { continuation in
+            DispatchQueue.main.async { continuation.resume() }
+        }
+        #expect(changes == [true, false])
+    }
+
     @Test
     func registeringNilUnregisters() {
         var presses = 0
@@ -149,6 +172,32 @@ struct CaffeinateShortcutPreferencesTests {
 
             #expect(preferences.shortcut == CaffeinateShortcut.default)
         }
+    }
+
+    @Test
+    func aStoredShiftOnlyShortcutFallsBackToTheDefault() throws {
+        try withScratchDefaults { defaults in
+            let shifted = CaffeinateShortcut(keyCode: UInt32(kVK_ANSI_C), modifiers: UInt32(shiftKey))
+            defaults.set(try JSONEncoder().encode(shifted), forKey: "caffeinate.shortcut")
+
+            let preferences = UserDefaultsCaffeinatePreferences(defaults: defaults)
+
+            #expect(preferences.shortcut == CaffeinateShortcut.default)
+        }
+    }
+
+    @Test
+    func shiftAloneIsNotAModifier() {
+        func shortcut(_ modifiers: Int) -> CaffeinateShortcut {
+            CaffeinateShortcut(keyCode: UInt32(kVK_ANSI_C), modifiers: UInt32(modifiers))
+        }
+
+        #expect(!shortcut(0).hasModifier)
+        #expect(!shortcut(shiftKey).hasModifier)
+        #expect(shortcut(shiftKey | cmdKey).hasModifier)
+        #expect(shortcut(controlKey).hasModifier)
+        #expect(shortcut(optionKey).hasModifier)
+        #expect(shortcut(cmdKey).hasModifier)
     }
 
     @Test

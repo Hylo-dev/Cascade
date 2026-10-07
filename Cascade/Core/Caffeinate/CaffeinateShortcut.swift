@@ -53,9 +53,10 @@ nonisolated struct CaffeinateShortcut: Codable, Hashable, Sendable {
     let modifiers: UInt32
 
     /// hasModifier is false for a bare key, which would be registered globally and steal that key
-    /// from every app; such a value is never a valid shortcut.
+    /// from every app; such a value is never a valid shortcut. Shift alone does not count, as in
+    /// the recorder: ⇧C would steal a plain capital C everywhere, so one of ⌘⌃⌥ is required.
     var hasModifier: Bool {
-        modifiers & UInt32(controlKey | optionKey | cmdKey | shiftKey) != 0
+        modifiers & UInt32(controlKey | optionKey | cmdKey) != 0
     }
 
     /// displayString writes the shortcut as macOS does: modifier symbols in the order ⌃⌥⇧⌘, then

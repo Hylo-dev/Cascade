@@ -22,15 +22,17 @@ import SwiftUI
 ///
 /// `onActiveChanged` tells the owner when listening starts and ends, so it can free the global
 /// hot key meanwhile (pressing the current combination must record it, not toggle Caffeinate).
+/// A recorder freed while it listens, without the view's `onDisappear`, still says it ended:
+/// `deinit` hands that to the main actor, or the hot key would stay unregistered until relaunch.
 @MainActor
 @Observable
 final class CaffeinateShortcutRecording {
 
     private(set) var isRecording = false
 
-    /// The monitor and the observer tokens are written only on the main actor and read again by
-    /// `deinit`, when no one else holds the object; `deinit` is nonisolated on the macOS 15
-    /// floor, hence `nonisolated(unsafe)`.
+    /// The monitor, the observer tokens and the end callback are written only on the main actor
+    /// and read again by `deinit`, when no one else holds the object; `deinit` is nonisolated on
+    /// the macOS 15 floor, hence `nonisolated(unsafe)`.
     @ObservationIgnored
     nonisolated(unsafe) private var monitor: Any?
 
@@ -40,17 +42,25 @@ final class CaffeinateShortcutRecording {
     @ObservationIgnored
     private var onRecorded: ((CaffeinateShortcut) -> Void)?
 
+    /// onActiveChanged is set only while recording. It is main-actor isolated, which also makes it
+    /// Sendable, so `deinit` can carry it, and not the object, back to main.
     @ObservationIgnored
-    private var onActiveChanged: ((Bool) -> Void)?
+    nonisolated(unsafe) private var onActiveChanged: (@MainActor (Bool) -> Void)?
 
     deinit {
         if let monitor { NSEvent.removeMonitor(monitor) }
         for observer in observers { NotificationCenter.default.removeObserver(observer) }
+
+        if let onActiveChanged {
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated { onActiveChanged(false) }
+            }
+        }
     }
 
     func begin(
-        onRecorded    : @escaping (CaffeinateShortcut) -> Void,
-        onActiveChanged: @escaping (Bool) -> Void
+        onRecorded     : @escaping (CaffeinateShortcut) -> Void,
+        onActiveChanged: @escaping @MainActor (Bool) -> Void
     ) {
         guard !isRecording else { return }
 
@@ -143,7 +153,7 @@ struct CaffeinateShortcutRecorder: View {
     let shortcut     : CaffeinateShortcut?
     let isUnavailable: Bool
     let onChange     : (CaffeinateShortcut?) -> Void
-    let onRecording  : (Bool) -> Void
+    let onRecording  : @MainActor (Bool) -> Void
 
     @State
     private var recording = CaffeinateShortcutRecording()

@@ -711,6 +711,27 @@ struct CaffeinateServiceTests {
         #expect(harness.emitted.all.last?.startedAt == nil)
     }
 
+    /// aToggleOnAJustExpiredSessionOnlyStops is the shortcut pressed inside the timer's leeway,
+    /// or just after a wake: the user saw a session and asked to stop it.
+    @Test
+    func aToggleOnAJustExpiredSessionOnlyStops() {
+        let harness = CaffeinateHarness(nextDuration: .minutes(15))
+        harness.perform(.start)
+        harness.clock.advance(by: 900.1)
+        harness.emitted.clear()
+
+        harness.perform(.toggle)
+
+        #expect(!harness.service.state.isActive)
+        #expect(harness.assertions.liveCount == 0)
+        #expect(harness.assertions.acquiredCount == 2)
+        #expect(harness.emitted.count == 1)
+        #expect(harness.emitted.all.last?.startedAt == nil)
+
+        harness.perform(.toggle)
+        #expect(harness.service.state.isActive)
+    }
+
     @Test
     func aGestureRenewsTheActivityOnlyPastItsCap() {
         let harness = CaffeinateHarness(nextDuration: .indefinite)

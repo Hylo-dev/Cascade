@@ -308,7 +308,8 @@ nonisolated final class CaffeinateService: Sendable {
 
             // A session whose end has passed but whose timer has not fired yet is over; ending
             // it first means a gesture never extends, steps or toggles a dead session.
-            if session.hasExpired(at: now) {
+            let hadExpired = session.hasExpired(at: now)
+            if hadExpired {
                 releaseEverything(of: &session)
             }
 
@@ -320,9 +321,12 @@ nonisolated final class CaffeinateService: Sendable {
                     releaseEverything(of: &session)
 
                 case .toggle:
+                    // A toggle that lands on a session already past its end (inside the timer's
+                    // leeway, or just after a wake) was pressed to stop what the user saw running:
+                    // ending it is the whole answer, never a new session.
                     if session.isActive {
                         releaseEverything(of: &session)
-                    } else {
+                    } else if !hadExpired {
                         start(&session, now: now)
                     }
 

@@ -176,6 +176,36 @@ struct PluginActivityRoutingTests {
         #expect(live.selection.primary == nil)
     }
 
+    /// aMoreRelevantNativeActivityTakesTheCompact is the spec's arbitration: Caffeinate's
+    /// activity goes through the same `LiveActivityHost` as a native one, with no rule of its own,
+    /// so a native activity of relevance 0.5 (music playing) takes the compact presentation and
+    /// Caffeinate's, at 0.3, drops to minimal, whichever was presented first.
+    @Test
+    func aMoreRelevantNativeActivityTakesTheCompact() throws {
+        let live      = LiveActivityHost(now: { start })
+        let surfaces  = PluginSurfaceRouter(host: LiveHost(live: live), manifests: [], submit: { _ in }, visibility: { _, _ in })
+        var publisher = PluginPublicationStore()
+        let id        = "plugin:com.cascade.caffeinate/caffeinate"
+        let music     = LiveFixture("music", relevance: 0.5)
+
+        let attributes = try PluginActivityAttributes(startedAt: start, relevance: 0.3, accessibilityLabel: "Keeping awake")
+        let change     = publisher.apply(try regions(), staleAfter: nil, for: key, at: start, activity: attributes)
+        surfaces.apply([try #require(change)], rejected: [])
+        #expect(live.selection.primary?.id == id)
+
+        live.present(music)
+
+        #expect(live.selection.primary?.id   == "music")
+        #expect(live.selection.secondary?.id == id)
+
+        live.end(id: "music")
+
+        #expect(live.selection.primary?.id == id)
+        #expect(live.selection.secondary == nil)
+
+        live.stop()
+    }
+
     @Test
     func aWithdrawalEndsTheActivity() throws {
         let rig = Rig()
