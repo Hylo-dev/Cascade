@@ -137,6 +137,16 @@ public func Text(
     )
 }
 
+/// Text(countdownTo:style:) is the time left until `end` in the Dynamic Island's compact
+/// format (`2h`, `24m`, `4:59`), drawn by the kernel, which redraws it only when the text
+/// changes, so the plugin never wakes to tick it.
+public func Text(
+    countdownTo end: Date,
+    style          : PluginCountdownStyle = .compact
+) -> PluginNode {
+    PluginNode(.countdown(end: end, style: style))
+}
+
 /// ProgressView(timerInterval:) is a bar that fills over the interval, drawn by the kernel.
 public func ProgressView(timerInterval: ClosedRange<Date>) -> PluginNode {
     PluginNode(.timerProgress(start: timerInterval.lowerBound, end: timerInterval.upperBound))

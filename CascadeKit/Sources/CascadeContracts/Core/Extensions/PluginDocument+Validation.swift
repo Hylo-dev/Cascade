@@ -123,7 +123,7 @@ extension PluginDocument {
             case .shape(let shape):
                 try validate(shape: shape)
 
-            case .date(let date, _):
+            case .date(let date, _), .countdown(let date, _):
                 try ContractValidation.finite(date)
 
             case .timer(let start, let end, _), .timerProgress(let start, let end):

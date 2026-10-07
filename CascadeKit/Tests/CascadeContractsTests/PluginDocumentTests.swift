@@ -57,6 +57,15 @@ struct PluginDocumentTests {
     }
 
     @Test
+    func roundTripsACountdown() throws {
+        let end      = Date(timeIntervalSince1970: 1_800_000_000)
+        let document = try PluginDocument(root: PluginNode(.countdown(end: end, style: .compact)))
+        let decoded  = try PluginDocument.decode(JSONEncoder().encode(document))
+
+        #expect(decoded == document)
+    }
+
+    @Test
     func leavesUndeclaredNodeListsEmpty() throws {
         let json = #"{"schema":2,"root":{"kind":{"spacer":{}}}}"#
         let root = try PluginDocument.decode(Data(json.utf8)).root

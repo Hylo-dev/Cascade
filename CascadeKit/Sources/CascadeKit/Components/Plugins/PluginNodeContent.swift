@@ -81,6 +81,11 @@ struct PluginNodeContent: View {
             case .timer(let start, let end, let countsDown):
                 Text(timerInterval: start...end, countsDown: countsDown)
 
+            case .countdown(let end, _):
+                TimelineView(CompactCountdownSchedule(end: end)) { context in
+                    Text(CompactCountdown.text(remaining: end.timeIntervalSince(context.date)))
+                }
+
             case .timerProgress(let start, let end):
                 ProgressView(timerInterval: start...end, countsDown: false)
 

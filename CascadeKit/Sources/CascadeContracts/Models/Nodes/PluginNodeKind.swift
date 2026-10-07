@@ -8,8 +8,8 @@ import Foundation
 /// PluginNodeKind is the tier-1 vocabulary of v1 plus the tier-2 component node. Every case
 /// exists because Clock, a notice or Music needs it; a node with no consumer is left out.
 /// Time is drawn by the kernel: `clock` is the current time and `today` the current weekday,
-/// day and month, while `date`, `timer` and `timerProgress` show the dates they are given, so
-/// none of them costs the plugin anything while it ticks, which is how the clock stops waking
+/// day and month, while `date`, `timer`, `timerProgress` and `countdown` show the dates they are
+/// given, so none of them costs the plugin anything while it ticks, which is how the clock stops waking
 /// anything once a second. A `regions` node is the root of a notice's document, holding its
 /// compact leading, compact trailing and minimal regions in that order. A `viewThatFits` shows the
 /// first of its children that fits the space it is given, which is how a widget that comes in
@@ -30,6 +30,7 @@ public enum PluginNodeKind: Codable, Hashable, Sendable {
     case today
     case timer(start: Date, end: Date, countsDown: Bool)
     case timerProgress(start: Date, end: Date)
+    case countdown(end: Date, style: PluginCountdownStyle)
     case progress(value: Double, total: Double, style: PluginProgressStyle)
     case button(action: String)
     case toggle(isOn: Bool, action: String)
@@ -55,6 +56,7 @@ public enum PluginNodeKind: Codable, Hashable, Sendable {
             case .today        : "today"
             case .timer        : "timer"
             case .timerProgress: "timerProgress"
+            case .countdown    : "countdown"
             case .progress     : "progress"
             case .button       : "button"
             case .toggle       : "toggle"
