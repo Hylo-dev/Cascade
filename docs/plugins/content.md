@@ -47,14 +47,22 @@ HStack(spacing: 8) {
 
 | Group | Builder |
 | --- | --- |
-| Layout | `VStack`, `HStack`, `ZStack`, `ViewThatFits(in:)`, `Spacer`, and `Regions`, a notice's root, whose three children are the compact leading, compact trailing and minimal regions |
+| Layout | `VStack`, `HStack`, `ZStack`, `ViewThatFits(in:)`, `Spacer`, and `Regions`, the root of a notice or an activity: a notice's three children are the compact leading, compact trailing and minimal regions, an activity's four add the expanded one |
 | Content | `Text`, `Image(systemName:)`, `Image(asset:)`, `Circle`, `Capsule`, `RoundedRectangle(cornerRadius:)`, `Component(id:version:parameters:)` |
-| Kernel-drawn time | `Clock()`, `Today()`, `Text(_:style:)` with `.time`, `.date` or `.relative`, `Text(timerInterval:countsDown:)`, `ProgressView(timerInterval:)` |
+| Kernel-drawn time | `Clock()`, `Today()`, `Text(_:style:)` with `.time`, `.date` or `.relative`, `Text(timerInterval:countsDown:)`, `Text(countdownTo:style:)`, `ProgressView(timerInterval:)` |
 | Progress | `ProgressView(value:total:style:)`, linear or circular |
 | Controls | `Button(action:label:)`, `Toggle(isOn:action:label:)`, `Slider(value:in:step:action:)` |
 | Modifiers | `font`, `foregroundStyle` (color, hierarchical level or gradient of two to four colors), `frame`, `padding`, `opacity`, `clipShape`, `lineLimit`, `minimumScaleFactor`, `contentTransition` (`numericText`, `symbolEffect`), `transition` (`opacity`, `scale`, `move`), `accessibilityLabel`, `overlay`, `background`, `id` |
 
 `overlay` and `background` take their content as the node's next layer, several nodes laid in a `ZStack`. `ViewThatFits` is how a widget, which cannot know the size the user gave it, offers a face per size, largest first, as `ClockPlugin` does. Kernel-drawn time is drawn and kept current by the kernel, so a clock or a countdown costs the plugin nothing while it ticks.
+
+### Kernel-drawn times
+
+`Text(countdownTo:style:)` (the `countdown` node) is the time left until a date in the Dynamic Island's compact format: whole hours from one hour (`2h`), whole minutes from five minutes (`24m`), `m:ss` below that (`4:59`), and `0:00` at the end. Every unit is floored, so it never shows less time than is left. It is redrawn only when its text changes, on a sparse `TimelineSchedule` (`CompactCountdownSchedule`) whose entries are those instants: a countdown of eight hours wakes the view eight times, not once a second, and the plugin not at all. The schedule ends with the change at `end`, so a finished countdown asks for nothing more. `Text(timerInterval:countsDown:)` stops the same way, at the end of its interval.
+
+Both nodes draw their digits with `RollingDigitsLabel`, the control Music's progress labels use: only the digits that change roll, in the render server, and under Reduce Motion they change in place. VoiceOver reads the label as one static text with the current value.
+
+A time node takes its font and colour only from its own modifiers: the innermost `.font(_:)` and the innermost `.foregroundStyle(color)` on the node itself. An ancestor's style does not reach it, because the label is an AppKit view and not a SwiftUI `Text`; a foreground style that is not a plain color (a hierarchical level, a gradient) falls back to white. Digits are always monospaced, so a roll never moves its neighbours.
 
 Not in v1: `ForEach` and dynamic lists, grids and gestures. `Image(asset:)` draws nothing until the asset pipeline exists (see [Services, storage and assets](services.md)).
 
@@ -66,7 +74,7 @@ Not in v1: `ForEach` and dynamic lists, grids and gestures. `Image(asset:)` draw
 - 4 KiB per text, 512 bytes per accessibility label;
 - a component takes at most 16 parameters, each a string of at most 256 bytes, a finite number or a bool;
 - lengths are finite, from 0 to 10,000 points; colors, opacity and progress stay in range; a slider's range and step make sense; a timer does not end before it starts;
-- only containers and labelled controls take children, and `Regions` is a notice's root with exactly three regions.
+- only containers and labelled controls take children, and `Regions` is the root of a notice or an activity, with three regions or four. The publication then fixes the number: a notice has exactly three and an activity exactly four.
 
 A `PluginOutput` carries at most 48 publications, one per feature and surface. A document that breaks a limit is rejected whole and the previous one stays on screen; the kernel also rejects a publication for a feature or surface its manifest does not declare, or that shows an undeclared component.
 

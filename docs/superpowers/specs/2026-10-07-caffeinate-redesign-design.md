@@ -1,6 +1,6 @@
 # Cascade: Caffeinate, redesigned
 
-Date: 7 October 2026. Status: design approved section by section in the conversation of 7 October; implementation plan not written yet. It replaces the Caffeinate widget, its options page and its native owner as they stand on `cava/widget-fullscreen`, and it routes plugin activities for the first time.
+Date: 7 October 2026. Status: implemented on branch `cava/caffeinate-redesign` (7 October 2026); see the plan's ledger rulings in the PR description. It replaces the Caffeinate widget, its options page and its native owner as they stand on `cava/widget-fullscreen`, and it routes plugin activities for the first time.
 
 The UI follows Apple's Human Interface Guidelines (Live Activities, Steppers, Toggles, Color, Accessibility, Motion) and the Dynamic Island's design system: a key tint on black, a glyph leading, a value trailing, rounded tabular digits, a minimal presentation when the island is shared.
 

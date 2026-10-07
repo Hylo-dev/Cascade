@@ -22,6 +22,8 @@ The renderer reports a `PluginActionRequest`: the publication and the revision i
 
 Anything else is refused, and the refusal reaches the renderer, which reverts at once. An accepted action becomes a `PluginActionEvent` with the feature, the action and the value, and queues ahead of every other pending event. Grants are checked again when its turn comes, and an action that waited past 1.5 seconds (`PluginKernel.actionTimeout`), which the renderer has already reverted, is refused rather than run late. At most eight actions wait per plugin.
 
+A control whose effect belongs to a native owner, such as Caffeinate's power assertions, also reaches `PluginSystem.actionHandler` with the `PluginActionEvent` the broker resolved: the action name the manifest declared and the value of a toggle or slider, never the renderer's own claim. It runs on main only after the broker accepted the control, and a control on an options page also rechecks that its page is still the one shown. Widget, options-page and activity controls reach it alike.
+
 The plugin answers with a publication that shows the new state, which is the confirmation.
 
 ## Actions Cascade invokes

@@ -9,7 +9,7 @@ While no source changes, no wake is due and nobody touches a control, no plugin 
 ## Designing finite work
 
 - **Publish on real change only.** An answer costs a dispatch over XPC, a `handle()` and, for every new document, one validation encoding. A document equal to the stored one changes nothing on screen, but the work to produce it was still spent. Answer a `refresh` with the current content, and any other event with only what it changed, an empty `PluginOutput` when nothing did.
-- **Let the kernel draw time.** `Clock()`, `Today()`, `Text(_:style:)`, `Text(timerInterval:countsDown:)` and `ProgressView(timerInterval:)` are drawn and kept current by the kernel. A clock, a countdown or a playback position never needs a plugin that wakes every second. Content drawn this way never goes stale, so leave `staleAfter` out.
+- **Let the kernel draw time.** `Clock()`, `Today()`, `Text(_:style:)`, `Text(timerInterval:countsDown:)`, `Text(countdownTo:style:)` and `ProgressView(timerInterval:)` are drawn and kept current by the kernel. A clock, a countdown or a playback position never needs a plugin that wakes every second. Content drawn this way never goes stale, so leave `staleAfter` out.
 - **Ask for a wake only when content changes at a known time.** The kernel holds a wake at least a second away; a plugin that wakes often is charged for every run.
 - **Offer every size at once.** A widget cannot know the tile the user gave it, so it offers one face per size inside `ViewThatFits`, and the kernel picks the first that fits without asking the plugin again.
 - **Keep state small.** A reducer behind a `Mutex` is the usual whole state. A plugin persists nothing: after a restart its sources' latest states and a `refresh` rebuild it.

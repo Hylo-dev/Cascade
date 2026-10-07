@@ -12,7 +12,7 @@ from iPhone; these protocols do not conform to ActivityKit.
 
 Cascade's notices and activities are moving to the [plugin engine](../superpowers/specs/2026-09-29-plugin-engine-design.md). The protocols below remain CascadeKit's internal host seams; plugins never conform to them. A plugin publishes a notice as data, its three regions plus `PluginNoticeAttributes` (duration, rim tint, compact width, accessibility sentence, show or update), and `PluginNotice` adapts each publication to `NotchTransientNotice`, so it follows every rule on this page.
 
-The Bluetooth, charging and volume notices are already plugins. Music's activity is still the native `MediaLiveActivity` until the services and Music sub-project moves it, and plugin activities are not shown until that sub-project routes them. The file shelf's unsupported-file notice stays native, as part of a system surface. The visual, timing, privacy and accessibility rules described here hold for every path.
+The Bluetooth, charging and volume notices are already plugins, and so is Caffeinate's activity, which `PluginSurfaceRouter` presents through the same live-activity host as Music. Music's activity is still the native `MediaLiveActivity` until the services and Music sub-project moves it. The file shelf's unsupported-file notice stays native, as part of a system surface. The visual, timing, privacy and accessibility rules described here hold for every path.
 
 ## Cascade contract choices
 

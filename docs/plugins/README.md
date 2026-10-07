@@ -6,8 +6,8 @@ First-party plugins run in **PluginHost**, an XPC service bundled in Cascade, ea
 
 ## Pages
 
-- [Manifest](manifest.md): manifest v2, features, requirements and how manifests are validated.
-- [Content](content.md): the document, the SwiftUI-mirror builder, the three tiers, limits and identity.
+- [Manifest](manifest.md): manifest v2, features, activities, requirements and how manifests are validated.
+- [Content](content.md): the document, the SwiftUI-mirror builder, the three tiers, kernel-drawn times, limits and identity.
 - [Lifecycle](lifecycle.md): what wakes a plugin, sources, staleness, restarts and the failure table.
 - [Actions](actions.md): controls, optimistic state and how the kernel authorizes an action.
 - [Testing](testing.md): testing a plugin as a value, and the engine's own tests.
@@ -36,6 +36,7 @@ First-party plugins run in **PluginHost**, an XPC service bundled in Cascade, ea
 | --- | --- | --- | --- | --- |
 | `com.cascade.battery` | `BatteryPlugin` | Widget (2x1, 2x2, 1x1) | `power` | `power.battery` |
 | `com.cascade.clock` | `ClockPlugin` | Widget (2x2, 2x1, 1x1) | none | none |
+| `com.cascade.caffeinate` | `CaffeinatePlugin` | Widget (2x1, 1x1) with an options page, and an activity while a session runs | `caffeinate` | none |
 | `com.cascade.bluetooth` | `BluetoothPlugin` | Notice | `bluetooth` | `bluetooth.device`, `bluetooth.battery` |
 | `com.cascade.power` | `ChargingPlugin` | Notice | `power` | `power.battery` |
 | `com.cascade.volume` | `VolumePlugin` | Notice | `volume` | `volume.level` |
@@ -46,7 +47,7 @@ The user places widgets on the notch grid: a long press starts editing, where a 
 
 ## Still pending
 
-- **Music as a plugin**, with the media and spectrum services and the `audio.spectrum`, `media.scrubber` and `audio.outputPicker` components (the services and Music sub-project). Until then Music is native (`MediaLiveActivity` and the expanded fallback), and plugin activities are accepted but not shown.
+- **Music as a plugin**, with the media and spectrum services and the `audio.spectrum`, `media.scrubber` and `audio.outputPicker` components (the services and Music sub-project). Until then Music is native (`MediaLiveActivity` and the expanded fallback), beside the plugin activities the same live-activity host arbitrates.
 - **The layout sub-project**: slot pages and the arbitration of compact and expanded space. Plugin widgets meanwhile use today's grid and its editing.
 - **External plugins**: discovery, installation, a process per plugin behind the same `PluginExecutor` protocol, and user approval of permissions.
 - **Services, storage and assets**: see [the planned page](services.md).
