@@ -40,6 +40,11 @@ public final class RollingDigitsLabelView: NSView {
         // A push transition renders outside the layer it runs on, so the
         // clip that keeps a rolling digit inside its line sits on the parent.
         layer?.masksToBounds = true
+
+        // The glyph layers are not accessibility elements, so the view itself is the one
+        // static text VoiceOver reads; `show` keeps its value current.
+        setAccessibilityElement(true)
+        setAccessibilityRole(.staticText)
     }
 
     public required init?(coder: NSCoder) { nil }
@@ -76,6 +81,10 @@ public final class RollingDigitsLabelView: NSView {
         let isRelaid      = oldCharacters.count != newCharacters.count
 
         self.text = text
+
+        // Only on a change, after the guard: a tick that shows the same text costs nothing.
+        setAccessibilityValue(text)
+        setAccessibilityLabel(text)
 
         CATransaction.begin()
         CATransaction.setDisableActions(true)

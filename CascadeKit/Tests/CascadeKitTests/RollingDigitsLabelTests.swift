@@ -146,6 +146,21 @@ struct RollingDigitsLabelTests {
     }
 
     @Test
+    func voiceOverReadsTheCurrentText() {
+        let label = label()
+
+        #expect(label.isAccessibilityElement())
+        #expect(label.accessibilityRole() == .staticText)
+
+        label.show("1:24", countsDown: true, animates: true)
+        #expect(label.accessibilityValue() as? String == "1:24")
+
+        label.show("1:23", countsDown: true, animates: true)
+        #expect(label.accessibilityValue() as? String == "1:23")
+        #expect(label.accessibilityLabel() == "1:23")
+    }
+
+    @Test
     func theLabelNeverCatchesTheMouse() {
         let label = label()
         label.show("1:00", countsDown: false, animates: true)
