@@ -2,32 +2,32 @@
   "sourceLanguage": "en",
   "strings": {
     "Caffeinate": {
-      "comment": "Name of the keep-awake widget.",
+      "comment": "Name of the keep-awake widget and the title of its options page and activity.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Caffeinate" } } }
     },
     "Caffeinate Options": {
-      "comment": "Accessibility label of the widget title that opens its options page.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Opzioni Caffeinate" } } }
+      "comment": "Accessibility label of the widget text that opens its options page.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Opzioni di Caffeinate" } } }
     },
-    "Toggle Caffeinate": {
-      "comment": "Accessibility label of the switch that starts or stops a keep-awake session.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Attiva o disattiva Caffeinate" } } }
+    "Start Caffeinate": {
+      "comment": "Accessibility label of the switch that starts a keep-awake session.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Avvia Caffeinate" } } }
     },
-    "On": {
-      "comment": "Widget status while a keep-awake session runs.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Attivo" } } }
+    "Stop Caffeinate": {
+      "comment": "Accessibility label of the switch that stops the keep-awake session.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Ferma Caffeinate" } } }
     },
-    "Off": {
-      "comment": "Widget status while no keep-awake session runs.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Disattivo" } } }
+    "Add 15 minutes": {
+      "comment": "Accessibility label of the button that extends a session by fifteen minutes.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Aggiungi 15 minuti" } } }
     },
-    "Error": {
-      "comment": "Widget status when the keep-awake assertion failed.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Errore" } } }
+    "Shorter": {
+      "comment": "Accessibility label of the stepper button that picks a shorter duration.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Più breve" } } }
     },
-    "Updating…": {
-      "comment": "Status while the keep-awake session is being changed.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Aggiornamento…" } } }
+    "Longer": {
+      "comment": "Accessibility label of the stepper button that picks a longer duration.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Più lunga" } } }
     },
     "Start": {
       "comment": "Pill that starts a keep-awake session.",
@@ -35,35 +35,47 @@
     },
     "Stop": {
       "comment": "Pill that stops the keep-awake session.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Interrompi" } } }
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Ferma" } } }
     },
     "Your Mac sleeps normally": {
       "comment": "Options page status while no session runs.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Il Mac va in stop normalmente" } } }
     },
+    "Awake until %@": {
+      "comment": "Options page status of a timed session. %@ is the time the session ends, such as 16:30.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Sveglio fino alle %@" } } }
+    },
     "Awake until you stop it": {
       "comment": "Options page status for a session without a time limit.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Sveglio finché non lo interrompi" } } }
-    },
-    "Awake until": {
-      "comment": "Options page status, followed by the session end time.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Sveglio fino alle" } } }
-    },
-    "Time left": {
-      "comment": "Accessibility label of the countdown of a timed session.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Tempo rimasto" } } }
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Sveglio finché non lo fermi" } } }
     },
     "Keep display awake": {
       "comment": "Switch that also keeps the display from sleeping.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Mantieni lo schermo acceso" } } }
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Schermo acceso" } } }
     },
-    "Duration: Indefinite": {
-      "comment": "Accessibility label of the duration without a time limit.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Durata: illimitata" } } }
+    "until": {
+      "comment": "Small label before the time a timed session ends.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "fino alle" } } }
     },
-    "Duration: %lld min": {
-      "comment": "Accessibility label of a session duration in minutes.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Durata: %lld min" } } }
+    "active for": {
+      "comment": "Small label above the elapsed time of a session without a time limit.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "attivo da" } } }
+    },
+    "Couldn't prevent sleep": {
+      "comment": "Widget line when the system refused to keep the Mac awake.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Impossibile impedire lo stop" } } }
+    },
+    "Couldn't prevent sleep (error %@)": {
+      "comment": "Options page line when the system refused to keep the Mac awake. %@ is the system's error code, written without digit grouping.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Impossibile impedire lo stop (errore %@)" } } }
+    },
+    "Caffeinate, awake until %@": {
+      "comment": "Spoken sentence of the live activity of a timed session. %@ is the time the session ends.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Caffeinate, sveglio fino alle %@" } } }
+    },
+    "Caffeinate, awake until you stop it": {
+      "comment": "Spoken sentence of the live activity of a session without a time limit.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Caffeinate, sveglio finché non lo fermi" } } }
     }
   },
   "version": "1.0"

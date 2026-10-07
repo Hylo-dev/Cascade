@@ -1,0 +1,162 @@
+//
+//  CaffeinateStyle.swift
+//  CascadeKit
+//
+
+import CascadeContracts
+import CascadePluginSDK
+import Foundation
+
+/// CaffeinateStyle gathers what the three faces share: the identities of the controls, the
+/// actions they send, the palette, the words and the few formats. The faces are pure functions
+/// of the snapshot and of "now", so none of this holds state.
+///
+/// Every control has one explicit identity per placement, whatever the session does, so a
+/// publication updates a control in place instead of replacing it, and the native owner maps
+/// the action by name, never by the node's identity.
+enum CaffeinateStyle {
+
+    /// Node holds the explicit identities. Each placement of the power control has its own,
+    /// because identities are unique within a document and the widget, its options page and
+    /// the activity each draw one.
+    enum Node {
+
+        static let powerLarge    = "power.large"
+        static let powerSmall    = "power.small"
+        static let powerOptions  = "power.options"
+        static let powerActivity = "power.activity"
+        static let extend        = "extend"
+        static let durationDown  = "duration.down"
+        static let durationUp    = "duration.up"
+        static let display       = "display"
+        static let opener        = "options"
+    }
+
+    enum Action {
+
+        static let start        = "caffeinate.start"
+        static let stop         = "caffeinate.stop"
+        static let extend       = "caffeinate.extend"
+        static let durationDown = "caffeinate.duration.down"
+        static let durationUp   = "caffeinate.duration.up"
+        static let display      = "caffeinate.display"
+        static let options      = "caffeinate.options"
+
+        /// power is the one action a power control sends in a given state: it is a toggle whose
+        /// value says "on", and the owner answers by name.
+        static func power(isActive: Bool) -> String {
+            isActive ? stop : start
+        }
+    }
+
+    enum Palette {
+
+        static let amber     = PluginColor(red: 1, green: 0.77, blue: 0.33)
+        static let ink       = PluginColor(red: 0.15, green: 0.13, blue: 0.10)
+        static let warning   = PluginColor(red: 1, green: 0.55, blue: 0.45)
+        static let secondary = PluginColor(red: 0.70, green: 0.70, blue: 0.74)
+        static let fill      = PluginColor.white.opacity(0.08)
+        static let disc      = PluginColor.white.opacity(0.14)
+        static let button    = PluginColor.white.opacity(0.16)
+        static let track     = PluginColor.white.opacity(0.22)
+    }
+
+    /// dimmed is the look of a stepper button or a control that can do nothing right now. It
+    /// stays a button: the owner ignores a step off the scale, so a stale press is harmless.
+    static let dimmed = 0.35
+
+    /// nearCap is fifteen minutes short of the longest a session may run, 24 hours: past it the
+    /// stepper's plus and the extension have little or nowhere to go.
+    static let nearCap: TimeInterval = (24 * 60 - 15) * 60
+
+    enum Copy {
+
+        static var title            : String { String(localized: "Caffeinate", table: "CaffeinateWidget", bundle: .module) }
+        static var options          : String { String(localized: "Caffeinate Options", table: "CaffeinateWidget", bundle: .module) }
+        static var startLabel       : String { String(localized: "Start Caffeinate", table: "CaffeinateWidget", bundle: .module) }
+        static var stopLabel        : String { String(localized: "Stop Caffeinate", table: "CaffeinateWidget", bundle: .module) }
+        static var addFifteen       : String { String(localized: "Add 15 minutes", table: "CaffeinateWidget", bundle: .module) }
+        static var shorter          : String { String(localized: "Shorter", table: "CaffeinateWidget", bundle: .module) }
+        static var longer           : String { String(localized: "Longer", table: "CaffeinateWidget", bundle: .module) }
+        static var start            : String { String(localized: "Start", table: "CaffeinateWidget", bundle: .module) }
+        static var stop             : String { String(localized: "Stop", table: "CaffeinateWidget", bundle: .module) }
+        static var sleepsNormally   : String { String(localized: "Your Mac sleeps normally", table: "CaffeinateWidget", bundle: .module) }
+        static var awakeIndefinitely: String { String(localized: "Awake until you stop it", table: "CaffeinateWidget", bundle: .module) }
+        static var keepDisplayAwake : String { String(localized: "Keep display awake", table: "CaffeinateWidget", bundle: .module) }
+        static var until            : String { String(localized: "until", table: "CaffeinateWidget", bundle: .module) }
+        static var activeFor        : String { String(localized: "active for", table: "CaffeinateWidget", bundle: .module) }
+        static var refused          : String { String(localized: "Couldn't prevent sleep", table: "CaffeinateWidget", bundle: .module) }
+
+        static func awakeUntil(_ end: Date) -> String {
+            String(localized: "Awake until \(Format.clock(end))", table: "CaffeinateWidget", bundle: .module)
+        }
+
+        static func activityLabel(endsAt: Date?) -> String {
+            guard let endsAt else {
+                return String(localized: "Caffeinate, awake until you stop it", table: "CaffeinateWidget", bundle: .module)
+            }
+
+            return String(localized: "Caffeinate, awake until \(Format.clock(endsAt))", table: "CaffeinateWidget", bundle: .module)
+        }
+
+        /// refusedWithCode is the options page's longer line: the code is for diagnosis, so it
+        /// stays out of the widget.
+        static func refusedWithCode(_ failure: CaffeinateFailure) -> String {
+            let code: Int32 = switch failure {
+                case .assertionRefused(let code), .extensionRefused(let code): code
+            }
+
+            return String(localized: "Couldn't prevent sleep (error \(String(code)))", table: "CaffeinateWidget", bundle: .module)
+        }
+    }
+
+    enum Format {
+
+        /// duration is a stepper value: the hours and minutes the system abbreviates, `∞` for an
+        /// indefinite session. The units come from the system's formatting, not from literals.
+        static func duration(_ duration: CaffeinateDuration) -> String {
+            guard let seconds = duration.seconds else { return "∞" }
+
+            return minutes(seconds)
+        }
+
+        static func minutes(_ seconds: TimeInterval) -> String {
+            Duration.seconds(seconds).formatted(.units(allowed: [.hours, .minutes], width: .narrow))
+        }
+
+        /// clock is a time of day in the user's locale, as the activity's spoken sentence reads it.
+        static func clock(_ date: Date) -> String {
+            date.formatted(Date.FormatStyle(date: .omitted, time: .shortened, locale: .current))
+        }
+    }
+}
+
+extension PluginCaffeinateState {
+
+    /// symbol is the glyph's look: filled while a session runs, its outline while off.
+    var symbol: String {
+        isActive ? glyph.filledSymbol : glyph.outlineSymbol
+    }
+
+    /// elapsed is the start-to-end interval of a timed session, which a kernel timer counts down.
+    /// An end that does not follow the start is clamped, so an odd snapshot still validates.
+    var elapsed: ClosedRange<Date>? {
+        guard let startedAt, let endsAt else { return nil }
+
+        return startedAt...max(startedAt, endsAt)
+    }
+
+    /// countUp is the day-long interval an indefinite session's elapsed time counts up in.
+    var countUp: ClosedRange<Date>? {
+        guard let startedAt, endsAt == nil else { return nil }
+
+        return startedAt...startedAt.addingTimeInterval(86_400)
+    }
+
+    /// remaining is the time a timed session has left when the document is built, nil for an
+    /// indefinite one. It is read once per publication: the dimming it decides is a hint, since
+    /// the owner enforces the cap whatever is pressed.
+    func remaining(at now: Date) -> TimeInterval? {
+        endsAt.map { $0.timeIntervalSince(now) }
+    }
+}

@@ -66,6 +66,23 @@ struct FirstPartyPluginsTests {
     }
 
     @Test
+    func caffeinateDeclaresItsWidgetItsActivityAndItsActions() throws {
+        let manifest = try #require(FirstPartyPlugins.manifests().first { $0.id.rawValue == "com.cascade.caffeinate" })
+        let feature  = try #require(manifest.features.first)
+
+        #expect(feature.id == "awake")
+        #expect(feature.surfaces.widget?.sizes == [try PluginWidgetSize(columns: 2, rows: 1), try PluginWidgetSize(columns: 1, rows: 1)])
+        #expect(feature.surfaces.activity != nil)
+        #expect(feature.supportsFullscreen)
+        #expect(
+            Set(feature.actions) == [
+                "caffeinate.start", "caffeinate.stop", "caffeinate.extend", "caffeinate.duration.up",
+                "caffeinate.duration.down", "caffeinate.display", "caffeinate.options",
+            ]
+        )
+    }
+
+    @Test
     func everyBundledPluginHasAName() {
         for manifest in FirstPartyPlugins.manifests() {
             let name = FirstPartyPlugins.name(of: manifest.id)
