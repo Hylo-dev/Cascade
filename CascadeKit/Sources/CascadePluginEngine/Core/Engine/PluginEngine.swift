@@ -97,17 +97,23 @@ public final class PluginEngine: Sendable {
     }
 
     /// submit calls onAccepted only after the broker accepted the current control and its
-    /// revision, outside the kernel lock. Native adapters use that same authority for actions
-    /// whose resource stays in Cascade, such as Caffeinate's power assertion.
+    /// revision, outside the kernel lock, with the event the broker resolved from that control.
+    /// Native adapters use that same authority for actions whose resource stays in Cascade, such
+    /// as Caffeinate's power assertion, and act on the event, not on the request's own claim.
     public func submit(
         _ request : PluginActionRequest,
-        onAccepted: (@Sendable (PluginActionRequest) -> Void)? = nil
+        onAccepted: (@Sendable (PluginActionRequest, PluginActionEvent) -> Void)? = nil
     ) {
         queue.async { [self] in
-            let effects = execute { kernel, now in kernel.submit(request, at: now) }
-            guard !effects.contains(.reject(request)) else { return }
+            var accepted: PluginActionEvent?
+            execute { kernel, now in
+                let submission = kernel.submit(request, at: now)
+                accepted = submission.event
+                return submission.effects
+            }
+            guard let accepted else { return }
 
-            onAccepted?(request)
+            onAccepted?(request, accepted)
         }
     }
 

@@ -125,23 +125,25 @@ struct PluginKernel: Sendable {
 
     /// submit checks a renderer's request with the broker and queues the resulting event ahead
     /// of everything else pending. A refused request comes back as `reject`, so the renderer
-    /// reverts its optimistic value at once.
+    /// reverts its optimistic value at once. An accepted one also returns the event the broker
+    /// resolved from the control, the same one the plugin will get, so a native owner acts on
+    /// the broker's reading of the control and never on the renderer's own claim.
     mutating func submit(
         _ request: PluginActionRequest,
         at now   : PluginInstant
-    ) -> [PluginEngineEffect] {
+    ) -> (effects: [PluginEngineEffect], event: PluginActionEvent?) {
         guard var record = records[request.key.plugin],
               record.isRunnable,
               let feature = availableFeature(request.key.feature, of: record),
               let event = PluginActionAuthorizer.event(for: request, entry: store[request.key], feature: feature),
               record.mailbox.queue(PluginMailbox.Action(event: event, request: request, postedAt: now.monotonic))
-        else { return [.reject(request)] }
+        else { return ([.reject(request)], nil) }
 
         records[request.key.plugin] = record
 
         var effects: [PluginEngineEffect] = []
         schedule(at: now, into: &effects)
-        return effects
+        return (effects, event)
     }
 
     /// complete takes a plugin's answer to the dispatch `token` named. An answer to anything but
@@ -546,7 +548,8 @@ struct PluginKernel: Sendable {
             staleAfter: publication.staleAfter,
             for       : key,
             at        : now.wall,
-            notice    : publication.notice
+            notice    : publication.notice,
+            activity  : publication.activity
         )
     }
 

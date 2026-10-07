@@ -33,10 +33,12 @@ final class PluginSystem {
     var statusHandler: (PluginEngineStatus) -> Void = { _ in }
 
     /// actionHandler routes an accepted control to a native resource owner, such as Caffeinate's
-    /// power assertion. The engine invokes it only after the broker's revision, control, manifest
-    /// and permission checks, then hops to main; an options page's control also rechecks its
-    /// page's authority there before this runs.
-    var actionHandler: (PluginActionRequest) -> Void = { _ in }
+    /// power assertion, with the event the broker resolved from that control: the action the
+    /// plugin's manifest declared and the value of a toggle or slider, not the renderer's own
+    /// claim. The engine invokes it only after the broker's revision, control, manifest and
+    /// permission checks, then hops to main; an options page's control also rechecks its page's
+    /// authority there before this runs. Widget, options-page and activity controls reach it alike.
+    var actionHandler: (PluginPublicationKey, PluginActionEvent) -> Void = { _, _ in }
 
     init(
         host   : any PluginSurfaceHosting,
@@ -121,18 +123,18 @@ final class PluginSystem {
             host          : host,
             manifests     : manifests,
             submit        : { [weak self] request in
-                self?.engine?.submit(request, onAccepted: { [weak self] accepted in
+                self?.engine?.submit(request, onAccepted: { [weak self] accepted, event in
                     DispatchQueue.main.async {
-                        MainActor.assumeIsolated { self?.actionHandler(accepted) }
+                        MainActor.assumeIsolated { self?.actionHandler(accepted.key, event) }
                     }
                 })
             },
             visibility    : { [weak self] isVisible, key in self?.engine?.setVisible(isVisible, for: key) },
             submitAccepted: { [weak self] request, accepted in
-                self?.engine?.submit(request, onAccepted: { [weak self] request in
+                self?.engine?.submit(request, onAccepted: { [weak self] request, event in
                     DispatchQueue.main.async {
                         MainActor.assumeIsolated {
-                            accepted { self?.actionHandler(request) }
+                            accepted { self?.actionHandler(request.key, event) }
                         }
                     }
                 })

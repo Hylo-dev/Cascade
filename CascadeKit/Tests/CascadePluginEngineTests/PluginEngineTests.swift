@@ -42,16 +42,48 @@ struct PluginEngineTests {
         let stale   = PluginActionRequest(key: current.key, node: node, revision: 0)
         let forged  = PluginActionRequest(key: current.key, node: PluginNodeID(rawValue: "#missing:button"), revision: current.revision)
 
-        engine.submit(stale, onAccepted: accepted.record)
-        engine.submit(forged, onAccepted: accepted.record)
-        engine.submit(valid, onAccepted: accepted.record)
+        engine.submit(stale, onAccepted: { request, _ in accepted.record(request) })
+        engine.submit(forged, onAccepted: { request, _ in accepted.record(request) })
+        engine.submit(valid, onAccepted: { request, _ in accepted.record(request) })
         #expect(try await eventually { accepted.values.count == 1 })
         #expect(accepted.values == [valid])
 
         engine.revoke("capture.screenRecording", from: owner)
-        engine.submit(valid, onAccepted: accepted.record)
+        engine.submit(valid, onAccepted: { request, _ in accepted.record(request) })
         _ = engine.state(of: owner)
         #expect(accepted.values == [valid])
+    }
+
+    @Test
+    func anAcceptedActionCarriesItsEvent() async throws {
+        let owner  = PluginEngineFixtures.clockID
+        let face   = try PluginDocument(root: PluginNode(.button(action: "x.y"), id: "go"))
+        let output = try PluginEngineFixtures.output("time", .widget, face)
+        let sink   = RecordingSink()
+        let events = Recorder<PluginActionEvent>()
+        let manifest = try PluginEngineFixtures.manifest(
+            owner,
+            entryPoint: "ClockPlugin",
+            features  : [PluginFeature(
+                id      : "time",
+                surfaces: PluginSurfaces(widget: PluginWidgetSurface(sizes: [PluginWidgetSize(columns: 1, rows: 1)])),
+                actions : ["x.y"]
+            )]
+        )
+        let engine = PluginEngine(
+            executor: InProcessExecutor(providers: ["ClockPlugin": ScriptedProvider { _ in output }]),
+            sources : [:],
+            sink    : sink
+        )
+        engine.register(manifest, grants: [])
+        #expect(try await eventually { !sink.changes.isEmpty })
+        let current = try #require(sink.changes.last)
+        let request = PluginActionRequest(key: current.key, node: PluginNodeID(rawValue: "#go:button"), revision: current.revision)
+
+        engine.submit(request, onAccepted: { _, event in events.record(event) })
+
+        #expect(try await eventually { events.values.count == 1 })
+        #expect(events.values == [try PluginActionEvent(feature: "time", action: "x.y")])
     }
 
     @Test

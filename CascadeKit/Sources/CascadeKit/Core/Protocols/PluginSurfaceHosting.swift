@@ -6,8 +6,8 @@
 import Foundation
 
 /// PluginSurfaceHosting is the part of the notch plugin surfaces need: placing a widget on the
-/// grid and taking it off, showing a notice, enriching it and dismissing it, and opening a
-/// widget's options page over the grid. The notch engine provides it; tests record it.
+/// grid and taking it off, showing a notice, enriching it and dismissing it, presenting a live
+/// activity and ending it, and opening a widget's options page over the grid. The notch engine provides it; tests record it.
 @MainActor
 public protocol PluginSurfaceHosting: AnyObject {
 
@@ -20,6 +20,10 @@ public protocol PluginSurfaceHosting: AnyObject {
     func updateNotice(_ notice: any NotchTransientNotice)
 
     func dismissActivity(id: String)
+
+    func present(_ activity: any NotchLiveActivity)
+
+    func endActivity(id: String)
 
     /// captureOptionsOrigin records a click on a visible widget's options opener, bound to the
     /// display and page it happened on. A hidden widget, or one that offers no options, gets nil.

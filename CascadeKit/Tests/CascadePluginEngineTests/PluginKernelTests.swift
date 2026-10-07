@@ -267,7 +267,7 @@ struct PluginKernelTests {
 
         let request = PluginActionRequest(key: activity, node: PluginNodeID(rawValue: "#next:button"), revision: 1)
 
-        #expect(kernel.submit(request, at: start) == [.reject(request)])
+        #expect(kernel.submit(request, at: start).effects == [.reject(request)])
     }
 
     @Test
@@ -280,7 +280,7 @@ struct PluginKernelTests {
         let request = PluginActionRequest(key: activity, node: PluginNodeID(rawValue: "#play:toggle"), revision: 1, value: .bool(false))
         let toggled = try PluginActionEvent(feature: "now-playing", action: "togglePlayback", value: .bool(false))
 
-        #expect(kernel.submit(request, at: start).isEmpty)
+        #expect(kernel.submit(request, at: start).effects.isEmpty)
         #expect(kernel.complete(music, token: 2, result: Fixtures.result(try PluginOutput()), at: start) == [.dispatch(music, .action(toggled), token: 3)])
     }
 

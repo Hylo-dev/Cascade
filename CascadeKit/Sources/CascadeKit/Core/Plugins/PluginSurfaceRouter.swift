@@ -17,8 +17,11 @@ public typealias PluginAcceptedAction = @MainActor @Sendable (_ nativeEffect: @M
 /// grid, registered with its first content and removed with its withdrawal. Later publications
 /// only update the store. A notice gets one store and one `PluginNotice`, shown again for every
 /// publication, or only enriched in place when the publication asks to update, and dismissed with
-/// its withdrawal. Activities are routed by the Music sub-project; until then their publications
-/// are not shown.
+/// its withdrawal. An activity gets one store and one `PluginActivity`, presented with its first
+/// content and kept in place by later ones; it is presented again only when its start changes,
+/// which is a new lifetime after the activity host ended the old one at its cap, and ended with
+/// its withdrawal. An activity's controls submit through the same broker as a widget's, with no
+/// options origin: only a widget's options page has one.
 ///
 /// A widget whose feature supports fullscreen may also publish an options page. Pressing its
 /// opener captures a host-owned origin first, then asks the broker; only the accepted click
@@ -49,6 +52,7 @@ public final class PluginSurfaceRouter {
 
     private var stores : [PluginPublicationKey: PluginNodeStore] = [:]
     private var notices: [PluginPublicationKey: PluginNotice] = [:]
+    private var activities: [PluginPublicationKey: PluginActivity] = [:]
 
     public init(
         host          : any PluginSurfaceHosting,
@@ -94,7 +98,7 @@ public final class PluginSurfaceRouter {
             switch change.key.surface {
                 case .widget  : route(widget: change)
                 case .notice  : route(notice: change)
-                case .activity: break
+                case .activity: route(activity: change)
             }
         }
 
@@ -155,6 +159,43 @@ public final class PluginSurfaceRouter {
             case .show  : host.showNotice(notice)
             case .update: host.updateNotice(notice)
         }
+    }
+
+    /// route presents an activity with its first content, updates it in place after, and ends it
+    /// with its withdrawal. The host reads the content through the store, so an update needs no
+    /// new presentation; only a renewed start does, because the host's entry carries the old
+    /// lifetime and may have dropped the activity at its cap.
+    private func route(activity change: PluginPublicationChange) {
+        let key = change.key
+        guard let content = change.content else {
+            stores[key] = nil
+            if activities.removeValue(forKey: key) != nil {
+                host.endActivity(id: Self.identifier(of: key).rawValue)
+            }
+            return
+        }
+        guard let attributes = content.activity else { return }
+
+        let store = stores[key] ?? PluginNodeStore(key: key, submit: submit)
+        stores[key] = store
+        store.apply(change)
+
+        if let activity = activities[key] {
+            let isRenewed = activity.attributes.startedAt != attributes.startedAt
+            activity.update(attributes)
+            if isRenewed { host.present(activity) }
+            return
+        }
+
+        let activity = PluginActivity(
+            id        : Self.identifier(of: key).rawValue,
+            sourceID  : key.plugin.rawValue,
+            store     : store,
+            attributes: attributes,
+            visibility: { [visibility] isVisible in visibility(isVisible, key) }
+        )
+        activities[key] = activity
+        host.present(activity)
     }
 
     /// place makes the store for a widget's first content, fills it, then registers the widget,
