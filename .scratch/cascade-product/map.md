@@ -207,3 +207,9 @@ Definire il piano applicativo globale di Cascade, basato sul codice esistente: u
 - 17 settembre 2026 — Ripresa di [Collegare i messaggi asset al runtime e al client SDK](issues/23-asset-message-integration.md) autorizzata con deroga esplicita alla riserva GPT del 35%; resta richiesta la valutazione indipendente prima della consegna.
 
 - 18 settembre 2026 — Per [Collegare i messaggi asset al runtime e al client SDK](issues/23-asset-message-integration.md), l’utente sostituisce la pipeline DeepSeek con agenti Codex scelti secondo difficoltà; deroga 35% attiva, criteri tecnici invariati.
+
+### Rifinitura del ripiano — 27 settembre
+
+[Ripiano principale e carte](issues/92-file-shelf-primary-and-clear.md): ventaglio compatto, ritorno con gesto inverso e preview Xcode sul componente reale. Review root, 20 test mirati, build firmata e riavvio PID 5063; Canvas attende setup Xcode, QA trackpad nativa pendente.
+
+[Ripiano e carte](issues/92-file-shelf-primary-and-clear.md): nuova rifinitura con focus a passi, selezione multipla, dissolvenza, drag di tutti/selezionati e rinomina autorizzata dell’originale. Review root, 1.452 test SwiftPM e 17 test app passati; la prova nativa resta distinta.

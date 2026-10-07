@@ -14,6 +14,41 @@ import UniformTypeIdentifiers
 @Suite
 struct FileWorkspacePresentationTests {
     @Test
+    @MainActor
+    func rendererRefreshesRenameAndPaginationAtTheSameRevision() async throws {
+        var seen: [String] = []
+        let firstID = UUID()
+        func view(id: UUID, name: String) throws -> AnyView {
+            let entry = try FileWorkspaceEntry(id: id, name: name, typeIdentifier: "public.text",
+                availability: .available, ownership: .externalReference, thumbnailAssetID: nil)
+            let snapshot = try FileWorkspaceSnapshot(revision: 1, entries: [entry], totalCount: 2, nextCursor: nil, jobs: [])
+            let presentation = try FileWorkspacePresentation(snapshot: snapshot, mode: .list,
+                selectedEntryIDs: [], formats: [], selectedFormatID: nil, actions: [])
+            let content = try CascadeFileWorkspace(presentation, assets: PreviewAssets(), dispatch: { _ in },
+                reduceMotion: true, thumbnail: { entry in
+                    seen.append(entry.name)
+                    return Image(systemName: "doc")
+                })
+            return AnyView(content.frame(width: 400, height: 124))
+        }
+        let hosting = NSHostingView(rootView: try view(id: firstID, name: "original.txt"))
+        let window = NSWindow(contentRect: CGRect(x: -10000, y: -10000, width: 400, height: 124),
+                              styleMask: [.borderless], backing: .buffered, defer: false)
+        window.contentView = hosting
+        window.orderFront(nil)
+        defer { window.orderOut(nil) }
+        try await Task.sleep(for: .milliseconds(100))
+        seen = []
+        hosting.rootView = try view(id: firstID, name: "renamed.txt")
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(seen.contains("renamed.txt"))
+        seen = []
+        hosting.rootView = try view(id: UUID(), name: "next-page.txt")
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(seen.contains("next-page.txt"))
+    }
+
+    @Test
     func deckUsesFourStableCardsAndTotalCountOverflow() {
         let transforms = FileWorkspaceLayout.cardTransforms(
             count       : 40,
@@ -21,9 +56,9 @@ struct FileWorkspacePresentationTests {
         )
         #expect(transforms.count == 4)
         #expect(transforms.map(\.index) == [0, 1, 2, 3])
-        #expect(transforms[0].rotationDegrees > 0)
+        #expect(transforms[0].rotationDegrees == 1.75)
         #expect(transforms.dropFirst().allSatisfy { $0.rotationDegrees < 0 })
-        #expect(transforms.map(\.xOffset) == [42, 8, -26, -60])
+        #expect(transforms.map(\.xOffset) == [42, 26, 10, -6])
         #expect(FileWorkspaceLayout.overflowCount(totalCount: 40) == 36)
         #expect(FileWorkspaceLayout.overflowCount(totalCount: 4) == 0)
     }
@@ -88,6 +123,7 @@ struct FileWorkspacePresentationTests {
         var thumbnails: Set<UUID> = []
         var wrapped: Set<UUID> = []
         var clearCount = 0
+        var renameCount = 0
         let view = try CascadeFileWorkspace(
             presentation,
             assets  : PreviewAssets(),
@@ -101,7 +137,10 @@ struct FileWorkspacePresentationTests {
                 return content
             },
             conversionUnavailableExplanation: "Conversione non ancora disponibile",
-            clearAll: { clearCount += 1 }
+            clearAll: { clearCount += 1 },
+            focusedEntryID: presentation.snapshot.entries.first?.id,
+            rename: { renameCount += 1 },
+            renameDisabled: false
         )
 
         _ = try render(
@@ -112,6 +151,7 @@ struct FileWorkspacePresentationTests {
         #expect(thumbnails == Set(presentation.snapshot.entries.map(\.id)))
         #expect(wrapped == Set(presentation.snapshot.entries.map(\.id)))
         #expect(clearCount == 0)
+        #expect(renameCount == 0)
     }
 
     @Test
@@ -196,6 +236,8 @@ struct FileWorkspacePresentationTests {
                 },
                 conversionUnavailableExplanation: "La conversione sarà disponibile prossimamente",
                 clearAll: {},
+                focusedEntryID: presentation.mode == .list ? presentation.snapshot.entries.first?.id : nil,
+                rename: {},
                 centerObstructionFrame: fixture.3 == CGSize(width: 400, height: 124)
                     ? CGRect(x: 108, y: 0, width: 184, height: 28)
                     : nil

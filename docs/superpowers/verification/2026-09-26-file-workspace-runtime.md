@@ -131,3 +131,36 @@ Il renderer usa icone Finder senza fondi, ingresso centro→sinistra→ventaglio
 Verifiche indipendenti: suite SwiftPM finale exit 0, 1.447/1.447 (885 runtime, 124 presentazione, 319 CascadeKit, 102 contratti, 17 CLI), `root-final-tests.log`; test app firmati exit 0, 9/9, `root-final-app-tests.log`; build firmata exit 0 con `BUILD SUCCEEDED`, confini SDK/codesign/link Applications verificati, `root-build.log`. Log in `.superpowers/sdd/2026-09-27-shelf-design/`. Preview PNG native di 1/4/5 file e fila orizzontale esaminate dal root a 400×124 pt; sono verifiche del renderer, non una cattura del notch fisico.
 
 Dopo Quit, nessun processo Cascade rimasto (`pgrep` exit 1). Rilancio verificato al PID 97319, 27 settembre 2026 15:26:52, dal bundle `CascadeFileShelf/Build/Products/Debug/Cascade.app`; `/Applications/Cascade.app` punta alla stessa build. Ricevitore pronto con tre tipi, Space attivo e finestra visibile. CUA continua a selezionare la finestra ricevente trasparente: la prova reale di drag veloce, gesto e resa nel notch resta richiesta all'utente. Nessuna nuova qualifica di Mission Control. Quota osservata 13% usata, 87% residua.
+
+## Rifinitura del ventaglio e preview SwiftUI — 27 settembre 2026
+
+Lavoro delegato a GPT-6 Sol per layout/preview e GPT-5.6 Sol per il gesto; review e correzioni root. Il passo delle icone passa da 34 a 16 pt, con inclinazioni +4/−4/−8/−12°. Il ritorno richiama `perform(closeList)` e azzera la selezione, riportando la paginazione all’inizio. Da apertura con click il ritorno convenzionale usa delta X positivo; da apertura con scroll usa l’inverso della direzione iniziale. Per l’asse orizzontale la navigazione si attiva solo al bordo iniziale, mantenendo lo sfoglio della fila. Momentum e aggiornamenti orfani dopo ricostruzione della vista non navigano.
+
+La preview `Cascade/Features/FileShelf/FileShelfDesignPreview.swift` usa `CascadeFileWorkspace` e il wrapper AppKit reali, icone Finder e DTO in memoria, nessun file utente o conversione. Aprire il progetto del worktree in Xcode, quel file, quindi il Canvas «Ripiano». Controlli esterni per 0/1/4/8 file, ripetizione dell’ingresso e Riduci movimento; frame 440×144, contenuto 400×124 e ostruzione centrale 184×28. Il root ha corretto contrasto del contenuto, espressione SwiftUI troppo complessa, compatibilità del vecchio hook scroll e isolamento dei tipi puri.
+
+Verifica finale (`.superpowers/sdd/2026-09-27-shelf-preview/`):
+
+- `renderer-tests.log`: 8/8 test passati; `previews/deck-4.png` esaminata per sovrapposizione, rotazione e nome.
+- `app-tests-final.log`: 12/12 test passati, exit 0. Include direzione inversa, prevenzione doppia navigazione, bordo lista, momentum e reset selezione/pagina tramite percorso del gesto.
+- `build.log`: build firmata, verifica codesign e aggiornamento `/Applications/Cascade.app`, exit 0. Il percorso aggiornato è `~/Library/Developer/Xcode/DerivedData/CascadeFileShelf/Build/Products/Debug/Cascade.app`.
+- Riavvio tramite CUA: uscita del PID 97319, assenza processo confermata, nuovo PID **5063** alle **17:48:21 CEST**. Receiver pronto e visibile alle 17:48:22.
+
+Limiti: il Canvas non è stato avviato perché Xcode presenta «Install Required» per i componenti iniziali. La compilazione della macro preview è verificata; l’interazione nel Canvas e il gesto sul trackpad fisico restano da provare. La cattura del notch tramite CUA conserva il limite già registrato. I test non qualificano Mission Control o nuovi drop Finder. Quota settimanale residua rilevata: **87%**, sopra la soglia utente 80%.
+
+## Selezione, azioni e rename dell’originale — 27 settembre 2026
+
+Implementazione delegata a GPT-5.6 Sol per renderer e interazioni, GPT-6 Sol per la preview; root implementa il rename runtime e revisiona/corregge l’integrazione. Nessun file originale utente è stato rinominato durante i test: i test usano fixture temporanee. La preferenza esplicita dell’utente abilita il rename dell’originale quando utilizzerà il pulsante.
+
+Il renderer mantiene la misura 400×124 pt e la spalla superiore libera al centro: icone compatte 68 pt, elenco 60 pt; rotazione frontale 1,75°, nomi solo nell’elenco, overflow sotto. Testi colorati 19 pt e icone 24 pt condividono la transizione. Focus accentColor di sistema, selezione distinta; la rimozione conserva brevemente le voci già rimosse dal modello per mostrarne la dissolvenza, senza falsificare una rimozione fallita. La priorità dell’ultimo frame viene rilasciata al termine dell’effetto.
+
+Lo scroll preciso viene consumato e sposta il focus un file per gesto; il gesto indietro al primo file richiude. Clic toggle, Shift intervallo, frecce/Shift e Cmd+A sulla pagina; Delete selezionati/focus. Il `NotchPanel` può diventare key solo se il responder conforma al marker esplicito; il contenitore tastiera stabile acquisisce focus dopo click/scroll e lo rilascia quando smontato. Il glow resta fuori dal nuovo NSHostingView per propagare le preferenze native; tema e dimensioni vengono conservati all’interno.
+
+Il mazzo prepara tutte le pagine, l’elenco risolve la selezione al momento del drag. Il runtime preesistente conserva gli originali e rimuove ogni riferimento soltanto dopo copia riuscita. Rename usa coordinamento nativo e rename esclusivo, aggiorna bookmark/metadata e invalida i PreparedFile precedenti; collisioni, nomi non validi, revisioni stale e fallimento di persistenza sono verificati.
+
+Prove in `.superpowers/sdd/2026-09-27-shelf-selection/`:
+
+- `full-tests.log`: 1.452 test SwiftPM passati (888 runtime, 125 presentation, 320 core, 102 contracts, 17 CLI), exit 0. Comprende rename/persistenza/rollback, aggiornamento metadata e paginazione senza variazione della revision, e accesso esplicito al focus del pannello.
+- `app-tests-final.log`: 17 test passati, exit 0; include selezione, Delete pagina 2, drag di 25 file contro selezione, contenitore responder stabile e dissolvenza dell’ultimo file.
+- `previews/deck-5.png` e `list-40.png` esaminate dal root; corretto clipping della maschera prima della trasformazione delle carte. La preview SwiftUI interattiva è stata aggiornata e compila con l’app.
+
+Il Canvas richiede ancora il setup iniziale Xcode. La verifica delle gesture fisiche e del drop in Finder resta pendente; nessuna nuova qualifica Mission Control. Riserva settimanale finale rilevata: **85%**, sopra il vincolo dell’80%.

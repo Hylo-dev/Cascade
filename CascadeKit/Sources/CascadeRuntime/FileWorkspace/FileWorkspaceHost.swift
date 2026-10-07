@@ -163,6 +163,15 @@ public actor FileWorkspaceHost {
         }
     }
 
+    /// Renames the original file without overwriting another file, preserving its shelf ID.
+    public func renameExternalReference(id: UUID, newName: String, revision: UInt64) async throws {
+        try await withOpenExclusive {
+            try await self.requireStore().renameExternalReference(
+                id: id, newName: newName, revision: revision
+            )
+        }
+    }
+
     /// Prepares deferred native transfers without opening files or pinning store entries.
     public func prepareItems(ids: [UUID]) async throws -> [PreparedFile] {
         try await withOpenExclusive {

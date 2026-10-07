@@ -85,6 +85,26 @@ struct FileWorkspaceStoreTests {
     }
 
     @Test
+    func failedRenameSaveRollsOriginalBackWithoutPublishingNewMetadata() async throws {
+        let fixture = try Fixture(owner: owner)
+        let persistent = FailingFileWorkspacePersistence(base: fixture.persistence)
+        let store = try await fixture.store(persistence: persistent)
+        let source = try fixture.file(name: "before.txt", contents: "preserved")
+        let id = try #require(try await store.addOriginals([source]).first)
+        let before = try await store.snapshot(cursor: nil)
+        await persistent.failNextSave()
+        await #expect(throws: FileWorkspaceError.ioFailure) {
+            try await store.renameExternalReference(id: id, newName: "after.txt", revision: before.revision)
+        }
+        #expect(try String(contentsOf: source, encoding: .utf8) == "preserved")
+        #expect(!FileManager.default.fileExists(atPath: source.deletingLastPathComponent().appendingPathComponent("after.txt").path))
+        let after = try await store.snapshot(cursor: nil)
+        #expect(after.entries.first?.name == "before.txt")
+        #expect(after.entries.first?.availability == .available)
+        #expect(after.revision == before.revision)
+    }
+
+    @Test
     func failedSavePublishesNeitherEntriesNorRevision() async throws {
         let fixture    = try Fixture(owner: owner)
         let persistent = FailingFileWorkspacePersistence(base: fixture.persistence)

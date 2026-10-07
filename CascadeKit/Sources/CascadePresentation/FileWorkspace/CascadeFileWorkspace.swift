@@ -19,6 +19,9 @@ public struct CascadeFileWorkspace: View {
     private let conversionUnavailableExplanation: String?
     private let clearAll: (@MainActor () -> Void)?
     private let clearAllDisabled: Bool
+    private let focusedEntryID: UUID?
+    private let rename: (@MainActor () -> Void)?
+    private let renameDisabled: Bool
     private let admissionSequence: UInt64
     private let onAdmissionAnimationConsumed: (@MainActor (UInt64) -> Void)?
     private let centerObstructionFrame: CGRect?
@@ -44,6 +47,18 @@ public struct CascadeFileWorkspace: View {
     @State
     private var consumedAdmissionSequence: UInt64 = 0
 
+    @State
+    private var renderedEntries: [FileWorkspaceEntry]
+
+    @State
+    private var renderedTotalCount: Int
+
+    @State
+    private var removingEntryIDs: Set<UUID> = []
+
+    @State
+    private var removalTask: Task<Void, Never>?
+
     public init(
         _ presentation: FileWorkspacePresentation,
         assets        : any ContentAssetResolving,
@@ -54,6 +69,9 @@ public struct CascadeFileWorkspace: View {
         conversionUnavailableExplanation: String? = nil,
         clearAll      : (@MainActor () -> Void)? = nil,
         clearAllDisabled: Bool = false,
+        focusedEntryID: UUID? = nil,
+        rename        : (@MainActor () -> Void)? = nil,
+        renameDisabled: Bool = false,
         admissionSequence: UInt64 = 0,
         onAdmissionAnimationConsumed: (@MainActor (UInt64) -> Void)? = nil,
         centerObstructionFrame: CGRect? = nil
@@ -68,9 +86,14 @@ public struct CascadeFileWorkspace: View {
         self.conversionUnavailableExplanation = conversionUnavailableExplanation
         self.clearAll = clearAll
         self.clearAllDisabled = clearAllDisabled
+        self.focusedEntryID = focusedEntryID
+        self.rename = rename
+        self.renameDisabled = renameDisabled
         self.admissionSequence = admissionSequence
         self.onAdmissionAnimationConsumed = onAdmissionAnimationConsumed
         self.centerObstructionFrame = centerObstructionFrame
+        _renderedEntries = State(initialValue: presentation.snapshot.entries)
+        _renderedTotalCount = State(initialValue: presentation.snapshot.totalCount)
     }
 
     public var body: some View {
@@ -98,18 +121,24 @@ public struct CascadeFileWorkspace: View {
             guard mode != .deck else { return }
             cancelAndConsumePendingAdmission()
         }
+        .onChange(of: presentation.snapshot) { _, _ in
+            synchronizeRenderedEntries()
+        }
         .onChange(of: reduceMotion) { _, isReduced in
             guard isReduced else { return }
             frontHasMoved = true
             deckHasFanned = true
             cancelAndConsumePendingAdmission()
         }
-        .onDisappear { cancelAndConsumePendingAdmission() }
+        .onDisappear {
+            cancelAndConsumePendingAdmission()
+            removalTask?.cancel()
+        }
     }
 
     private var deck: some View {
         let transforms = FileWorkspaceLayout.cardTransforms(
-            count       : presentation.snapshot.entries.count,
+            count       : renderedEntries.count,
             reduceMotion: reduceMotion
         )
         return GeometryReader { geometry in
@@ -117,27 +146,29 @@ public struct CascadeFileWorkspace: View {
             let arrivalOffset = geometry.size.width / 2 - stackCenterX
             let deckHeight = min(96, max(82, geometry.size.height - obstructionDepth))
             ZStack(alignment: .bottomLeading) {
-                HStack(spacing: 4) {
+                VStack(spacing: 0) {
                     deckStack(
                         transforms,
                         arrivalOffset: arrivalOffset,
-                        deckHeight: deckHeight
+                        deckHeight: deckHeight - 17
                     )
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Apri elenco file")
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Apri elenco file")
                     let overflow = FileWorkspaceLayout.overflowCount(
                         totalCount: presentation.snapshot.totalCount
                     )
                     if overflow > 0 {
                         Text("+\(overflow)")
-                            .font(.headline.monospacedDigit())
+                            .font(.caption.weight(.semibold).monospacedDigit())
                             .foregroundStyle(.secondary)
                             .accessibilityLabel("Altri \(overflow) file")
                             .opacity(deckHasFanned || reduceMotion ? 1 : 0)
                     }
                 }
+                .frame(width: 206, alignment: .bottom)
                 .padding(.leading, 14)
-                deckActions
+                workspaceActions(iconOnly: false)
+                    .frame(height: deckHeight)
                     .frame(maxWidth: .infinity, alignment: .bottomTrailing)
                     .padding(.trailing, 14)
             }
@@ -183,13 +214,14 @@ public struct CascadeFileWorkspace: View {
     ) -> some View {
         ZStack {
             ForEach(Array(transforms.reversed()), id: \.index) { transform in
-                if presentation.snapshot.entries.indices.contains(transform.index) {
-                    let entry = presentation.snapshot.entries[transform.index]
+                if renderedEntries.indices.contains(transform.index) {
+                    let entry = renderedEntries[transform.index]
                     wrappedEntry(
                         entry,
                         action : action,
-                        content: AnyView(card(entry, showsName: transform.index == 0))
+                        content: AnyView(card(entry, showsName: false))
                     )
+                    .modifier(removalModifier(for: entry.id))
                     .matchedGeometryEffect(id: entry.id, in: fileIdentity)
                     .rotationEffect(.degrees(cardHasArrived(transform) ? transform.rotationDegrees : 0))
                     .offset(
@@ -205,36 +237,52 @@ public struct CascadeFileWorkspace: View {
     }
 
     private var list: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            actionButton(
-                presentation.action(for: .closeList),
-                label : "Torna al ripiano",
-                symbol: "chevron.left"
-            )
-            ScrollView(.horizontal) {
-                LazyHStack(spacing: 12) {
-                    ForEach(Array(presentation.snapshot.entries.enumerated()), id: \.element.id) { index, entry in
-                        horizontalEntry(entry)
-                            .matchedGeometryEffect(id: entry.id, in: fileIdentity)
-                            .opacity(reduceMotion || listIsVisible ? 1 : 0)
-                            .offset(x: reduceMotion || listIsVisible ? 0 : 12)
-                            .animation(
-                                reduceMotion ? nil : .easeOut(duration: 0.18).delay(Double(min(index, 5)) * 0.025),
-                                value: listIsVisible
-                            )
-                    }
-                    if presentation.snapshot.nextCursor != nil {
-                        actionButton(
-                            presentation.action(for: .nextPage),
-                            label : "Carica altri file",
-                            symbol: "chevron.right"
-                        )
-                        .frame(width: 42, height: 82)
-                    }
-                }
-                .padding(.horizontal, 4)
+        ZStack(alignment: .top) {
+            HStack {
+                actionButton(
+                    presentation.action(for: .closeList),
+                    label : "Torna al ripiano",
+                    symbol: "chevron.left"
+                )
+                Spacer()
+                workspaceActions(iconOnly: true)
             }
-            .scrollIndicators(.hidden)
+            .padding(.horizontal, 12)
+            .padding(.top, 4)
+
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal) {
+                    LazyHStack(spacing: 12) {
+                        ForEach(Array(renderedEntries.enumerated()), id: \.element.id) { index, entry in
+                            horizontalEntry(entry)
+                                .id(entry.id)
+                                .matchedGeometryEffect(id: entry.id, in: fileIdentity)
+                                .opacity(reduceMotion || listIsVisible ? 1 : 0)
+                                .offset(x: reduceMotion || listIsVisible ? 0 : 12)
+                                .animation(
+                                    reduceMotion ? nil : .easeOut(duration: 0.18).delay(Double(min(index, 5)) * 0.025),
+                                    value: listIsVisible
+                                )
+                                .modifier(removalModifier(for: entry.id))
+                        }
+                        if presentation.snapshot.nextCursor != nil {
+                            actionButton(
+                                presentation.action(for: .nextPage),
+                                label : "Carica altri file",
+                                symbol: "chevron.right"
+                            )
+                            .frame(width: 42, height: 82)
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                }
+                .scrollIndicators(.hidden)
+                .onAppear { scrollToFocusedEntry(using: proxy, animated: false) }
+                .onChange(of: focusedEntryID) { _, _ in
+                    scrollToFocusedEntry(using: proxy, animated: !reduceMotion)
+                }
+            }
+            .padding(.top, 28)
         }
         .padding(.horizontal, 12)
         .padding(.bottom, 7)
@@ -397,16 +445,21 @@ public struct CascadeFileWorkspace: View {
         .help(entry.name)
         .opacity(entry.availability == .available ? 1 : 0.55)
         .contextMenu { entryContextActions(entry) }
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(entryHighlight(entry.id))
+        )
     }
 
     private func card(
         _ entry : FileWorkspaceEntry,
         showsName: Bool
     ) -> some View {
-        VStack(spacing: 4) {
+        let iconSide: CGFloat = showsName ? 60 : 68
+        return VStack(spacing: showsName ? 4 : 0) {
             ZStack(alignment: .bottomTrailing) {
                 thumbnail(entry)
-                    .frame(width: 54, height: 54)
+                    .frame(width: iconSide, height: iconSide)
                     .id(showsName ? "\(entry.id)-\(admissionSequence)" : entry.id.uuidString)
                     .contentTransition(symbolReplacement)
                 if presentation.selectedEntryIDs.contains(entry.id) {
@@ -431,7 +484,7 @@ public struct CascadeFileWorkspace: View {
                 }
             }
         }
-        .frame(width: 78, height: 82)
+        .frame(width: showsName ? 78 : 72, height: showsName ? 82 : 72)
         .accessibilityElement(children: .combine)
     }
 
@@ -516,33 +569,123 @@ public struct CascadeFileWorkspace: View {
     }
 
     @ViewBuilder
-    private var conversionButton: some View {
+    private func conversionButton(iconOnly: Bool) -> some View {
         if let action = presentation.action(for: .convert) {
-            actionButton(
-                action,
-                label   : "Converti",
-                symbol  : "arrow.triangle.2.circlepath",
-                iconOnly: false
-            )
+            workspaceButton(label: "converti", symbol: "arrow.triangle.2.circlepath", tint: .blue, iconOnly: iconOnly) {
+                dispatch(action)
+            }
         } else if let explanation = conversionUnavailableExplanation {
-            Button("Converti", systemImage: "arrow.triangle.2.circlepath") {}
-                .labelStyle(.titleAndIcon)
+            workspaceButton(label: "converti", symbol: "arrow.triangle.2.circlepath", tint: .blue, iconOnly: iconOnly) {}
                 .disabled(true)
                 .help(explanation)
                 .accessibilityHint(explanation)
         }
     }
 
-    private var deckActions: some View {
-        VStack(spacing: 6) {
-            conversionButton
-            if let clearAll {
-                Button("Svuota", systemImage: "trash") { clearAll() }
-                    .labelStyle(.titleAndIcon)
-                    .disabled(clearAllDisabled)
-                    .help("Rimuovi tutti i file dal ripiano")
-                    .accessibilityHint("I file originali restano al loro posto")
+    private func workspaceActions(iconOnly: Bool) -> some View {
+        HStack(spacing: iconOnly ? 5 : 6) {
+            workspaceActionButtons(iconOnly: iconOnly)
+        }
+    }
+
+    @ViewBuilder
+    private func workspaceActionButtons(iconOnly: Bool) -> some View {
+        conversionButton(iconOnly: iconOnly)
+            .matchedGeometryEffect(id: "file-workspace-convert", in: fileIdentity)
+        if let rename {
+            workspaceButton(label: "rename", symbol: "pencil", tint: .orange, iconOnly: iconOnly, action: rename)
+                .disabled(renameDisabled)
+                .help("Rinomina il file selezionato")
+                .matchedGeometryEffect(id: "file-workspace-rename", in: fileIdentity)
+        }
+        if let clearAll {
+            workspaceButton(label: "svuota", symbol: "trash", tint: .red, iconOnly: iconOnly, action: clearAll)
+                .disabled(clearAllDisabled)
+                .help("Rimuovi tutti i file dal ripiano")
+                .accessibilityHint("I file originali restano al loro posto")
+                .matchedGeometryEffect(id: "file-workspace-clear", in: fileIdentity)
+        }
+    }
+
+    private func workspaceButton(
+        label: String,
+        symbol: String,
+        tint: Color,
+        iconOnly: Bool,
+        action: @escaping @MainActor () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 5) {
+                Image(systemName: symbol)
+                    .font(.system(size: iconOnly ? 14 : 22, weight: .medium))
+                    .foregroundStyle(tint)
+                    .shadow(color: tint.opacity(0.55), radius: iconOnly ? 5 : 8)
+                    .frame(width: iconOnly ? 24 : 36, height: iconOnly ? 24 : 36)
+                    .accessibilityHidden(true)
+
+                if !iconOnly {
+                    Text(label)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                }
             }
+            .frame(width: iconOnly ? 24 : 48)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .help(label)
+    }
+
+    private func entryHighlight(_ id: UUID) -> Color {
+        if focusedEntryID == id { return Color.accentColor.opacity(0.32) }
+        if presentation.selectedEntryIDs.contains(id) { return Color.accentColor.opacity(0.16) }
+        return .clear
+    }
+
+    private func scrollToFocusedEntry(using proxy: ScrollViewProxy, animated: Bool) {
+        guard let focusedEntryID else { return }
+        if animated {
+            withAnimation(.easeOut(duration: 0.18)) {
+                proxy.scrollTo(focusedEntryID, anchor: .center)
+            }
+        } else {
+            proxy.scrollTo(focusedEntryID, anchor: .center)
+        }
+    }
+
+    private func removalModifier(for id: UUID) -> FileRemovalModifier {
+        FileRemovalModifier(progress: removingEntryIDs.contains(id) ? 1 : 0, reduceMotion: reduceMotion)
+    }
+
+    private func synchronizeRenderedEntries() {
+        let currentIDs = Set(presentation.snapshot.entries.map(\.id))
+        let removedIDs = Set(renderedEntries.map(\.id)).subtracting(currentIDs)
+        let isRemoval = presentation.snapshot.totalCount < renderedTotalCount
+        renderedTotalCount = presentation.snapshot.totalCount
+        removalTask?.cancel()
+        guard isRemoval, !removedIDs.isEmpty else {
+            renderedEntries = presentation.snapshot.entries
+            removingEntryIDs.removeAll()
+            return
+        }
+        let currentByID = Dictionary(uniqueKeysWithValues: presentation.snapshot.entries.map { ($0.id, $0) })
+        renderedEntries = renderedEntries.map { currentByID[$0.id] ?? $0 }
+        let additions = presentation.snapshot.entries.filter { entry in
+            !renderedEntries.contains(where: { $0.id == entry.id })
+        }
+        renderedEntries.append(contentsOf: additions)
+        if reduceMotion {
+            withAnimation(.easeOut(duration: 0.12)) { removingEntryIDs = removedIDs }
+        } else {
+            withAnimation(.easeOut(duration: 0.24)) { removingEntryIDs = removedIDs }
+        }
+        removalTask = Task { @MainActor in
+            do { try await Task.sleep(for: .milliseconds(reduceMotion ? 130 : 260)) } catch { return }
+            renderedEntries = presentation.snapshot.entries
+            removingEntryIDs.removeAll()
+            renderedTotalCount = presentation.snapshot.totalCount
         }
     }
 
@@ -666,5 +809,55 @@ public struct CascadeFileWorkspace: View {
         guard sequence > 0, consumedAdmissionSequence != sequence else { return }
         consumedAdmissionSequence = sequence
         onAdmissionAnimationConsumed?(sequence)
+    }
+}
+
+private struct FileRemovalModifier: AnimatableModifier {
+    nonisolated var progress: CGFloat
+    let reduceMotion: Bool
+
+    nonisolated var animatableData: CGFloat {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(1 - progress)
+            .scaleEffect(reduceMotion ? 1 : 1 - progress * 0.08)
+            .offset(y: reduceMotion ? 0 : -progress * 7)
+            .mask {
+                if reduceMotion || progress <= 0 {
+                    Rectangle()
+                } else {
+                    FileDissolveMask(progress: progress)
+                }
+            }
+    }
+}
+
+private struct FileDissolveMask: View {
+    let progress: CGFloat
+
+    var body: some View {
+        Canvas { context, size in
+            let columns = 8
+            let rows = 8
+            let cellWidth = size.width / CGFloat(columns)
+            let cellHeight = size.height / CGFloat(rows)
+            for row in 0..<rows {
+                for column in 0..<columns {
+                    let threshold = CGFloat((column * 17 + row * 11) % 64) / 64
+                    guard progress < threshold else { continue }
+                    let rect = CGRect(
+                        x: CGFloat(column) * cellWidth,
+                        y: CGFloat(row) * cellHeight - progress * CGFloat(4 + (column + row) % 7),
+                        width: cellWidth + 0.5,
+                        height: cellHeight + 0.5
+                    )
+                    context.fill(Path(rect), with: .color(.white))
+                }
+            }
+        }
     }
 }

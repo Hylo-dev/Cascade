@@ -26,3 +26,19 @@ La parte app/renderer è stata revisionata dal root: sette test app e un test re
 ## Redesign — 27 settembre
 
 Implementato in `48e682c`, con review e correzioni root. Misura standard 440×144 pt, contenuto 400×124 pt; pagina prioritaria ma richiudibile, glow nativo, drop centrato, ingresso in due fasi e fila orizzontale con freccia di ritorno. Preview del renderer esaminate, inclusi overflow e Riduci movimento; test finali 1.447/1.447 e app 9/9, build firmata e riavvio PID 97319 verificati. [Dettagli e limiti della verifica](../../../docs/superpowers/verification/2026-09-26-file-workspace-runtime.md). Regole permanenti in PRODUCT.md. La prova nel notch fisico resta pendente per il limite CUA e il ticket rimane aperto/non assegnato.
+
+## Rifinitura ventaglio e preview — 27 settembre
+
+Icone Finder sovrapposte con passo 16 pt e rotazioni +4/−4/−8/−12°. Il gesto di apertura memorizza la direzione inversa; il ritorno esegue la stessa azione della freccia. Lo scorrimento orizzontale sfoglia fino all’inizio prima di richiudere; momentum e coda della gesture precedente non navigano. Preview nativa `FileShelfDesignPreview.swift`, Canvas «Ripiano», dati solo in memoria e controlli 0/1/4/8 file, ingresso e Riduci movimento.
+
+Review root e correzioni completate: routing comune, isolamento Swift dei tipi puri, compilazione del corpo della preview e contrasto sul fondo scuro. Test renderer 8/8 e app 12/12; build firmata riuscita e riavvio verificato PID 5063. La preview compila, ma il Canvas non è stato eseguito: Xcode richiede l’installazione iniziale dei componenti di sistema. Prova del trackpad fisico pendente; ticket aperto per QA nativa. [Verifica dettagliata](../../../docs/superpowers/verification/2026-09-26-file-workspace-runtime.md).
+
+## Interazioni e azioni colorate — 27 settembre
+
+Nuova richiesta implementata: primo file a 1,75°, icone native più grandi (68 pt nel mazzo, 60 pt nell’elenco), nessun nome nel mazzo e +N sotto. Testi «converti», «rename», «svuota» a destra con blu/arancio/rosso e bagliori; in lista si raccolgono come icone nella spalla superiore destra, sostituendo la precedente decisione di nasconderli. Il notch resta entro le misure standard.
+
+Scroll orizzontale a passi di focus; clic toggle e Shift per intervalli, frecce/Shift+frecce e Cmd+A nella pagina visibile. Delete rimuove i selezionati o il file a fuoco, preservando gli originali; dissolvenza a frammenti, compreso l’ultimo file, con alternativa Riduci movimento. Il focus tastiera viene acquisito solo interagendo coi file e mantenuto da un contenitore stabile fino all’uscita dal ripiano.
+
+Drag dal mazzo: tutti i file, anche oltre le prime dodici voci. Dalla lista: selezionati; trascinare una voce non selezionata la seleziona prima del drag. Nessuna rimozione al semplice avvio/cancellazione del drag: i receipt del runtime rimuovono solo i file copiati con successo. La risposta esplicita dell’utente autorizza «rename» anche sull’originale Finder: rinomina singola, collisioni senza sovrascrittura, bookmark e nome aggiornati, rollback prima del commit se il salvataggio fallisce.
+
+Review root con correzioni di clipping, focus nativo, selezione aggiornata al drag, paginazione, metadata a ID invariato e durata della dissolvenza finale. Suite SwiftPM 1.452/1.452 e test app 17/17 passati; preview aggiornate e verificate. Build/riavvio finali e limiti nella [verifica runtime](../../../docs/superpowers/verification/2026-09-26-file-workspace-runtime.md). Il ticket resta aperto per QA fisica nel notch.

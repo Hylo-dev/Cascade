@@ -37,15 +37,15 @@ public enum FileWorkspaceLayout {
                 return FileCardTransform(
                     index          : index,
                     rotationDegrees: 0,
-                    xOffset        : 42 - Double(index * 34),
+                    xOffset        : 42 - Double(index * 16),
                     yOffset        : 0,
                     scale          : 1
                 )
             }
             return FileCardTransform(
                 index          : index,
-                rotationDegrees: index == 0 ? 4 : -Double(index * 3),
-                xOffset        : 42 - Double(index * 34),
+                rotationDegrees: index == 0 ? 1.75 : -Double(index * 4),
+                xOffset        : 42 - Double(index * 16),
                 yOffset        : index == 0 ? 2 : Double(abs(index - 2) * 2),
                 scale          : 1 - Double(index) * 0.025
             )

@@ -7,6 +7,58 @@ import Testing
 @Suite
 struct FileWorkspaceHostTests {
     @Test
+    func renameOriginalPreservesContentsAndIdentityAcrossRestore() async throws {
+        let fixture = try HostFixture()
+        let host = try fixture.host()
+        try await host.restore()
+        let source = try fixture.file(name: "before.txt", contents: "keep me")
+        let id = try #require(try await host.addOriginals([source]).first)
+        let before = try await host.snapshot()
+        let oldPrepared = try #require(try await host.prepareItems(ids: [id]).first)
+        try await host.renameExternalReference(id: id, newName: "after.txt", revision: before.revision)
+        let renamedURL = source.deletingLastPathComponent().appendingPathComponent("after.txt")
+        #expect(!FileManager.default.fileExists(atPath: source.path))
+        #expect(try String(contentsOf: renamedURL, encoding: .utf8) == "keep me")
+        let renamed = try await host.snapshot()
+        #expect(renamed.entries.first?.id == id)
+        #expect(renamed.entries.first?.name == "after.txt")
+        #expect(renamed.entries.first?.availability == .available)
+        await #expect(throws: FileWorkspaceError.unavailable) {
+            try await host.copy(oldPrepared, to: fixture.output.appendingPathComponent("old.txt"))
+        }
+        try await host.close()
+        let restored = try fixture.host()
+        try await restored.restore()
+        #expect(try await restored.snapshot().entries.first?.name == "after.txt")
+        let prepared = try #require(try await restored.prepareItems(ids: [id]).first)
+        try await restored.copy(prepared, to: fixture.output.appendingPathComponent(prepared.name))
+        #expect(try String(contentsOf: renamedURL, encoding: .utf8) == "keep me")
+        #expect(try String(contentsOf: fixture.output.appendingPathComponent("after.txt"), encoding: .utf8) == "keep me")
+    }
+
+    @Test
+    func renameRejectsCollisionsAndInvalidNamesWithoutChangingTheOriginal() async throws {
+        let fixture = try HostFixture()
+        let host = try fixture.host()
+        try await host.restore()
+        let source = try fixture.file(name: "source.txt", contents: "source")
+        let existing = try fixture.file(name: "existing.txt", contents: "existing")
+        let id = try #require(try await host.addOriginals([source]).first)
+        let before = try await host.snapshot()
+        for name in ["", "..", "../escape.txt", "dir/name.txt", "bad:name", "existing.txt"] {
+            await #expect(throws: (any Error).self) {
+                try await host.renameExternalReference(id: id, newName: name, revision: before.revision)
+            }
+        }
+        #expect(try String(contentsOf: source, encoding: .utf8) == "source")
+        #expect(try String(contentsOf: existing, encoding: .utf8) == "existing")
+        #expect(try await host.snapshot().revision == before.revision)
+        await #expect(throws: FileWorkspaceError.staleRevision) {
+            try await host.renameExternalReference(id: id, newName: "after.txt", revision: before.revision + 1)
+        }
+    }
+
+    @Test
     func snapshotPagesTwelveEntriesWithoutSkipping() async throws {
         let fixture = try HostFixture()
         let host    = try fixture.host()

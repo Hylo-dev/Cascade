@@ -702,6 +702,78 @@ actor FileWorkspaceStore {
         }
     }
 
+    /// Renames the original in its current directory and refreshes the durable bookmark.
+    func renameExternalReference(id: UUID, newName: String, revision: UInt64) async throws {
+        try await withOperation { operation in
+            try self.requireWritable()
+            guard self.manifest.revision == revision else { throw FileWorkspaceError.staleRevision }
+            guard !newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  newName != ".", newName != "..",
+                  !newName.contains("/"), !newName.contains(":"), !newName.contains("\0"),
+                  newName.utf8.count <= 255 else { throw FileWorkspaceError.unsupported }
+            guard let index = self.manifest.entries.firstIndex(where: { $0.id == id }),
+                  self.manifest.entries[index].ownership == .externalReference else {
+                throw FileWorkspaceError.unavailable
+            }
+            let original = self.manifest.entries[index]
+            let source = try await self.lease(for: original)
+            defer { source.close() }
+            guard source.url.lastPathComponent != newName else { return }
+            let destination = source.url.deletingLastPathComponent().appendingPathComponent(newName)
+            let metadata = try Self.metadata(for: destination)
+            try Self.renameOriginal(from: source.url, to: destination, identity: source.identity)
+            do {
+                let renamed = try await self.references.createReference(to: destination)
+                defer { renamed.close() }
+                guard renamed.identity == source.identity else { throw FileWorkspaceError.unavailable }
+                var candidate = self.manifest
+                candidate.entries[index] = StoredEntry(
+                    id: id, name: metadata.name, typeIdentifier: metadata.type,
+                    ownership: .externalReference,
+                    reference: StoredReference(bookmark: renamed.bookmark, identity: renamed.identity),
+                    managedName: nil, identity: renamed.identity, generation: UUID()
+                )
+                candidate.revision = try Self.nextRevision(self.manifest.revision)
+                try await self.commit(candidate, operation: operation)
+            } catch {
+                // Once persistence may have committed, its new bookmark remains authoritative.
+                if !(error is FileWorkspaceCommitUncertain), self.manifest.revision == revision {
+                    try? Self.renameOriginal(from: destination, to: source.url, identity: source.identity)
+                }
+                throw Self.map(error)
+            }
+        }
+    }
+
+    private static func renameOriginal(
+        from source: URL, to destination: URL, identity: FileReferenceIdentity
+    ) throws {
+        var coordinationError: NSError?
+        var failure: (any Error)?
+        NSFileCoordinator().coordinate(
+            writingItemAt: source, options: .forMoving,
+            writingItemAt: destination, options: [], error: &coordinationError
+        ) { sourceURL, destinationURL in
+            var info = stat()
+            guard lstat(sourceURL.path, &info) == 0,
+                  info.st_mode & S_IFMT == S_IFREG,
+                  UInt64(info.st_dev) == identity.device,
+                  UInt64(info.st_ino) == identity.inode,
+                  UInt64(info.st_gen) == identity.generation else {
+                failure = FileWorkspaceError.unavailable
+                return
+            }
+            // RENAME_EXCL performs an atomic no-overwrite move in the same directory.
+            guard renameatx_np(AT_FDCWD, sourceURL.path, AT_FDCWD, destinationURL.path, UInt32(RENAME_EXCL)) == 0 else {
+                failure = (errno == EACCES || errno == EPERM)
+                    ? FileWorkspaceError.permissionDenied : FileWorkspaceError.ioFailure
+                return
+            }
+        }
+        if let failure { throw failure }
+        if coordinationError != nil { throw FileWorkspaceError.ioFailure }
+    }
+
     /// leaseForDelivery keeps the checked descriptor and any security scope alive for the reader.
     /// The returned URL is metadata; delivery code reads from the descriptor to avoid path replacement.
     func leaseForDelivery(

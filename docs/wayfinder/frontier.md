@@ -25,6 +25,10 @@ La decisione di conservazione e il routing limitato al ripiano sono fissati dall
 
 ## Tranche file-shelf mappata
 
+Nuova tranche UI/interazioni revisionata: icone grandi, azioni colorate, focus discreto, selezione multipla, Delete con dissolvenza, drag completo/selettivo e rename dell’originale. 1.452 test SwiftPM e 17 test app passati; riserva settimanale 85%. Il [ticket del ripiano](../../.scratch/cascade-product/issues/92-file-shelf-primary-and-clear.md) resta aperto per QA nativa.
+
+Rifinitura successiva del ventaglio e gesto inverso revisionati; preview SwiftUI nativa aggiunta. Test mirati 8 renderer + 12 app passati, build firmata e riavvio PID 5063. Canvas bloccato dal setup iniziale Xcode; prova trackpad fisico pendente.
+
 Concluso anche [Preparare formati e avanzamento della conversione](../../.scratch/cascade-product/issues/86-file-workspace-conversion-planning.md): 64 test indipendenti passati, build firmata e riavvio PID34695 verificati. La conversione completa conserva i suoi requisiti nativi; nessuna attivazione produttiva.
 
 Nel [piano locale autorizzato](../superpowers/plans/2026-09-26-local-file-shelf.md), host, pagina/ingresso e composizione/uscita sono risolti dopo review root e test. L'A/B senza pin SkyLight ha ricevuto callback nativi e l'utente ha visto un file nel ripiano; il manifest contiene una voce, mentre il ricevitore finale è revisionato e testato, con prova manuale pendente. La [verifica finale](../../.scratch/cascade-product/issues/90-file-shelf-local-delivery.md) resta bloccata dal [drag](../../.scratch/cascade-product/issues/91-file-shelf-native-drop-regression.md). Il [design del ripiano](../../.scratch/cascade-product/issues/92-file-shelf-primary-and-clear.md) e la correzione del drag rapido sono integrati in `48e682c`: review root, 1.447 test SwiftPM e 9 test app passati, preview esaminate, build firmata e riavvio PID 97319 verificati. La prova nativa nel notch e in Finder resta pendente; riserva settimanale 87%. Questa tranche non apre il launcher addon e non abilita Converti.

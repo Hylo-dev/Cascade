@@ -8,13 +8,17 @@ import OSLog
 
 private let fileDropLog = Logger(subsystem: "hylo.Cascade", category: "FileDrop")
 
+/// A native control that explicitly requests keyboard focus after user interaction.
+/// Other notch content remains nonactivating and cannot become the key window.
+public protocol NotchKeyboardFocusTarget: AnyObject {}
+
 /// NotchPanel is the always-on overlay window.
 ///
 /// It is a borderless, nonactivating `NSPanel` so it never steals focus from
 /// the app the user is actually working in. Its collection behavior is what
 /// makes it persist across every Space and survive full-screen transitions, and
 /// its window level sits above the menu bar so the chrome can sit flush in the
-/// notch region. The panel never becomes key or main.
+/// notch region. Only an explicitly focused keyboard target can make it key.
 ///
 /// The controller toggles `ignoresMouseEvents` from the exact animated path
 /// under the cursor. This matters because the panel's frame spans the whole menu
@@ -50,10 +54,8 @@ final class NotchPanel: NSPanel {
         collectionBehavior          = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
     }
 
-    // A borderless panel refuses key/main by default; we state it explicitly so
-    // no future change can accidentally let the overlay grab focus.
     override var canBecomeKey: Bool {
-        false
+        firstResponder is any NotchKeyboardFocusTarget
     }
 
     override var canBecomeMain: Bool {
