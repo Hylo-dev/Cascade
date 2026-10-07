@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import CascadeContracts
 import CascadeKit
 
 /// CascadeSettingsView uses the system sidebar, grouped forms and controls.
@@ -122,6 +123,19 @@ struct CascadeSettingsView: View {
 
                     Section("Search") { settingRow(.spotlight) }
 
+                    Section {
+
+                        settingRow(.caffeinateGlyph)
+
+                        settingRow(.caffeinateDisplay)
+
+                        settingRow(.caffeinateShortcut)
+                    } header: {
+                        Text("Caffeinate")
+                    } footer: {
+                        Text("Start or stop Caffeinate from anywhere with the shortcut.")
+                    }
+
                     PluginStatusSection(services: services)
 
                     permissions
@@ -188,6 +202,24 @@ struct CascadeSettingsView: View {
                 toggleRow(setting, value: $services.chargingEnabled)
             case .spotlight:
                 toggleRow(setting, value: $services.spotlightEnabled)
+
+            case .caffeinateGlyph:
+                caffeinateGlyphRow(setting)
+
+            case .caffeinateDisplay:
+                toggleRow(setting, value: $services.caffeinateKeepsDisplayAwake)
+
+            case .caffeinateShortcut:
+                LabeledContent {
+                    CaffeinateShortcutRecorder(
+                        shortcut     : services.caffeinateShortcut,
+                        isUnavailable: services.caffeinateShortcutUnavailable,
+                        onChange     : { services.setCaffeinateShortcut($0) }
+                    )
+                } label: {
+                    Text(setting.title)
+                }
+                .accessibilityHint(setting.subtitle)
             case .volumePreview:
                 actionRow(setting) { services.previewVolume() }
                     .disabled(!services.volumeEnabled)
@@ -203,6 +235,25 @@ struct CascadeSettingsView: View {
             case .spotlightPreview:
                 actionRow(setting) { services.previewSpotlightDroplet(from: .settings) }
         }
+    }
+
+    private func caffeinateGlyphRow(_ setting: CascadeSetting) -> some View {
+        LabeledContent {
+            Picker(setting.title, selection: $services.caffeinateGlyph) {
+                ForEach(CaffeinateGlyph.allCases, id: \.self) { glyph in
+                    Image(systemName: glyph.filledSymbol)
+                        .accessibilityLabel(glyph.displayName)
+                        .tag(glyph)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.segmented)
+            .frame(width: 160)
+            .accessibilityIdentifier("settings.\(setting.rawValue)")
+        } label: {
+            Text(setting.title)
+        }
+        .accessibilityHint(setting.subtitle)
     }
 
     @ViewBuilder
@@ -440,5 +491,17 @@ struct CascadeSettingsView: View {
         let build   = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
 
         return "\(version) (\(build))"
+    }
+}
+
+/// The glyph's name is what VoiceOver reads for its picker segment, which is only an image.
+private extension CaffeinateGlyph {
+
+    var displayName: String {
+        switch self {
+            case .cupHeatWaves: String(localized: "Cup")
+            case .mug         : String(localized: "Mug")
+            case .pill        : String(localized: "Pill")
+        }
     }
 }

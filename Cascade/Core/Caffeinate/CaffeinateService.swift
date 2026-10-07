@@ -195,15 +195,18 @@ nonisolated final class CaffeinateService: Sendable {
         storage.withLock { $0.armedDeadline }
     }
 
-    /// perform queues a command; it returns at once and the queue does the work. A command is
-    /// ignored while no emitter is set, that is while the plugin holds no lease: a shortcut press
-    /// with the plugin disabled must not start a session with no UI, the orphaned assertion the
-    /// lifecycle forbids. The check sits here and not in `run`, because the lease ending stops the
-    /// session through `run` itself. It is race-free: `setEmitter` writes the emitter under the
-    /// lock before it returns, so a command queued after the lease ended sees no emitter.
+    /// perform queues a command; it returns at once and the queue does the work. A session command
+    /// is ignored while no emitter is set, that is while the plugin holds no lease: a shortcut
+    /// press with the plugin disabled must not start a session with no UI, the orphaned assertion
+    /// the lifecycle forbids. A preference command (`setGlyph`, `setKeepsDisplayAwake`) runs
+    /// without a lease, so Settings keeps working while the plugin is disabled; that is safe
+    /// because no session can be active without a lease, so there is no assertion to touch. The
+    /// check sits here and not in `run`, because the lease ending stops the session through `run`
+    /// itself. It is race-free: `setEmitter` writes the emitter under the lock before it returns,
+    /// so a command queued after the lease ended sees no emitter.
     func perform(_ command: CaffeinateCommand) {
         queue.async { [self] in
-            guard storage.withLock({ $0.emitter != nil }) else { return }
+            guard command.isPreference || storage.withLock({ $0.emitter != nil }) else { return }
 
             run(command)
         }

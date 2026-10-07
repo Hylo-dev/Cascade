@@ -20,6 +20,15 @@ nonisolated enum CaffeinateCommand: Equatable, Sendable {
     case setKeepsDisplayAwake(Bool)
     case setGlyph(CaffeinateGlyph)
 
+    /// isPreference tells a command that only changes what the next session looks like from one
+    /// that acts on the session. A preference may run while the plugin holds no lease.
+    var isPreference: Bool {
+        switch self {
+            case .setKeepsDisplayAwake, .setGlyph: true
+            default                              : false
+        }
+    }
+
     static let plugin = PluginID(rawValue: "com.cascade.caffeinate")!
 
     /// init?(_:) reads the action the broker accepted, by its manifest name, and fails for an

@@ -49,6 +49,41 @@ final class CascadeServices {
 
     var spotlightStatus: String { spotlight.status }
 
+    /// The Caffeinate settings are mirrored here, not read from the service: the service applies
+    /// a command on its own queue, so its `state` would still show the old value in the render
+    /// that follows the user's click. The setters forward to the service, which persists them;
+    /// the mirrors are read once at launch and change only through these setters.
+    var caffeinateGlyph: CaffeinateGlyph {
+        didSet {
+            guard caffeinateGlyph != oldValue else { return }
+
+            caffeinateService.perform(.setGlyph(caffeinateGlyph))
+        }
+    }
+
+    var caffeinateKeepsDisplayAwake: Bool {
+        didSet {
+            guard caffeinateKeepsDisplayAwake != oldValue else { return }
+
+            caffeinateService.perform(.setKeepsDisplayAwake(caffeinateKeepsDisplayAwake))
+        }
+    }
+
+    private(set) var caffeinateShortcut: CaffeinateShortcut?
+
+    /// True when the system refused the shortcut the user chose, because another app owns it.
+    /// The choice stays persisted so Settings shows what the user picked.
+    private(set) var caffeinateShortcutUnavailable = false
+
+    /// setCaffeinateShortcut persists the shortcut and registers it, `nil` meaning off. The
+    /// preferences are written from the main actor: a single `UserDefaults` set, never on the
+    /// service's queue, which only touches the other keys.
+    func setCaffeinateShortcut(_ shortcut: CaffeinateShortcut?) {
+        caffeinatePreferences.shortcut = shortcut
+        caffeinateShortcut             = shortcut
+        caffeinateShortcutUnavailable  = !caffeinateHotKey.register(shortcut)
+    }
+
     func previewSpotlightDroplet(from origin: AuxiliaryInvocationOrigin) {
         guard let anchor = spotlightAnchor(on: invocationDisplayID(for: origin)) else { return }
 
@@ -167,6 +202,12 @@ final class CascadeServices {
     private var settings           : (any CascadeSettingsPresenting)?
     @ObservationIgnored
     private let spotlight          : SpotlightCoordinator
+    @ObservationIgnored
+    private let caffeinateService    : CaffeinateService
+    @ObservationIgnored
+    private let caffeinatePreferences: UserDefaultsCaffeinatePreferences
+    @ObservationIgnored
+    private let caffeinateHotKey     : CaffeinateHotKey
 
     @ObservationIgnored
     private let suppressor    = AccessibilityBluetoothNoticeSuppressor()
@@ -217,11 +258,29 @@ final class CascadeServices {
             configuration     : .default,
             displayPreferences: displayPreferencesStore.preferences
         )
+
+        // The service touches NSWorkspace when it is created, which is why it is built here on
+        // the main actor. It holds no assertion until a command reaches it with the lease held.
+        let caffeinatePreferences = UserDefaultsCaffeinatePreferences(defaults: preferences)
+        let caffeinateService     = CaffeinateService(
+            assertions : IOKitCaffeinateAssertions(),
+            preferences: caffeinatePreferences
+        )
+        self.caffeinatePreferences  = caffeinatePreferences
+        self.caffeinateService      = caffeinateService
+        caffeinateHotKey            = CaffeinateHotKey(
+            onPress: { [caffeinateService] in caffeinateService.perform(.toggle) }
+        )
+        caffeinateGlyph             = caffeinatePreferences.glyph
+        caffeinateKeepsDisplayAwake = caffeinatePreferences.keepsDisplayAwake
+        caffeinateShortcut          = caffeinatePreferences.shortcut
+
         self.notch                   = notch
         plugins                      = PluginSystem(
             host   : notch,
             sources: [
-                PluginVolumeState.source: volumeSource,
+                PluginCaffeinateState.source: CaffeinatePluginSource(service: caffeinateService),
+                PluginVolumeState.source    : volumeSource,
             ]
         )
         self.displayPreferencesStore = displayPreferencesStore
@@ -289,6 +348,18 @@ final class CascadeServices {
 
         plugins.statusHandler = { [weak self] status in
             self?.pluginStatus = status
+        }
+
+        // Caffeinate's power assertion stays in Cascade: its widget's controls reach the service
+        // only after the broker accepted them. The closure holds the service, not self, so there
+        // is no cycle through the plugin system.
+        plugins.actionHandler = { [caffeinateService] key, event in
+            guard
+                key.plugin == CaffeinateCommand.plugin,
+                let command = CaffeinateCommand(event)
+            else { return }
+
+            caffeinateService.perform(command)
         }
 
         volumeSource.statusHandler = { [weak self] status in
@@ -392,6 +463,7 @@ final class CascadeServices {
         plugins.setEnabled(chargingEnabled, for: ChargingPlugin.id)
         plugins.setEnabled(volumeEnabled, for: VolumePlugin.id)
         plugins.start()
+        caffeinateShortcutUnavailable = !caffeinateHotKey.register(caffeinateShortcut)
         notch.setHapticsEnabled(hapticsEnabled)
         notch.setSensitiveContentVisible(sensitiveContentVisible)
         fileShelfStartTask = Task { [weak fileShelfController] in
@@ -483,6 +555,8 @@ final class CascadeServices {
         mediaProvider.stop()
         if let mediaActivity { notch.endActivity(id: mediaActivity.id) }
         mediaActivity = nil
+
+        caffeinateHotKey.register(nil)
 
         notch.stop()
     }

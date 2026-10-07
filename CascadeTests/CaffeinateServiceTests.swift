@@ -797,6 +797,29 @@ struct CaffeinateServiceTests {
     }
 
     @Test
+    func preferenceCommandsRunWithoutALease() {
+        let assertions  = FakeAssertions()
+        let preferences = InMemoryCaffeinatePreferences()
+        let service     = CaffeinateService(
+            assertions : assertions,
+            preferences: preferences,
+            now        : { TestClock.origin }
+        )
+
+        service.perform(.setGlyph(.pill))
+        service.perform(.setKeepsDisplayAwake(false))
+        service.perform(.start)
+        service.drain()
+
+        #expect(service.state.glyph == .pill)
+        #expect(!service.state.keepsDisplayAwake)
+        #expect(preferences.glyph == .pill)
+        #expect(!preferences.keepsDisplayAwake)
+        #expect(!service.state.isActive)
+        #expect(assertions.calls.isEmpty)
+    }
+
+    @Test
     func aToggleQueuedAfterTheLeaseEndsStartsNothing() {
         let harness = CaffeinateHarness()
         harness.perform(.start)

@@ -3,6 +3,7 @@
 //  Cascade
 //
 
+import AppKit
 import Carbon.HIToolbox
 
 /// CaffeinateShortcut is the global key combination that starts and stops a session: a virtual key
@@ -68,5 +69,50 @@ nonisolated struct CaffeinateShortcut: Codable, Hashable, Sendable {
         if modifiers & UInt32(cmdKey)     != 0 { text += "⌘" }
 
         return text + (Self.keyNames[keyCode] ?? "Key \(keyCode)")
+    }
+
+    /// Recording is what one key press means to the Settings recorder.
+    enum Recording: Equatable {
+
+        /// The press is a valid shortcut.
+        case shortcut(CaffeinateShortcut)
+
+        /// The press is Escape: the user gave up.
+        case cancel
+
+        /// The press is not usable (a key outside the table, or no ⌘⌃⌥); recording goes on.
+        case ignored
+    }
+
+    /// recording reads a key-down as the recorder's next step. `NSEvent.keyCode` is already
+    /// Carbon's virtual key code, so no layout lookup is needed. A shortcut needs a key from the
+    /// table and at least one of ⌘⌃⌥: Shift alone would still steal a plain capital from every
+    /// app, so it only counts beside another modifier.
+    static func recording(
+        keyCode: UInt16,
+        flags  : NSEvent.ModifierFlags
+    ) -> Recording {
+        if Int(keyCode) == kVK_Escape { return .cancel }
+
+        let relevant = flags.intersection([.command, .control, .option, .shift])
+
+        guard
+            keyNames[UInt32(keyCode)] != nil,
+            !relevant.isDisjoint(with: [.command, .control, .option])
+        else { return .ignored }
+
+        var carbon: UInt32 = 0
+
+        if relevant.contains(.control) { carbon |= UInt32(controlKey) }
+        if relevant.contains(.option)  { carbon |= UInt32(optionKey) }
+        if relevant.contains(.shift)   { carbon |= UInt32(shiftKey) }
+        if relevant.contains(.command) { carbon |= UInt32(cmdKey) }
+
+        return .shortcut(
+            CaffeinateShortcut(
+                keyCode  : UInt32(keyCode),
+                modifiers: carbon
+            )
+        )
     }
 }

@@ -3,6 +3,7 @@
 //  CascadeTests
 //
 
+import AppKit
 import Carbon.HIToolbox
 import Foundation
 import Testing
@@ -159,5 +160,60 @@ struct CaffeinateShortcutPreferencesTests {
 
             #expect(preferences.shortcut == CaffeinateShortcut.default)
         }
+    }
+
+    // MARK: Recording
+
+    @Test
+    func recordingAcceptsAKeyWithAModifier() {
+        let result = CaffeinateShortcut.recording(
+            keyCode: UInt16(kVK_ANSI_K),
+            flags  : [.command, .shift]
+        )
+
+        #expect(
+            result == .shortcut(
+                CaffeinateShortcut(
+                    keyCode  : UInt32(kVK_ANSI_K),
+                    modifiers: UInt32(cmdKey | shiftKey)
+                )
+            )
+        )
+    }
+
+    @Test
+    func recordingMapsEveryModifierToItsCarbonFlag() {
+        let result = CaffeinateShortcut.recording(
+            keyCode: UInt16(kVK_F5),
+            flags  : [.control, .option, .shift, .command, .capsLock]
+        )
+
+        #expect(
+            result == .shortcut(
+                CaffeinateShortcut(
+                    keyCode  : UInt32(kVK_F5),
+                    modifiers: UInt32(controlKey | optionKey | shiftKey | cmdKey)
+                )
+            )
+        )
+    }
+
+    @Test
+    func recordingRefusesABareKeyAndShiftAlone() {
+        #expect(CaffeinateShortcut.recording(keyCode: UInt16(kVK_ANSI_A), flags: []) == .ignored)
+        #expect(CaffeinateShortcut.recording(keyCode: UInt16(kVK_ANSI_A), flags: [.shift]) == .ignored)
+        #expect(CaffeinateShortcut.recording(keyCode: UInt16(kVK_ANSI_A), flags: [.capsLock]) == .ignored)
+    }
+
+    @Test
+    func recordingRefusesAKeyOutsideTheTable() {
+        #expect(CaffeinateShortcut.recording(keyCode: UInt16(kVK_Space), flags: [.command]) == .ignored)
+        #expect(CaffeinateShortcut.recording(keyCode: UInt16(kVK_LeftArrow), flags: [.control]) == .ignored)
+    }
+
+    @Test
+    func escapeCancelsWithOrWithoutModifiers() {
+        #expect(CaffeinateShortcut.recording(keyCode: UInt16(kVK_Escape), flags: []) == .cancel)
+        #expect(CaffeinateShortcut.recording(keyCode: UInt16(kVK_Escape), flags: [.command]) == .cancel)
     }
 }
