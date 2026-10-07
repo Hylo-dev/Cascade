@@ -23,10 +23,21 @@ final class CaffeinateHotKey {
 
     /// One fixed identity: the class never owns more than one hot key at a time. The signature is
     /// the four ASCII bytes of 'CafS', the way Carbon code writes an `OSType`.
-    private static let hotKeyIdentifier = EventHotKeyID(
+    nonisolated private static let hotKeyIdentifier = EventHotKeyID(
         signature: 0x4361_6653,
         id       : 1
     )
+
+    /// isOurs tells whether a press belongs to this class's hot key. The handler sits on the whole
+    /// application target, so it sees every hot key of the process; answering only its own keeps a
+    /// future second one from toggling Caffeinate and from losing its event.
+    nonisolated static func isOurs(_ identifier: EventHotKeyID) -> Bool {
+        identifier.signature == hotKeyIdentifier.signature && identifier.id == hotKeyIdentifier.id
+    }
+
+    /// False when the handler could not be installed: without it a registered key would press
+    /// into the void, so `register` refuses a shortcut instead.
+    private var handlerInstalled = false
 
     private let onPress: @MainActor () -> Void
 
@@ -43,10 +54,25 @@ final class CaffeinateHotKey {
 
         // The callback is a C function pointer and cannot capture: the object travels as userData,
         // unretained, which is safe because `deinit` removes the handler before the object dies.
-        InstallEventHandler(
+        let installStatus = InstallEventHandler(
             GetApplicationEventTarget(),
-            { _, _, userData in
-                guard let userData else { return OSStatus(eventNotHandledErr) }
+            { _, event, userData in
+                guard let event, let userData else { return OSStatus(eventNotHandledErr) }
+
+                var identifier = EventHotKeyID()
+                let status     = GetEventParameter(
+                    event,
+                    EventParamName(kEventParamDirectObject),
+                    EventParamType(typeEventHotKeyID),
+                    nil,
+                    MemoryLayout<EventHotKeyID>.size,
+                    nil,
+                    &identifier
+                )
+
+                guard status == noErr, CaffeinateHotKey.isOurs(identifier) else {
+                    return OSStatus(eventNotHandledErr)
+                }
 
                 let hotKey = Unmanaged<CaffeinateHotKey>.fromOpaque(userData).takeUnretainedValue()
                 MainActor.assumeIsolated { hotKey.onPress() }
@@ -58,6 +84,8 @@ final class CaffeinateHotKey {
             Unmanaged.passUnretained(self).toOpaque(),
             &handlerReference
         )
+
+        handlerInstalled = installStatus == noErr
     }
 
     deinit {
@@ -67,7 +95,8 @@ final class CaffeinateHotKey {
 
     /// register replaces the registered combination with `shortcut`, or leaves none for `nil`.
     /// It answers `false` when the system refuses the new one (another app already owns it): the
-    /// previous combination is gone by then, so nothing is registered.
+    /// previous combination is gone by then, so nothing is registered. It also answers `false` for
+    /// any shortcut when the event handler could not be installed.
     @discardableResult
     func register(_ shortcut: CaffeinateShortcut?) -> Bool {
         if let hotKeyReference {
@@ -76,6 +105,7 @@ final class CaffeinateHotKey {
         }
 
         guard let shortcut else { return true }
+        guard handlerInstalled else { return false }
 
         var reference: EventHotKeyRef?
         let status = RegisterEventHotKey(

@@ -51,6 +51,12 @@ nonisolated struct CaffeinateShortcut: Codable, Hashable, Sendable {
     /// Carbon modifier flags (`controlKey`, `optionKey`, `shiftKey`, `cmdKey`).
     let modifiers: UInt32
 
+    /// hasModifier is false for a bare key, which would be registered globally and steal that key
+    /// from every app; such a value is never a valid shortcut.
+    var hasModifier: Bool {
+        modifiers & UInt32(controlKey | optionKey | cmdKey | shiftKey) != 0
+    }
+
     /// displayString writes the shortcut as macOS does: modifier symbols in the order ⌃⌥⇧⌘, then
     /// the key.
     var displayString: String {

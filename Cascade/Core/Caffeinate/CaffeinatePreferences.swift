@@ -72,13 +72,19 @@ nonisolated final class UserDefaultsCaffeinatePreferences: CaffeinatePreferences
 
     /// The shortcut is JSON in a `Data`. Three states share one key: absent means never chosen
     /// (the default), empty data means switched off, anything else is the encoded shortcut, and
-    /// data that no longer decodes falls back to the default rather than silently disabling it.
+    /// data that no longer decodes, or decodes to a bare key with no modifier (which would steal that
+    /// key everywhere), falls back to the default rather than silently disabling it.
     var shortcut: CaffeinateShortcut? {
         get {
             guard let data = defaults.data(forKey: Key.shortcut) else { return .default }
             guard !data.isEmpty else { return nil }
 
-            return (try? JSONDecoder().decode(CaffeinateShortcut.self, from: data)) ?? .default
+            guard
+                let shortcut = try? JSONDecoder().decode(CaffeinateShortcut.self, from: data),
+                shortcut.hasModifier
+            else { return .default }
+
+            return shortcut
         }
         set {
             let data = newValue.flatMap { try? JSONEncoder().encode($0) } ?? Data()

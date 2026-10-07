@@ -56,6 +56,15 @@ struct CaffeinateShortcutTests {
     }
 
     @Test
+    func onlyItsOwnHotKeyIdentifierIsAnswered() {
+        let ours = EventHotKeyID(signature: 0x4361_6653, id: 1)
+
+        #expect(CaffeinateHotKey.isOurs(ours))
+        #expect(!CaffeinateHotKey.isOurs(EventHotKeyID(signature: 0x4F74_6872, id: 1)))
+        #expect(!CaffeinateHotKey.isOurs(EventHotKeyID(signature: 0x4361_6653, id: 2)))
+    }
+
+    @Test
     func registeringNilUnregisters() {
         var presses = 0
         let hotKey  = CaffeinateHotKey(onPress: { presses += 1 })
@@ -79,17 +88,19 @@ struct CaffeinateShortcutPreferencesTests {
 
     /// withScratchDefaults runs `body` on a throwaway suite. Removing the persistent domain empties
     /// the suite but cfprefsd leaves its plist behind, so the file goes too.
-    private func withScratchDefaults(_ body: (UserDefaults) -> Void) {
+    private func withScratchDefaults(_ body: (UserDefaults) throws -> Void) rethrows {
         let suiteName = "CascadeTests.caffeinate.shortcut.\(UUID().uuidString)"
         let defaults  = UserDefaults(suiteName: suiteName)!
 
-        body(defaults)
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
 
-        defaults.removePersistentDomain(forName: suiteName)
+            let plist = FileManager.default.homeDirectoryForCurrentUser
+                .appending(path: "Library/Preferences/\(suiteName).plist")
+            try? FileManager.default.removeItem(at: plist)
+        }
 
-        let plist = FileManager.default.homeDirectoryForCurrentUser
-            .appending(path: "Library/Preferences/\(suiteName).plist")
-        try? FileManager.default.removeItem(at: plist)
+        try body(defaults)
     }
 
     @Test
@@ -124,6 +135,18 @@ struct CaffeinateShortcutPreferencesTests {
             preferences.shortcut = nil
 
             #expect(UserDefaultsCaffeinatePreferences(defaults: defaults).shortcut == nil)
+        }
+    }
+
+    @Test
+    func aBareKeyWithoutModifiersFallsBackToTheDefault() throws {
+        try withScratchDefaults { defaults in
+            let bare = CaffeinateShortcut(keyCode: UInt32(kVK_ANSI_C), modifiers: 0)
+            defaults.set(try JSONEncoder().encode(bare), forKey: "caffeinate.shortcut")
+
+            let preferences = UserDefaultsCaffeinatePreferences(defaults: defaults)
+
+            #expect(preferences.shortcut == CaffeinateShortcut.default)
         }
     }
 
