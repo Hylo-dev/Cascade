@@ -66,17 +66,21 @@ final class CascadeServices {
     private(set) var caffeinateShortcut: CaffeinateShortcut?
 
     /// True when the system refused the shortcut the user chose, because another app owns it.
-    /// The choice stays persisted so Settings shows what the user picked.
+    /// The choice stays persisted so Settings shows what the user picked. It is only ever set by
+    /// a registration that was attempted: while Caffeinate is not active nothing is registered,
+    /// and nothing was refused.
     private(set) var caffeinateShortcutUnavailable = false
 
     /// setCaffeinateShortcutRecording frees the global combination while the recorder listens, so
     /// pressing the current shortcut records it instead of toggling Caffeinate, and registers the
     /// current one again when recording ends.
     func setCaffeinateShortcutRecording(_ isRecording: Bool) {
+        isRecordingCaffeinateShortcut = isRecording
+
         if isRecording {
             caffeinateHotKey.register(nil)
         } else {
-            caffeinateShortcutUnavailable = !caffeinateHotKey.register(caffeinateShortcut)
+            registerCaffeinateShortcut()
         }
     }
 
@@ -86,7 +90,30 @@ final class CascadeServices {
     func setCaffeinateShortcut(_ shortcut: CaffeinateShortcut?) {
         caffeinatePreferences.shortcut = shortcut
         caffeinateShortcut             = shortcut
-        caffeinateShortcutUnavailable  = !caffeinateHotKey.register(shortcut)
+        registerCaffeinateShortcut()
+    }
+
+    /// registerCaffeinateShortcut holds the global hot key only while it can do something: while
+    /// Cascade runs and Caffeinate is active, and not while the recorder listens. Otherwise the
+    /// combination is given back, so ⌃⌥⌘C is not taken from other apps for a plugin that is off.
+    private func registerCaffeinateShortcut() {
+        guard !isRecordingCaffeinateShortcut else { return }
+
+        let wanted = isRunning && caffeinateSessionsAllowed ? caffeinateShortcut : nil
+
+        caffeinateShortcutUnavailable = !caffeinateHotKey.register(wanted)
+    }
+
+    /// updateCaffeinatePermission follows the engine's status: a session may run while Caffeinate
+    /// is active, whatever PluginHost does, and the service and the hot key hear only of a change.
+    private func updateCaffeinatePermission(from status: PluginEngineStatus) {
+        let allowed = CaffeinateCommand.sessionsAllowed(in: status.plugins)
+
+        guard allowed != caffeinateSessionsAllowed else { return }
+
+        caffeinateSessionsAllowed = allowed
+        caffeinateService.setSessionsAllowed(allowed)
+        registerCaffeinateShortcut()
     }
 
     func previewSpotlightDroplet(from origin: AuxiliaryInvocationOrigin) {
@@ -215,6 +242,10 @@ final class CascadeServices {
     private let caffeinateHotKey     : CaffeinateHotKey
     @ObservationIgnored
     private let caffeinateSettings   : CaffeinateSettingsMirror
+    @ObservationIgnored
+    private var caffeinateSessionsAllowed     = false
+    @ObservationIgnored
+    private var isRecordingCaffeinateShortcut = false
 
     @ObservationIgnored
     private let suppressor    = AccessibilityBluetoothNoticeSuppressor()
@@ -267,7 +298,8 @@ final class CascadeServices {
         )
 
         // The service touches NSWorkspace when it is created, which is why it is built here on
-        // the main actor. It holds no assertion until a command reaches it with the lease held.
+        // the main actor. It holds no assertion until the engine reports Caffeinate active and a
+        // command reaches it.
         let caffeinatePreferences = UserDefaultsCaffeinatePreferences(defaults: preferences)
         let caffeinateService     = CaffeinateService(
             assertions : IOKitCaffeinateAssertions(),
@@ -359,6 +391,7 @@ final class CascadeServices {
 
         plugins.statusHandler = { [weak self] status in
             self?.pluginStatus = status
+            self?.updateCaffeinatePermission(from: status)
         }
 
         // Caffeinate's power assertion stays in Cascade: its widget's controls reach the service
@@ -484,7 +517,7 @@ final class CascadeServices {
         plugins.setEnabled(chargingEnabled, for: ChargingPlugin.id)
         plugins.setEnabled(volumeEnabled, for: VolumePlugin.id)
         plugins.start()
-        caffeinateShortcutUnavailable = !caffeinateHotKey.register(caffeinateShortcut)
+        registerCaffeinateShortcut()
         notch.setHapticsEnabled(hapticsEnabled)
         notch.setSensitiveContentVisible(sensitiveContentVisible)
         fileShelfStartTask = Task { [weak fileShelfController] in

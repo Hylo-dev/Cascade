@@ -4,6 +4,7 @@
 //
 
 import CascadeContracts
+import CascadePluginEngine
 import Foundation
 import Synchronization
 import Testing
@@ -226,8 +227,8 @@ nonisolated final class CaffeinateHarness: Sendable {
     let emitted    : EmittedStates
     let service    : CaffeinateService
 
-    /// init builds a service with an emitter already set and the initial snapshot forgotten, so
-    /// a test counts only the transitions it causes.
+    /// init builds a service with sessions allowed, an emitter already set and the initial
+    /// snapshot forgotten, so a test counts only the transitions it causes.
     init(
         nextDuration     : CaffeinateDuration = .minutes(60),
         keepsDisplayAwake: Bool               = true
@@ -245,6 +246,7 @@ nonisolated final class CaffeinateHarness: Sendable {
             now        : { clock.now }
         )
         assertions.watch(service)
+        service.setSessionsAllowed(true)
         service.setEmitter { emitted.append($0) }
         service.drain()
         emitted.clear()
@@ -762,32 +764,84 @@ struct CaffeinateServiceTests {
         #expect(received.all.first?.isActive == true)
     }
 
+    /// aSessionSurvivesTheEmitterGoingAway is a PluginHost loss: the kernel ends the source's
+    /// lease, which takes the emitter away, and the session must go on; the next emitter, when
+    /// the host is back, catches up with the session as it is.
     @Test
-    func endingTheLeaseStopsTheSessionAndSilencesTheEmitter() {
-        let harness = CaffeinateHarness()
+    func aSessionSurvivesTheEmitterGoingAway() {
+        let harness = CaffeinateHarness(nextDuration: .minutes(30))
         harness.perform(.start)
         harness.emitted.clear()
 
         harness.service.setEmitter(nil)
         harness.service.drain()
 
-        #expect(!harness.service.state.isActive)
-        #expect(harness.assertions.liveCount == 0)
+        #expect(harness.service.state.isActive)
+        #expect(harness.assertions.liveCount == 2)
+        #expect(harness.assertions.releasedCount == 0)
         #expect(harness.emitted.count == 0)
 
-        harness.perform(.start)
+        harness.perform(.extend)
+        #expect(harness.service.state.endsAt == origin.addingTimeInterval(2700))
         #expect(harness.emitted.count == 0)
-        #expect(!harness.service.state.isActive)
+
+        let received = EmittedStates()
+        harness.service.setEmitter { received.append($0) }
+        harness.service.drain()
+
+        #expect(received.count == 1)
+        #expect(received.all.first?.isActive == true)
+        #expect(received.all.first?.endsAt == origin.addingTimeInterval(2700))
     }
 
     @Test
-    func commandsAreIgnoredWithoutALease() {
+    func disallowingSessionsStopsTheSessionAndEmitsOff() {
+        let harness = CaffeinateHarness()
+        harness.perform(.start)
+        harness.emitted.clear()
+
+        harness.service.setSessionsAllowed(false)
+        harness.service.drain()
+
+        #expect(!harness.service.state.isActive)
+        #expect(harness.assertions.liveCount == 0)
+        #expect(harness.assertions.acquiredCount == harness.assertions.releasedCount)
+        #expect(harness.emitted.count == 1)
+        #expect(harness.emitted.all.last?.startedAt == nil)
+        #expect(harness.service.armedDeadline == nil)
+    }
+
+    @Test
+    func sessionCommandsAreIgnoredWhileNotAllowed() {
+        let harness = CaffeinateHarness()
+        harness.service.setSessionsAllowed(false)
+        harness.service.drain()
+        harness.emitted.clear()
+
+        for command in [CaffeinateCommand.start, .toggle, .extend, .stepUp, .stepDown, .stop] {
+            harness.service.perform(command)
+        }
+        harness.service.drain()
+
+        #expect(harness.assertions.calls.isEmpty)
+        #expect(!harness.service.state.isActive)
+        #expect(harness.service.state.nextDuration == .minutes(60))
+        #expect(harness.emitted.count == 0)
+
+        harness.service.setSessionsAllowed(true)
+        harness.perform(.start)
+        #expect(harness.service.state.isActive)
+    }
+
+    @Test
+    func sessionsStartOutNotAllowed() {
         let assertions = FakeAssertions()
         let service    = CaffeinateService(
             assertions : assertions,
             preferences: InMemoryCaffeinatePreferences(),
             now        : { TestClock.origin }
         )
+        service.setEmitter { _ in }
 
         service.perform(.start)
         service.drain()
@@ -797,7 +851,7 @@ struct CaffeinateServiceTests {
     }
 
     @Test
-    func preferenceCommandsRunWithoutALease() {
+    func preferenceCommandsRunWhileNotAllowed() {
         let assertions  = FakeAssertions()
         let preferences = InMemoryCaffeinatePreferences()
         let service     = CaffeinateService(
@@ -820,17 +874,29 @@ struct CaffeinateServiceTests {
     }
 
     @Test
-    func aToggleQueuedAfterTheLeaseEndsStartsNothing() {
+    func aToggleQueuedAfterSessionsAreDisallowedStartsNothing() {
         let harness = CaffeinateHarness()
         harness.perform(.start)
 
-        harness.service.setEmitter(nil)
+        harness.service.setSessionsAllowed(false)
         harness.service.perform(.toggle)
         harness.service.drain()
 
         #expect(!harness.service.state.isActive)
         #expect(harness.assertions.liveCount == 0)
         #expect(harness.assertions.acquiredCount == harness.assertions.releasedCount)
+    }
+
+    @Test
+    func sessionsAreAllowedOnlyWhileCaffeinateIsActive() throws {
+        let other = try #require(PluginID(rawValue: "com.cascade.clock"))
+
+        #expect(CaffeinateCommand.sessionsAllowed(in: [CaffeinateCommand.plugin: .active]))
+        #expect(!CaffeinateCommand.sessionsAllowed(in: [CaffeinateCommand.plugin: .switchedOff]))
+        #expect(!CaffeinateCommand.sessionsAllowed(in: [CaffeinateCommand.plugin: .quarantined]))
+        #expect(!CaffeinateCommand.sessionsAllowed(in: [CaffeinateCommand.plugin: .disabledAfterHang]))
+        #expect(!CaffeinateCommand.sessionsAllowed(in: [other: .active]))
+        #expect(!CaffeinateCommand.sessionsAllowed(in: [:]))
     }
 
     @Test
@@ -965,7 +1031,7 @@ struct CaffeinateServiceTests {
     }
 
     @Test
-    func theSourceEmitsTheCurrentStateOnStartAndEveryTransitionUntilStopped() throws {
+    func theSourceEmitsEveryTransitionUntilStoppedAndCatchesUpOnRestart() throws {
         let harness = CaffeinateHarness(nextDuration: .minutes(30))
         harness.service.setEmitter(nil)
         harness.service.drain()
@@ -985,8 +1051,17 @@ struct CaffeinateServiceTests {
 
         source.stop()
         harness.service.drain()
-        #expect(!harness.service.state.isActive)
+        #expect(harness.service.state.isActive)
+
+        harness.perform(.extend)
         #expect(events.withLock { $0.count } == 2)
+
+        source.start { event in events.withLock { $0.append(event) } }
+        harness.service.drain()
+        #expect(events.withLock { $0.count } == 3)
+        let latest   = try #require(events.withLock { $0.last })
+        let caughtUp = try #require(PluginCaffeinateState(latest))
+        #expect(caughtUp.endsAt == origin.addingTimeInterval(2700))
     }
 
     @Test

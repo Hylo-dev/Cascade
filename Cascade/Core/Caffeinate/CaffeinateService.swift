@@ -93,9 +93,10 @@ nonisolated final class CaffeinateService: Sendable {
 
     private struct Storage {
 
-        var session      : Session
-        var emitter      : (@Sendable (PluginCaffeinateState) -> Void)?
-        var armedDeadline: Date?
+        var session        : Session
+        var emitter        : (@Sendable (PluginCaffeinateState) -> Void)?
+        var armedDeadline  : Date?
+        var sessionsAllowed = false
     }
 
     private let assertions : any CaffeinateAssertions
@@ -196,37 +197,57 @@ nonisolated final class CaffeinateService: Sendable {
     }
 
     /// perform queues a command; it returns at once and the queue does the work. A session command
-    /// is ignored while no emitter is set, that is while the plugin holds no lease: a shortcut
-    /// press with the plugin disabled must not start a session with no UI, the orphaned assertion
-    /// the lifecycle forbids. A preference command (`setGlyph`, `setKeepsDisplayAwake`) runs
-    /// without a lease, so Settings keeps working while the plugin is disabled; that is safe
-    /// because no session can be active without a lease, so there is no assertion to touch. The
-    /// check sits here and not in `run`, because the lease ending stops the session through `run`
-    /// itself. It is race-free: `setEmitter` writes the emitter under the lock before it returns,
-    /// so a command queued after the lease ended sees no emitter.
+    /// is ignored while sessions are not allowed, that is while the plugin is not active (switched
+    /// off, quarantined or disabled after a hang): a shortcut press then must not start a session
+    /// with no UI to show or stop it, the orphaned assertion the lifecycle forbids. A preference
+    /// command (`setGlyph`, `setKeepsDisplayAwake`) always runs, so Settings keeps working while the
+    /// plugin is off; that is safe because no session can be active while sessions are not allowed,
+    /// so there is no assertion to touch. The check sits here and not in `run`, because withdrawing
+    /// the permission stops the session through `run` itself. It is race-free:
+    /// `setSessionsAllowed` writes the permission under the lock before it returns, so a command
+    /// queued after it sees the new value.
+    ///
+    /// The permission is deliberately not the emitter. The emitter follows the source's lease,
+    /// which the kernel also ends when PluginHost goes away (a crash of any plugin, a memory kill,
+    /// a restart from Settings); the session must outlive that, since the service owns it and
+    /// needs no PluginHost to hold an assertion.
     func perform(_ command: CaffeinateCommand) {
         queue.async { [self] in
-            guard command.isPreference || storage.withLock({ $0.emitter != nil }) else { return }
+            guard command.isPreference || storage.withLock({ $0.sessionsAllowed }) else { return }
 
             run(command)
         }
     }
 
+    /// setSessionsAllowed says whether a session may run, following the plugin's own state:
+    /// allowed while it is active, whatever PluginHost is doing. Withdrawing the permission stops
+    /// a running session, releasing its assertions and emitting off if an emitter is attached, so
+    /// no assertion outlives a plugin the user switched off or the kernel quarantined. Sessions
+    /// start out not allowed: nothing may start before the engine said the plugin is active.
+    func setSessionsAllowed(_ allowed: Bool) {
+        storage.withLock { $0.sessionsAllowed = allowed }
+
+        guard !allowed else { return }
+
+        queue.async { [self] in
+            run(.stop)
+        }
+    }
+
     /// setEmitter gives the service the place to send its snapshots, or takes it away. A new
     /// emitter first receives the current state, sent from the queue so it can never arrive after
-    /// a newer one. Nil means the lease ended: the emitter is dropped at once, so nothing is
-    /// emitted from then on, and the session stops, releasing its assertions, so no assertion
-    /// outlives its UI.
+    /// a newer one: this is how the plugin catches up with a session that went on, or ended,
+    /// while PluginHost was away. Nil means the lease ended: the emitter is dropped at once, so
+    /// nothing is emitted from then on, and the session is left alone. Its fate is decided by
+    /// `setSessionsAllowed`, never by the lease.
     func setEmitter(_ emit: (@Sendable (PluginCaffeinateState) -> Void)?) {
         storage.withLock { $0.emitter = emit }
 
+        guard emit != nil else { return }
+
         queue.async { [self] in
-            if emit == nil {
-                run(.stop)
-            } else {
-                let (snapshot, emitter) = storage.withLock { ($0.session.published, $0.emitter) }
-                emitter?(snapshot)
-            }
+            let (snapshot, emitter) = storage.withLock { ($0.session.published, $0.emitter) }
+            emitter?(snapshot)
         }
     }
 
