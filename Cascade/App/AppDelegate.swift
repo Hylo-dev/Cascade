@@ -50,16 +50,4 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         services.stop()
     }
-
-    /// applicationShouldTerminate lets a held power assertion be released before quitting, off
-    /// the main thread, then lets the quit go on.
-    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard services.needsResourceShutdown else { return .terminateNow }
-
-        Task { @MainActor in
-            await services.finishResourcesBeforeTermination()
-            sender.reply(toApplicationShouldTerminate: true)
-        }
-        return .terminateLater
-    }
 }

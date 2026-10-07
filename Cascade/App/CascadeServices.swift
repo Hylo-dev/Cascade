@@ -173,10 +173,6 @@ final class CascadeServices {
     @ObservationIgnored
     private let volumeSource = VolumePluginSource(monitor: CoreAudioVolumeMonitor())
     @ObservationIgnored
-    private let caffeinateSource = CaffeinatePluginSource()
-    @ObservationIgnored
-    private let caffeinate: CaffeinateController
-    @ObservationIgnored
     private let network      : any NetworkMonitoring = NetworkConnectionMonitor()
     @ObservationIgnored
     private let mediaProvider = SystemNowPlayingProvider()
@@ -216,11 +212,6 @@ final class CascadeServices {
     private var isRunning = false
 
     init(preferences: UserDefaults = .standard) {
-        caffeinate = CaffeinateController(
-            source     : caffeinateSource,
-            session    : CaffeinateSession(backend: IOKitCaffeinateAssertions()),
-            preferences: preferences
-        )
         let displayPreferencesStore = DisplayPresentationPreferencesStore(defaults: preferences)
         let notch = NotchEngine(
             configuration     : .default,
@@ -230,8 +221,7 @@ final class CascadeServices {
         plugins                      = PluginSystem(
             host   : notch,
             sources: [
-                PluginVolumeState.source    : volumeSource,
-                PluginCaffeinateState.source: caffeinateSource,
+                PluginVolumeState.source: volumeSource,
             ]
         )
         self.displayPreferencesStore = displayPreferencesStore
@@ -299,12 +289,6 @@ final class CascadeServices {
 
         plugins.statusHandler = { [weak self] status in
             self?.pluginStatus = status
-        }
-
-        // Caffeinate's power assertion stays in Cascade: its widget's controls reach the native
-        // owner only after the broker accepted them.
-        plugins.actionHandler = { [weak self] request in
-            self?.caffeinate.handleAction(request)
         }
 
         volumeSource.statusHandler = { [weak self] status in
@@ -467,16 +451,6 @@ final class CascadeServices {
                 await self.mediaProvider.requestAccess(includeInstalledPlayers: true)
             }
         }
-    }
-
-    /// needsResourceShutdown says whether a native resource must be released before Cascade
-    /// quits: today only a Caffeinate session or one being acquired.
-    var needsResourceShutdown: Bool { caffeinate.needsShutdown }
-
-    /// finishResourcesBeforeTermination releases native resources without waiting on the main
-    /// thread; the system also releases the process's assertions if quitting cannot wait.
-    func finishResourcesBeforeTermination() async {
-        await caffeinate.shutdown()
     }
 
     func stop() {

@@ -5,80 +5,129 @@
 
 import Foundation
 
-/// PluginCaffeinateState is a full native-session snapshot. It carries no control token: the
-/// widget's controls ask for absolute values, so an accepted request that arrives after the
-/// session changed is either already satisfied or applies to the session the user now sees.
-/// No seconds counter is streamed across the process boundary; `until` is a fixed date.
+/// PluginCaffeinateState is a full snapshot of the native keep-awake session. Time travels as
+/// absolute dates, never as a counter: a session that started at one instant and ends at
+/// another is drawn and kept current by the kernel without a single message more, and a late
+/// or repeated snapshot can only repeat the truth. `activityStartedAt` marks the live activity's
+/// own start, so a renewed activity can present again after its lifetime was capped while an
+/// unchanged one does not. `nextDuration` is what the next session will last, and the glyph is
+/// the user's pick. The snapshot carries no control token: the widget's controls ask for
+/// absolute values.
 public struct PluginCaffeinateState: Equatable, Sendable {
 
     public static let source = "caffeinate"
 
-    public let isActive        : Bool
-    public let isBusy          : Bool
-    public let keepDisplayAwake: Bool
-    public let until           : Date?
-    public let error           : String?
-    public let minutes         : Int
+    public let startedAt        : Date?
+    public let endsAt           : Date?
+    public let activityStartedAt: Date?
+    public let nextDuration     : CaffeinateDuration
+    public let keepsDisplayAwake: Bool
+    public let glyph            : CaffeinateGlyph
+    public let failure          : CaffeinateFailure?
 
     public init(
-        isActive        : Bool = false,
-        isBusy          : Bool = false,
-        keepDisplayAwake: Bool = true,
-        until           : Date? = nil,
-        error           : String? = nil,
-        minutes         : Int = 0
+        startedAt        : Date?               = nil,
+        endsAt           : Date?               = nil,
+        activityStartedAt: Date?               = nil,
+        nextDuration     : CaffeinateDuration  = .minutes(60),
+        keepsDisplayAwake: Bool                = true,
+        glyph            : CaffeinateGlyph     = .cupHeatWaves,
+        failure          : CaffeinateFailure?  = nil
     ) {
-        self.isActive         = isActive
-        self.isBusy           = isBusy
-        self.keepDisplayAwake = keepDisplayAwake
-        self.until            = until
-        self.error            = error
-        self.minutes          = minutes
+        self.startedAt         = startedAt
+        self.endsAt            = endsAt
+        self.activityStartedAt = activityStartedAt
+        self.nextDuration      = nextDuration
+        self.keepsDisplayAwake = keepsDisplayAwake
+        self.glyph             = glyph
+        self.failure           = failure
     }
 
+    /// isActive says a session is running: it has a start. A session without an end is indefinite.
+    public var isActive: Bool { startedAt != nil }
+
+    /// init?(_:) reads a caffeinate event, or fails for another source's event or any field that
+    /// is present but not valid; a missing optional field is simply nil.
     public init?(_ event: PluginSourceEvent) {
         guard event.source == Self.source,
-              case .bool(let active)?  = event.fields["isActive"],
-              case .bool(let busy)?    = event.fields["isBusy"],
-              case .bool(let display)? = event.fields["keepDisplayAwake"]
+              case .bool(let keepsDisplayAwake)? = event.fields["keepsDisplayAwake"],
+              case .number(let wireMinutes)?     = event.fields["nextDuration"],
+              case .string(let glyphName)?       = event.fields["glyph"],
+              wireMinutes.isFinite,
+              abs(wireMinutes) < 1e9,
+              wireMinutes == wireMinutes.rounded(),
+              let nextDuration = CaffeinateDuration(wireMinutes: Int(wireMinutes)),
+              let glyph        = CaffeinateGlyph(rawValue: glyphName)
         else { return nil }
 
-        var until: Date?
-        if let field = event.fields["until"] {
+        // A date field is optional, but one that is present must be a number a Date can hold.
+        func date(_ key: String) -> Result<Date?, Invalid> {
+            guard let field = event.fields[key] else { return .success(nil) }
             guard case .number(let seconds) = field,
                   seconds.isFinite, abs(seconds) <= 253_402_300_799
+            else { return .failure(Invalid()) }
+
+            return .success(Date(timeIntervalSince1970: seconds))
+        }
+
+        guard case .success(let startedAt)         = date("startedAt"),
+              case .success(let endsAt)            = date("endsAt"),
+              case .success(let activityStartedAt) = date("activityStartedAt")
+        else { return nil }
+
+        var failure: CaffeinateFailure?
+        if let field = event.fields["failure"] {
+            guard case .string(let kind)        = field,
+                  case .number(let rawCode)?    = event.fields["failureCode"],
+                  rawCode.isFinite, rawCode == rawCode.rounded(),
+                  rawCode >= Double(Int32.min), rawCode <= Double(Int32.max)
             else { return nil }
-            until = Date(timeIntervalSince1970: seconds)
+
+            let code = Int32(rawCode)
+            switch kind {
+                case "assertionRefused" : failure = .assertionRefused(code)
+                case "extensionRefused" : failure = .extensionRefused(code)
+                default                 : return nil
+            }
         }
-        var error: String?
-        if let field = event.fields["error"] {
-            guard case .string(let text) = field else { return nil }
-            error = text
-        }
-        var minutes = 0
-        if let field = event.fields["minutes"] {
-            guard case .number(let value) = field, [0.0, 15, 30, 60, 120, 240, 480].contains(value) else { return nil }
-            minutes = Int(value)
-        }
+
         self.init(
-            isActive        : active,
-            isBusy          : busy,
-            keepDisplayAwake: display,
-            until           : until,
-            error           : error,
-            minutes         : minutes
+            startedAt        : startedAt,
+            endsAt           : endsAt,
+            activityStartedAt: activityStartedAt,
+            nextDuration     : nextDuration,
+            keepsDisplayAwake: keepsDisplayAwake,
+            glyph            : glyph,
+            failure          : failure
         )
     }
 
+    /// event is the state as the source emits it; an absent date or failure is left out.
     public func event() throws -> PluginSourceEvent {
         var fields: [String: PluginValue] = [
-            "isActive"        : .bool(isActive),
-            "isBusy"          : .bool(isBusy),
-            "keepDisplayAwake": .bool(keepDisplayAwake),
-            "minutes"         : .number(Double(minutes)),
+            "nextDuration"     : .number(Double(nextDuration.wireMinutes)),
+            "keepsDisplayAwake": .bool(keepsDisplayAwake),
+            "glyph"            : .string(glyph.rawValue),
         ]
-        if let until { fields["until"] = .number(until.timeIntervalSince1970) }
-        if let error { fields["error"] = .string(String(error.prefix(512))) }
+        if let startedAt         { fields["startedAt"]         = .number(startedAt.timeIntervalSince1970) }
+        if let endsAt            { fields["endsAt"]            = .number(endsAt.timeIntervalSince1970) }
+        if let activityStartedAt { fields["activityStartedAt"] = .number(activityStartedAt.timeIntervalSince1970) }
+
+        switch failure {
+            case .assertionRefused(let code)?:
+                fields["failure"]     = .string("assertionRefused")
+                fields["failureCode"] = .number(Double(code))
+
+            case .extensionRefused(let code)?:
+                fields["failure"]     = .string("extensionRefused")
+                fields["failureCode"] = .number(Double(code))
+
+            case nil:
+                break
+        }
+
         return try PluginSourceEvent(source: Self.source, fields: fields)
     }
+
+    private struct Invalid: Error {}
 }
