@@ -1,0 +1,58 @@
+Cascade Plugin Exception, version 1.0
+
+Additional permission under GNU GPL version 3 section 7
+
+1. Scope
+
+This additional permission applies to copyrightable material in Cascade that
+its copyright holders license under the GNU General Public License, version 3
+(GPLv3), together with this Exception. It does not grant rights to third-party
+material whose copyright holders have not granted this permission.
+
+"Public Plugin Interfaces" means the public APIs of CascadePluginSDK and
+CascadeContracts, together with the documented plugin contract: the manifest,
+events, sources, documents and publications, tier-2 components, actions,
+services, storage and assets. It does not include private or SPI APIs, host
+internals, or direct use of GPL-covered implementation code.
+
+"Independent Plugin" means an independently authored plugin, its features or
+its source application that uses the Public Plugin Interfaces and
+does not incorporate or derive from GPL-covered Cascade implementation code,
+except for the interaction permitted by this Exception. Use of separately
+MIT-licensed SDK code does not disqualify an Independent Plugin.
+
+2. Permission
+
+You may develop, run, copy and convey Independent Plugins under terms of your
+choice, including proprietary terms, and combine or distribute them with
+Cascade through the Public Plugin Interfaces. Calling host services, exchanging
+the documented messages and data structures, or publishing documents through
+those interfaces does not, by itself, require an Independent Plugin or its
+source application to be licensed under GPLv3 or to provide its source code
+under GPLv3.
+
+To the extent GPLv3 would otherwise require the Independent Plugin or its source
+application to be covered by GPLv3 solely because of that permitted combination
+or interaction, the copyright holders grant an exception from that requirement.
+You must comply with GPLv3 for the Cascade portion of any such combination and
+with the applicable licenses for SDK code and third-party material.
+
+3. Limits
+
+This Exception does not grant permission to convey GPL-covered Cascade code
+or modifications of that code under proprietary terms. Copying or modifying
+the app shell, notch engine, renderer, plugin engine (kernel), PluginHost or
+bundled GPL-covered plugin implementation does not become permitted proprietary
+use by describing the resulting work as a plugin, wrapping it in a separate
+process, or routing it through a Public Plugin Interface.
+
+Except for the additional permission stated above, GPLv3 remains in effect
+for the covered Cascade material. This Exception does not grant trademark
+rights or waive technical admission, security, permission or resource policies.
+
+4. Modified versions
+
+As permitted by GPLv3 section 7, you may remove this additional permission when
+conveying a copy of covered material. If you retain it, retain this Exception
+and the notices identifying it. You may extend it to your modifications only
+to the extent you have the necessary copyright permissions to do so.

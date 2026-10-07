@@ -5,6 +5,20 @@ hugs the MacBook's hardware notch and morphs into an expanded surface hosting
 modular widgets. See [`PRODUCT.md`](PRODUCT.md) for what it does and
 [`CLAUDE.md`](CLAUDE.md) / [`CODE_STYLE.md`](CODE_STYLE.md) for how it is built.
 
+## License
+
+Cascade's app, engine and host runtime are licensed under **GPLv3 only**, with
+the [Cascade Plugin Exception](LICENSES/Cascade-Plugin-Exception.txt) permitting
+independent plugins and their source apps to remain proprietary when using the
+public plugin interfaces. Distributed modifications to GPL-covered Cascade code
+remain subject to GPLv3.
+
+The public SDK (`CascadePluginSDK`, `CascadeContracts`) and the plugin developer
+guides are **MIT-licensed**. The package also contains GPL-covered host targets:
+its public products do not all share the SDK license. See
+[the exact license scope](LICENSING.md), [GPLv3](LICENSE) and
+[MIT](LICENSES/MIT.txt). Third-party components retain their own licenses.
+
 ## Requirements
 
 - macOS 15 (Sequoia) or newer to run.

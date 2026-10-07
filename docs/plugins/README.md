@@ -60,3 +60,10 @@ swift run --package-path CascadeKit cascade-plugin validate CascadeKit/Sources/C
 ```
 
 The tool decodes each file with the same `PluginManifest` rules Cascade applies when it registers a plugin and prints one line per file. It exits `0` when every file is valid, `1` when any is not, and `2` on wrong arguments. A version 1 manifest is refused by name. Validation does not run the plugin and does not check a signature. `scripts/build-development.sh` runs it on every bundled manifest before Xcode compiles anything; see [Manifest](manifest.md#validation).
+
+## License
+
+`CascadePluginSDK`, `CascadeContracts` and these guides are MIT-licensed: keep the MIT
+notice with any copy of them. An independent plugin and its source app may use any license,
+proprietary included, under the [Cascade Plugin Exception](../../LICENSES/Cascade-Plugin-Exception.txt);
+copied or modified GPL-covered Cascade host code stays GPLv3. See [the license scope](../../LICENSING.md).

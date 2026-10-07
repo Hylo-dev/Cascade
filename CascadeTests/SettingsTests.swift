@@ -195,6 +195,27 @@ struct SettingsTests {
 
     @MainActor
     @Test
+    func disabledSpotlightPassesTheNativeShortcutThrough() async throws {
+        let fixture = try SpotlightCoordinatorFixture()
+        fixture.coordinator.stop()
+
+        #expect(!fixture.coordinator.handle(type: .keyDown, event: fixture.shortcutEvent()))
+        await Task.yield()
+        #expect(fixture.droplet.playCount == 0)
+        #expect(fixture.tap.nativeInvocationCount == 0)
+    }
+
+    @MainActor
+    @Test
+    func initiallyDisabledSpotlightPassesTheNativeShortcutThrough() throws {
+        let fixture = try SpotlightCoordinatorFixture(initiallyEnabled: false)
+
+        #expect(!fixture.coordinator.handle(type: .keyDown, event: fixture.shortcutEvent()))
+        #expect(fixture.droplet.playCount == 0)
+    }
+
+    @MainActor
+    @Test
     func shortcutCancellationRecoversWhenNativeOpeningNeverAppears() async throws {
         let fixture = try SpotlightCoordinatorFixture(handoffTimeout: .milliseconds(10))
 

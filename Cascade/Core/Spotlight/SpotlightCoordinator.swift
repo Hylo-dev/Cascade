@@ -212,6 +212,7 @@ final class SpotlightCoordinator {
 
     func stop() {
         isEnabled = false
+        shortcut  = nil
         cancelHandoff()
         handoff.forgetNativePresence()
         tap.stop()
@@ -275,7 +276,7 @@ final class SpotlightCoordinator {
         type : CGEventType,
         event: CGEvent
     ) -> Bool {
-        guard let shortcut else { return false }
+        guard isEnabled, let shortcut else { return false }
 
         let key = event.getIntegerValueField(.keyboardEventKeycode)
         if type == .keyUp, key == Int64(shortcut.keyCode), suppressShortcutRelease {
