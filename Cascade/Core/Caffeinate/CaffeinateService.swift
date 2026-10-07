@@ -104,7 +104,8 @@ nonisolated final class CaffeinateService: Sendable {
     private let queue      : DispatchQueue
     private let storage    : Mutex<Storage>
     private let deadline   : any DispatchSourceTimer
-    private let wakeObserver = Mutex<(any NSObjectProtocol)?>(nil)
+    private let wakeObserver  = Mutex<(any NSObjectProtocol)?>(nil)
+    private let clockObserver = Mutex<(any NSObjectProtocol)?>(nil)
 
     /// init reads the preferences once and registers the wake observer once. The queue must be
     /// serial; it is where every command, the deadline and every emission run.
@@ -146,6 +147,20 @@ nonisolated final class CaffeinateService: Sendable {
                 self?.systemDidWake()
             }
         }
+
+        // The deadline timer runs on wall time while the assertions' IOKit timeouts are
+        // monotonic: a user who moves the clock could leave the published end disagreeing with
+        // them. The check is the same as after a wake, and it re-arms the timer for the new
+        // wall time when nothing is due.
+        clockObserver.withLock {
+            $0 = NotificationCenter.default.addObserver(
+                forName: .NSSystemClockDidChange,
+                object : nil,
+                queue  : nil
+            ) { [weak self] _ in
+                self?.expire()
+            }
+        }
     }
 
     deinit {
@@ -153,6 +168,11 @@ nonisolated final class CaffeinateService: Sendable {
         wakeObserver.withLock {
             if let observer = $0 {
                 NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            }
+        }
+        clockObserver.withLock {
+            if let observer = $0 {
+                NotificationCenter.default.removeObserver(observer)
             }
         }
 
@@ -175,9 +195,16 @@ nonisolated final class CaffeinateService: Sendable {
         storage.withLock { $0.armedDeadline }
     }
 
-    /// perform queues a command; it returns at once and the queue does the work.
+    /// perform queues a command; it returns at once and the queue does the work. A command is
+    /// ignored while no emitter is set, that is while the plugin holds no lease: a shortcut press
+    /// with the plugin disabled must not start a session with no UI, the orphaned assertion the
+    /// lifecycle forbids. The check sits here and not in `run`, because the lease ending stops the
+    /// session through `run` itself. It is race-free: `setEmitter` writes the emitter under the
+    /// lock before it returns, so a command queued after the lease ended sees no emitter.
     func perform(_ command: CaffeinateCommand) {
         queue.async { [self] in
+            guard storage.withLock({ $0.emitter != nil }) else { return }
+
             run(command)
         }
     }

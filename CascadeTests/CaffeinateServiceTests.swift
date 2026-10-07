@@ -771,7 +771,51 @@ struct CaffeinateServiceTests {
 
         harness.perform(.start)
         #expect(harness.emitted.count == 0)
-        #expect(harness.service.state.isActive)
+        #expect(!harness.service.state.isActive)
+    }
+
+    @Test
+    func commandsAreIgnoredWithoutALease() {
+        let assertions = FakeAssertions()
+        let service    = CaffeinateService(
+            assertions : assertions,
+            preferences: InMemoryCaffeinatePreferences(),
+            now        : { TestClock.origin }
+        )
+
+        service.perform(.start)
+        service.drain()
+
+        #expect(assertions.calls.isEmpty)
+        #expect(!service.state.isActive)
+    }
+
+    @Test
+    func aToggleQueuedAfterTheLeaseEndsStartsNothing() {
+        let harness = CaffeinateHarness()
+        harness.perform(.start)
+
+        harness.service.setEmitter(nil)
+        harness.service.perform(.toggle)
+        harness.service.drain()
+
+        #expect(!harness.service.state.isActive)
+        #expect(harness.assertions.liveCount == 0)
+        #expect(harness.assertions.acquiredCount == harness.assertions.releasedCount)
+    }
+
+    @Test
+    func systemClockDidChangeRechecksTheDeadline() {
+        let harness = CaffeinateHarness(nextDuration: .minutes(15))
+        harness.perform(.start)
+        harness.clock.advance(by: 901)
+
+        NotificationCenter.default.post(name: .NSSystemClockDidChange, object: nil)
+        harness.service.drain()
+
+        #expect(!harness.service.state.isActive)
+        #expect(harness.assertions.liveCount == 0)
+        #expect(harness.emitted.all.last?.startedAt == nil)
     }
 
     // MARK: Preferences
