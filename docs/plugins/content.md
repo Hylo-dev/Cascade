@@ -70,6 +70,14 @@ Not in v1: `ForEach` and dynamic lists, grids and gestures. `Image(asset:)` draw
 
 A `PluginOutput` carries at most 48 publications, one per feature and surface. A document that breaks a limit is rejected whole and the previous one stays on screen; the kernel also rejects a publication for a feature or surface its manifest does not declare, or that shows an undeclared component.
 
+## Options page
+
+A widget whose feature declares `supportsFullscreen` may publish a second tree with its document: `PluginDocument(root:optionsRoot:optionsAction:)`. `optionsAction` names a button in the widget that opens the page; validation rejects an options page without an opening button in `root`, an opener without a page, and a page whose root is `Regions`. Both trees share the document's limits, and every control on the page must be one of the feature's declared actions, or the kernel rejects the publication.
+
+Cascade owns everything around the page: pressing the opener records the click, and only once the broker accepted it does the page replace the grid, in the expanded footprint below Cascade's Back control (about 400 by 86 points in the default notch, so design it to fit without scrolling). Back, Escape and closing the notch dismiss it and restore the grid. The page's controls act only while the page that drew them is shown, and a publication updates the open page in place, node by node, like the widget. The user can also open it from the widget's context menu, so a face too small to show the opener still reaches it.
+
+`ViewThatFits` measures each face's ideal width against the tile, so a face held at a fixed width wider than its tile never fits and the widget falls back to its smallest face in every size. In the default notch a tile two manifest columns wide (`2x1`, `2x2`) is 110 points wide and a one-column tile 52: hold a large face at 100 points, as the battery and Caffeinate widgets do.
+
 ## Identity
 
 Identity is structural by default: a node is its parent's identity, its position and its kind, so a node whose kind changes in place becomes a new node, as a SwiftUI view of another type would. `.id(_:)` gives a node an explicit identity, which follows it wherever it moves; explicit ids must be unique within a document.

@@ -1,0 +1,70 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Caffeinate": {
+      "comment": "Name of the keep-awake widget.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Caffeinate" } } }
+    },
+    "Caffeinate Options": {
+      "comment": "Accessibility label of the widget title that opens its options page.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Opzioni Caffeinate" } } }
+    },
+    "Toggle Caffeinate": {
+      "comment": "Accessibility label of the switch that starts or stops a keep-awake session.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Attiva o disattiva Caffeinate" } } }
+    },
+    "On": {
+      "comment": "Widget status while a keep-awake session runs.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Attivo" } } }
+    },
+    "Off": {
+      "comment": "Widget status while no keep-awake session runs.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Disattivo" } } }
+    },
+    "Error": {
+      "comment": "Widget status when the keep-awake assertion failed.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Errore" } } }
+    },
+    "Updating…": {
+      "comment": "Status while the keep-awake session is being changed.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Aggiornamento…" } } }
+    },
+    "Start": {
+      "comment": "Pill that starts a keep-awake session.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Avvia" } } }
+    },
+    "Stop": {
+      "comment": "Pill that stops the keep-awake session.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Interrompi" } } }
+    },
+    "Your Mac sleeps normally": {
+      "comment": "Options page status while no session runs.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Il Mac va in stop normalmente" } } }
+    },
+    "Awake until you stop it": {
+      "comment": "Options page status for a session without a time limit.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Sveglio finché non lo interrompi" } } }
+    },
+    "Awake until": {
+      "comment": "Options page status, followed by the session end time.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Sveglio fino alle" } } }
+    },
+    "Time left": {
+      "comment": "Accessibility label of the countdown of a timed session.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Tempo rimasto" } } }
+    },
+    "Keep display awake": {
+      "comment": "Switch that also keeps the display from sleeping.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Mantieni lo schermo acceso" } } }
+    },
+    "Duration: Indefinite": {
+      "comment": "Accessibility label of the duration without a time limit.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Durata: illimitata" } } }
+    },
+    "Duration: %lld min": {
+      "comment": "Accessibility label of a session duration in minutes.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Durata: %lld min" } } }
+    }
+  },
+  "version": "1.0"
+}

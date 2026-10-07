@@ -71,6 +71,12 @@ final class WidgetHost {
             editedArrangements[display] = saved
         }
 
+        var repaired = false
+        for widget in widgets.values {
+            if reconcileSizes(for: widget) { repaired = true }
+        }
+        if repaired { store.save(editedArrangements) }
+
         if let openState { update(state: openState, display: currentDisplay) }
         onContentChanged?()
     }
@@ -97,6 +103,8 @@ final class WidgetHost {
         if widgets[widget.id] == nil { registrationOrder.append(widget.id) }
         widgets[widget.id] = widget
         cachedViews.removeValue(forKey: widget.id)
+
+        if reconcileSizes(for: widget) { store?.save(editedArrangements) }
 
         guard defaultArrangement[widget.id] == nil else { return }
 
@@ -533,5 +541,47 @@ final class WidgetHost {
             for  : span,
             among: Array(defaultArrangement.values)
         )
+    }
+
+    /// canCaptureOptionsOrigin admits only a mounted plugin widget that offers an options page.
+    /// A click is captured on the revision the user saw; while it waits for the broker the widget
+    /// may publish again, so `acceptsNewerRevision` lets that newer content keep the click alive.
+    func canCaptureOptionsOrigin(
+        _ id                : WidgetIdentifier,
+        revision            : UInt64,
+        acceptsNewerRevision: Bool = false
+    ) -> Bool {
+        guard activeWidgets.contains(id), let widget = widgets[id] as? PluginWidget else { return false }
+
+        let isCurrent = acceptsNewerRevision ? widget.store.revision >= revision : widget.store.revision == revision
+        return widget.supportsFullscreen && widget.store.optionsRoot != nil && isCurrent
+    }
+
+    /// reconcileSizes shrinks obsolete saved footprints when a provider's declaration changes.
+    /// Both load orders pass here: arrangements may arrive before or after registration. A
+    /// replacement must fit inside the old rectangle, so it cannot cover another widget;
+    /// without such a size the widget returns to the gallery instead of silently growing.
+    private func reconcileSizes(for widget: any NotchWidget) -> Bool {
+        func supported(_ placement: WidgetPlacement?) -> WidgetPlacement? {
+            guard let placement else { return nil }
+            if widget.sizes.contains(placement.span) { return placement }
+
+            let replacement = widget.sizes.filter {
+                $0.columns <= placement.span.columns && $0.rows <= placement.span.rows
+            }.max { $0.columns * $0.rows < $1.columns * $1.rows }
+            return replacement.map { WidgetPlacement(position: placement.position, span: $0) }
+        }
+
+        defaultArrangement[widget.id] = supported(defaultArrangement[widget.id])
+        var repaired = false
+        for display in editedArrangements.keys {
+            guard let current = editedArrangements[display]?[widget.id] else { continue }
+            let replacement = supported(current)
+            if replacement != current {
+                editedArrangements[display]?[widget.id] = replacement
+                repaired = true
+            }
+        }
+        return repaired
     }
 }

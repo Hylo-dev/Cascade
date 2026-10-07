@@ -518,6 +518,28 @@ struct PluginKernel: Sendable {
 
         let key = PluginPublicationKey(plugin: plugin, feature: feature.id, surface: publication.surface)
         guard let document = publication.document else { return store.withdraw(key) }
+        if let optionsRoot = document.optionsRoot {
+            guard publication.surface == .widget, feature.supportsFullscreen,
+                  document.optionsAction.map(feature.actions.contains) ?? true
+            else { throw AddonFailure(code: .invalidPayload, reason: "Options outside widget declarations") }
+
+            // Walk only the options subtree, in place: the store builds the document's node
+            // table once, and the widget's own controls are checked when they are used.
+            var pending = [optionsRoot]
+            while let node = pending.popLast() {
+                switch node.kind {
+                    case .button(let action), .toggle(_, let action), .slider(_, _, _, _, let action):
+                        guard feature.actions.contains(action) else {
+                            throw AddonFailure(code: .invalidPayload, reason: "Undeclared options control")
+                        }
+
+                    default:
+                        break
+                }
+                pending.append(contentsOf: node.children)
+                pending.append(contentsOf: node.layers)
+            }
+        }
 
         return store.apply(
             document,
@@ -637,6 +659,7 @@ struct PluginKernel: Sendable {
         capabilities.sources.isSuperset(of: feature.sources)
             && capabilities.services.isSuperset(of: feature.services)
             && capabilities.components.isSuperset(of: feature.components.map(\.id))
+            && (!feature.supportsFullscreen || capabilities.supportsFullscreen)
             && record.grants.isSuperset(of: feature.permissions)
     }
 

@@ -88,6 +88,29 @@ public final class NotchEngine {
 
     public func register(_ widget: NotchWidget) { coordinator.register(widget) }
 
+    public func captureOptionsOrigin(
+        widgetID        : WidgetIdentifier,
+        observedRevision: UInt64
+    ) -> PluginOptionsOrigin? {
+        coordinator.captureOptionsOrigin(widgetID: widgetID, observedRevision: observedRevision)
+    }
+
+    public func presentOptions(
+        page     : any NotchContextualPage,
+        leaseID  : UUID,
+        origin   : PluginOptionsOrigin,
+        onDismiss: @escaping @MainActor () -> Void
+    ) -> Bool {
+        coordinator.presentOptions(
+            page     : page,
+            leaseID  : leaseID,
+            origin   : origin,
+            onDismiss: onDismiss
+        )
+    }
+
+    public func dismissOptions(leaseID: UUID) { coordinator.dismissOptions(leaseID: leaseID) }
+
     public func unregisterWidget(id: WidgetIdentifier) { coordinator.unregisterWidget(id: id) }
 
     public func setContextualPage(

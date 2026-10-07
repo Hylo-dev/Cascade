@@ -34,6 +34,17 @@
         }
       }
     },
+    "Caffeinate": {
+      "comment": "Settings name of the keep-awake widget plugin.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Caffeinate"
+          }
+        }
+      }
+    },
     "Clock": {
       "comment": "Settings name of the clock widget plugin.",
       "localizations": {

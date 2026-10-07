@@ -31,7 +31,10 @@ public struct PluginNodeDiff: Equatable, Sendable {
             updated  = []
             return
         }
-        guard old.root.id != new.root.id || old.root.subtreeHash != new.root.subtreeHash else {
+        guard old.root.id != new.root.id || old.root.subtreeHash != new.root.subtreeHash
+                || old.optionsRoot?.id != new.optionsRoot?.id
+                || old.optionsRoot?.subtreeHash != new.optionsRoot?.subtreeHash
+        else {
             inserted = []
             removed  = []
             updated  = []
@@ -40,7 +43,7 @@ public struct PluginNodeDiff: Equatable, Sendable {
 
         var inserted = [PluginNodeID]()
         var updated  = [PluginNodeID]()
-        var pending  = [0]
+        var pending = new.optionsRoot.flatMap { new.index(of: $0.id) }.map { [$0, 0] } ?? [0]
 
         while let index = pending.popLast() {
             let entry = new.entries[index]

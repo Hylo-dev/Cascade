@@ -26,33 +26,41 @@ final class PluginNodeStore {
 
     let key: PluginPublicationKey
 
-    private(set) var revision   : UInt64 = 0
-    private(set) var root       : PluginNodeModel?
-    private(set) var glassLights: [GlassLight] = []
+    private(set) var revision     : UInt64 = 0
+    private(set) var root         : PluginNodeModel?
+    private(set) var glassLights  : [GlassLight] = []
+    private(set) var optionsRoot  : PluginNodeModel?
+    private(set) var optionsButton: PluginNodeModel?
 
     @ObservationIgnored private var models     : [PluginNodeID: PluginNodeModel] = [:]
     @ObservationIgnored private var generations: [PluginNodeID: UInt64] = [:]
+    @ObservationIgnored private var optionsNodes: Set<PluginNodeID> = []
 
-    private let submit  : (PluginActionRequest) -> Void
-    private let schedule: (Duration, @escaping @MainActor () -> Void) -> Void
+    private let submit       : (PluginActionRequest) -> Void
+    private let submitOptions: ((PluginActionRequest, PluginOptionsOrigin) -> Void)?
+    private let schedule     : (Duration, @escaping @MainActor () -> Void) -> Void
 
     init(
-        key     : PluginPublicationKey,
-        submit  : @escaping (PluginActionRequest) -> Void,
-        schedule: @escaping (Duration, @escaping @MainActor () -> Void) -> Void = { delay, task in
+        key          : PluginPublicationKey,
+        submit       : @escaping (PluginActionRequest) -> Void,
+        submitOptions: ((PluginActionRequest, PluginOptionsOrigin) -> Void)? = nil,
+        schedule     : @escaping (Duration, @escaping @MainActor () -> Void) -> Void = { delay, task in
             DispatchQueue.main.asyncAfter(deadline: .now() + delay / .seconds(1)) {
                 MainActor.assumeIsolated(task)
             }
         }
     ) {
-        self.key      = key
-        self.submit   = submit
-        self.schedule = schedule
+        self.key           = key
+        self.submit        = submit
+        self.submitOptions = submitOptions
+        self.schedule      = schedule
     }
 
     func model(_ id: PluginNodeID) -> PluginNodeModel? {
         models[id]
     }
+
+    func isOptionsNode(_ id: PluginNodeID) -> Bool { optionsNodes.contains(id) }
 
     /// apply takes one change from the kernel. Removed nodes lose their models, inserted nodes
     /// get new ones, updated nodes have theirs refreshed, and every control but a dragged slider
@@ -62,14 +70,19 @@ final class PluginNodeStore {
 
         guard let content = change.content else {
             models.removeAll()
-            root        = nil
-            glassLights = []
+            generations.removeAll()
+            root          = nil
+            glassLights   = []
+            optionsRoot   = nil
+            optionsButton = nil
+            optionsNodes  = []
             return
         }
 
         let table = content.table
         for id in content.diff.removed {
             models.removeValue(forKey: id)
+            generations.removeValue(forKey: id)
         }
         for id in content.diff.inserted {
             if let index = table.index(of: id) {
@@ -90,6 +103,19 @@ final class PluginNodeStore {
         if root?.id != table.root.id {
             root = models[table.root.id]
         }
+        // The table lays the options subtree out after the widget's, so it runs from the
+        // options root to the end. A document without options pays for none of this.
+        if let options = table.optionsRoot, let start = table.index(of: options.id) {
+            optionsRoot  = models[options.id]
+            optionsNodes = Set(table.entries[start...].map(\.id))
+        } else if optionsRoot != nil || !optionsNodes.isEmpty {
+            optionsRoot  = nil
+            optionsNodes = []
+        }
+        let opener    = content.document.optionsAction.flatMap { action in
+            table.entries.first { $0.kind == .button(action: action) }
+        }
+        optionsButton = opener.flatMap { models[$0.id] }
         if glassLights != content.document.glassLights {
             glassLights = content.document.glassLights
         }
@@ -97,25 +123,40 @@ final class PluginNodeStore {
 
     /// press sends a button's action. A button holds no state: SwiftUI shows the press, and
     /// whatever the action changes arrives as the next publication.
-    func press(_ model: PluginNodeModel) {
-        submit(PluginActionRequest(key: key, node: model.id, revision: revision))
+    func press(
+        _ model      : PluginNodeModel,
+        optionsOrigin: PluginOptionsOrigin? = nil
+    ) {
+        guard canInteract(with: model, optionsOrigin: optionsOrigin) else { return }
+        let request = PluginActionRequest(key: key, node: model.id, revision: revision)
+        send(request, optionsOrigin: optionsOrigin)
     }
 
     /// set shows a control's new value at once, sends the action, and arms the revert.
     func set(
-        _ value : PluginValue,
-        on model: PluginNodeModel
+        _ value      : PluginValue,
+        on model     : PluginNodeModel,
+        optionsOrigin: PluginOptionsOrigin? = nil
     ) {
+        guard canInteract(with: model, optionsOrigin: optionsOrigin) else { return }
         generations[model.id, default: 0] += 1
         let generation = generations[model.id]
 
         withAnimation(.snappy) {
             model.optimistic = value
         }
-        submit(PluginActionRequest(key: key, node: model.id, revision: revision, value: value))
+        let request = PluginActionRequest(
+            key     : key,
+            node    : model.id,
+            revision: revision,
+            value   : value
+        )
+        send(request, optionsOrigin: optionsOrigin)
 
         schedule(Self.confirmationTimeout) { [weak self, weak model] in
-            guard let self, let model, generations[model.id] == generation else { return }
+            guard let self, let model,
+                  models[model.id] === model, generations[model.id] == generation
+            else { return }
 
             revert(model)
         }
@@ -125,20 +166,30 @@ final class PluginNodeStore {
     /// drag also outdates the revert an earlier release armed, so its timeout cannot pull the
     /// thumb from under the user's hand.
     func drag(
-        _ value : Double,
-        on model: PluginNodeModel
+        _ value      : Double,
+        on model     : PluginNodeModel,
+        optionsOrigin: PluginOptionsOrigin? = nil
     ) {
+        guard canInteract(with: model, optionsOrigin: optionsOrigin) else { return }
         generations[model.id, default: 0] += 1
         model.isDragging = true
         model.optimistic = .number(value)
     }
 
     /// release sends the value the slider was let go at.
-    func release(_ model: PluginNodeModel) {
+    func release(
+        _ model      : PluginNodeModel,
+        optionsOrigin: PluginOptionsOrigin? = nil
+    ) {
+        guard canInteract(with: model, optionsOrigin: optionsOrigin) else { return }
         model.isDragging = false
 
         if let value = model.optimistic?.number {
-            set(.number(value), on: model)
+            set(
+                .number(value),
+                on           : model,
+                optionsOrigin: optionsOrigin
+            )
         }
     }
 
@@ -147,6 +198,28 @@ final class PluginNodeStore {
     func reject(_ request: PluginActionRequest) {
         if let model = models[request.node], !model.isDragging {
             revert(model)
+        }
+    }
+
+    /// canInteract rejects revoked page callbacks before they change optimistic state.
+    /// Options controls require their captured origin; compact controls need only their model.
+    private func canInteract(
+        with model   : PluginNodeModel,
+        optionsOrigin: PluginOptionsOrigin?
+    ) -> Bool {
+        guard models[model.id] === model else { return false }
+        return !isOptionsNode(model.id) || (optionsOrigin?.isValid == true && submitOptions != nil)
+    }
+
+    private func send(
+        _ request    : PluginActionRequest,
+        optionsOrigin: PluginOptionsOrigin?
+    ) {
+        if isOptionsNode(request.node) {
+            guard let optionsOrigin else { return }
+            submitOptions?(request, optionsOrigin)
+        } else {
+            submit(request)
         }
     }
 

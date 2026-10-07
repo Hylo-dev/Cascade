@@ -32,6 +32,12 @@ final class PluginSystem {
     /// plugin's state and PluginHost's, for settings.
     var statusHandler: (PluginEngineStatus) -> Void = { _ in }
 
+    /// actionHandler routes an accepted control to a native resource owner, such as Caffeinate's
+    /// power assertion. The engine invokes it only after the broker's revision, control, manifest
+    /// and permission checks, then hops to main; an options page's control also rechecks its
+    /// page's authority there before this runs.
+    var actionHandler: (PluginActionRequest) -> Void = { _ in }
+
     init(
         host   : any PluginSurfaceHosting,
         sources: [String: any PluginEventSource] = [:]
@@ -112,10 +118,25 @@ final class PluginSystem {
         requirement: String?
     ) {
         let surfaces = PluginSurfaceRouter(
-            host      : host,
-            manifests : manifests,
-            submit    : { [weak self] request in self?.engine?.submit(request) },
-            visibility: { [weak self] isVisible, key in self?.engine?.setVisible(isVisible, for: key) }
+            host          : host,
+            manifests     : manifests,
+            submit        : { [weak self] request in
+                self?.engine?.submit(request, onAccepted: { [weak self] accepted in
+                    DispatchQueue.main.async {
+                        MainActor.assumeIsolated { self?.actionHandler(accepted) }
+                    }
+                })
+            },
+            visibility    : { [weak self] isVisible, key in self?.engine?.setVisible(isVisible, for: key) },
+            submitAccepted: { [weak self] request, accepted in
+                self?.engine?.submit(request, onAccepted: { [weak self] request in
+                    DispatchQueue.main.async {
+                        MainActor.assumeIsolated {
+                            accepted { self?.actionHandler(request) }
+                        }
+                    }
+                })
+            }
         )
         let executor = SharedHostExecutor(transport: XPCPluginTransport(serviceName: serviceName, requirement: requirement))
         let hosted   = Dictionary(
@@ -130,10 +151,11 @@ final class PluginSystem {
             }
         }
         let engine = PluginEngine(
-            executor  : executor,
-            sources   : sources,
-            components: PluginSurfaceRouter.components,
-            sink      : surfaces.makeSink()
+            executor          : executor,
+            sources           : sources,
+            components        : PluginSurfaceRouter.components,
+            sink              : surfaces.makeSink(),
+            supportsFullscreen: true
         )
 
         for manifest in manifests {
