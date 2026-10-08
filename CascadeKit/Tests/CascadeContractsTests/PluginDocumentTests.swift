@@ -303,6 +303,43 @@ struct PluginDocumentTests {
         #expect(decoded.root.kind == .slider(value: 60, minimum: 15, maximum: 1_440, step: 15, style: style, action: "set"))
     }
 
+    /// everyKind has one value of each of the vocabulary's cases, so a case added to
+    /// `PluginNodeKind` and forgotten in the decoder's mirror fails the round trip below.
+    private static let everyKind: [PluginNodeKind] = [
+        .vStack(alignment: .leading, spacing: 4),
+        .hStack(alignment: .center, spacing: nil),
+        .zStack(alignment: .center),
+        .viewThatFits(axes: .vertical),
+        .spacer(minLength: 2),
+        .text("Title"),
+        .symbol(name: "star.fill"),
+        .asset(id: "artwork"),
+        .shape(.roundedRectangle(cornerRadius: 6)),
+        .date(Date(timeIntervalSince1970: 1_800_000_000), style: .time),
+        .clock,
+        .today,
+        .timer(start: Date(timeIntervalSince1970: 1_800_000_000), end: Date(timeIntervalSince1970: 1_800_000_060), countsDown: true),
+        .timerProgress(start: Date(timeIntervalSince1970: 1_800_000_000), end: Date(timeIntervalSince1970: 1_800_000_060)),
+        .countdown(end: Date(timeIntervalSince1970: 1_800_000_060), style: .hoursMinutes),
+        .progress(value: 0.5, total: 1, style: .circular),
+        .button(action: "next"),
+        .toggle(isOn: true, action: "play"),
+        .slider(value: 0.5, minimum: 0, maximum: 1, step: 0.1, style: .ruler(labelEvery: 4, labels: .clockTime), action: "seek"),
+        .component(id: "audio.spectrum", version: 1, parameters: ["bars": .number(12), "live": .bool(true)]),
+        .regions,
+    ]
+
+    @Test
+    func everyNodeKindRoundTripsThroughJSON() throws {
+        #expect(Set(Self.everyKind.map(\.name)).count == 21)
+
+        for kind in Self.everyKind {
+            let decoded = try JSONDecoder().decode(PluginNodeKind.self, from: JSONEncoder().encode(kind))
+
+            #expect(decoded == kind, "\(kind.name) did not round-trip")
+        }
+    }
+
     @Test
     func aSliderWithoutAStyleDecodesAsStandard() throws {
         let json     = #"{"schema":2,"root":{"kind":{"slider":{"value":0.5,"minimum":0,"maximum":1,"action":"volume"}}}}"#

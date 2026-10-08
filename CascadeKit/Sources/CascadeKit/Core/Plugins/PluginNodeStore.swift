@@ -141,17 +141,20 @@ final class PluginNodeStore {
         send(request, optionsOrigin: optionsOrigin)
     }
 
-    /// set shows a control's new value at once, sends the action, and arms the revert.
+    /// set shows a control's new value at once, sends the action, and arms the revert. The
+    /// value appears with `animation`, `.snappy` unless the caller passes nil, as a control does
+    /// under Reduce Motion.
     func set(
         _ value      : PluginValue,
         on model     : PluginNodeModel,
-        optionsOrigin: PluginOptionsOrigin? = nil
+        optionsOrigin: PluginOptionsOrigin? = nil,
+        animation    : Animation? = .snappy
     ) {
         guard canInteract(with: model, optionsOrigin: optionsOrigin) else { return }
         generations[model.id, default: 0] += 1
         let generation = generations[model.id]
 
-        withAnimation(.snappy) {
+        withAnimation(animation) {
             model.optimistic = value
         }
         let request = PluginActionRequest(
@@ -185,10 +188,11 @@ final class PluginNodeStore {
         model.optimistic = .number(value)
     }
 
-    /// release sends the value the slider was let go at.
+    /// release sends the value the slider was let go at, shown with `animation` (see `set`).
     func release(
         _ model      : PluginNodeModel,
-        optionsOrigin: PluginOptionsOrigin? = nil
+        optionsOrigin: PluginOptionsOrigin? = nil,
+        animation    : Animation? = .snappy
     ) {
         guard canInteract(with: model, optionsOrigin: optionsOrigin) else { return }
         model.isDragging = false
@@ -197,9 +201,20 @@ final class PluginNodeStore {
             set(
                 .number(value),
                 on           : model,
-                optionsOrigin: optionsOrigin
+                optionsOrigin: optionsOrigin,
+                animation    : animation
             )
         }
+    }
+
+    /// cancelDrag ends a drag that will never be released, because its control left the screen
+    /// under the user's finger: nothing is sent, the thumb goes back to the published value
+    /// and the control takes publications again. A control that is not being dragged is left alone.
+    func cancelDrag(_ model: PluginNodeModel) {
+        guard models[model.id] === model, model.isDragging else { return }
+        generations[model.id, default: 0] += 1
+        model.isDragging = false
+        model.optimistic = nil
     }
 
     /// reject reverts the control whose action the kernel refused, unless the user is dragging

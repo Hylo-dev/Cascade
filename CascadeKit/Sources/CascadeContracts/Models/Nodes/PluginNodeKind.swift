@@ -86,8 +86,10 @@ extension PluginNodeKind {
     /// `style` is a standard slider. Swift's synthesis fails on a missing key, even when the case
     /// has a default value, so the document is decoded as `Wire`, a mirror of the vocabulary in
     /// which the style is optional, and mapped back. `encode(to:)` stays synthesized, so the wire
-    /// form is the one the mirror reads, plus the style. Keep the two enums in step: a case
-    /// added to one and not to the other fails to compile in `kind`.
+    /// form is the one the mirror reads, plus the style. Keep the two enums in step by hand: the
+    /// compiler does not notice a case added to `PluginNodeKind` and forgotten in `Wire`, which
+    /// would simply fail to decode. `PluginDocumentTests` round-trips one node of every case, so
+    /// that omission fails a test.
     public init(from decoder: any Decoder) throws {
         self = try Wire(from: decoder).kind
     }

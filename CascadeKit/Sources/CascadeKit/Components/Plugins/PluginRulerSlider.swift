@@ -29,10 +29,14 @@ struct PluginRulerSlider: View {
     let labelEvery: Int
     let labels    : PluginRulerLabels
     let tint      : Color
-    let released  : (Bool) -> Void
+
+    /// released lets go of the control with the animation its value settles in, nil under
+    /// Reduce Motion: it sends the one action. cancelled lets go without sending.
+    let released  : (Animation?) -> Void
+    let cancelled : () -> Void
 
     @State
-    private var dragStart: Double?
+    private var interaction: RulerInteraction
 
     @State
     private var labelCache = RulerLabelCache()
@@ -44,6 +48,36 @@ struct PluginRulerSlider: View {
     /// of an hour a comfortable thumb-width, and about twenty ticks, five hours, fit in the
     /// options page's 260 points.
     static let spacing = 13.0
+
+    init(
+        value     : Binding<Double>,
+        minimum   : Double,
+        maximum   : Double,
+        step      : Double,
+        labelEvery: Int,
+        labels    : PluginRulerLabels,
+        tint      : Color,
+        released  : @escaping (Animation?) -> Void,
+        cancelled : @escaping () -> Void
+    ) {
+        self.value       = value
+        self.minimum     = minimum
+        self.maximum     = maximum
+        self.step        = step
+        self.labelEvery  = labelEvery
+        self.labels      = labels
+        self.tint        = tint
+        self.released    = released
+        self.cancelled   = cancelled
+        _interaction     = State(
+            initialValue: RulerInteraction(
+                minimum: minimum,
+                maximum: maximum,
+                step   : step,
+                spacing: Self.spacing
+            )
+        )
+    }
 
     var body: some View {
         PluginRulerCanvas(
@@ -61,62 +95,41 @@ struct PluginRulerSlider: View {
         .accessibilityElement()
         .accessibilityValue(Text(verbatim: spoken))
         .accessibilityAdjustableAction { direction in
-            adjust(direction)
+            switch direction {
+                case .increment:
+                    driver.adjust(1)
+
+                case .decrement:
+                    driver.adjust(-1)
+
+                @unknown default:
+                    break
+            }
         }
+        .onDisappear {
+            driver.disappeared()
+        }
+    }
+
+    /// driver is rebuilt at every body from the current bindings and holds no state of its own.
+    private var driver: RulerGestureDriver {
+        RulerGestureDriver(
+            interaction: $interaction,
+            value      : value,
+            animation  : reduceMotion ? nil : .snappy,
+            released   : released,
+            cancelled  : cancelled
+        )
     }
 
     private var drag: some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { gesture in
-                if dragStart == nil, abs(gesture.translation.width) >= 1 {
-                    dragStart = value.wrappedValue
-                }
-
-                if let dragStart {
-                    value.wrappedValue = RulerGeometry.dragged(
-                        from       : dragStart,
-                        translation: gesture.translation.width,
-                        minimum    : minimum,
-                        maximum    : maximum,
-                        step       : step,
-                        spacing    : Self.spacing
-                    )
-                }
+                driver.changed(translation: gesture.translation.width)
             }
             .onEnded { _ in
-                guard dragStart != nil else { return }
-                dragStart = nil
-                settle(on: value.wrappedValue)
+                driver.ended()
             }
-    }
-
-    /// settle moves the value to its nearest step, animated unless Reduce Motion is on, and
-    /// lets go of the control, which sends the one action.
-    private func settle(on proposed: Double) {
-        let snapped = RulerGeometry.snapped(
-            proposed,
-            minimum: minimum,
-            maximum: maximum,
-            step   : step
-        )
-
-        withAnimation(reduceMotion ? nil : .snappy) {
-            value.wrappedValue = snapped
-        }
-        released(false)
-    }
-
-    private func adjust(_ direction: AccessibilityAdjustmentDirection) {
-        switch direction {
-            case .increment:
-                settle(on: value.wrappedValue + step)
-
-            case .decrement:
-                settle(on: value.wrappedValue - step)
-
-            @unknown default:
-                break
-        }
     }
 
     private var spoken: String {
