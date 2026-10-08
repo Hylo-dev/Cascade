@@ -4,6 +4,8 @@ Date: 7 October 2026. Revised 8 October 2026 after first use (see the note below
 
 **Revised 8 October 2026 after first use.** The first version showed a 2x1 widget, a four-region activity whose expanded presentation took over the opened notch, and a two-row options page with a ＋15m button. Use showed that the activity should stay a status and never cover the widgets, that the default tile should be the larger one, and that the options page reads best as the iOS Timer's single row. So: the widget is 2x2 by default (2x1 and 1x1 remain); the activity has compact and minimal presentations only and never takes over the opened notch; the options page is one row of two round buttons and a stepper; and ＋15m is gone, since the stepper's + already lengthens a running session. The sections edited are D2, D10 and D11, §3 (the actions table and the removed `caffeinate.extend`), §5 (widget, options page, activity, manifest), §6 (an activity has three regions, or four), §7 (`.hoursMinutes` is no longer used by Caffeinate), §8 and §9; they are the revised text. A refused step, shorter or longer, reads "Couldn't change the time".
 
+**Revised again 9 October 2026: a ruler instead of − and +.** §11 below supersedes, where they differ, D4, D5 and D11, the `nextDuration` field and the `caffeinate.duration.up/down` actions of §3, the stepper of §4 and §5, and the options page of §5. Everything else stands.
+
 The UI follows Apple's Human Interface Guidelines (Live Activities, Steppers, Toggles, Color, Accessibility, Motion) and the Dynamic Island's design system: a key tint on black, a glyph leading, a value trailing, rounded tabular digits, a minimal presentation when the island is shared.
 
 ## 1. Why
@@ -197,3 +199,21 @@ Feature `awake`: `surfaces` widget (`2x2`, `2x1`, `1x1`, the first being the def
 ## 10. Out of scope
 
 Automatic rules, App Intents and a menu item; Music as a plugin and its tier-2 components; slot pages and layout arbitration beyond `LiveActivityHost`'s existing rules; external plugins.
+
+## 11. Revision of 9 October 2026: the ruler, and duration or end time
+
+Approved by the user after the 8 October build, from a recording of the iOS timer's ruler.
+
+**Decisions.**
+
+| # | Decision |
+|---|---|
+| R1 | The options page chooses the next or running session with a **ruler**, not − and +: ticks scroll under a fixed ▲ indicator; the ticks already passed are full in the tint, those ahead at 28 %. Ticks are **bottom-aligned** and grow **shorter and more transparent** with their distance from the indicator. |
+| R2 | A selector `Per | Fino a | ∞` (EN `For | Until | ∞`) picks the target kind. **∞ is the default.** With ∞ the ruler is replaced by "Until you stop it". |
+| R3 | One tick every 15 minutes, a label every hour: `1h 2h …` for "For" (15 min … 24 h), `17:00 18:00 …` for "Until" (quarter hours of the clock, up to 24 h ahead). |
+| R4 | Layout A: top band — the selector leading, the round Display and Start/Stop buttons trailing; bottom band — the ruler across most of the width, the large time trailing ("1h 30m" / "18:00" / "∞" when off; the kernel-drawn countdown or elapsed time when running). |
+
+**The ruler is a kernel control.** The existing `slider` node gains a style: `standard` (today's) or `ruler(labelEvery: Int, labels: duration | clockTime)`. With `duration` the value is minutes and a label reads `1h`; with `clockTime` the value is seconds since 1970 and a label is that instant's local time. The kernel draws it in one SwiftUI `Canvas` (only the visible ticks), tinted by the node's own `foregroundStyle` colour, takes the drag itself with the slider's optimistic value, snaps to `step` on release and sends one action then — the plugin never wakes during a drag. VoiceOver sees an adjustable element that steps by `step` and reads the label. It costs nothing at rest and redraws only while dragged.
+
+**State and actions.** `PluginCaffeinateState.nextDuration` becomes `nextTarget: CaffeinateTarget` — `.indefinite` (default), `.duration(minutes)` (15…1440, multiple of 15) or `.until(minuteOfDay)` (0…1425, multiple of 15, local time; the session ends at its next occurrence, at least 15 minutes ahead). New absolute actions replace `caffeinate.duration.up/down`: `caffeinate.mode.indefinite`, `caffeinate.mode.duration`, `caffeinate.mode.until` (the selector's segments), `caffeinate.duration.set` (slider, minutes) and `caffeinate.until.set` (slider, seconds since 1970, a quarter hour; the service rejects one in the past or more than 24 h ahead). While a session runs: choosing ∞ makes it indefinite; choosing For or Until keeps its end, or, if it was indefinite, applies that mode's value; moving the ruler moves the end (`IOPMAssertionSetProperty`, never a gap). While off, they change the next session. The widget's status line follows the target: "∞ ›", "1h 30m ›", "until 18:00 ›".
+
