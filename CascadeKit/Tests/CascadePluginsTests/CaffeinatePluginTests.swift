@@ -564,7 +564,7 @@ struct CaffeinatePluginTests {
         #expect(entries.contains { $0.kind == .countdown(end: ends, style: .compact) })
         #expect(entries.contains { $0.kind == .timer(start: Self.started, end: ends, countsDown: true) })
         #expect(!entries.contains { $0.kind == .date(ends, style: .time) })
-        #expect(page.contains("Couldn't extend (error 5)"))
+        #expect(page.contains("Couldn't change the time (error 5)"))
         #expect(!page.contains("Error"))
         #expect(!page.contains { $0.hasPrefix("Couldn't prevent sleep") })
         #expect(symbols(entries).contains("exclamationmark.triangle.fill"))

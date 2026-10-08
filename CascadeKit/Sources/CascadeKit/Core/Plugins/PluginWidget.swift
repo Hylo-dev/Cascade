@@ -47,15 +47,16 @@ final class PluginWidget: NotchWidget {
         // The menu reaches the options from every size, including a face too small to show
         // the opener.
         return AnyView(content.contextMenu {
-            if store.optionsButton != nil {
+            if !store.optionsButtons.isEmpty {
                 Button(String(localized: "Options", bundle: .module), action: openOptions)
             }
         })
     }
 
-    /// openOptions always reads the current opener, including at the icon-only size.
+    /// openOptions always reads the current openers, including at the icon-only size, and
+    /// presses the first: every opener opens the same page.
     func openOptions() {
-        guard supportsFullscreen, let button = store.optionsButton else { return }
+        guard supportsFullscreen, let button = store.optionsButtons.first else { return }
         store.press(button)
     }
 

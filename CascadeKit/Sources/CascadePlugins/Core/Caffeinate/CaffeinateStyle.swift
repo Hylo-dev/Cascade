@@ -103,7 +103,7 @@ enum CaffeinateStyle {
                     String(localized: "Couldn't prevent sleep (error \(String(code)))", table: "CaffeinateWidget", bundle: .module)
 
                 case .extensionRefused(let code):
-                    String(localized: "Couldn't extend (error \(String(code)))", table: "CaffeinateWidget", bundle: .module)
+                    String(localized: "Couldn't change the time (error \(String(code)))", table: "CaffeinateWidget", bundle: .module)
             }
         }
     }

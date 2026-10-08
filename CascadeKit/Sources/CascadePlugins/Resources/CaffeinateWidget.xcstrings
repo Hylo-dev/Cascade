@@ -69,9 +69,9 @@
       "comment": "Widget tile line when the system refused to keep the Mac awake; the options page has the sentence and the code.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Errore" } } }
     },
-    "Couldn't extend (error %@)": {
-      "comment": "Options page line when the system refused to lengthen a running session. %@ is the system's error code.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Impossibile estendere (errore %@)" } } }
+    "Couldn't change the time (error %@)": {
+      "comment": "Options page line when the system refused to change the time of a running session, by a step either way. %@ is the system's error code.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Impossibile cambiare la durata (errore %@)" } } }
     }
   },
   "version": "1.0"

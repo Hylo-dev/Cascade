@@ -2,7 +2,7 @@
 
 Date: 7 October 2026. Revised 8 October 2026 after first use (see the note below). Status: implemented on branch `cava/caffeinate-redesign` (7 October 2026); see the plan's ledger rulings in the PR description. It replaces the Caffeinate widget, its options page and its native owner as they stand on `cava/widget-fullscreen`, and it routes plugin activities for the first time.
 
-**Revised 8 October 2026 after first use.** The first version showed a 2x1 widget, a four-region activity whose expanded presentation took over the opened notch, and a two-row options page with a ＋15m button. Use showed that the activity should stay a status and never cover the widgets, that the default tile should be the larger one, and that the options page reads best as the iOS Timer's single row. So: the widget is 2x2 by default (2x1 and 1x1 remain); the activity has compact and minimal presentations only and never takes over the opened notch; the options page is one row of two round buttons and a stepper; and ＋15m is gone, since the stepper's + already lengthens a running session. D2, D10 and D11, §3, §5 and §8 below are the revised text.
+**Revised 8 October 2026 after first use.** The first version showed a 2x1 widget, a four-region activity whose expanded presentation took over the opened notch, and a two-row options page with a ＋15m button. Use showed that the activity should stay a status and never cover the widgets, that the default tile should be the larger one, and that the options page reads best as the iOS Timer's single row. So: the widget is 2x2 by default (2x1 and 1x1 remain); the activity has compact and minimal presentations only and never takes over the opened notch; the options page is one row of two round buttons and a stepper; and ＋15m is gone, since the stepper's + already lengthens a running session. The sections edited are D2, D10 and D11, §3 (the actions table and the removed `caffeinate.extend`), §5 (widget, options page, activity, manifest), §6 (an activity has three regions, or four), §7 (`.hoursMinutes` is no longer used by Caffeinate), §8 and §9; they are the revised text. A refused step, shorter or longer, reads "Couldn't change the time".
 
 The UI follows Apple's Human Interface Guidelines (Live Activities, Steppers, Toggles, Color, Accessibility, Motion) and the Dynamic Island's design system: a key tint on black, a glyph leading, a value trailing, rounded tabular digits, a minimal presentation when the island is shared.
 
@@ -60,7 +60,7 @@ Actions, declared in the manifest:
 
 | Action | Effect |
 |---|---|
-| `caffeinate.start`, `caffeinate.stop` | Absolute. The disc and the pills are `Toggle`s carrying the value. |
+| `caffeinate.start`, `caffeinate.stop` | Absolute. Each power control (the widget's disc in every size and the options page's round button) is a `Toggle` whose value says "on"; its action is the one the current state calls for, so a late press cannot flip the session the wrong way. |
 | `caffeinate.duration.down`, `caffeinate.duration.up` | While off, move `nextDuration` one step. While active, the stepper's value is the time left rounded up to the scale (∞ when indefinite); a step sets `endsAt = now + ` the neighbouring value, so − from 15m makes the session indefinite and + from ∞ makes it 15 minutes from now. `nextDuration` follows the stepped value. |
 | `caffeinate.display` | Absolute toggle of the preference. |
 | `caffeinate.options` | Opens the options page (existing). |
@@ -162,7 +162,7 @@ Feature `awake`: `surfaces` widget (`2x2`, `2x1`, `1x1`, the first being the def
 
 | Case | Behaviour |
 |---|---|
-| IOKit refuses at start | Stays off, publishes `failure`. The widget shows a warning glyph and "Couldn't prevent sleep"; the options page adds the code. Cleared by the next gesture. No activity. |
+| IOKit refuses at start | Stays off, publishes `failure`. The tile shows the warning symbol and "Error"; the options page shows the sentence with the code ("Couldn't prevent sleep (error N)"). Cleared by the next gesture. No activity. |
 | Step refused | A refusal leaves the session and its end unchanged (any timeout already moved is put back) and publishes `extensionRefused`. No assertion is released or acquired. |
 | Release fails | The identifier is kept and retried. Published state is off: the assertion has its own IOKit timeout. |
 | Lid closed past the end | The wall-clock timer and the wake check end the session; nothing is replayed. |
@@ -171,7 +171,7 @@ Feature `awake`: `surfaces` widget (`2x2`, `2x1`, `1x1`, the first being the def
 | PluginHost restart | The lease ends, which only detaches the emitter: the session continues, the kernel keeps the publication, and the new lease sends the current snapshot. |
 | Plugin disabled or quarantined | The plugin is no longer `active`: sessions are disallowed, the service stops the session, the hot key is released, the UI goes. |
 | Late or repeated action | Start, stop and display are absolute and idempotent; a stale step is dropped by the broker's revision. |
-| Stepper at a limit | The button is disabled; the service rejects an off-scale value anyway. |
+| Stepper at a limit | The button is dimmed, not disabled: it stays a button, and the service ignores a step off the scale. |
 | Shortcut taken | `RegisterEventHotKey` fails; Settings say "Shortcut unavailable"; no silent fallback. |
 | Quit | Nothing waits on main; the system releases the process's assertions. |
 

@@ -34,6 +34,38 @@ struct PluginOptionsNavigationTests {
         rig.fixture.coordinator.stop()
     }
 
+    /// Every button that carries the options action is an opener: a widget with a face for each
+    /// size draws one in each face, and the tile shows only one of them.
+    @Test
+    func everyButtonWithTheOptionsActionOpensThePage() throws {
+        let rig = try Rig()
+        rig.openers = ["open", "open.large"]
+        try rig.publish(control: "first")
+        rig.show()
+        defer { rig.fixture.coordinator.stop() }
+        let store = try rig.widget.store
+
+        #expect(store.optionsButtons.map(\.id.rawValue) == ["#open:button", "#open.large:button"])
+        #expect(store.isOptionsButton(PluginNodeID(rawValue: "#open.large:button")))
+        #expect(!store.isOptionsButton(PluginNodeID(rawValue: "#compact:button")))
+
+        for (index, node) in ["#open:button", "#open.large:button"].enumerated() {
+            let opener = try #require(store.model(PluginNodeID(rawValue: node)))
+            store.press(opener)
+            #expect(rig.acceptances.count == index + 1)
+            #expect(rig.requests[index].node.rawValue == node)
+            rig.acceptances[index]()
+            #expect(rig.presentation?.optionsPage != nil)
+            rig.fixture.coordinator.dismissOptions(leaseID: try #require(rig.presentation?.optionsLeaseID))
+            #expect(rig.presentation?.optionsPage == nil)
+        }
+
+        let compact = try #require(store.model(PluginNodeID(rawValue: "#compact:button")))
+        store.press(compact)
+        #expect(rig.acceptances.count == 2)
+        #expect(rig.submitted.last?.node.rawValue == "#compact:button")
+    }
+
     @Test
     func sourceRefreshKeepsTheLivePageAndRejectsOldAndDismissedControls() throws {
         let rig = try Rig()
@@ -259,6 +291,7 @@ struct PluginOptionsNavigationTests {
         var submitted: [PluginActionRequest] = []
         var nativeDeliveries: [@MainActor () -> Void] = []
         var delivered: [PluginActionRequest] = []
+        var openers = ["open"]
         var widget: PluginWidget {
             get throws { try #require(host.widgets.values.first) }
         }
@@ -292,7 +325,7 @@ struct PluginOptionsNavigationTests {
                 visibility    : { _, _ in },
                 submitAccepted: { [weak self] request, accepted in
                     guard let self, PluginActionAuthorizer.event(for: request, entry: publisher[key], feature: feature) != nil else { return }
-                    if request.node.rawValue == "#open:button" {
+                    if request.node.rawValue.hasPrefix("#open") {
                         requests.append(request)
                         acceptances.append { accepted {} }
                     } else {
@@ -308,8 +341,7 @@ struct PluginOptionsNavigationTests {
             let document = try PluginDocument(
                 root         : PluginNode(.hStack(alignment: .center, spacing: 4), children: [
                     PluginNode(.button(action: "compact"), id: "compact", children: [PluginNode(.text("Cup"))]),
-                    PluginNode(.button(action: "open"), id: "open", children: [PluginNode(.text("Open"))]),
-                ]),
+                ] + openers.map { PluginNode(.button(action: "open"), id: $0, children: [PluginNode(.text("Open"))]) }),
                 optionsRoot  : PluginNode(toggle ? .toggle(isOn: false, action: "stop") : .button(action: "stop"), id: "stop." + control, children: [PluginNode(.text("Stop"))]),
                 optionsAction: "open"
             )

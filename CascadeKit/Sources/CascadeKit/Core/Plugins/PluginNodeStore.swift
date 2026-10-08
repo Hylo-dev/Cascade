@@ -30,7 +30,7 @@ final class PluginNodeStore {
     private(set) var root         : PluginNodeModel?
     private(set) var glassLights  : [GlassLight] = []
     private(set) var optionsRoot  : PluginNodeModel?
-    private(set) var optionsButton: PluginNodeModel?
+    private(set) var optionsButtons: [PluginNodeModel] = []
 
     @ObservationIgnored private var models     : [PluginNodeID: PluginNodeModel] = [:]
     @ObservationIgnored private var generations: [PluginNodeID: UInt64] = [:]
@@ -74,7 +74,7 @@ final class PluginNodeStore {
             root          = nil
             glassLights   = []
             optionsRoot   = nil
-            optionsButton = nil
+            optionsButtons = []
             optionsNodes  = []
             return
         }
@@ -112,13 +112,22 @@ final class PluginNodeStore {
             optionsRoot  = nil
             optionsNodes = []
         }
-        let opener    = content.document.optionsAction.flatMap { action in
-            table.entries.first { $0.kind == .button(action: action) }
+        // Every button that carries the options action opens the page: a widget with a face
+        // for each size may draw an opener in more than one of them.
+        let openers = content.document.optionsAction.map { action in
+            table.entries.filter { $0.kind == .button(action: action) }.compactMap { models[$0.id] }
+        } ?? []
+        if optionsButtons.map(\.id) != openers.map(\.id) {
+            optionsButtons = openers
         }
-        optionsButton = opener.flatMap { models[$0.id] }
         if glassLights != content.document.glassLights {
             glassLights = content.document.glassLights
         }
+    }
+
+    /// isOptionsButton says whether a node is one of the buttons that open the options page.
+    func isOptionsButton(_ id: PluginNodeID) -> Bool {
+        optionsButtons.contains { $0.id == id }
     }
 
     /// press sends a button's action. A button holds no state: SwiftUI shows the press, and

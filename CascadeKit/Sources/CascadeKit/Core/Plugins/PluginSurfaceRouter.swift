@@ -24,7 +24,7 @@ public typealias PluginAcceptedAction = @MainActor @Sendable (_ nativeEffect: @M
 /// fresh eight hours. It is ended with its withdrawal. An activity's controls submit through the
 /// same broker as a widget's, with no options origin: only a widget's options page has one.
 ///
-/// A widget whose feature supports fullscreen may also publish an options page. Pressing its
+/// A widget whose feature supports fullscreen may also publish an options page. Pressing an
 /// opener captures a host-owned origin first, then asks the broker; only the accepted click
 /// presents the page, and only the page's own controls, holding that origin, can act in it.
 @MainActor
@@ -228,13 +228,13 @@ public final class PluginSurfaceRouter {
         )
     }
 
-    /// submitWidget sends a widget's control, except the options opener, which first captures
+    /// submitWidget sends a widget's control, except an options opener, which first captures
     /// the mounted origin before the broker hop. Its acceptance closure holds that exact click,
     /// so an equal late request cannot open the page.
     private func submitWidget(_ request: PluginActionRequest) {
         guard let store = stores[request.key], store.revision == request.revision else { return }
         guard !store.isOptionsNode(request.node) else { return }
-        guard store.optionsButton?.id == request.node else {
+        guard store.isOptionsButton(request.node) else {
             submit(request)
             return
         }
