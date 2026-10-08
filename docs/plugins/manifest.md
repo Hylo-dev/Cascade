@@ -72,7 +72,7 @@ A feature (`PluginFeature`) is one thing a plugin does. Each declares, with uniq
 
 ## Activities
 
-A feature that declares `activity: {}` publishes a live activity: a document of four regions (compact leading, compact trailing, minimal and expanded, see [Content](content.md#vocabulary)) and `PluginActivityAttributes`, which only an activity carries:
+A feature that declares `activity: {}` publishes a live activity: a document of three regions (compact leading, compact trailing and minimal) or four (those plus expanded, see [Content](content.md#vocabulary)). An activity without an expanded region is a status: it never takes over the opened notch, which shows the widgets while it runs, and clicking its compact presentation does the same. The publication also carries `PluginActivityAttributes`, which only an activity carries:
 
 | Attribute | Meaning |
 | --- | --- |

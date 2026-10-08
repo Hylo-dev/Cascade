@@ -24,11 +24,17 @@ struct PluginActivityPublicationTests {
     }
 
     @Test
-    func anActivityNeedsFourRegionsAndAttributes() throws {
+    func anActivityNeedsThreeOrFourRegionsAndAttributes() throws {
         _ = try PluginPublication(
             feature : "caffeinate",
             surface : .activity,
             document: PluginDocument(root: regions(4)),
+            activity: attributes()
+        )
+        _ = try PluginPublication(
+            feature : "caffeinate",
+            surface : .activity,
+            document: PluginDocument(root: regions(3)),
             activity: attributes()
         )
 
@@ -36,7 +42,15 @@ struct PluginActivityPublicationTests {
             try PluginPublication(
                 feature : "caffeinate",
                 surface : .activity,
-                document: PluginDocument(root: regions(3)),
+                document: PluginDocument(root: regions(2)),
+                activity: attributes()
+            )
+        }
+        #expect(throws: AddonFailure.self) {
+            try PluginPublication(
+                feature : "caffeinate",
+                surface : .activity,
+                document: PluginDocument(root: regions(5)),
                 activity: attributes()
             )
         }

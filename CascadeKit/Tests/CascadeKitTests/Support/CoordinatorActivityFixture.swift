@@ -19,6 +19,8 @@ final class CoordinatorActivityFixture: NotchLiveActivity {
     let expandedContentHeight: CGFloat = 40
     let accessibilityLabel    = "Coordinator activity"
 
+    var hasExpandedPresentation = true
+
     private(set) var activations                = 0
     private(set) var suspensions                = 0
     private(set) var factoryCount               = 0

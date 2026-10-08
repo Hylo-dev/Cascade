@@ -650,6 +650,60 @@ struct NotchDisplayCoordinatorTests {
     }
 
     @Test
+    func openingTheNotchSkipsAnActivityWithoutAnExpandedPresentation() throws {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10])
+        let status  = CoordinatorActivityFixture(id: "status")
+        status.hasExpandedPresentation = false
+        fixture.activityHost.present(status)
+        fixture.coordinator.start()
+
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
+
+        #expect(fixture.activityHost.expansionSelection == .fallback)
+        #expect(fixture.surfaces[10]?.presentations.last?.expanded == nil)
+        #expect(fixture.surfaces[10]?.presentations.last?.showsWidgets == true)
+    }
+
+    @Test
+    func clickingTheCompactOfAnActivityWithoutAnExpandedPresentationDoesNotExpandIt() throws {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10])
+        let status  = CoordinatorActivityFixture(id: "status")
+        status.hasExpandedPresentation = false
+        fixture.activityHost.present(status)
+        fixture.coordinator.start()
+
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: "status",
+            trigger   : .click,
+            generation: 1
+        )
+
+        #expect(fixture.activityHost.expansionSelection == .fallback)
+        #expect(fixture.surfaces[10]?.presentations.last?.expanded == nil)
+    }
+
+    @Test
+    func anActivityThatExpandsStillTakesTheOpenedNotchAndAnExplicitClick() throws {
+        let fixture = DisplayCoordinatorFixture(displayIDs: [10])
+        let music   = CoordinatorActivityFixture(id: "music")
+        fixture.activityHost.present(music)
+        fixture.coordinator.start()
+
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: "music",
+            trigger   : .click,
+            generation: 1
+        )
+
+        #expect(fixture.activityHost.expansionSelection == .activity("music"))
+        #expect(fixture.surfaces[10]?.presentations.last?.expanded === music)
+    }
+
+    @Test
     func queuedExplicitActivityCannotBypassNewFixedRoutingAtGrant() throws {
         let fixture = DisplayCoordinatorFixture(displayIDs: [10, 20])
         fixture.activityHost.present(CoordinatorActivityFixture(id: "music"))

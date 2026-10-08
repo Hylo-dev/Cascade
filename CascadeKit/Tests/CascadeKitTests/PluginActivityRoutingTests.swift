@@ -91,6 +91,33 @@ struct PluginActivityRoutingTests {
         #expect(presented.contentRevision == 1)
     }
 
+    private func threeRegions() throws -> PluginDocument {
+        try PluginDocument(
+            root: PluginNode(
+                .regions,
+                children: [
+                    PluginNode(.text("W")),
+                    PluginNode(.text("WWWWWWWW")),
+                    PluginNode(.text("WWWW")),
+                ]
+            )
+        )
+    }
+
+    /// anActivityExpandsOnlyWithAFourthRegion: the host asks the activity, not the document, so
+    /// an activity that publishes no expanded region never takes over the opened notch.
+    @Test
+    func anActivityExpandsOnlyWithAFourthRegion() throws {
+        let rig = Rig()
+
+        rig.surfaces.apply([try publish(rig, document: threeRegions())], rejected: [])
+        let compact = try #require(rig.host.presented.first)
+        #expect(!compact.hasExpandedPresentation)
+
+        rig.surfaces.apply([try publish(rig, document: regions())], rejected: [])
+        #expect(compact.hasExpandedPresentation)
+    }
+
     @Test
     func anUpdateDoesNotPresentAgain() throws {
         let rig = Rig()

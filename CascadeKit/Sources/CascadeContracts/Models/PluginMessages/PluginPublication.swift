@@ -9,9 +9,10 @@ import Foundation
 /// feature showed there; no document withdraws it. `staleAfter` says, in seconds, how old the
 /// content may grow before the kernel asks for a fresh one when the surface becomes visible
 /// again. Content the kernel draws itself, such as a clock face, never goes stale, so it leaves
-/// `staleAfter` out. A notice's document is three regions, an activity's four, and the
-/// publication carries the notice's or the activity's attributes; no other publication carries
-/// either.
+/// `staleAfter` out. A notice's document is three regions; an activity's is three or four, the
+/// fourth being the expanded presentation, and an activity without it never takes over the
+/// opened notch. The publication carries the notice's or the activity's attributes; no other
+/// publication carries either.
 public struct PluginPublication: Codable, Equatable, Sendable {
 
     public static let maximumStaleAfter = 86_400.0
@@ -77,9 +78,10 @@ public struct PluginPublication: Codable, Equatable, Sendable {
                 (surface == .notice || surface == .activity) == regions,
                 "A notice's or an activity's document is its regions, and only theirs"
             )
+            let regionCount = document.root.children.count
             try ContractValidation.require(
-                !regions || document.root.children.count == (surface == .activity ? 4 : 3),
-                "A notice has three regions and an activity four"
+                !regions || (surface == .activity ? (3...4).contains(regionCount) : regionCount == 3),
+                "A notice has three regions and an activity three or four"
             )
         } else {
             try ContractValidation.require(notice == nil && activity == nil, "A withdrawal carries no attributes")

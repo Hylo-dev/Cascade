@@ -923,9 +923,7 @@ final class NotchDisplayCoordinator {
                 applyOrdinarySelection(selection)
             }
         } else if let activityID = request.activityID {
-            let selection: ActivityExpansionSelection = routedDisplayIDs().contains(request.displayID)
-                ? .activity(activityID)
-                : .widgets
+            let selection = expansion(forActivityID: activityID, on: request.displayID)
             expandedPageSelection = .ordinary(selection)
             activityHost.setExpansion(selection)
         } else if !wasAlreadyOwner {
@@ -944,12 +942,26 @@ final class NotchDisplayCoordinator {
     }
 
     private func resolvedOrdinarySelection(on displayID: CGDirectDisplayID) -> ActivityExpansionSelection {
-        let isRouted = routedDisplayIDs().contains(displayID)
-        if isRouted, let primary = activityHost.selection.primary {
-            return .activity(primary.id)
-        }
+        expansion(forActivityID: activityHost.selection.primary?.id, on: displayID)
+    }
 
-        return isRouted ? .fallback : .widgets
+    /// expansion is the one place that turns an activity into the opened notch's content. A
+    /// display that does not receive activities shows the widgets, and so does a routed one
+    /// when there is no activity, or when the activity has no expanded presentation: a status
+    /// is never allowed to take the notch over, whether the person opened it or clicked the
+    /// status itself. An identifier the host no longer knows is kept as it came, so a click
+    /// that raced the activity's end behaves as it always did.
+    private func expansion(
+        forActivityID activityID: String?,
+        on displayID            : CGDirectDisplayID
+    ) -> ActivityExpansionSelection {
+        guard routedDisplayIDs().contains(displayID) else { return .widgets }
+
+        guard let activityID,
+              activityHost.liveActivity(id: activityID)?.hasExpandedPresentation ?? true
+        else { return .fallback }
+
+        return .activity(activityID)
     }
 
     private func applyOrdinarySelection(_ selection: ActivityExpansionSelection) {
@@ -1389,11 +1401,9 @@ final class NotchDisplayCoordinator {
                routed.contains(owner),
                latestRequests[owner]?.activityID == nil,
                case .automatic = expandedPageSelection {
-                let expansion = activityHost.selection.primary.map {
-                    ActivityExpansionSelection.activity($0.id)
-                } ?? .fallback
-                if activityHost.expansionSelection != expansion {
-                    activityHost.setExpansion(expansion)
+                let automatic = expansion(forActivityID: activityHost.selection.primary?.id, on: owner)
+                if activityHost.expansionSelection != automatic {
+                    activityHost.setExpansion(automatic)
                     needsReconciliation = true
                     continue
                 }

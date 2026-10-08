@@ -12,8 +12,9 @@ import SwiftUI
 /// its attributes change, and when the plugin renews its start it ends the old session and
 /// presents the activity anew, which is what gives the renewed lifetime a fresh session cap.
 /// The three compact regions fill their slots as a notice's do, the leading one from the leading
-/// edge, the trailing one from the trailing edge, the minimal one centred; the fourth is the
-/// expanded content, which lays itself out in the room the host gives it.
+/// edge, the trailing one from the trailing edge, the minimal one centred; the optional fourth
+/// is the expanded content, which lays itself out in the room the host gives it. Without it the
+/// activity reports no expanded presentation and never takes over the opened notch.
 ///
 /// Whether the activity is on screen is reported as it is activated and suspended, so the kernel
 /// can ask the plugin for one refresh when stale content becomes visible, and never otherwise.
@@ -57,6 +58,12 @@ final class PluginActivity: NotchLiveActivity {
 
     var relevanceScore: Double {
         attributes.relevance
+    }
+
+    /// The plugin publishes a fourth region only for an activity that expands; with three the
+    /// activity is a status, and the notch opens on the widgets instead of on an empty page.
+    var hasExpandedPresentation: Bool {
+        store.root?.children.count == 4
     }
 
     func update(_ attributes: PluginActivityAttributes) {

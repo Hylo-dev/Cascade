@@ -47,7 +47,7 @@ HStack(spacing: 8) {
 
 | Group | Builder |
 | --- | --- |
-| Layout | `VStack`, `HStack`, `ZStack`, `ViewThatFits(in:)`, `Spacer`, and `Regions`, the root of a notice or an activity: a notice's three children are the compact leading, compact trailing and minimal regions, an activity's four add the expanded one |
+| Layout | `VStack`, `HStack`, `ZStack`, `ViewThatFits(in:)`, `Spacer`, and `Regions`, the root of a notice or an activity: a notice's three children are the compact leading, compact trailing and minimal regions, an activity's three or four, the optional fourth being the expanded one |
 | Content | `Text`, `Image(systemName:)`, `Image(asset:)`, `Circle`, `Capsule`, `RoundedRectangle(cornerRadius:)`, `Component(id:version:parameters:)` |
 | Kernel-drawn time | `Clock()`, `Today()`, `Text(_:style:)` with `.time`, `.date` or `.relative`, `Text(timerInterval:countsDown:)`, `Text(countdownTo:style:)`, `ProgressView(timerInterval:)` |
 | Progress | `ProgressView(value:total:style:)`, linear or circular |
@@ -74,7 +74,7 @@ Not in v1: `ForEach` and dynamic lists, grids and gestures. `Image(asset:)` draw
 - 4 KiB per text, 512 bytes per accessibility label;
 - a component takes at most 16 parameters, each a string of at most 256 bytes, a finite number or a bool;
 - lengths are finite, from 0 to 10,000 points; colors, opacity and progress stay in range; a slider's range and step make sense; a timer does not end before it starts;
-- only containers and labelled controls take children, and `Regions` is the root of a notice or an activity, with three regions or four. The publication then fixes the number: a notice has exactly three and an activity exactly four.
+- only containers and labelled controls take children, and `Regions` is the root of a notice or an activity, with three regions or four. The publication then fixes the number: a notice has exactly three and an activity three or four. An activity without the expanded region never takes over the opened notch.
 
 A `PluginOutput` carries at most 48 publications, one per feature and surface. A document that breaks a limit is rejected whole and the previous one stays on screen; the kernel also rejects a publication for a feature or surface its manifest does not declare, or that shows an undeclared component.
 
