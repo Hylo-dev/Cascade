@@ -1,6 +1,8 @@
 # Cascade: Caffeinate, redesigned
 
-Date: 7 October 2026. Status: implemented on branch `cava/caffeinate-redesign` (7 October 2026); see the plan's ledger rulings in the PR description. It replaces the Caffeinate widget, its options page and its native owner as they stand on `cava/widget-fullscreen`, and it routes plugin activities for the first time.
+Date: 7 October 2026. Revised 8 October 2026 after first use (see the note below). Status: implemented on branch `cava/caffeinate-redesign` (7 October 2026); see the plan's ledger rulings in the PR description. It replaces the Caffeinate widget, its options page and its native owner as they stand on `cava/widget-fullscreen`, and it routes plugin activities for the first time.
+
+**Revised 8 October 2026 after first use.** The first version showed a 2x1 widget, a four-region activity whose expanded presentation took over the opened notch, and a two-row options page with a ＋15m button. Use showed that the activity should stay a status and never cover the widgets, that the default tile should be the larger one, and that the options page reads best as the iOS Timer's single row. So: the widget is 2x2 by default (2x1 and 1x1 remain); the activity has compact and minimal presentations only and never takes over the opened notch; the options page is one row of two round buttons and a stepper; and ＋15m is gone, since the stepper's + already lengthens a running session. D2, D10 and D11, §3, §5 and §8 below are the revised text.
 
 The UI follows Apple's Human Interface Guidelines (Live Activities, Steppers, Toggles, Color, Accessibility, Motion) and the Dynamic Island's design system: a key tint on black, a glyph leading, a value trailing, rounded tabular digits, a minimal presentation when the island is shared.
 
@@ -17,7 +19,7 @@ The current Caffeinate works, but it is more machinery than the feature needs an
 - Duration is any multiple of 15 minutes up to 24 hours, or indefinite, from one stepper.
 - A global shortcut starts and stops a session without any permission prompt.
 - At rest Caffeinate costs no armed timer, no awake thread and no main-thread work. During a session the only periodic work is the kernel's countdown: about one wake a minute above five minutes left, one a second below.
-- Extending a running session never leaves a gap in which the Mac could sleep.
+- Lengthening a running session never leaves a gap in which the Mac could sleep.
 - No private code path: Caffeinate's activity goes through the same contract, kernel and router any plugin would use.
 
 ## 2. Decisions
@@ -25,7 +27,7 @@ The current Caffeinate works, but it is more machinery than the feature needs an
 | # | Decision |
 |---|---|
 | D1 | Start over on behaviour, UI and features. |
-| D2 | In scope: flexible duration, a live activity, a global shortcut. Out of scope: automatic rules (apps, power, displays), App Intents, a menu item. |
+| D2 | In scope: flexible duration (the stepper, − and +, also moves a running session's end), a live activity, a global shortcut. Out of scope: automatic rules (apps, power, displays), App Intents, a menu item. |
 | D3 | Plugin activity routing is built in this project; Caffeinate is its first client. No native activity for Caffeinate. |
 | D4 | Duration is a stepper only, no presets. The scale is ∞, 15m, 30m … 24h in 15-minute steps; − from 15m reaches ∞. |
 | D5 | Tapping the widget's disc or using the shortcut starts with the last duration used. |
@@ -33,8 +35,8 @@ The current Caffeinate works, but it is more machinery than the feature needs an
 | D7 | Keep display awake stays, as a global preference, on by default. |
 | D8 | Compact activity: glyph leading, time left trailing as `2h` (≥ 1 h), `24m` (5–59 min), `4:59` (< 5 min), nothing for ∞. Every digit change rolls like Music's time labels. |
 | D9 | The glyph is `cup.and.heat.waves.fill` by default; Settings offer `mug.fill`, `cup.and.heat.waves.fill` and `pill.fill`. |
-| D10 | Expanded activity in the iOS Timer style: round **Stop** (tinted) and **＋15m** (grey, absent for ∞) leading, the large time trailing with "until 16:30"; for ∞ the large time counts up from the start, with "active for". |
-| D11 | Widget: the disc is the switch, the text opens the options page. The options page has two rows: state and Start/Stop; stepper with end time and the display switch. |
+| D10 | The activity has three regions: compact leading, compact trailing and minimal. There is no expanded presentation, so it never takes over the opened notch; the widget and its options page hold the controls. |
+| D11 | Widget: the disc is the switch, the text opens the options page; 2x2 is the default size. The options page is one row in the iOS Timer style: round **Start/Stop** and **Display** buttons with captions, then `−` time `+` with "until 16:30" under the time (for ∞ the time counts up, with "active for"). |
 | D12 | The activity keeps the 8-hour cap. Past it the activity ends, the session goes on, the widget stays the source of truth, and any user gesture on the session opens a new activity. |
 | D13 | The native owner is one `nonisolated` class with a `Mutex`, a serial queue and one timer; no actor, no main-actor logic. |
 
@@ -59,12 +61,11 @@ Actions, declared in the manifest:
 | Action | Effect |
 |---|---|
 | `caffeinate.start`, `caffeinate.stop` | Absolute. The disc and the pills are `Toggle`s carrying the value. |
-| `caffeinate.extend` | ＋15 minutes on the current session's end. The only relative action; the broker's control revision drops a stale or repeated one. |
 | `caffeinate.duration.down`, `caffeinate.duration.up` | While off, move `nextDuration` one step. While active, the stepper's value is the time left rounded up to the scale (∞ when indefinite); a step sets `endsAt = now + ` the neighbouring value, so − from 15m makes the session indefinite and + from ∞ makes it 15 minutes from now. `nextDuration` follows the stepped value. |
 | `caffeinate.display` | Absolute toggle of the preference. |
 | `caffeinate.options` | Opens the options page (existing). |
 
-Removed: `isBusy`, `minutes`, the string `error`, `CaffeinateCommand` and node-identity decoding. One snapshot is published per transition: start, stop, extend, step, expiry, preference change. None while time passes.
+Removed: `isBusy`, `minutes`, the string `error`, `CaffeinateCommand` and node-identity decoding. One snapshot is published per transition: start, stop, step, expiry, preference change. None while time passes.
 
 ## 4. `CaffeinateService` (app)
 
@@ -74,7 +75,7 @@ A `nonisolated final class`, `Sendable`, holding `Mutex<CaffeinateSession?>` and
 
 **Assertions.** `PreventUserIdleSystemSleep` always; `PreventUserIdleDisplaySleep` too when `keepsDisplayAwake`. Both carry the IOKit timeout `endsAt − now` with `kIOPMAssertionTimeoutActionTurnOff`, so the Mac sleeps on time even if Cascade hangs or crashes, and the system drops them when the process exits.
 
-- Extend, step and switching between timed and indefinite update the existing assertions' timeout with `IOPMAssertionSetProperty(kIOPMAssertionTimeoutKey)` (0 means none), so there is never an instant without an assertion. The spike of 7 October confirmed it: powerd honours the new timeout and measures it from the moment it is set (a 4-second assertion extended at second 2 to 10 seconds expired between seconds 11 and 14, its unextended twin at 4).
+- Steps and switching between timed and indefinite update the existing assertions' timeout with `IOPMAssertionSetProperty(kIOPMAssertionTimeoutKey)` (0 means none), so there is never an instant without an assertion. The spike of 7 October confirmed it: powerd honours the new timeout and measures it from the moment it is set (a 4-second assertion extended at second 2 to 10 seconds expired between seconds 11 and 14, its unextended twin at 4).
 - Toggling the display preference during a session acquires or releases the display assertion alone.
 - A refused acquisition leaves the previous state intact and publishes `failure`. A failed release keeps its identifier and is retried on the next stop and at expiry.
 
@@ -94,16 +95,24 @@ At rest: no awake thread, no armed timer, one Carbon handler, one notification o
 
 ### Widget
 
+- **2x2 (the default size).** Control Center's large module: the disc on top (the start/stop `Toggle`), and under it the title and a second line, both inside the `Button` that opens the options page. Off: "Caffeinate" over the next duration with a chevron ("1h 30m ›"); on, the second line is the time left by the compact rules (D8), or "∞" with the elapsed time counting up. A refused start says "Error" in the warning colour; a refused step keeps the running line and adds a small warning symbol.
 - **2x1.** A disc with the glyph (the start/stop `Toggle`) and a text block (the `Button` that opens the options page). Off: grey disc, outline glyph, "Caffeinate" over "1h 30m ›", the next duration. On: tinted disc, filled glyph, time left by the compact rules (D8), or "active for 1h 24m" when indefinite.
 - **1x1.** The disc alone, still the switch.
 - State is never colour alone: the glyph's fill and the text change too. Every control has an accessibility label ("Start Caffeinate", "Stop Caffeinate", "Caffeinate Options") and a spoken value ("24 minutes left").
 
 ### Options page
 
-About 400 × 86 points below Cascade's Back control, two rows:
+About 400 × 86 points below Cascade's Back control, one row in the iOS Timer's style (about 57 points tall as built):
 
-1. The disc, "Caffeinate" and the state in words: "Your Mac sleeps normally", "Awake until 16:30", "Awake until you stop it". Trailing, one prominent **Start** pill in the tint, or a neutral **Stop** pill.
-2. The stepper `− 1h 30m +` with "until 16:30" beside it, and the "Keep display awake" switch trailing. The value is always visible next to the stepper, the time left in hours and minutes (rounded up) while a session runs; at the limits (∞, 24h) the matching button is disabled, not hidden. The kernel formats the end time in the user's locale.
+```
+(▶/■)  (🖥/☾)                 (−)  1:24:10  (+)
+Start/  Display                    until 16:30
+Stop
+```
+
+- **Power.** A round 40 pt button, the power `Toggle`: an amber disc with Play while off, the one prominent action, a grey disc with Stop while on. Caption "Start" or "Stop".
+- **Display.** A round 40 pt button, the display `Toggle`: a display symbol on an amber-tinted disc when the display is kept awake, a moon on a grey disc when it may sleep. Caption "Display", accessibility label "Keep display awake". State is the symbol and the fill, never colour alone.
+- **Stepper.** Round 30 pt `−` and `+` around the big time, 26 pt rounded digits, with a caption under it. Off: the next duration in white and "Next session". Timed: the kernel's `Text(timerInterval:)` counting down in amber and "until 16:30". ∞: the same counting up and "active for". At the limits (∞ for −, 24h for +) the button is dimmed, not hidden. A refusal replaces the caption with its sentence and code, in the warning colour. The kernel formats the end time in the user's locale.
 
 ### Live activity
 
@@ -114,9 +123,10 @@ Published only while a session runs and within the current activity's 8 hours; w
 | Compact leading | The glyph in the tint. |
 | Compact trailing | `Text(countdownTo: endsAt, style: .compact)`; empty for ∞. |
 | Minimal | The glyph alone. |
-| Expanded | Top: glyph and "Caffeinate". Leading: round **Stop** (tinted) and **＋15m** (grey, absent for ∞). Trailing: the large `Text(timerInterval:)` with "until 16:30", or for ∞ the elapsed time counting up with "active for". |
 
-The key tint is amber `#FFC454` on black. Digits are SF Pro Rounded, tabular. At most two actions, both about the session. The glyph changes from outline to filled with `.symbolEffect`, `.identity` under Reduce Motion. Copy lives in `CaffeinateWidget.xcstrings` (English and Italian); the `h` and `m` units come from system formatting, not literals.
+There is no expanded presentation: the activity is a status and never takes over the opened notch, which keeps showing the widgets. It has no controls.
+
+The key tint is amber `#FFC454` on black. Digits are SF Pro Rounded, tabular. The glyph changes from outline to filled with `.symbolEffect`, `.identity` under Reduce Motion. Copy lives in `CaffeinateWidget.xcstrings` (English and Italian); the `h` and `m` units come from system formatting, not literals.
 
 ### Settings
 
@@ -124,11 +134,11 @@ In the widget's Settings section: a glyph picker previewing the three symbols, a
 
 ### Manifest
 
-Feature `awake`: `surfaces` widget (`2x1`, `1x1`) and `activity`; source `caffeinate`; permission `power.keepAwake`; the actions of §3; `supportsFullscreen`.
+Feature `awake`: `surfaces` widget (`2x2`, `2x1`, `1x1`, the first being the default) and `activity`; source `caffeinate`; permission `power.keepAwake`; the actions of §3; `supportsFullscreen`.
 
 ## 6. Plugin activity routing (`CascadeContracts`, `CascadeKit`)
 
-**Contract.** An activity follows the notice's existing idiom instead of a new document field. Its document's root is a `regions` node with **four** children, in this order: compact leading, compact trailing, minimal, expanded (a notice's has three). Its publication carries `PluginActivityAttributes` beside the document, as a notice carries `PluginNoticeAttributes`: `startedAt` (the start of the 8-hour lifetime), `relevance` (0…1) and `accessibilityLabel`. Attributes are required on, and only valid on, an `.activity` publication. The existing document limits apply. The plugin ends its activity by withdrawing the publication. Controls in the regions go through the broker like a widget's.
+**Contract.** An activity follows the notice's existing idiom instead of a new document field. Its document's root is a `regions` node with three children, in this order: compact leading, compact trailing, minimal, and optionally a fourth, expanded (a notice's has exactly three). Caffeinate publishes three. Its publication carries `PluginActivityAttributes` beside the document, as a notice carries `PluginNoticeAttributes`: `startedAt` (the start of the 8-hour lifetime), `relevance` (0…1) and `accessibilityLabel`. Attributes are required on, and only valid on, an `.activity` publication. The existing document limits apply. The plugin ends its activity by withdrawing the publication. Controls in the regions go through the broker like a widget's.
 
 **Accepted actions carry their action.** Today the broker hands a native owner only the request (plugin, node, revision, value), which is why the old Caffeinate decoded node identities. `PluginEngine.submit`'s acceptance callback now also receives the `PluginActionEvent` the broker resolved (feature, action, value), and `PluginSystem.actionHandler` receives `(PluginPublicationKey, PluginActionEvent)`. Native owners switch on action names.
 
@@ -142,7 +152,7 @@ Feature `awake`: `surfaces` widget (`2x1`, `1x1`) and `activity`; source `caffei
 
 ## 7. Countdown node and rolling digits
 
-**Node.** `PluginNodeKind.countdown(end: Date, style: .compact)`, built with `Text(countdownTo:style:)`, formats `2h`, `24m`, `4:59`, `0:00`: whole hours (floored) from one hour, whole minutes (floored) from five minutes, `m:ss` below, through the system's `Duration` formatting. A second style, `.hoursMinutes`, is the options stepper's value while a session runs: the time left rounded up to whole minutes, as `2h`, `1h 5m`, `45m`, `1m`, `0m`, so a 15-minute step always moves it (the compact `1h` would not), redrawn at minute boundaries only. Elapsed and large times reuse `.timer(start:end:countsDown:)`; an indefinite session counts up in an interval of a year from its start, so "active for" never freezes.
+**Node.** `PluginNodeKind.countdown(end: Date, style: .compact)`, built with `Text(countdownTo:style:)`, formats `2h`, `24m`, `4:59`, `0:00`: whole hours (floored) from one hour, whole minutes (floored) from five minutes, `m:ss` below, through the system's `Duration` formatting. A second style, `.hoursMinutes`, is a kernel feature that Caffeinate no longer uses (the options page shows the timer node instead): the time left rounded up to whole minutes, as `2h`, `1h 5m`, `45m`, `1m`, `0m`, so a 15-minute step always moves it (the compact `1h` would not), redrawn at minute boundaries only. Elapsed and large times reuse `.timer(start:end:countsDown:)`; an indefinite session counts up in an interval of a year from its start, so "active for" never freezes.
 
 **Drawing.** A `TimelineView` with a custom `TimelineSchedule` that yields only the instants at which the text changes: hour or minute boundaries above five minutes, every second below. SwiftUI suspends the timeline while the view is not visible, so no timer of ours runs.
 
@@ -153,14 +163,14 @@ Feature `awake`: `surfaces` widget (`2x1`, `1x1`) and `activity`; source `caffei
 | Case | Behaviour |
 |---|---|
 | IOKit refuses at start | Stays off, publishes `failure`. The widget shows a warning glyph and "Couldn't prevent sleep"; the options page adds the code. Cleared by the next gesture. No activity. |
-| Extension refused | A refusal leaves the session and its end unchanged (any timeout already moved is put back) and publishes `extensionRefused`. No assertion is released or acquired. |
+| Step refused | A refusal leaves the session and its end unchanged (any timeout already moved is put back) and publishes `extensionRefused`. No assertion is released or acquired. |
 | Release fails | The identifier is kept and retried. Published state is off: the assertion has its own IOKit timeout. |
 | Lid closed past the end | The wall-clock timer and the wake check end the session; nothing is replayed. |
 | Clock or time zone change | `endsAt` is absolute; the end time redraws in the new locale, the time left stays right. |
 | Past 8 hours | The activity is withdrawn, the session continues, the widget shows it; a gesture opens a new activity. |
 | PluginHost restart | The lease ends, which only detaches the emitter: the session continues, the kernel keeps the publication, and the new lease sends the current snapshot. |
 | Plugin disabled or quarantined | The plugin is no longer `active`: sessions are disallowed, the service stops the session, the hot key is released, the UI goes. |
-| Late or repeated action | Start, stop, steps and display are absolute or idempotent; a stale extend is dropped by the broker's revision. |
+| Late or repeated action | Start, stop and display are absolute and idempotent; a stale step is dropped by the broker's revision. |
 | Stepper at a limit | The button is disabled; the service rejects an off-scale value anyway. |
 | Shortcut taken | `RegisterEventHotKey` fails; Settings say "Shortcut unavailable"; no silent fallback. |
 | Quit | Nothing waits on main; the system releases the process's assertions. |
@@ -169,18 +179,18 @@ Feature `awake`: `surfaces` widget (`2x1`, `1x1`) and `activity`; source `caffei
 
 **Unit tests (Swift Testing, test first).**
 
-- `CaffeinateServiceTests` with fake assertions, a test clock and in-memory preferences: start, stop, indefinite; extend and step without a gap; steps while off; display during a session; refused start and rollback; failed release retried; expiry and wake; session permission and a lease ending; shortcut toggle; no call made while the lock is held.
+- `CaffeinateServiceTests` with fake assertions, a test clock and in-memory preferences: start, stop, indefinite; steps without a gap; steps while off; display during a session; refused start and rollback; failed release retried; expiry and wake; session permission and a lease ending; shortcut toggle; no call made while the lock is held.
 - `CaffeinateDurationTests`: the scale, steps and limits.
 - `PluginCaffeinateStateTests`: event round trip, rejection of invalid fields.
-- `CaffeinatePluginTests`: documents for off, timed, indefinite and failure; no publication for an unchanged snapshot; activity withdrawn when off; no ＋15m for indefinite; stable node identities across publications.
+- `CaffeinatePluginTests`: documents for off, timed, indefinite and failure; no publication for an unchanged snapshot; activity withdrawn when off; three activity regions and no controls; the 2x2 face first in the `ViewThatFits`; the options page's controls and time node; stable node identities across publications.
 - Contract and kernel: activity regions and attributes validation; accepted actions carry their event; router create, update and remove of `PluginActivity`; arbitration against a native activity of higher relevance dropping Caffeinate to minimal.
 - Countdown: schedule boundaries; `2h`, `24m`, `4:59`, `0:00` across locales.
 
 **Manual, before merge.**
 
-- `pmset -g assertions` through start, extend, step and display: the right assertions, the timeout updated, no gap.
+- `pmset -g assertions` through start, step and display: the right assertions, the timeout updated, no gap.
 - Instruments (Time Profiler, Energy Log): nothing at rest; about one wake a minute above five minutes; about 0.2 % of a core below.
-- Compact, minimal and expanded with the notch closed and open, with Music playing, on an external display without a notch, with Reduce Motion and Increase Contrast, with VoiceOver.
+- Compact and minimal with the notch closed and open, with Music playing, on an external display without a notch, with Reduce Motion and Increase Contrast, with VoiceOver.
 
 **Delivery order.** Contract (state, duration, activity attributes, countdown node); accepted actions with their event; `CaffeinateService` and the shortcut; `RollingDigitsLabel` and the kernel countdown; activity routing; plugin and documents; Settings; docs (`content.md`, `manifest.md`, `README.md`); removal of the old controller, session, command and face.
 

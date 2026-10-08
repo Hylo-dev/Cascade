@@ -36,7 +36,7 @@ First-party plugins run in **PluginHost**, an XPC service bundled in Cascade, ea
 | --- | --- | --- | --- | --- |
 | `com.cascade.battery` | `BatteryPlugin` | Widget (2x1, 2x2, 1x1) | `power` | `power.battery` |
 | `com.cascade.clock` | `ClockPlugin` | Widget (2x2, 2x1, 1x1) | none | none |
-| `com.cascade.caffeinate` | `CaffeinatePlugin` | Widget (2x1, 1x1) with an options page, and an activity while a session runs | `caffeinate` | none |
+| `com.cascade.caffeinate` | `CaffeinatePlugin` | Widget (2x2, 2x1, 1x1) with an options page, and an activity while a session runs | `caffeinate` | none |
 | `com.cascade.bluetooth` | `BluetoothPlugin` | Notice | `bluetooth` | `bluetooth.device`, `bluetooth.battery` |
 | `com.cascade.power` | `ChargingPlugin` | Notice | `power` | `power.battery` |
 | `com.cascade.volume` | `VolumePlugin` | Notice | `volume` | `volume.level` |
