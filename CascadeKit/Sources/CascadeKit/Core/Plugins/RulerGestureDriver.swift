@@ -24,6 +24,11 @@ struct RulerGestureDriver {
     let released   : (Animation?) -> Void
     let cancelled  : () -> Void
 
+    /// deferCheck runs a block one main turn later, by default; a test runs it when it chooses.
+    var deferCheck : (@escaping () -> Void) -> Void = { block in
+        DispatchQueue.main.async(execute: block)
+    }
+
     /// changed follows a drag that has moved `translation` points: the ticks move, nothing is sent.
     func changed(translation: Double) {
         let before = interaction.wrappedValue
@@ -52,6 +57,26 @@ struct RulerGestureDriver {
     func adjust(_ direction: Int) {
         if let target = interaction.wrappedValue.adjust(direction, current: value.wrappedValue, scale: scale) {
             settle(on: target)
+        }
+    }
+
+    /// gestureStateReset is told that the drag's `GestureState` went back to false. That happens
+    /// on a normal end and on a cancel by the system, and SwiftUI does not say in which order it
+    /// runs this and `onEnded`. So it decides nothing at once: it notes which drag it saw and
+    /// looks again one main turn later. By then a real end has finished the drag and the check
+    /// finds nothing to do; a cancel, which has no end, is let go of without sending; and a
+    /// drag that began in between is another generation and is left alone.
+    func gestureStateReset() {
+        let seen = interaction.wrappedValue
+
+        guard seen.isDragging else { return }
+
+        deferCheck {
+            let now = interaction.wrappedValue
+
+            if now.isDragging, now.generation == seen.generation {
+                interrupted()
+            }
         }
     }
 

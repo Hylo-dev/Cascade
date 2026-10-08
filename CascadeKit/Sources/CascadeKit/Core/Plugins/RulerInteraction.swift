@@ -37,6 +37,10 @@ nonisolated struct RulerInteraction: Equatable {
     /// dragStart is the value shown when the drag began, nil while no drag is under way.
     private(set) var dragStart: Double?
 
+    /// generation counts the drags started, so a check made about one drag can tell, later,
+    /// that the drag it saw is gone and another one has taken its place.
+    private(set) var generation = 0
+
     var isDragging: Bool {
         dragStart != nil
     }
@@ -50,7 +54,8 @@ nonisolated struct RulerInteraction: Equatable {
     ) -> Double? {
         if dragStart == nil {
             guard abs(translation) >= Self.movementThreshold else { return nil }
-            dragStart = current
+            dragStart  = current
+            generation += 1
         }
 
         return RulerGeometry.dragged(

@@ -39,8 +39,9 @@ struct PluginRulerSlider: View {
     private var interaction = RulerInteraction()
 
     /// isHeld is true while a drag is under way. A `GestureState` resets by itself when the
-    /// system cancels the gesture, which `onEnded` never reports; that reset is how a lost
-    /// drag is noticed and let go.
+    /// system cancels the gesture, which `onEnded` never reports, but it resets on a normal end
+    /// too, in an order SwiftUI does not specify; the driver therefore looks again one main turn
+    /// after the reset, and drops only a drag that no `onEnded` finished (`gestureStateReset`).
     @GestureState
     private var isHeld = false
 
@@ -83,8 +84,8 @@ struct PluginRulerSlider: View {
             }
         }
         .onChange(of: isHeld) { wasHeld, isHeld in
-            if wasHeld, !isHeld, interaction.isDragging {
-                driver.interrupted()
+            if wasHeld, !isHeld {
+                driver.gestureStateReset()
             }
         }
         .onDisappear {

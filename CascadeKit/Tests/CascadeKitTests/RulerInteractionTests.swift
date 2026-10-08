@@ -119,6 +119,14 @@ struct RulerGestureTests {
         var scale       = RulerScale(minimum: 15, maximum: 1_440, step: 15, spacing: 13)
         var animations  = [Animation?]()
         var cancels     = 0
+        var deferred    = [() -> Void]()
+
+        /// runDeferred runs the checks the driver put off, as the next main turn would.
+        func runDeferred() {
+            let pending = deferred
+            deferred    = []
+            pending.forEach { $0() }
+        }
     }
 
     private struct Harness {
@@ -144,7 +152,8 @@ struct RulerGestureTests {
                 cancelled  : {
                     box.cancels += 1
                     store.cancelDrag(model)
-                }
+                },
+                deferCheck : { box.deferred.append($0) }
             )
         }
     }
@@ -301,5 +310,76 @@ struct RulerGestureTests {
         harness.driver.adjust(1)
 
         #expect(harness.sent.requests.map(\.value) == [.number(120)])
+    }
+
+    @Test
+    func aResetThatComesBeforeTheEndNeverEatsTheRelease() throws {
+        let harness = try harness()
+
+        harness.driver.changed(translation: -26)
+        harness.driver.gestureStateReset()
+        harness.driver.ended()
+        harness.box.runDeferred()
+
+        #expect(harness.sent.requests.map(\.value) == [.number(120)])
+        #expect(harness.box.cancels == 0)
+    }
+
+    @Test
+    func aResetThatComesAfterTheEndSchedulesNothing() throws {
+        let harness = try harness()
+
+        harness.driver.changed(translation: -26)
+        harness.driver.ended()
+        harness.driver.gestureStateReset()
+
+        #expect(harness.box.deferred.isEmpty)
+        #expect(harness.sent.requests.count == 1)
+    }
+
+    @Test
+    func aResetWithNoEndLetsGoOfTheDragOneTurnLaterWithoutSending() throws {
+        let harness = try harness()
+
+        harness.driver.changed(translation: -26)
+        harness.driver.gestureStateReset()
+
+        #expect(harness.model.isDragging)
+
+        harness.box.runDeferred()
+
+        #expect(harness.box.cancels == 1)
+        #expect(harness.sent.requests.isEmpty)
+        #expect(!harness.model.isDragging)
+        #expect(harness.model.optimistic == nil)
+    }
+
+    @Test
+    func aNewDragThatBeganBeforeTheDeferredCheckIsNotCancelled() throws {
+        let harness = try harness()
+
+        harness.driver.changed(translation: -26)
+        harness.driver.gestureStateReset()
+        harness.driver.ended()
+        harness.driver.changed(translation: -13)
+        harness.box.runDeferred()
+
+        #expect(harness.box.cancels == 0)
+        #expect(harness.model.isDragging)
+        #expect(harness.box.interaction.isDragging)
+
+        harness.driver.ended()
+
+        #expect(harness.sent.requests.count == 2)
+    }
+
+    @Test
+    func aResetWhileNothingIsDraggedSchedulesNothing() throws {
+        let harness = try harness()
+
+        harness.driver.changed(translation: 0.5)
+        harness.driver.gestureStateReset()
+
+        #expect(harness.box.deferred.isEmpty)
     }
 }
