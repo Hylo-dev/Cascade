@@ -329,9 +329,40 @@ struct PluginDocumentTests {
         .regions,
     ]
 
+    /// caseNumber numbers each case of the vocabulary with an exhaustive `switch` and no
+    /// `default`: a case added to `PluginNodeKind` fails to compile here until it is numbered, which
+    /// sends whoever adds it to this test to give it a sample in `everyKind` and to raise `caseCount`.
+    private static func caseNumber(_ kind: PluginNodeKind) -> Int {
+        switch kind {
+            case .vStack       : 0
+            case .hStack       : 1
+            case .zStack       : 2
+            case .viewThatFits : 3
+            case .spacer       : 4
+            case .text         : 5
+            case .symbol       : 6
+            case .asset        : 7
+            case .shape        : 8
+            case .date         : 9
+            case .clock        : 10
+            case .today        : 11
+            case .timer        : 12
+            case .timerProgress: 13
+            case .countdown    : 14
+            case .progress     : 15
+            case .button       : 16
+            case .toggle       : 17
+            case .slider       : 18
+            case .component    : 19
+            case .regions      : 20
+        }
+    }
+
+    private static let caseCount = 21
+
     @Test
     func everyNodeKindRoundTripsThroughJSON() throws {
-        #expect(Set(Self.everyKind.map(\.name)).count == 21)
+        #expect(Set(Self.everyKind.map(Self.caseNumber)) == Set(0..<Self.caseCount))
 
         for kind in Self.everyKind {
             let decoded = try JSONDecoder().decode(PluginNodeKind.self, from: JSONEncoder().encode(kind))

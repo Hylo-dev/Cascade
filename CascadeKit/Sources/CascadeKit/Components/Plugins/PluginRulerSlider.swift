@@ -36,7 +36,13 @@ struct PluginRulerSlider: View {
     let cancelled : () -> Void
 
     @State
-    private var interaction: RulerInteraction
+    private var interaction = RulerInteraction()
+
+    /// isHeld is true while a drag is under way. A `GestureState` resets by itself when the
+    /// system cancels the gesture, which `onEnded` never reports; that reset is how a lost
+    /// drag is noticed and let go.
+    @GestureState
+    private var isHeld = false
 
     @State
     private var labelCache = RulerLabelCache()
@@ -48,36 +54,6 @@ struct PluginRulerSlider: View {
     /// of an hour a comfortable thumb-width, and about twenty ticks, five hours, fit in the
     /// options page's 260 points.
     static let spacing = 13.0
-
-    init(
-        value     : Binding<Double>,
-        minimum   : Double,
-        maximum   : Double,
-        step      : Double,
-        labelEvery: Int,
-        labels    : PluginRulerLabels,
-        tint      : Color,
-        released  : @escaping (Animation?) -> Void,
-        cancelled : @escaping () -> Void
-    ) {
-        self.value       = value
-        self.minimum     = minimum
-        self.maximum     = maximum
-        self.step        = step
-        self.labelEvery  = labelEvery
-        self.labels      = labels
-        self.tint        = tint
-        self.released    = released
-        self.cancelled   = cancelled
-        _interaction     = State(
-            initialValue: RulerInteraction(
-                minimum: minimum,
-                maximum: maximum,
-                step   : step,
-                spacing: Self.spacing
-            )
-        )
-    }
 
     var body: some View {
         PluginRulerCanvas(
@@ -106,8 +82,13 @@ struct PluginRulerSlider: View {
                     break
             }
         }
+        .onChange(of: isHeld) { wasHeld, isHeld in
+            if wasHeld, !isHeld, interaction.isDragging {
+                driver.interrupted()
+            }
+        }
         .onDisappear {
-            driver.disappeared()
+            driver.interrupted()
         }
     }
 
@@ -116,6 +97,12 @@ struct PluginRulerSlider: View {
         RulerGestureDriver(
             interaction: $interaction,
             value      : value,
+            scale      : RulerScale(
+                minimum: minimum,
+                maximum: maximum,
+                step   : step,
+                spacing: Self.spacing
+            ),
             animation  : reduceMotion ? nil : .snappy,
             released   : released,
             cancelled  : cancelled
@@ -124,6 +111,9 @@ struct PluginRulerSlider: View {
 
     private var drag: some Gesture {
         DragGesture(minimumDistance: 0)
+            .updating($isHeld) { _, held, _ in
+                held = true
+            }
             .onChanged { gesture in
                 driver.changed(translation: gesture.translation.width)
             }

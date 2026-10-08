@@ -19,24 +19,28 @@ struct RulerGestureDriver {
 
     let interaction: Binding<RulerInteraction>
     let value      : Binding<Double>
+    let scale      : RulerScale
     let animation  : Animation?
     let released   : (Animation?) -> Void
     let cancelled  : () -> Void
 
     /// changed follows a drag that has moved `translation` points: the ticks move, nothing is sent.
     func changed(translation: Double) {
-        var next = interaction.wrappedValue
+        let before = interaction.wrappedValue
+        var next   = before
 
-        if let shown = next.change(translation: translation, current: value.wrappedValue) {
+        if let shown = next.change(translation: translation, current: value.wrappedValue, scale: scale) {
             value.wrappedValue = shown
         }
-        interaction.wrappedValue = next
+        if next != before {
+            interaction.wrappedValue = next
+        }
     }
 
     /// ended settles a drag on its nearest step and sends the one action; a tap sends nothing.
     func ended() {
         var next = interaction.wrappedValue
-        let target = next.end(current: value.wrappedValue)
+        let target = next.end(current: value.wrappedValue, scale: scale)
         interaction.wrappedValue = next
 
         if let target {
@@ -46,13 +50,15 @@ struct RulerGestureDriver {
 
     /// adjust is an accessibility step, `+1` or `-1`: one action per step, none at the range's end.
     func adjust(_ direction: Int) {
-        if let target = interaction.wrappedValue.adjust(direction, current: value.wrappedValue) {
+        if let target = interaction.wrappedValue.adjust(direction, current: value.wrappedValue, scale: scale) {
             settle(on: target)
         }
     }
 
-    /// disappeared ends a drag whose control left the screen, so it cannot stay held.
-    func disappeared() {
+    /// interrupted ends a drag that will never end by itself: its control left the screen, or
+    /// the system cancelled the gesture (a `@GestureState` that reset with no `onEnded`). It
+    /// lets go without sending, so the control does not stay held.
+    func interrupted() {
         var next = interaction.wrappedValue
 
         if next.cancel() {

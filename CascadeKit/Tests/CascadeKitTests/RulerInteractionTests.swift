@@ -13,17 +13,19 @@ import Testing
 @Suite
 struct RulerInteractionTests {
 
+    private let scale = RulerScale(minimum: 15, maximum: 1_440, step: 15, spacing: 13)
+
     private func interaction() -> RulerInteraction {
-        RulerInteraction(minimum: 15, maximum: 1_440, step: 15, spacing: 13)
+        RulerInteraction()
     }
 
     @Test
     func aTouchUnderAPointIsATap() {
         var ruler = interaction()
 
-        let right = ruler.change(translation: 0.9, current: 90)
-        let left  = ruler.change(translation: -0.9, current: 90)
-        let end   = ruler.end(current: 90)
+        let right = ruler.change(translation: 0.9, current: 90, scale: scale)
+        let left  = ruler.change(translation: -0.9, current: 90, scale: scale)
+        let end   = ruler.end(current: 90, scale: scale)
 
         #expect(right == nil)
         #expect(left == nil)
@@ -35,10 +37,10 @@ struct RulerInteractionTests {
     func aDragFollowsTheFingerAndEndsOnTheNearestStep() {
         var ruler = interaction()
 
-        let shown = ruler.change(translation: -19.5, current: 90)
+        let shown = ruler.change(translation: -19.5, current: 90, scale: scale)
         let held  = ruler.isDragging
-        let later = ruler.change(translation: -26, current: shown ?? 0)
-        let end   = ruler.end(current: shown ?? 0)
+        let later = ruler.change(translation: -26, current: shown ?? 0, scale: scale)
+        let end   = ruler.end(current: shown ?? 0, scale: scale)
 
         #expect(shown == 112.5)
         #expect(held)
@@ -50,8 +52,8 @@ struct RulerInteractionTests {
     func theStartOfTheDragIsRememberedNotTheLatestValue() {
         var ruler = interaction()
 
-        _ = ruler.change(translation: -13, current: 90)
-        let shown = ruler.change(translation: -26, current: 105)
+        _ = ruler.change(translation: -13, current: 90, scale: scale)
+        let shown = ruler.change(translation: -26, current: 105, scale: scale)
 
         #expect(shown == 120)
     }
@@ -60,8 +62,8 @@ struct RulerInteractionTests {
     func aDragIsClampedToTheRangeAndSnapsInside() {
         var ruler = interaction()
 
-        let shown = ruler.change(translation: 100_000, current: 90)
-        let end   = ruler.end(current: shown ?? 0)
+        let shown = ruler.change(translation: 100_000, current: 90, scale: scale)
+        let end   = ruler.end(current: shown ?? 0, scale: scale)
 
         #expect(shown == 15)
         #expect(end == 15)
@@ -70,10 +72,10 @@ struct RulerInteractionTests {
     @Test
     func endingTwiceSendsOnce() {
         var ruler = interaction()
-        _ = ruler.change(translation: -13, current: 90)
+        _ = ruler.change(translation: -13, current: 90, scale: scale)
 
-        let first  = ruler.end(current: 105)
-        let second = ruler.end(current: 105)
+        let first  = ruler.end(current: 105, scale: scale)
+        let second = ruler.end(current: 105, scale: scale)
 
         #expect(first == 105)
         #expect(second == nil)
@@ -83,11 +85,11 @@ struct RulerInteractionTests {
     func aStepMovesByOneStepAndStopsAtTheEnds() {
         let ruler = interaction()
 
-        #expect(ruler.adjust(1, current: 90) == 105)
-        #expect(ruler.adjust(-1, current: 90) == 75)
-        #expect(ruler.adjust(1, current: 1_440) == nil)
-        #expect(ruler.adjust(-1, current: 15) == nil)
-        #expect(ruler.adjust(1, current: 1_430) == 1_440)
+        #expect(ruler.adjust(1, current: 90, scale: scale) == 105)
+        #expect(ruler.adjust(-1, current: 90, scale: scale) == 75)
+        #expect(ruler.adjust(1, current: 1_440, scale: scale) == nil)
+        #expect(ruler.adjust(-1, current: 15, scale: scale) == nil)
+        #expect(ruler.adjust(1, current: 1_430, scale: scale) == 1_440)
     }
 
     @Test
@@ -95,7 +97,7 @@ struct RulerInteractionTests {
         var ruler = interaction()
 
         let idle = ruler.cancel()
-        _ = ruler.change(translation: -13, current: 90)
+        _ = ruler.change(translation: -13, current: 90, scale: scale)
         let held = ruler.cancel()
 
         #expect(!idle)
@@ -113,7 +115,8 @@ struct RulerGestureTests {
 
     private final class Box {
 
-        var interaction = RulerInteraction(minimum: 15, maximum: 1_440, step: 15, spacing: 13)
+        var interaction = RulerInteraction()
+        var scale       = RulerScale(minimum: 15, maximum: 1_440, step: 15, spacing: 13)
         var animations  = [Animation?]()
         var cancels     = 0
     }
@@ -132,6 +135,7 @@ struct RulerGestureTests {
                     get: { model.optimistic?.number ?? 90 },
                     set: { store.drag($0, on: model) }
                 ),
+                scale      : box.scale,
                 animation  : nil,
                 released   : { animation in
                     box.animations.append(animation)
@@ -236,13 +240,13 @@ struct RulerGestureTests {
     }
 
     @Test
-    func aDragCancelledByTheViewLeavingSendsNothingAndLetsGo() throws {
+    func aDragInterruptedByTheViewLeavingOrTheSystemSendsNothingAndLetsGo() throws {
         let harness = try harness()
 
         harness.driver.changed(translation: -26)
         #expect(harness.model.isDragging)
 
-        harness.driver.disappeared()
+        harness.driver.interrupted()
 
         #expect(harness.sent.requests.isEmpty)
         #expect(harness.box.cancels == 1)
@@ -252,11 +256,50 @@ struct RulerGestureTests {
     }
 
     @Test
-    func disappearingWithoutADragDoesNothing() throws {
+    func interruptingWithoutADragDoesNothing() throws {
         let harness = try harness()
 
-        harness.driver.disappeared()
+        harness.driver.interrupted()
 
         #expect(harness.box.cancels == 0)
+    }
+
+    @Test
+    func aReleaseUsesTheRangeAndGridOfTheMomentNotOfTheFirstDrag() throws {
+        let harness = try harness()
+
+        harness.driver.changed(translation: -13)
+        harness.driver.ended()
+        #expect(harness.sent.requests.last?.value == .number(105))
+
+        // A publication re-anchors the range and coarsens the grid: 60 ... 600 by 30.
+        harness.box.scale = RulerScale(minimum: 60, maximum: 600, step: 30, spacing: 13)
+        // The value shown, 105, is off the new grid; one step of 30 later it lands on it.
+        harness.driver.changed(translation: -13)
+        harness.driver.ended()
+
+        #expect(harness.sent.requests.map(\.value) == [.number(105), .number(150)])
+    }
+
+    @Test
+    func aRangeThatChangesMidDragClampsAndSnapsTheReleaseToTheNewOne() throws {
+        let harness = try harness()
+
+        harness.driver.changed(translation: -13)
+        harness.box.scale = RulerScale(minimum: 15, maximum: 100, step: 25, spacing: 13)
+        harness.driver.changed(translation: -130)
+        harness.driver.ended()
+
+        #expect(harness.sent.requests.map(\.value) == [.number(90)])
+    }
+
+    @Test
+    func aStepUsesTheCurrentGridToo() throws {
+        let harness = try harness()
+        harness.box.scale = RulerScale(minimum: 0, maximum: 300, step: 30, spacing: 13)
+
+        harness.driver.adjust(1)
+
+        #expect(harness.sent.requests.map(\.value) == [.number(120)])
     }
 }
