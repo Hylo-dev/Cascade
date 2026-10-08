@@ -106,7 +106,7 @@ struct CaffeinatePluginTests {
     }
 
     @Test
-    func onPublishesBothAndTheActivityHasFourRegions() throws {
+    func onPublishesBothAndTheActivityHasThreeRegions() throws {
         let output   = try send(timed(), to: plugin())
         let activity = try #require(activity(output))
         let root     = try #require(activity.document?.root)
@@ -114,7 +114,7 @@ struct CaffeinatePluginTests {
         #expect(output.publications.count == 2)
         #expect(widget(output) != nil)
         #expect(root.kind == .regions)
-        #expect(root.children.count == 4)
+        #expect(root.children.count == 3)
         #expect(activity.feature == CaffeinatePlugin.feature)
         #expect(activity.activity?.relevance == 0.3)
     }
@@ -243,18 +243,35 @@ struct CaffeinatePluginTests {
     }
 
     @Test
-    func indefiniteHasNoExtendAndCountsUp() throws {
-        let state    = indefinite()
-        let output   = try send(state, to: plugin())
-        let root     = try #require(activity(output)?.document?.root)
-        let entries  = try nodes(activity(output))
-        let started  = try #require(state.startedAt)
+    func indefiniteActivityIsTheGlyphAloneAndTheOptionsPageCountsUp() throws {
+        let state   = indefinite()
+        let output  = try send(state, to: plugin())
+        let root    = try #require(activity(output)?.document?.root)
+        let started = try #require(state.startedAt)
+        let options = try nodes(PluginPublication(
+            feature : CaffeinatePlugin.feature,
+            surface : .widget,
+            document: PluginDocument(root: try #require(widget(output)?.document?.optionsRoot))
+        ))
 
+        #expect(root.children.count == 3)
         #expect(root.children[1].kind == .spacer(minLength: 0))
-        #expect(!entries.contains { $0.kind == .button(action: "caffeinate.extend") })
-        #expect(entries.contains { $0.kind == .timer(start: started, end: started.addingTimeInterval(365 * 86_400), countsDown: false) })
-        #expect(texts(entries).contains("active for"))
-        #expect(!entries.contains { if case .countdown = $0.kind { true } else { false } })
+        #expect(options.contains { $0.kind == .timer(start: started, end: started.addingTimeInterval(365 * 86_400), countsDown: false) })
+        #expect(texts(options).contains("active for"))
+        #expect(!options.contains { if case .countdown = $0.kind { true } else { false } })
+    }
+
+    @Test
+    func theActivityHasNoControlsAndNeverAnExpandedRegion() throws {
+        for state in [timed(), indefinite()] {
+            let output  = try send(state, to: plugin())
+            let entries = try nodes(activity(output))
+
+            #expect(controls(entries).isEmpty)
+            #expect(!entries.contains { if case .button = $0.kind { true } else { false } })
+            #expect(!entries.contains { if case .timer = $0.kind { true } else { false } })
+            #expect(try #require(activity(output)?.document?.root).children.count == 3)
+        }
     }
 
     /// kinds lists a subtree's node kinds, depth first, the node itself included.
@@ -269,64 +286,130 @@ struct CaffeinatePluginTests {
         }
     }
 
-    /// anIndefiniteCountUpRunsPastADay keeps "active for" counting after 24 hours: the 2x1 face
-    /// and the expanded activity both count in an interval far longer than a day.
+    /// anIndefiniteCountUpRunsPastADay keeps "active for" counting after 24 hours: the 2x2 and
+    /// 2x1 faces and the options page all count in an interval far longer than a day.
     @Test
     func anIndefiniteCountUpRunsPastADay() throws {
-        let output = try send(indefinite(), to: plugin())
-        let face   = try #require(widget(output)?.document?.root)
-        let island = try #require(activity(output)?.document?.root)
-        let large  = try #require(face.children.first)
+        let output  = try send(indefinite(), to: plugin())
+        let face    = try #require(widget(output)?.document?.root)
+        let options = try #require(widget(output)?.document?.optionsRoot)
+        let medium  = try #require(face.children.first)
+        let large   = try #require(face.children.last?.children.first)
 
-        #expect(!countUpLengths(large).isEmpty)
-        #expect(countUpLengths(large).allSatisfy { $0 > 86_400 })
-        #expect(!countUpLengths(island.children[3]).isEmpty)
-        #expect(countUpLengths(island.children[3]).allSatisfy { $0 > 86_400 })
+        for (name, node) in [("2x2", medium), ("2x1", large), ("options", options)] {
+            #expect(!countUpLengths(node).isEmpty, "\(name)")
+            #expect(countUpLengths(node).allSatisfy { $0 > 86_400 }, "\(name)")
+        }
     }
 
+    /// theOptionsTimeCountsDownWithTheKernelTimer: the big time is the kernel's timer node, and
+    /// the font and the tint sit on that node, where the kernel reads them.
     @Test
-    func theOptionsStepperShowsTheTimeLeftInHoursAndMinutes() throws {
+    func theOptionsTimeCountsDownWithTheKernelTimer() throws {
         let state   = timed(minutesLeft: 110)
         let ends    = try #require(state.endsAt)
         let output  = try send(state, to: plugin())
         let options = try #require(widget(output)?.document?.optionsRoot)
         let face    = try #require(widget(output)?.document?.root)
+        let entries = try nodes(PluginPublication(
+            feature : CaffeinatePlugin.feature,
+            surface : .widget,
+            document: PluginDocument(root: options)
+        ))
 
-        #expect(kinds(options).contains(.countdown(end: ends, style: .hoursMinutes)))
+        #expect(!kinds(options).contains(.countdown(end: ends, style: .hoursMinutes)))
         #expect(!kinds(options).contains(.countdown(end: ends, style: .compact)))
         #expect(kinds(face).contains(.countdown(end: ends, style: .compact)))
+
+        let time = try #require(entries.first { $0.kind == .timer(start: Self.started, end: ends, countsDown: true) })
+        #expect(time.modifiers.contains(.font(.system(size: 26, weight: .semibold, design: .rounded).monospacedDigit())))
+        #expect(time.modifiers.contains(.foregroundStyle(.color(Self.amber))))
     }
 
     @Test
-    func theExpandedActivityOffersStopAndExtendAndTheLargeTime() throws {
-        let state   = timed(minutesLeft: 24)
-        let output  = try send(state, to: plugin())
-        let entries = try nodes(activity(output))
-        let ends    = try #require(state.endsAt)
+    func theOffTimeIsWhiteAndShowsTheNextDuration() throws {
+        let output  = try send(off(nextDuration: .minutes(90)), to: plugin())
+        let options = try #require(widget(output)?.document?.optionsRoot)
+        let entries = try nodes(PluginPublication(
+            feature : CaffeinatePlugin.feature,
+            surface : .widget,
+            document: PluginDocument(root: options)
+        ))
+        let time    = try #require(entries.first { $0.kind == .text("1h 30m") })
 
-        #expect(entries.contains { $0.kind == .toggle(isOn: true, action: "caffeinate.stop") })
-        #expect(entries.contains { $0.kind == .button(action: "caffeinate.extend") })
-        #expect(entries.contains { $0.kind == .timer(start: Self.started, end: ends, countsDown: true) })
-        #expect(entries.contains { $0.kind == .date(ends, style: .time) })
-        #expect(texts(entries).contains("until"))
-
-        let large = try #require(entries.first { $0.kind == .timer(start: Self.started, end: ends, countsDown: true) })
-        #expect(large.modifiers.contains(.font(.system(size: 26, weight: .semibold, design: .rounded).monospacedDigit())))
-        #expect(large.modifiers.contains(.foregroundStyle(.color(Self.amber))))
+        #expect(time.modifiers.contains(.font(.system(size: 26, weight: .semibold, design: .rounded).monospacedDigit())))
+        #expect(time.modifiers.contains(.foregroundStyle(.color(.white))))
+        #expect(texts(entries).contains("Next session"))
+        #expect(!texts(entries).contains("until"))
     }
 
+    /// theOptionsPageIsOneRowOfTwoRoundButtonsAndAStepper checks the Timer-style layout by what
+    /// it contains: Start/Stop and Display captions, the two switches, − and +, and no ＋15m.
     @Test
-    func extendIsDimmedNearTheTwentyFourHourCap() throws {
-        func extendOpacity(minutesLeft: Double) throws -> Bool {
-            let output = try send(timed(minutesLeft: minutesLeft), to: plugin())
-            let extend = try #require(try nodes(activity(output)).first { $0.kind == .button(action: "caffeinate.extend") })
+    func theOptionsPageIsOneRowOfTwoRoundButtonsAndAStepper() throws {
+        func optionsEntries(_ state: PluginCaffeinateState) throws -> [PluginNodeTable.Entry] {
+            let output = try send(state, to: plugin())
 
-            return extend.modifiers.contains(.opacity(0.35))
+            return try nodes(PluginPublication(
+                feature : CaffeinatePlugin.feature,
+                surface : .widget,
+                document: PluginDocument(root: try #require(widget(output)?.document?.optionsRoot))
+            ))
         }
 
-        #expect(try extendOpacity(minutesLeft: 60) == false)
-        #expect(try extendOpacity(minutesLeft: 1_425) == true)
-        #expect(try extendOpacity(minutesLeft: 1_440) == true)
+        let idle = try optionsEntries(off())
+        #expect(idle.contains { $0.id.rawValue == "#power.options:toggle" && $0.kind == .toggle(isOn: false, action: "caffeinate.start") })
+        #expect(idle.contains { $0.id.rawValue == "#display:toggle" && $0.kind == .toggle(isOn: true, action: "caffeinate.display") })
+        #expect(idle.contains { $0.id.rawValue == "#duration.down:button" })
+        #expect(idle.contains { $0.id.rawValue == "#duration.up:button" })
+        #expect(symbols(idle).isSuperset(of: ["play.fill", "stop.fill", "display", "moon.zzz"]))
+        #expect(Set(texts(idle)).isSuperset(of: ["Start", "Stop", "Display"]))
+        #expect(!idle.contains { $0.kind == .button(action: "caffeinate.extend") })
+
+        let running = try optionsEntries(timed())
+        #expect(running.contains { $0.id.rawValue == "#power.options:toggle" && $0.kind == .toggle(isOn: true, action: "caffeinate.stop") })
+        #expect(!running.contains { $0.kind == .button(action: "caffeinate.extend") })
+    }
+
+    @Test
+    func theWidgetOffersA2x2FaceFirstAndThe2x1And1x1FacesAfterIt() throws {
+        let face = try #require(widget(try send(timed(), to: plugin()))?.document?.root)
+
+        #expect(face.kind == .viewThatFits(axes: .vertical))
+        try #require(face.children.count == 2)
+
+        let medium = face.children[0]
+        let rest   = face.children[1]
+        #expect(rest.kind == .viewThatFits(axes: .horizontal))
+        #expect(rest.children.count == 2)
+
+        let mediumEntries = PluginNodeTable(try PluginDocument(root: medium)).entries
+        #expect(mediumEntries.contains { $0.id.rawValue == "#power.medium:toggle" && $0.kind == .toggle(isOn: true, action: "caffeinate.stop") })
+        #expect(mediumEntries.contains { $0.id.rawValue == "#options:button" && $0.kind == .button(action: "caffeinate.options") })
+        #expect(texts(mediumEntries).contains("Caffeinate"))
+        #expect(!mediumEntries.contains { $0.id.rawValue == "#power.large:toggle" })
+        #expect(!kinds(rest.children[1]).contains(.text("Caffeinate")))
+    }
+
+    @Test
+    func the2x2FaceSaysErrorOnARefusedStartAndKeepsTheSessionOnARefusedExtension() throws {
+        let refused = PluginCaffeinateState(failure: .assertionRefused(-5))
+        let medium  = try #require(widget(try send(refused, to: plugin()))?.document?.root.children.first)
+        let entries = PluginNodeTable(try PluginDocument(root: medium)).entries
+        #expect(texts(entries).contains("Error"))
+        #expect(symbols(entries).contains("exclamationmark.triangle.fill"))
+
+        let extension_ = PluginCaffeinateState(
+            startedAt        : Self.started,
+            endsAt           : Self.now.addingTimeInterval(1_440),
+            activityStartedAt: Self.started,
+            failure          : .extensionRefused(5)
+        )
+        let running = try #require(widget(try send(extension_, to: plugin()))?.document?.root.children.first)
+        let ends    = try #require(extension_.endsAt)
+        #expect(kinds(running).contains(.countdown(end: ends, style: .compact)))
+        #expect(PluginNodeTable(try PluginDocument(root: running)).entries.contains { $0.kind == .symbol(name: "exclamationmark.triangle.fill") })
+        #expect(!kinds(running).contains(.text("Error")))
     }
 
     @Test
@@ -373,17 +456,15 @@ struct CaffeinatePluginTests {
         #expect(idle == (try widgetControls(timed())))
         #expect(idle == (try widgetControls(indefinite())))
         #expect(idle == (try widgetControls(PluginCaffeinateState(failure: .assertionRefused(-1)))))
-        for id in ["power.large", "power.small", "power.options"] {
+        for id in ["power.medium", "power.large", "power.small", "power.options"] {
             #expect(idle.contains(PluginNodeID(rawValue: "#\(id):toggle")))
         }
-        for id in ["duration.down", "duration.up", "options"] {
+        for id in ["duration.down", "duration.up", "options", "options.large"] {
             #expect(idle.contains(PluginNodeID(rawValue: "#\(id):button")))
         }
         #expect(idle.contains(PluginNodeID(rawValue: "#display:toggle")))
 
-        let expanded = controls(try nodes(activity(try send(timed(), to: plugin()))))
-        #expect(expanded.contains(PluginNodeID(rawValue: "#power.activity:toggle")))
-        #expect(expanded.contains(PluginNodeID(rawValue: "#extend:button")))
+        #expect(controls(try nodes(activity(try send(timed(), to: plugin())))).isEmpty)
     }
 
     @Test
@@ -391,11 +472,11 @@ struct CaffeinatePluginTests {
         let plugin = plugin()
 
         let idle = try nodes(widget(try send(off(), to: plugin)))
-        #expect(idle.filter { $0.kind == .toggle(isOn: false, action: "caffeinate.start") }.count == 3)
+        #expect(idle.filter { $0.kind == .toggle(isOn: false, action: "caffeinate.start") }.count == 4)
         #expect(idle.contains { $0.kind == .button(action: "caffeinate.options") })
 
         let running = try nodes(widget(try send(timed(), to: plugin)))
-        #expect(running.filter { $0.kind == .toggle(isOn: true, action: "caffeinate.stop") }.count == 3)
+        #expect(running.filter { $0.kind == .toggle(isOn: true, action: "caffeinate.stop") }.count == 4)
         #expect(running.contains { $0.kind == .toggle(isOn: true, action: "caffeinate.display") })
     }
 
@@ -446,12 +527,13 @@ struct CaffeinatePluginTests {
     }
 
     @Test
-    func aRunningStepperTicksWithTheKernelsCountdown() throws {
+    func aRunningWidgetTicksWithTheKernelsCountdownAndTimer() throws {
         let state   = timed(minutesLeft: 24)
         let ends    = try #require(state.endsAt)
         let entries = try nodes(widget(try send(state, to: plugin())))
 
         #expect(entries.contains { $0.kind == .countdown(end: ends, style: .compact) })
+        #expect(entries.contains { $0.kind == .timer(start: Self.started, end: ends, countsDown: true) })
         #expect(entries.contains { $0.kind == .date(ends, style: .time) })
     }
 
@@ -480,8 +562,8 @@ struct CaffeinatePluginTests {
         let page    = texts(entries)
 
         #expect(entries.contains { $0.kind == .countdown(end: ends, style: .compact) })
-        #expect(entries.contains { $0.kind == .date(ends, style: .time) })
-        #expect(page.contains("Awake until"))
+        #expect(entries.contains { $0.kind == .timer(start: Self.started, end: ends, countsDown: true) })
+        #expect(!entries.contains { $0.kind == .date(ends, style: .time) })
         #expect(page.contains("Couldn't extend (error 5)"))
         #expect(!page.contains("Error"))
         #expect(!page.contains { $0.hasPrefix("Couldn't prevent sleep") })
@@ -494,8 +576,8 @@ struct CaffeinatePluginTests {
         let ends    = try #require(state.endsAt)
         let entries = try nodes(widget(try send(state, to: plugin())))
 
-        #expect(texts(entries).contains("Awake until"))
-        #expect(entries.filter { $0.kind == .date(ends, style: .time) }.count >= 2)
+        #expect(texts(entries).contains("until"))
+        #expect(entries.filter { $0.kind == .date(ends, style: .time) }.count == 1)
     }
 
     @Test

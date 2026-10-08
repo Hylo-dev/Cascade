@@ -71,12 +71,12 @@ struct FirstPartyPluginsTests {
         let feature  = try #require(manifest.features.first)
 
         #expect(feature.id == "awake")
-        #expect(feature.surfaces.widget?.sizes == [try PluginWidgetSize(columns: 2, rows: 1), try PluginWidgetSize(columns: 1, rows: 1)])
+        #expect(feature.surfaces.widget?.sizes == [try PluginWidgetSize(columns: 2, rows: 2), try PluginWidgetSize(columns: 2, rows: 1), try PluginWidgetSize(columns: 1, rows: 1)])
         #expect(feature.surfaces.activity != nil)
         #expect(feature.supportsFullscreen)
         #expect(
             Set(feature.actions) == [
-                "caffeinate.start", "caffeinate.stop", "caffeinate.extend", "caffeinate.duration.up",
+                "caffeinate.start", "caffeinate.stop", "caffeinate.duration.up",
                 "caffeinate.duration.down", "caffeinate.display", "caffeinate.options",
             ]
         )

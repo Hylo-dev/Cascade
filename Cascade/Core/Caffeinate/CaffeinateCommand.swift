@@ -15,7 +15,6 @@ nonisolated enum CaffeinateCommand: Equatable, Sendable {
     case start
     case stop
     case toggle
-    case extend
     case stepUp
     case stepDown
     case setKeepsDisplayAwake(Bool)
@@ -47,7 +46,6 @@ nonisolated enum CaffeinateCommand: Equatable, Sendable {
         switch event.action {
             case "caffeinate.start"        : self = .start
             case "caffeinate.stop"         : self = .stop
-            case "caffeinate.extend"       : self = .extend
             case "caffeinate.duration.up"  : self = .stepUp
             case "caffeinate.duration.down": self = .stepDown
 

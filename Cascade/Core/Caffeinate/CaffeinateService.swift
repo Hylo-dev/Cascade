@@ -39,14 +39,6 @@ nonisolated final class CaffeinateService: Sendable {
     /// under the user's tap.
     static let activityLifetime: TimeInterval = 8 * 60 * 60
 
-    /// extensionStep is what `extend` adds to the end of a timed session.
-    static let extensionStep: TimeInterval = 15 * 60
-
-    /// maximumRemaining is the longest an assertion may still have to run, the IOKit timeout limit
-    /// and the top of the duration scale. Extending stops at it, so the published end never outruns
-    /// the assertion that backs it.
-    static let maximumRemaining: TimeInterval = 86_400
-
     /// maximumStaleIdentifiers bounds the identifiers whose release failed and are retried, so an
     /// identifier the system will never accept again cannot grow the list for ever.
     private static let maximumStaleIdentifiers = 16
@@ -307,7 +299,7 @@ nonisolated final class CaffeinateService: Sendable {
             session.failure = nil
 
             // A session whose end has passed but whose timer has not fired yet is over; ending
-            // it first means a gesture never extends, steps or toggles a dead session.
+            // it first means a gesture never steps or toggles a dead session.
             let hadExpired = session.hasExpired(at: now)
             if hadExpired {
                 releaseEverything(of: &session)
@@ -330,9 +322,6 @@ nonisolated final class CaffeinateService: Sendable {
                         start(&session, now: now)
                     }
 
-                case .extend:
-                    extend(&session, now: now)
-
                 case .stepUp:
                     step(&session, now: now, up: true)
 
@@ -352,7 +341,7 @@ nonisolated final class CaffeinateService: Sendable {
 
     /// expireNow ends the session if, and only if, it still exists and its end has passed. The
     /// check runs on the copy taken at the top of the transaction, which is the same instant a
-    /// racing extend either already ran (the end moved, nothing is due) or has yet to run (it
+    /// racing step either already ran (the end moved, nothing is due) or has yet to run (it
     /// will see the session off). A fire that finds nothing due programs the timer again, since
     /// a timer fires once.
     private func expireNow() {
@@ -405,23 +394,6 @@ nonisolated final class CaffeinateService: Sendable {
         session.startedAt         = now
         session.endsAt            = seconds.map { now + $0 }
         session.activityStartedAt = now
-    }
-
-    /// extend adds fifteen minutes to a timed session's end, up to the day an assertion can run
-    /// for. An indefinite or stopped session has no end to move, and one already at the limit has
-    /// nothing to add: both are no-ops.
-    private func extend(
-        _ session: inout Session,
-        now      : Date
-    ) {
-        guard session.isActive, let endsAt = session.endsAt else { return }
-
-        let newEnd = min(endsAt + Self.extensionStep, now + Self.maximumRemaining)
-        guard newEnd > endsAt else { return }
-
-        if let code = retime(&session, to: newEnd, now: now) {
-            session.failure = .extensionRefused(code)
-        }
     }
 
     /// step moves the duration one step on the scale. While off it moves the next duration. While

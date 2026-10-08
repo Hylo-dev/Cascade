@@ -335,47 +335,31 @@ struct CaffeinateServiceTests {
         #expect(harness.assertions.liveCount == 0)
     }
 
-    // MARK: Extend
+    // MARK: Lengthening by a step
 
     @Test
-    func extendMovesBothTimeoutsAndTheEndByFifteenMinutes() {
+    func steppingUpMovesBothTimeoutsAndTheEnd() {
         let harness = CaffeinateHarness(nextDuration: .minutes(30))
         harness.perform(.start)
         harness.clock.advance(by: 300)
         harness.assertions.clearCalls()
 
-        harness.perform(.extend)
+        harness.perform(.stepUp)
 
-        let remaining: TimeInterval = 1800 + 900 - 300
+        let remaining: TimeInterval = 45 * 60
         #expect(harness.assertions.calls == [.setTimeout(.system, remaining), .setTimeout(.display, remaining)])
-        #expect(harness.service.state.endsAt == origin.addingTimeInterval(2700))
+        #expect(harness.service.state.endsAt == origin.addingTimeInterval(300 + remaining))
         #expect(harness.service.state.startedAt == origin)
     }
 
     @Test
-    func extendIsANoOpWhileOffOrIndefinite() {
-        let harness = CaffeinateHarness(nextDuration: .indefinite)
-
-        harness.perform(.extend)
-        #expect(harness.emitted.count == 0)
-
-        harness.perform(.start)
-        harness.assertions.clearCalls()
-        harness.emitted.clear()
-        harness.perform(.extend)
-
-        #expect(harness.assertions.calls.isEmpty)
-        #expect(harness.emitted.count == 0)
-    }
-
-    @Test
-    func extendAfterExpiryDoesNothing() {
+    func steppingUpAfterExpiryDoesNothing() {
         let harness = CaffeinateHarness(nextDuration: .minutes(15))
         harness.perform(.start)
         harness.clock.advance(by: 901)
         harness.assertions.clearCalls()
 
-        harness.perform(.extend)
+        harness.perform(.stepUp)
 
         #expect(!harness.assertions.calls.contains { if case .setTimeout = $0 { true } else { false } })
         #expect(!harness.service.state.isActive)
@@ -384,21 +368,21 @@ struct CaffeinateServiceTests {
     }
 
     @Test
-    func extendNeverLetsTheSessionPassTwentyFourHours() {
+    func steppingUpNeverLetsTheSessionPassTwentyFourHours() {
         let harness = CaffeinateHarness(nextDuration: .minutes(1440))
         harness.perform(.start)
         harness.assertions.clearCalls()
 
-        harness.perform(.extend)
+        harness.perform(.stepUp)
 
         #expect(harness.assertions.calls.isEmpty)
         #expect(harness.service.state.endsAt == origin.addingTimeInterval(86_400))
 
         harness.clock.advance(by: 600)
-        harness.perform(.extend)
+        harness.perform(.stepUp)
 
-        #expect(harness.service.state.endsAt == origin.addingTimeInterval(86_400 + 600))
-        #expect(harness.assertions.calls == [.setTimeout(.system, 86_400), .setTimeout(.display, 86_400)])
+        #expect(harness.service.state.endsAt == origin.addingTimeInterval(86_400))
+        #expect(harness.assertions.calls.isEmpty)
     }
 
     // MARK: Steps
@@ -570,13 +554,13 @@ struct CaffeinateServiceTests {
     }
 
     @Test
-    func aRefusedExtensionKeepsTheSessionAndItsEndAndPublishesTheFailure() {
+    func aRefusedStepKeepsTheSessionAndItsEndAndPublishesTheFailure() {
         let harness = CaffeinateHarness(nextDuration: .minutes(30))
         harness.perform(.start)
         harness.assertions.refuseSetTimeout(.display, code: 12)
         harness.assertions.clearCalls()
 
-        harness.perform(.extend)
+        harness.perform(.stepUp)
 
         let state = harness.service.state
         #expect(state.endsAt  == origin.addingTimeInterval(1800))
@@ -678,7 +662,7 @@ struct CaffeinateServiceTests {
         harness.perform(.start)
         #expect(harness.service.armedDeadline == origin.addingTimeInterval(900))
 
-        harness.perform(.extend)
+        harness.perform(.stepUp)
         #expect(harness.service.armedDeadline == origin.addingTimeInterval(1800))
 
         harness.perform(.stepDown)
@@ -754,7 +738,6 @@ struct CaffeinateServiceTests {
         let harness = CaffeinateHarness(nextDuration: .minutes(30))
 
         harness.perform(.stop)
-        harness.perform(.extend)
         harness.perform(.setKeepsDisplayAwake(true))
         #expect(harness.emitted.count == 0)
 
@@ -764,7 +747,7 @@ struct CaffeinateServiceTests {
         harness.perform(.start)
         #expect(harness.emitted.count == 1)
 
-        harness.perform(.extend)
+        harness.perform(.stepUp)
         #expect(harness.emitted.count == 2)
 
         harness.perform(.stop)
@@ -802,7 +785,7 @@ struct CaffeinateServiceTests {
         #expect(harness.assertions.releasedCount == 0)
         #expect(harness.emitted.count == 0)
 
-        harness.perform(.extend)
+        harness.perform(.stepUp)
         #expect(harness.service.state.endsAt == origin.addingTimeInterval(2700))
         #expect(harness.emitted.count == 0)
 
@@ -839,7 +822,7 @@ struct CaffeinateServiceTests {
         harness.service.drain()
         harness.emitted.clear()
 
-        for command in [CaffeinateCommand.start, .toggle, .extend, .stepUp, .stepDown, .stop] {
+        for command in [CaffeinateCommand.start, .toggle, .stepUp, .stepDown, .stop] {
             harness.service.perform(command)
         }
         harness.service.drain()
@@ -943,7 +926,6 @@ struct CaffeinateServiceTests {
         let baseline = harness.preferences.writes
 
         harness.perform(.start)
-        harness.perform(.extend)
         harness.perform(.stop)
         harness.perform(.setKeepsDisplayAwake(true))
         #expect(harness.preferences.writes == baseline)
@@ -993,7 +975,7 @@ struct CaffeinateServiceTests {
     @Test
     func concurrentCommandsNeverLeakAnAssertion() {
         let harness  = CaffeinateHarness(nextDuration: .minutes(30))
-        let commands: [CaffeinateCommand] = [.start, .extend, .stop, .toggle, .stepUp, .setKeepsDisplayAwake(false), .setKeepsDisplayAwake(true)]
+        let commands: [CaffeinateCommand] = [.start, .stop, .toggle, .stepUp, .stepDown, .setKeepsDisplayAwake(false), .setKeepsDisplayAwake(true)]
 
         DispatchQueue.concurrentPerform(iterations: 4) { thread in
             for index in 0 ..< 50 {
@@ -1019,12 +1001,12 @@ struct CaffeinateServiceTests {
         let harness = CaffeinateHarness(nextDuration: .minutes(30))
 
         harness.perform(.start)
-        harness.perform(.extend)
+        harness.perform(.stepUp)
         harness.perform(.stepDown)
         harness.perform(.setKeepsDisplayAwake(false))
         harness.perform(.setKeepsDisplayAwake(true))
         harness.assertions.refuseSetTimeout(.display)
-        harness.perform(.extend)
+        harness.perform(.stepUp)
         harness.assertions.allowEverything()
         harness.perform(.stop)
 
@@ -1042,7 +1024,7 @@ struct CaffeinateServiceTests {
 
         #expect(try command("caffeinate.start")                == .start)
         #expect(try command("caffeinate.stop")                 == .stop)
-        #expect(try command("caffeinate.extend")               == .extend)
+        #expect(try command("caffeinate.extend")               == nil)
         #expect(try command("caffeinate.duration.up")          == .stepUp)
         #expect(try command("caffeinate.duration.down")        == .stepDown)
         #expect(try command("caffeinate.display", .bool(false)) == .setKeepsDisplayAwake(false))
@@ -1074,7 +1056,7 @@ struct CaffeinateServiceTests {
         harness.service.drain()
         #expect(harness.service.state.isActive)
 
-        harness.perform(.extend)
+        harness.perform(.stepUp)
         #expect(events.withLock { $0.count } == 2)
 
         source.start { event in events.withLock { $0.append(event) } }

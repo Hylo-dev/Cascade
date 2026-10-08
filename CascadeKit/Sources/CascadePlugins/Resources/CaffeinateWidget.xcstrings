@@ -17,10 +17,6 @@
       "comment": "Accessibility label of the switch that stops the keep-awake session.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Ferma Caffeinate" } } }
     },
-    "Add 15 minutes": {
-      "comment": "Accessibility label of the button that extends a session by fifteen minutes.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Aggiungi 15 minuti" } } }
-    },
     "Shorter": {
       "comment": "Accessibility label of the stepper button that picks a shorter duration.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Più breve" } } }
@@ -30,20 +26,20 @@
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Più lunga" } } }
     },
     "Start": {
-      "comment": "Pill that starts a keep-awake session.",
+      "comment": "Caption under the round button that starts a keep-awake session.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Avvia" } } }
     },
     "Stop": {
-      "comment": "Pill that stops the keep-awake session.",
+      "comment": "Caption under the round button that stops the keep-awake session.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Ferma" } } }
     },
-    "Your Mac sleeps normally": {
-      "comment": "Options page status while no session runs.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Il Mac va in stop normalmente" } } }
+    "Display": {
+      "comment": "Caption under the round button that keeps the display awake.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Schermo" } } }
     },
-    "Awake until you stop it": {
-      "comment": "Options page status for a session without a time limit.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Sveglio finché non lo fermi" } } }
+    "Next session": {
+      "comment": "Caption under the length of the next keep-awake session, while no session runs.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Prossima sessione" } } }
     },
     "Keep display awake": {
       "comment": "Switch that also keeps the display from sleeping.",
@@ -68,10 +64,6 @@
     "Caffeinate, awake until you stop it": {
       "comment": "Spoken sentence of the live activity of a session without a time limit.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Caffeinate, sveglio finché non lo fermi" } } }
-    },
-    "Awake until": {
-      "comment": "Options page status of a timed session, followed by the time the session ends, which the kernel draws.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Sveglio fino alle" } } }
     },
     "Error": {
       "comment": "Widget tile line when the system refused to keep the Mac awake; the options page has the sentence and the code.",

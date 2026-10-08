@@ -8,10 +8,10 @@
     {
       "id": "awake",
       "supportsFullscreen": true,
-      "surfaces": { "widget": { "sizes": ["2x1", "1x1"] }, "activity": {} },
+      "surfaces": { "widget": { "sizes": ["2x2", "2x1", "1x1"] }, "activity": {} },
       "sources": ["caffeinate"],
       "permissions": ["power.keepAwake"],
-      "actions": ["caffeinate.start", "caffeinate.stop", "caffeinate.extend", "caffeinate.duration.up", "caffeinate.duration.down", "caffeinate.display", "caffeinate.options"]
+      "actions": ["caffeinate.start", "caffeinate.stop", "caffeinate.duration.up", "caffeinate.duration.down", "caffeinate.display", "caffeinate.options"]
     }
   ],
   "resources": { "profile": "eventDriven" }

@@ -44,7 +44,7 @@ nonisolated protocol CaffeinateAssertions: Sendable {
 
 /// IOKitCaffeinateAssertions holds the real `PreventUserIdleSystemSleep` and
 /// `PreventUserIdleDisplaySleep` assertions. Both turn themselves off when their timeout passes,
-/// and a timeout is changed in place with `IOPMAssertionSetProperty`, so extending or stepping a
+/// and a timeout is changed in place with `IOPMAssertionSetProperty`, so stepping a
 /// session never leaves an instant without an assertion; powerd measures the new timeout from the
 /// moment it is set. IOKit reads a timeout of 0 as none, so a timed value is rounded up to whole
 /// seconds and never below 1: rounding up errs on the side of keeping the Mac awake a moment

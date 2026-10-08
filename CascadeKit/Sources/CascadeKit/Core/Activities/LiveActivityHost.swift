@@ -212,14 +212,14 @@ final class LiveActivityHost {
         reconcileSelection()
     }
 
-    /// end removes a live session even while an outgoing view instance is held
-    /// for animation. The coordinator releases that retained root separately.
     /// liveActivity finds a presented activity by identifier, so a caller that holds only the
     /// identifier a click carried can ask it about itself.
     func liveActivity(id: String) -> (any NotchLiveActivity)? {
         persistent.first { $0.activity.id == id }?.activity
     }
 
+    /// end removes a live session even while an outgoing view instance is held
+    /// for animation. The coordinator releases that retained root separately.
     func end(id: String) {
         guard persistent.contains(where: { $0.activity.id == id }) else { return }
 

@@ -7,7 +7,7 @@ import CascadeContracts
 import CascadePluginSDK
 import Foundation
 
-/// CaffeinateStyle gathers what the three faces share: the identities of the controls, the
+/// CaffeinateStyle gathers what the faces share: the identities of the controls, the
 /// actions they send, the palette, the words and the few formats. The faces are pure functions
 /// of the snapshot and of "now", so none of this holds state.
 ///
@@ -17,26 +17,26 @@ import Foundation
 enum CaffeinateStyle {
 
     /// Node holds the explicit identities. Each placement of the power control has its own,
-    /// because identities are unique within a document and the widget, its options page and
-    /// the activity each draw one.
+    /// because identities are unique within a document and the widget's three faces and its
+    /// options page each draw one. The 2x2 face's opener is `options`, the 2x1 face's
+    /// `options.large`, for the same reason.
     enum Node {
 
-        static let powerLarge    = "power.large"
-        static let powerSmall    = "power.small"
-        static let powerOptions  = "power.options"
-        static let powerActivity = "power.activity"
-        static let extend        = "extend"
-        static let durationDown  = "duration.down"
-        static let durationUp    = "duration.up"
-        static let display       = "display"
-        static let opener        = "options"
+        static let powerMedium  = "power.medium"
+        static let powerLarge   = "power.large"
+        static let powerSmall   = "power.small"
+        static let powerOptions = "power.options"
+        static let durationDown = "duration.down"
+        static let durationUp   = "duration.up"
+        static let display      = "display"
+        static let opener       = "options"
+        static let openerLarge  = "options.large"
     }
 
     enum Action {
 
         static let start        = "caffeinate.start"
         static let stop         = "caffeinate.stop"
-        static let extend       = "caffeinate.extend"
         static let durationDown = "caffeinate.duration.down"
         static let durationUp   = "caffeinate.duration.up"
         static let display      = "caffeinate.display"
@@ -57,7 +57,6 @@ enum CaffeinateStyle {
         static let secondary = PluginColor(red: 0.70, green: 0.70, blue: 0.74)
         static let disc      = PluginColor.white.opacity(0.14)
         static let button    = PluginColor.white.opacity(0.16)
-        static let track     = PluginColor.white.opacity(0.22)
     }
 
     /// dimmed is the look of a stepper button or a control that can do nothing right now. It
@@ -65,7 +64,7 @@ enum CaffeinateStyle {
     static let dimmed = 0.35
 
     /// nearCap is fifteen minutes short of the longest a session may run, 24 hours: past it the
-    /// stepper's plus and the extension have little or nowhere to go.
+    /// stepper's plus has little or nowhere to go.
     static let nearCap: TimeInterval = (24 * 60 - 15) * 60
 
     enum Copy {
@@ -74,14 +73,12 @@ enum CaffeinateStyle {
         static var options          : String { String(localized: "Caffeinate Options", table: "CaffeinateWidget", bundle: .module) }
         static var startLabel       : String { String(localized: "Start Caffeinate", table: "CaffeinateWidget", bundle: .module) }
         static var stopLabel        : String { String(localized: "Stop Caffeinate", table: "CaffeinateWidget", bundle: .module) }
-        static var addFifteen       : String { String(localized: "Add 15 minutes", table: "CaffeinateWidget", bundle: .module) }
         static var shorter          : String { String(localized: "Shorter", table: "CaffeinateWidget", bundle: .module) }
         static var longer           : String { String(localized: "Longer", table: "CaffeinateWidget", bundle: .module) }
         static var start            : String { String(localized: "Start", table: "CaffeinateWidget", bundle: .module) }
         static var stop             : String { String(localized: "Stop", table: "CaffeinateWidget", bundle: .module) }
-        static var sleepsNormally   : String { String(localized: "Your Mac sleeps normally", table: "CaffeinateWidget", bundle: .module) }
-        static var awakeUntil       : String { String(localized: "Awake until", table: "CaffeinateWidget", bundle: .module) }
-        static var awakeIndefinitely: String { String(localized: "Awake until you stop it", table: "CaffeinateWidget", bundle: .module) }
+        static var display          : String { String(localized: "Display", table: "CaffeinateWidget", bundle: .module) }
+        static var nextSession      : String { String(localized: "Next session", table: "CaffeinateWidget", bundle: .module) }
         static var keepDisplayAwake : String { String(localized: "Keep display awake", table: "CaffeinateWidget", bundle: .module) }
         static var until            : String { String(localized: "until", table: "CaffeinateWidget", bundle: .module) }
         static var activeFor        : String { String(localized: "active for", table: "CaffeinateWidget", bundle: .module) }
