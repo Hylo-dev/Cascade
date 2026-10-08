@@ -30,7 +30,7 @@ enum PluginActionAuthorizer {
             case (.toggle(_, let name), .bool?):
                 action = name
 
-            case (.slider(_, let minimum, let maximum, _, let name), .number(let value)?) where value >= minimum && value <= maximum:
+            case (.slider(_, let minimum, let maximum, _, _, let name), .number(let value)?) where value >= minimum && value <= maximum:
                 action = name
 
             default:

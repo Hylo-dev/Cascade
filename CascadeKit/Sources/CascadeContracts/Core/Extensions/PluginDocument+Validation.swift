@@ -140,7 +140,7 @@ extension PluginDocument {
             case .button(let action), .toggle(_, let action):
                 try ContractValidation.require(ContractValidation.identifier(action), "Invalid action ID")
 
-            case .slider(let value, let minimum, let maximum, let step, let action):
+            case .slider(let value, let minimum, let maximum, let step, let style, let action):
                 try ContractValidation.require(ContractValidation.identifier(action), "Invalid action ID")
                 try ContractValidation.require(
                     minimum.isFinite && maximum.isFinite && minimum < maximum
@@ -151,6 +151,17 @@ extension PluginDocument {
                     step.map { $0.isFinite && $0 > 0 && $0 <= maximum - minimum } ?? true,
                     "Invalid slider step"
                 )
+
+                if case .ruler(let labelEvery, _) = style {
+                    try ContractValidation.require(
+                        (1...PluginSliderStyle.maximumLabelCadence).contains(labelEvery),
+                        "Invalid ruler label cadence"
+                    )
+                    try ContractValidation.require(
+                        step.map { (maximum - minimum) / $0 <= Double(PluginSliderStyle.maximumRulerTicks) } ?? false,
+                        "A ruler needs a step and at most \(PluginSliderStyle.maximumRulerTicks) ticks"
+                    )
+                }
 
             case .component(let id, let version, let parameters):
                 try ContractValidation.require(ContractValidation.identifier(id) && version >= 1, "Invalid component")

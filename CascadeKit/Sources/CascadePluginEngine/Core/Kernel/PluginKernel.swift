@@ -530,7 +530,7 @@ struct PluginKernel: Sendable {
             var pending = [optionsRoot]
             while let node = pending.popLast() {
                 switch node.kind {
-                    case .button(let action), .toggle(_, let action), .slider(_, _, _, _, let action):
+                    case .button(let action), .toggle(_, let action), .slider(_, _, _, _, _, let action):
                         guard feature.actions.contains(action) else {
                             throw AddonFailure(code: .invalidPayload, reason: "Undeclared options control")
                         }

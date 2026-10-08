@@ -283,6 +283,62 @@ struct PluginDocumentTests {
         }
     }
 
+    @Test(
+        arguments: [
+            PluginSliderStyle.standard,
+            PluginSliderStyle.ruler(labelEvery: 4, labels: .duration),
+            PluginSliderStyle.ruler(labelEvery: 1, labels: .clockTime),
+            PluginSliderStyle.ruler(labelEvery: 96, labels: .clockTime),
+        ]
+    )
+    func aSliderRoundTripsItsStyle(_ style: PluginSliderStyle) throws {
+        let slider   = PluginNode(
+            .slider(value: 60, minimum: 15, maximum: 1_440, step: 15, style: style, action: "set"),
+            id: "ruler"
+        )
+        let document = try PluginDocument(root: slider)
+        let decoded  = try PluginDocument.decode(JSONEncoder().encode(document))
+
+        #expect(decoded == document)
+        #expect(decoded.root.kind == .slider(value: 60, minimum: 15, maximum: 1_440, step: 15, style: style, action: "set"))
+    }
+
+    @Test
+    func aSliderWithoutAStyleDecodesAsStandard() throws {
+        let json     = #"{"schema":2,"root":{"kind":{"slider":{"value":0.5,"minimum":0,"maximum":1,"action":"volume"}}}}"#
+        let document = try PluginDocument.decode(Data(json.utf8))
+
+        #expect(document.root.kind == .slider(value: 0.5, minimum: 0, maximum: 1, step: nil, style: .standard, action: "volume"))
+    }
+
+    @Test
+    func theBuilderDefaultsASlidersStyleToStandard() {
+        let plain = PluginNode(.slider(value: 0.5, minimum: 0, maximum: 1, step: nil, action: "volume"))
+
+        #expect(plain.kind == .slider(value: 0.5, minimum: 0, maximum: 1, step: nil, style: .standard, action: "volume"))
+    }
+
+    @Test(
+        arguments: [
+            PluginNode(.slider(value: 60, minimum: 15, maximum: 1_440, step: 15, style: .ruler(labelEvery: 0, labels: .duration), action: "set")),
+            PluginNode(.slider(value: 60, minimum: 15, maximum: 1_440, step: 15, style: .ruler(labelEvery: 97, labels: .duration), action: "set")),
+            PluginNode(.slider(value: 60, minimum: 15, maximum: 1_440, step: nil, style: .ruler(labelEvery: 4, labels: .duration), action: "set")),
+            PluginNode(.slider(value: 60, minimum: 0, maximum: 2_049, step: 1, style: .ruler(labelEvery: 4, labels: .duration), action: "set")),
+        ]
+    )
+    func aRulerNeedsALabelCadenceAStepAndABoundedNumberOfTicks(_ root: PluginNode) {
+        #expect(throws: AddonFailure.self) { try PluginDocument(root: root) }
+    }
+
+    @Test
+    func aRulerAcceptsItsLimits() {
+        let widest = PluginNode(.slider(value: 60, minimum: 0, maximum: 2_048, step: 1, style: .ruler(labelEvery: 96, labels: .duration), action: "set"))
+        let finest = PluginNode(.slider(value: 60, minimum: 15, maximum: 1_440, step: 15, style: .ruler(labelEvery: 1, labels: .clockTime), action: "set"))
+
+        #expect(throws: Never.self) { try PluginDocument(root: widest) }
+        #expect(throws: Never.self) { try PluginDocument(root: finest) }
+    }
+
     @Test
     func aViewThatFitsRoundTripsAndNeedsAnAlternative() throws {
         let document = try PluginDocument(root: PluginNode(.viewThatFits(axes: .vertical), children: [PluginNode(.text("large")), PluginNode(.text("small"))]))

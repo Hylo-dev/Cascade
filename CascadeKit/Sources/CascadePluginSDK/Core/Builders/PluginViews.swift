@@ -184,11 +184,13 @@ public func Toggle(
 }
 
 /// Slider shows `value` within `bounds`, moving by `step` when one is given, and sends `action`
-/// with the value it is released at.
+/// with the value it is released at. With the `ruler` style the kernel draws a row of ticks, one
+/// per `step`, that scrolls under a fixed indicator; a ruler needs a `step`.
 public func Slider(
     value    : Double,
     in bounds: ClosedRange<Double> = 0...1,
     step     : Double? = nil,
+    style    : PluginSliderStyle = .standard,
     action   : String
 ) -> PluginNode {
     PluginNode(
@@ -197,6 +199,7 @@ public func Slider(
             minimum: bounds.lowerBound,
             maximum: bounds.upperBound,
             step   : step,
+            style  : style,
             action : action
         )
     )

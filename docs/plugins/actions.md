@@ -8,7 +8,7 @@ The renderer keeps a control's local value in its `PluginNodeModel`, apart from 
 
 - A `Button` is stateless: SwiftUI shows the press, the action is sent, and whatever it changes arrives as the next publication.
 - A `Toggle` flips at once, animated, and sends its action with the new state.
-- A `Slider` sends its value when it is released. While it is dragged, incoming publications do not move its thumb.
+- A `Slider` sends its value when it is released, a ruler style one at the step it settles on. While it is dragged, incoming publications do not move its thumb.
 - The next publication always wins, even when it contradicts the optimistic value.
 - With no publication within 1.5 seconds (`PluginNodeStore.confirmationTimeout`), or when the kernel refuses the action, the value reverts, animated.
 

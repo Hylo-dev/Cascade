@@ -51,10 +51,16 @@ HStack(spacing: 8) {
 | Content | `Text`, `Image(systemName:)`, `Image(asset:)`, `Circle`, `Capsule`, `RoundedRectangle(cornerRadius:)`, `Component(id:version:parameters:)` |
 | Kernel-drawn time | `Clock()`, `Today()`, `Text(_:style:)` with `.time`, `.date` or `.relative`, `Text(timerInterval:countsDown:)`, `Text(countdownTo:style:)`, `ProgressView(timerInterval:)` |
 | Progress | `ProgressView(value:total:style:)`, linear or circular |
-| Controls | `Button(action:label:)`, `Toggle(isOn:action:label:)`, `Slider(value:in:step:action:)` |
+| Controls | `Button(action:label:)`, `Toggle(isOn:action:label:)`, `Slider(value:in:step:style:action:)` |
 | Modifiers | `font`, `foregroundStyle` (color, hierarchical level or gradient of two to four colors), `frame`, `padding`, `opacity`, `clipShape`, `lineLimit`, `minimumScaleFactor`, `contentTransition` (`numericText`, `symbolEffect`), `transition` (`opacity`, `scale`, `move`), `accessibilityLabel`, `overlay`, `background`, `id` |
 
 `overlay` and `background` take their content as the node's next layer, several nodes laid in a `ZStack`. `ViewThatFits` is how a widget, which cannot know the size the user gave it, offers a face per size, largest first, as `ClockPlugin` does. Kernel-drawn time is drawn and kept current by the kernel, so a clock or a countdown costs the plugin nothing while it ticks.
+
+### The ruler slider
+
+`Slider(value:in:step:style:action:)` takes a `style`: `.standard`, the system slider and the default (a slider with no style on the wire decodes as standard), or `.ruler(labelEvery:labels:)`. A ruler is a row of ticks, one per `step`, that scrolls under a fixed ▲ indicator while the user drags it, as the iOS timer's does. The ticks already passed are drawn in the tint and those ahead at 28 %; they are bottom-aligned and grow shorter and fainter with their distance from the indicator. A label is written every `labelEvery` ticks: with `.duration` the value is minutes and a label reads `1h` or `1h 30m`; with `.clockTime` the value is seconds since 1970 and a label is that instant's short local time (`18:00`). A ruler needs a `step`, `labelEvery` is 1 to 96, and `(maximum - minimum) / step` is at most 2,048: a document that breaks them is rejected whole.
+
+The kernel draws it in one `Canvas`, only the visible ticks, tinted by the node's own `.foregroundStyle(color)` (white when it has none), and takes the drag itself. The thumb is the slider's optimistic value, so publications do not move it while it is dragged; the release settles on the nearest `step` (without animation under Reduce Motion) and sends one action then, with the same broker checks and the same revert as the system slider, so the plugin never wakes during a drag. VoiceOver sees one adjustable element that steps by `step` and reads the label of its value. It costs nothing at rest and redraws only when the value or the size changes.
 
 ### Kernel-drawn times
 
@@ -73,7 +79,7 @@ Not in v1: `ForEach` and dynamic lists, grids and gestures. `Image(asset:)` draw
 - 64 KiB per document, 256 nodes, depth 12, 16 modifiers per node, eight glass lights;
 - 4 KiB per text, 512 bytes per accessibility label;
 - a component takes at most 16 parameters, each a string of at most 256 bytes, a finite number or a bool;
-- lengths are finite, from 0 to 10,000 points; colors, opacity and progress stay in range; a slider's range and step make sense; a timer does not end before it starts;
+- lengths are finite, from 0 to 10,000 points; colors, opacity and progress stay in range; a slider's range and step make sense, and a ruler has a step, a label cadence of 1 to 96 and at most 2,048 ticks; a timer does not end before it starts;
 - only containers and labelled controls take children, and `Regions` is the root of a notice or an activity, with three regions or four. The publication then fixes the number: a notice has exactly three and an activity three or four. An activity without the expanded region never takes over the opened notch.
 
 A `PluginOutput` carries at most 48 publications, one per feature and surface. A document that breaks a limit is rejected whole and the previous one stays on screen; the kernel also rejects a publication for a feature or surface its manifest does not declare, or that shows an undeclared component.

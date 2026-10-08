@@ -59,6 +59,10 @@ struct PluginNodeViewTests {
                     PluginNode(.slider(value: 0.5, minimum: 0, maximum: 1, step: 0.1, action: "setVolume")),
                     PluginNode(.slider(value: 0.5, minimum: 0, maximum: 1, step: nil, action: "seek"), modifiers: [.transition(.move(.bottom))]),
                     PluginNode(
+                        .slider(value: 90, minimum: 15, maximum: 1_440, step: 15, style: .ruler(labelEvery: 4, labels: .duration), action: "setDuration"),
+                        modifiers: [.foregroundStyle(.color(PluginColor(red: 1, green: 0.77, blue: 0.33))), .frame(width: 260, height: 50, maxWidth: nil, maxHeight: nil, alignment: .center)]
+                    ),
+                    PluginNode(
                         .component(id: "audio.spectrum", version: 1, parameters: [:]),
                         modifiers: [.foregroundStyle(.hierarchical(.secondary)), .minimumScaleFactor(0.5), .frame(width: nil, height: nil, maxWidth: .infinity, maxHeight: .points(20), alignment: .leading)]
                     ),
@@ -119,6 +123,37 @@ struct PluginNodeViewTests {
         try await Task.sleep(for: .milliseconds(400))
 
         #expect(snapshot(of: host) != playing)
+    }
+
+    @Test
+    func aRulerIsDrawnAndRedrawsWhenItsValueMoves() async throws {
+        var publisher = PluginRenderFixtures.Publisher()
+        let store     = PluginNodeStore(key: PluginRenderFixtures.key, submit: { _ in })
+        let document  = try PluginDocument(
+            root: PluginNode(
+                .slider(value: 90, minimum: 15, maximum: 1_440, step: 15, style: .ruler(labelEvery: 4, labels: .duration), action: "setDuration"),
+                id       : "ruler",
+                modifiers: [
+                    .foregroundStyle(.color(PluginColor(red: 1, green: 0.77, blue: 0.33))),
+                    .frame(width: 260, height: 50, maxWidth: nil, maxHeight: nil, alignment: .center),
+                ]
+            )
+        )
+        store.apply(publisher.publish(document))
+        let host   = NSHostingView(rootView: PluginDocumentView(store: store))
+        let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 260, height: 50), styleMask: .borderless, backing: .buffered, defer: false)
+        window.contentView = host
+        try await Task.sleep(for: .milliseconds(100))
+        let first = snapshot(of: host)
+        try await Task.sleep(for: .milliseconds(100))
+
+        #expect(first != nil)
+        #expect(snapshot(of: host) == first)
+
+        store.drag(135.5, on: try #require(store.model(PluginNodeID(rawValue: "#ruler:slider"))))
+        try await Task.sleep(for: .milliseconds(200))
+
+        #expect(snapshot(of: host) != first)
     }
 
     /// snapshot draws the view offscreen and returns its pixels.

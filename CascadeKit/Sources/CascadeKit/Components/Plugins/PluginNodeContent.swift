@@ -163,7 +163,19 @@ struct PluginNodeContent: View {
                 }
                 .toggleStyle(PluginToggleStyle())
 
-            case .slider(let value, let minimum, let maximum, let step, _):
+            case .slider(let value, let minimum, let maximum, let step, .ruler(let labelEvery, let labels), _) where step != nil:
+                PluginRulerSlider(
+                    value     : thumb(value),
+                    minimum   : minimum,
+                    maximum   : maximum,
+                    step      : step ?? 1,
+                    labelEvery: labelEvery,
+                    labels    : labels,
+                    tint      : Color(nsColor: timeColor),
+                    released  : released
+                )
+
+            case .slider(let value, let minimum, let maximum, let step, _, _):
                 if let step {
                     Slider(value: thumb(value), in: minimum...maximum, step: step, onEditingChanged: released)
                 } else {
@@ -190,7 +202,7 @@ struct PluginNodeContent: View {
     }
 
     /// timeColor is the color of the node's own `.foregroundStyle(.color)` modifier, white
-    /// when it has none or a style that is not a plain color.
+    /// when it has none or a style that is not a plain color. A ruler slider is tinted by it too.
     private var timeColor: NSColor {
         let described = model.modifiers.lazy.compactMap { modifier -> PluginColor? in
             if case .foregroundStyle(.color(let color)) = modifier { color } else { nil }
