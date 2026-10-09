@@ -139,18 +139,20 @@ func createPrivate(pid: pid_t) -> Never {
     status = AudioHardwareCreateAggregateDevice(aggregate as CFDictionary, &aggregateID)
     guard status == noErr else { fail("AudioHardwareCreateAggregateDevice", status: status) }
 
-    /// The IOProc copies input to output so the muted app is still heard
-    /// through the aggregate: without it, "stays muted after the kill" would be
-    /// indistinguishable from "was never audible". Unsafe contract: the block
-    /// runs on the HAL's IO thread, touches only the two buffer lists it is
-    /// handed and allocates nothing.
+    /// The IOProc copies the tap to every output buffer so the muted app is still
+    /// heard through the aggregate: without it, "stays muted after the kill" would
+    /// be indistinguishable from "was never audible". An aggregate lists its
+    /// sub-device's own input streams before the tap, so the tap is the LAST input
+    /// buffer, not buffer 0. Unsafe contract: the block runs on the HAL's IO
+    /// thread, touches only the two buffer lists it is handed and allocates nothing.
     var procID: AudioDeviceIOProcID?
     status = AudioDeviceCreateIOProcIDWithBlock(&procID, aggregateID, nil) { _, inputData, _, outputData, _ in
         let input  = UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: inputData))
         let output = UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: outputData))
-        for index in 0 ..< min(input.count, output.count) {
-            guard let source = input[index].mData, let destination = output[index].mData else { continue }
-            memcpy(destination, source, Int(min(input[index].mDataByteSize, output[index].mDataByteSize)))
+        guard let tap = input.last, let source = tap.mData else { return }
+        for index in 0 ..< output.count {
+            guard let destination = output[index].mData else { continue }
+            memcpy(destination, source, Int(min(tap.mDataByteSize, output[index].mDataByteSize)))
         }
     }
     guard status == noErr, let procID else { fail("AudioDeviceCreateIOProcIDWithBlock", status: status) }
@@ -193,9 +195,10 @@ func createPublic() -> Never {
 // MARK: - inspect
 
 /// Reports, for each UID, whether a device or a tap with that UID is still
-/// registered. A private aggregate may be invisible to `kAudioHardwarePropertyDevices`
-/// even while alive, so "absent" for a private UID is read together with the
-/// tap list and, in the note, with what was audible.
+/// registered. NOT conclusive for private objects: a private tap or aggregate is
+/// visible only to the process that created it, so a fresh process reports
+/// absent whether or not it survived. Questions A and B are read from what the
+/// listener hears; this output only backs up the public (C) case.
 func inspect(
     uids: [String],
     destroy: Bool

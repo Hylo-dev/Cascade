@@ -42,6 +42,7 @@ ask_audible() {
 }
 
 start_afplay
+audible_baseline="$(ask_audible 'Baseline (nothing tapped):')"
 
 echo "=== A and B: private aggregate holding a muting tap on afplay ($afplay_pid) ==="
 "$probe" create-private "$afplay_pid" > "$work/private.json" &
@@ -49,13 +50,14 @@ creator_pid=$!
 sleep 2
 echo "creator output: $(cat "$work/private.json")"
 echo "(the IOProc copies the tap to the output, so the tone should be audible through the aggregate)"
+audible_tapped="$(ask_audible 'Tapped, before the kill:')"
 kill -9 "$creator_pid"; wait "$creator_pid" 2>/dev/null; creator_pid=""
 sleep 2
 aggregate_uid="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["aggregateUID"])' "$work/private.json")"
 tap_uid="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["tapUID"])' "$work/private.json")"
 private_inspect="$("$probe" inspect "$aggregate_uid" "$tap_uid")"
 echo "inspect after kill -9: $private_inspect"
-audible_after_private="$(ask_audible 'B:')"
+audible_after_kill="$(ask_audible 'After the kill:')"
 
 echo "=== C: public aggregate ==="
 "$probe" create-public > "$work/public.json" &
@@ -75,8 +77,11 @@ audible_after_destroy="$(ask_audible 'After destroy:')"
 cat <<REPORT
 
 --- paste into the note ---
-A (private aggregate + tap gone after SIGKILL?): $private_inspect
-B (afplay audible after SIGKILL, tap muting it): $audible_after_private
+Audible (a) baseline, before create-private: $audible_baseline
+Audible (b) tapped, before the kill (only through the IOProc copy): $audible_tapped
+Audible (c) after the kill: $audible_after_kill
+A and B read from (b) to (c): audible again = tap and muting died with the process; silent = the muting tap outlived it.
+Supporting, NOT conclusive (private objects are invisible to a fresh process): $private_inspect
 C (public aggregate survived SIGKILL?): $public_inspect
 Cleanup: $destroy
 Audible after destroy: $audible_after_destroy
