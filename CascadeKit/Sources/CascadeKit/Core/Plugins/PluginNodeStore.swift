@@ -3,6 +3,7 @@
 //  CascadeKit
 //
 
+import AppKit
 import CascadeContracts
 import CascadePluginEngine
 import Foundation
@@ -247,10 +248,12 @@ final class PluginNodeStore {
         }
     }
 
+    /// revert puts the control back on the published value. It glides there unless the user asked
+    /// for Reduce Motion, which the system reports on the main thread, where the store lives.
     private func revert(_ model: PluginNodeModel) {
         generations[model.id, default: 0] += 1
 
-        withAnimation(.snappy) {
+        withAnimation(NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil : .snappy) {
             model.optimistic = nil
         }
     }

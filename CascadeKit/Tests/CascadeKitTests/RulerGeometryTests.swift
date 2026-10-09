@@ -197,4 +197,53 @@ struct RulerLabelTests {
 
         #expect(text == "18:00")
     }
+
+    @Test(arguments: [(60.0, "1 hour"), (90.0, "1 hour, 30 minutes"), (15.0, "15 minutes"), (1_440.0, "24 hours")])
+    func aDurationIsSpokenInFull(minutes: Double, expected: String) {
+        let text = RulerLabel.spoken(
+            value : minutes,
+            labels: .duration,
+            locale: Locale(identifier: "en_US")
+        )
+
+        #expect(text == expected)
+    }
+
+    @Test
+    func aDurationIsSpokenInFullInTheLocalesOwnWords() {
+        let text = RulerLabel.spoken(
+            value : 90,
+            labels: .duration,
+            locale: Locale(identifier: "it_IT")
+        )
+
+        #expect(text.contains("ora"))
+        #expect(text.contains("minuti"))
+    }
+
+    @Test
+    func aClockTimeIsSpokenAsTheShortTime() {
+        let spoken = RulerLabel.spoken(
+            value   : 64_800,
+            labels  : .clockTime,
+            locale  : Locale(identifier: "en_GB"),
+            timeZone: .gmt
+        )
+
+        #expect(spoken == "18:00")
+    }
+
+    @MainActor
+    @Test
+    func theCacheKeepsTheDrawnAndTheSpokenFormsApart() {
+        let cache = RulerLabelCache()
+
+        let drawn  = cache.text(value: 90, labels: .duration)
+        let spoken = cache.spoken(value: 90, labels: .duration)
+
+        #expect(drawn == RulerLabel.text(value: 90, labels: .duration))
+        #expect(spoken == RulerLabel.spoken(value: 90, labels: .duration))
+        #expect(drawn != spoken)
+        #expect(cache.text(value: 90, labels: .duration) == drawn)
+    }
 }

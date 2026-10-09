@@ -23,9 +23,6 @@ struct PluginNodeContent: View {
     let store        : PluginNodeStore
     var optionsOrigin: PluginOptionsOrigin? = nil
 
-    @Environment(\.accessibilityReduceMotion)
-    private var reduceMotion
-
     var body: some View {
         switch model.kind {
             case .vStack(let alignment, let spacing):
@@ -188,11 +185,19 @@ struct PluginNodeContent: View {
                 )
 
             case .slider(let value, let minimum, let maximum, let step, _, _):
-                if let step {
-                    Slider(value: thumb(value), in: minimum...maximum, step: step, onEditingChanged: released)
-                } else {
-                    Slider(value: thumb(value), in: minimum...maximum, onEditingChanged: released)
-                }
+                PluginStandardSlider(
+                    value   : thumb(value),
+                    minimum : minimum,
+                    maximum : maximum,
+                    step    : step,
+                    released: { [optionsOrigin] animation in
+                        store.release(
+                            model,
+                            optionsOrigin: optionsOrigin,
+                            animation    : animation
+                        )
+                    }
+                )
 
             case .asset:
                 Color.clear
@@ -266,15 +271,5 @@ struct PluginNodeContent: View {
                 )
             }
         )
-    }
-
-    private func released(_ isEditing: Bool) {
-        if !isEditing {
-            store.release(
-                model,
-                optionsOrigin: optionsOrigin,
-                animation    : reduceMotion ? nil : .snappy
-            )
-        }
     }
 }

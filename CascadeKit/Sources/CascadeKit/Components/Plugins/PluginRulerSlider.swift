@@ -45,7 +45,7 @@ struct PluginRulerSlider: View {
     @GestureState
     private var isHeld = false
 
-    @State
+    @StateObject
     private var labelCache = RulerLabelCache()
 
     @Environment(\.accessibilityReduceMotion)
@@ -124,7 +124,7 @@ struct PluginRulerSlider: View {
     }
 
     private var spoken: String {
-        labelCache.text(
+        labelCache.spoken(
             value : RulerGeometry.snapped(value.wrappedValue, minimum: minimum, maximum: maximum, step: step),
             labels: labels
         )

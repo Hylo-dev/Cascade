@@ -70,6 +70,31 @@ struct RulerInteractionTests {
     }
 
     @Test
+    func aDragThatComesBackToItsStartingStepSendsNothing() {
+        var ruler = interaction()
+
+        let moved = ruler.change(translation: -26, current: 90, scale: scale)
+        let back  = ruler.change(translation: -4, current: moved ?? 0, scale: scale)
+        let end   = ruler.end(current: back ?? 0, scale: scale)
+
+        #expect(moved == 120)
+        #expect(end == nil)
+        #expect(!ruler.isDragging)
+    }
+
+    @Test
+    func aDragThatEndsOnTheSameStepButOffTheGridSendsNothing() {
+        var ruler = interaction()
+
+        // The ruler of a running "For" starts at the time left rounded up: 45, say. A nudge
+        // that returns within half a step of it must leave the session alone.
+        _ = ruler.change(translation: -1, current: 45, scale: scale)
+        let end = ruler.end(current: 45 + 3, scale: scale)
+
+        #expect(end == nil)
+    }
+
+    @Test
     func endingTwiceSendsOnce() {
         var ruler = interaction()
         _ = ruler.change(translation: -13, current: 90, scale: scale)
@@ -214,6 +239,25 @@ struct RulerGestureTests {
     }
 
     @Test
+    func aDragReleasedOnItsStartingStepSendsNothingAndLetsGo() throws {
+        let harness = try harness()
+
+        harness.driver.changed(translation: -26)
+        harness.driver.changed(translation: -2)
+        #expect(harness.model.isDragging)
+        #expect(harness.model.optimistic != nil)
+
+        harness.driver.ended()
+
+        #expect(harness.sent.requests.isEmpty)
+        #expect(harness.box.animations.isEmpty)
+        #expect(harness.box.cancels == 1)
+        #expect(!harness.model.isDragging)
+        #expect(harness.model.optimistic == nil)
+        #expect(!harness.box.interaction.isDragging)
+    }
+
+    @Test
     func theReleaseCarriesTheAnimationTheViewChose() throws {
         let harness = try harness()
 
@@ -295,11 +339,11 @@ struct RulerGestureTests {
         let harness = try harness()
 
         harness.driver.changed(translation: -13)
-        harness.box.scale = RulerScale(minimum: 15, maximum: 100, step: 25, spacing: 13)
-        harness.driver.changed(translation: -130)
+        harness.box.scale = RulerScale(minimum: 20, maximum: 100, step: 25, spacing: 13)
+        harness.driver.changed(translation: 130)
         harness.driver.ended()
 
-        #expect(harness.sent.requests.map(\.value) == [.number(90)])
+        #expect(harness.sent.requests.map(\.value) == [.number(20)])
     }
 
     @Test

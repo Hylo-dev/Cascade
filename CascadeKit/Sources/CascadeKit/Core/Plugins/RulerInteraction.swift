@@ -28,7 +28,8 @@ nonisolated struct RulerScale: Equatable, Sendable {
 ///
 /// A touch that moves less than a point is a tap and does nothing: it must not make the plugin
 /// wake for a value that did not change. A drag sends nothing until it ends, and its end sends
-/// once, at the nearest step. A step at either end of the range finds nothing to do.
+/// once, at the nearest step, unless that step is the one the drag started from. A step at
+/// either end of the range finds nothing to do.
 nonisolated struct RulerInteraction: Equatable {
 
     /// movementThreshold is the translation, in points, below which a touch is a tap.
@@ -68,15 +69,21 @@ nonisolated struct RulerInteraction: Equatable {
         )
     }
 
-    /// end finishes the drag: the step to settle on and send, or nil when there was no drag.
+    /// end finishes the drag: the step to settle on and send, or nil when there is nothing to
+    /// send, either because there was no drag or because the finger came back to the step the
+    /// drag started from. A release that changes nothing must not move a running session: the
+    /// value shown for a running "For" is its time left rounded up, so sending it back would
+    /// rewrite the end to a figure the user never chose.
     mutating func end(
         current: Double,
         scale  : RulerScale
     ) -> Double? {
-        guard dragStart != nil else { return nil }
+        guard let start = dragStart else { return nil }
         dragStart = nil
 
-        return snapped(current, scale)
+        let target = snapped(current, scale)
+
+        return target == snapped(start, scale) ? nil : target
     }
 
     /// cancel forgets a drag that will not end, and says whether there was one.

@@ -42,14 +42,22 @@ struct RulerGestureDriver {
         }
     }
 
-    /// ended settles a drag on its nearest step and sends the one action; a tap sends nothing.
+    /// ended settles a drag on its nearest step and sends the one action; a tap sends nothing,
+    /// and neither does a drag that came back to the step it started from: the control lets go
+    /// of it as a cancel does, with the animation of a release, so the ticks glide back to the
+    /// published value.
     func ended() {
         var next = interaction.wrappedValue
-        let target = next.end(current: value.wrappedValue, scale: scale)
+        let wasDragging = next.isDragging
+        let target      = next.end(current: value.wrappedValue, scale: scale)
         interaction.wrappedValue = next
 
         if let target {
             settle(on: target)
+        } else if wasDragging {
+            withAnimation(animation) {
+                cancelled()
+            }
         }
     }
 
