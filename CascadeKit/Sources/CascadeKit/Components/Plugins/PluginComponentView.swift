@@ -14,6 +14,9 @@ struct PluginComponentView: View {
 
     static let identifiers: Set<String> = ["power.battery", "volume.level", "bluetooth.device", "bluetooth.battery"]
 
+    @Environment(\.pluginComponentServices)
+    private var services
+
     let id        : String
     let version   : Int
     let parameters: [String: PluginValue]

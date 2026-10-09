@@ -101,6 +101,17 @@
         }
       }
     },
+    "Back": {
+      "comment": "Accessibility label of the button that closes a plugin's detail page.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indietro"
+          }
+        }
+      }
+    },
     "Back to Shelf": {
       "comment": "Shelf: button that closes the file list and returns to the deck.",
       "localizations": {
