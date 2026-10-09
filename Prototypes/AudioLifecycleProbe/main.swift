@@ -139,20 +139,20 @@ func createPrivate(pid: pid_t) -> Never {
     status = AudioHardwareCreateAggregateDevice(aggregate as CFDictionary, &aggregateID)
     guard status == noErr else { fail("AudioHardwareCreateAggregateDevice", status: status) }
 
-    /// The IOProc copies the tap to every output buffer so the muted app is still
-    /// heard through the aggregate: without it, "stays muted after the kill" would
-    /// be indistinguishable from "was never audible". An aggregate lists its
-    /// sub-device's own input streams before the tap, so the tap is the LAST input
-    /// buffer, not buffer 0. Unsafe contract: the block runs on the HAL's IO
-    /// thread, touches only the two buffer lists it is handed and allocates nothing.
+    /// A running IOProc on the aggregate is the client that reads the tap, and
+    /// `mutedWhenTapped` mutes the app only while a client does. It writes ZEROS
+    /// to every output buffer:
+    /// the tapped app is then silent exactly when the muting works. (Copying the
+    /// tap to the output, as an earlier version did, made "audible while tapped"
+    /// unable to tell a muting tap from a non-muting one.) Unsafe contract: the
+    /// block runs on the HAL's IO thread, touches only the buffer lists it is
+    /// handed and allocates nothing.
     var procID: AudioDeviceIOProcID?
-    status = AudioDeviceCreateIOProcIDWithBlock(&procID, aggregateID, nil) { _, inputData, _, outputData, _ in
-        let input  = UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: inputData))
-        let output = UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: outputData))
-        guard let tap = input.last, let source = tap.mData else { return }
+    status = AudioDeviceCreateIOProcIDWithBlock(&procID, aggregateID, nil) { _, _, _, outputData, _ in
+        let output = UnsafeMutableAudioBufferListPointer(outputData)
         for index in 0 ..< output.count {
             guard let destination = output[index].mData else { continue }
-            memcpy(destination, source, Int(min(tap.mDataByteSize, output[index].mDataByteSize)))
+            memset(destination, 0, Int(output[index].mDataByteSize))
         }
     }
     guard status == noErr, let procID else { fail("AudioDeviceCreateIOProcIDWithBlock", status: status) }

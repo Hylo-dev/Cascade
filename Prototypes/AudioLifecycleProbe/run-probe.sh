@@ -5,7 +5,6 @@ set -u
 here="$(cd "$(dirname "$0")" && pwd)"
 work="$(mktemp -d)"
 probe="$work/audio-lifecycle-probe"
-results="$work/results.txt"
 tone="$work/tone.wav"
 afplay_pid=""
 creator_pid=""
@@ -13,7 +12,7 @@ creator_pid=""
 cleanup() {
     [ -n "$creator_pid" ] && kill -9 "$creator_pid" 2>/dev/null
     [ -n "$afplay_pid" ] && kill "$afplay_pid" 2>/dev/null
-    "$probe" inspect --destroy >/dev/null 2>&1
+    [ -x "$probe" ] && "$probe" inspect --destroy >/dev/null 2>&1
 }
 trap cleanup EXIT
 
@@ -47,9 +46,22 @@ audible_baseline="$(ask_audible 'Baseline (nothing tapped):')"
 echo "=== A and B: private aggregate holding a muting tap on afplay ($afplay_pid) ==="
 "$probe" create-private "$afplay_pid" > "$work/private.json" &
 creator_pid=$!
-sleep 2
+# The first run triggers the System Audio Recording prompt, and the probe prints
+# its JSON only once the tap, the aggregate and the IOProc are running. Wait for
+# that line (up to 30 s, so the prompt can be answered) before judging (b).
+for _ in $(seq 60); do
+    [ -s "$work/private.json" ] && break
+    kill -0 "$creator_pid" 2>/dev/null || break
+    sleep 0.5
+done
+if ! grep -q '"mode"' "$work/private.json" 2>/dev/null; then
+    echo "error: create-private never reported a running tap. Its output:" >&2
+    cat "$work/private.json" >&2
+    exit 1
+fi
+sleep 1
 echo "creator output: $(cat "$work/private.json")"
-echo "(the IOProc copies the tap to the output, so the tone should be audible through the aggregate)"
+echo "(the IOProc reads the tap and writes silence, so the muted tone should now be SILENT)"
 audible_tapped="$(ask_audible 'Tapped, before the kill:')"
 kill -9 "$creator_pid"; wait "$creator_pid" 2>/dev/null; creator_pid=""
 sleep 2
@@ -74,13 +86,26 @@ destroy="$("$probe" inspect --destroy "$aggregate_uid" "$tap_uid" "$public_uid")
 echo "inspect --destroy: $destroy"
 audible_after_destroy="$(ask_audible 'After destroy:')"
 
+if [ "$audible_tapped" = "y" ]; then
+    reading="INVALID RUN: (b) was audible, so the tap never muted afplay"
+elif [ "$audible_tapped" = "n" ] && [ "$audible_after_kill" = "y" ]; then
+    reading="A yes, B no: the tap and its muting died with the process"
+elif [ "$audible_tapped" = "n" ] && [ "$audible_after_kill" = "n" ]; then
+    reading="A no, B yes: the muting tap outlived the process"
+else
+    reading="INCONCLUSIVE: an answer was not y/n (a=$audible_baseline b=$audible_tapped c=$audible_after_kill)"
+fi
+
 cat <<REPORT
 
 --- paste into the note ---
 Audible (a) baseline, before create-private: $audible_baseline
-Audible (b) tapped, before the kill (only through the IOProc copy): $audible_tapped
+Audible (b) tapped, before the kill (the IOProc reads the tap and writes silence): $audible_tapped
 Audible (c) after the kill: $audible_after_kill
-A and B read from (b) to (c): audible again = tap and muting died with the process; silent = the muting tap outlived it.
+Reading: $reading
+  (b) silent -> (c) audible = tap and muting died with the process;
+  (b) silent -> (c) silent  = the muting tap outlived it;
+  (b) audible               = the tap never muted, the run is invalid.
 Supporting, NOT conclusive (private objects are invisible to a fresh process): $private_inspect
 C (public aggregate survived SIGKILL?): $public_inspect
 Cleanup: $destroy
