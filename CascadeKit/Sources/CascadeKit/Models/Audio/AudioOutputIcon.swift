@@ -27,28 +27,28 @@ nonisolated public enum AudioOutputIcon: Equatable, Sendable {
         level  : Double,
         isMuted: Bool
     ) -> AudioOutputIcon {
-        if isMuted {
-            return .muted
-        }
-        guard let output else {
-            return .speaker(level: percent(of: level))
-        }
-        if let identity = output.bluetooth {
-            return .bluetooth(identity)
-        }
+        if isMuted { return .muted }
+        guard let output else { return .speaker(level: percent(of: level)) }
+        if let identity = output.bluetooth { return .bluetooth(identity) }
+
         switch output.transportType {
-        case kAudioDeviceTransportTypeBuiltIn:
-            return .symbol("laptopcomputer")
-        case kAudioDeviceTransportTypeDisplayPort:
-            return .symbol("display")
-        case kAudioDeviceTransportTypeHDMI:
-            return .symbol("tv")
-        case kAudioDeviceTransportTypeAirPlay:
-            return .symbol("airplayaudio")
-        case kAudioDeviceTransportTypeBluetooth, kAudioDeviceTransportTypeBluetoothLE:
-            return .symbol("headphones")
-        default:
-            return .speaker(level: percent(of: level))
+            case kAudioDeviceTransportTypeBuiltIn:
+                return .symbol("laptopcomputer")
+
+            case kAudioDeviceTransportTypeDisplayPort:
+                return .symbol("display")
+
+            case kAudioDeviceTransportTypeHDMI:
+                return .symbol("tv")
+
+            case kAudioDeviceTransportTypeAirPlay:
+                return .symbol("airplayaudio")
+
+            case kAudioDeviceTransportTypeBluetooth, kAudioDeviceTransportTypeBluetoothLE:
+                return .symbol("headphones")
+
+            default:
+                return .speaker(level: percent(of: level))
         }
     }
 

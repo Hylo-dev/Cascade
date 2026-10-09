@@ -6,15 +6,17 @@
 import CoreGraphics
 
 /// VolumeGesture follows one press on the volume capsule, from touch-down to release, and turns
-/// it into a click (toggle mute) or a drag (set the level). Scrolling has no press, so it is a
-/// pure function beside it.
+/// it into a click (open the mixer) or a drag (set the level). Scrolling has no press, so it is a
+/// pure function beside it. Muting is never decided here: it is set only from the mixer, and a
+/// level of zero is not mute.
 ///
 /// It is a reducer: the view feeds it the pointer's translation and elapsed time, and it answers
 /// what to do. It reuses `WidgetPress`'s slop and hold duration, so the capsule's feel matches the
 /// widget tiles'. A press that stays inside the slop and is released before the hold duration is
-/// a click; one held still past it is neither a click nor a drag, so a long press on the capsule
-/// does not mute by accident. Once the pointer has left the slop it is a drag for good, even if
-/// it comes back, because the user has started choosing a level.
+/// a click; one held still past it is neither a click nor a drag, because that hold belongs to the
+/// grid's editing (the tile's hold): the capsule neither opens the mixer nor changes the level.
+/// Once the pointer has left the slop it is a drag for good, even if it comes back, because the
+/// user has started choosing a level.
 nonisolated public struct VolumeGesture: Equatable, Sendable {
 
     public enum Outcome: Equatable, Sendable {
@@ -47,9 +49,8 @@ nonisolated public struct VolumeGesture: Equatable, Sendable {
         to translation: CGSize,
         elapsed       : Duration
     ) -> Outcome {
-        guard isDragging || Self.distance(of: translation) > WidgetPress.slop else {
-            return .none
-        }
+        guard isDragging || Self.distance(of: translation) > WidgetPress.slop else { return .none }
+
         isDragging = true
         return .level(level(at: translation))
     }
@@ -69,9 +70,9 @@ nonisolated public struct VolumeGesture: Equatable, Sendable {
     /// `deltaY`, so every notch is the same; a trackpad is continuous and follows the finger.
     /// Upward raises the level in both.
     public static func scrolled(
-        _ level   : Double,
-        deltaY    : Double,
-        isPrecise : Bool
+        _ level  : Double,
+        deltaY   : Double,
+        isPrecise: Bool
     ) -> Double {
         let change = isPrecise
             ? deltaY / preciseDivisor

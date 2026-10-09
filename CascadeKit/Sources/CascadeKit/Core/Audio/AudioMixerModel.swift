@@ -16,21 +16,32 @@ import Observation
 /// flush when none is pending: one hop per burst, no timer, nothing woken while idle. The level
 /// is paired with the device it was made for, and the flush drops it if the default output moved
 /// on meanwhile.
+///
+/// The optimistic state is a guess: the next `receive` replaces an optimistic mute or selection
+/// the system did not confirm, so a refused command heals itself without a rollback path.
 @MainActor
 @Observable
 public final class AudioMixerModel {
 
-    public private(set) var system     : SystemAudioState?
+    public private(set) var system: SystemAudioState?
+
     public private(set) var isAdjusting = false
 
     /// allowsSeveralOutputs is the picker's toggle between choosing one output and building a
     /// multi-output.
     public var allowsSeveralOutputs = false
 
-    @ObservationIgnored private let controller    : any SystemAudioControlling
-    @ObservationIgnored private var pendingLevel  : Double?
-    @ObservationIgnored private var pendingDevice : UInt32 = 0
-    @ObservationIgnored private var isFlushQueued = false
+    @ObservationIgnored
+    private let controller: any SystemAudioControlling
+
+    @ObservationIgnored
+    private var pendingLevel: Double?
+
+    @ObservationIgnored
+    private var pendingDevice: UInt32 = 0
+
+    @ObservationIgnored
+    private var isFlushQueued = false
 
     public init(controller: any SystemAudioControlling) {
         self.controller = controller
@@ -52,9 +63,8 @@ public final class AudioMixerModel {
     }
 
     public func adjust(to level: Double) {
-        guard let current = system else {
-            return
-        }
+        guard let current = system else { return }
+
         let clamped = Swift.min(Swift.max(level, 0), 1)
         isAdjusting   = true
         system        = current.replacing(level: clamped)
@@ -71,9 +81,8 @@ public final class AudioMixerModel {
     }
 
     public func toggleMute() {
-        guard let current = system else {
-            return
-        }
+        guard let current = system else { return }
+
         let isMuted = !current.isMuted
         system = current.replacing(isMuted: isMuted)
         controller.setMuted(isMuted, forDevice: current.defaultDeviceID)
@@ -83,16 +92,14 @@ public final class AudioMixerModel {
     /// system output. In several mode it joins or leaves the selection, except that the last one
     /// can never leave: a system with no output would be silent for no reason the user chose.
     public func choose(outputUID: String) {
-        guard let current = system else {
-            return
-        }
+        guard let current = system else { return }
+
         var uids = [outputUID]
         if allowsSeveralOutputs {
             uids = current.selectedUIDs
             if let index = uids.firstIndex(of: outputUID) {
-                guard uids.count > 1 else {
-                    return
-                }
+                guard uids.count > 1 else { return }
+
                 uids.remove(at: index)
             } else {
                 uids.append(outputUID)
@@ -103,9 +110,8 @@ public final class AudioMixerModel {
     }
 
     private func queueFlush() {
-        guard !isFlushQueued else {
-            return
-        }
+        guard !isFlushQueued else { return }
+
         isFlushQueued = true
         DispatchQueue.main.async { [weak self] in
             MainActor.assumeIsolated {
@@ -117,13 +123,11 @@ public final class AudioMixerModel {
     /// flush sends the pending level, if any, and only to the device it was made for.
     private func flush() {
         isFlushQueued = false
-        guard let level = pendingLevel else {
-            return
-        }
+        guard let level = pendingLevel else { return }
+
         pendingLevel = nil
-        guard pendingDevice == system?.defaultDeviceID else {
-            return
-        }
+        guard pendingDevice == system?.defaultDeviceID else { return }
+
         controller.setLevel(level, forDevice: pendingDevice)
     }
 }
