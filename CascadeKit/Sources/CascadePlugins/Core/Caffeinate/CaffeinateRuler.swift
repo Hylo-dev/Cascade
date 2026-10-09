@@ -15,9 +15,12 @@ import Foundation
 /// The ruler has two scales. A duration is minutes, 15 to 1440 in steps of 15. An end time is
 /// an instant in seconds since 1970 on the quarter hours of the clock, from the first quarter
 /// hour at least 15 minutes ahead to the last one within a day. The range is built from the
-/// moment the page is published, so it is as stale as the page is: the native owner rejects
-/// an instant that has meanwhile gone too close, and the ruler returns to its published value
-/// by itself (`PluginNodeStore.confirmationTimeout`).
+/// moment the page is published, so it ages. The widget therefore publishes with a `staleAfter`
+/// while its content depends on the clock (`PluginCaffeinateState.dependsOnTheClock`): the
+/// kernel asks for one fresh publication when the notch shows content older than that, so a
+/// page opened after a while starts on a range that begins in the future. Within those minutes
+/// an instant that has gone too close is still ignored by the native owner, and the ruler
+/// returns to its published value by itself (`PluginNodeStore.confirmationTimeout`).
 ///
 /// The value is what the control stands for now. While off, it is the next session's target. While
 /// a session runs, a duration is the time left rounded up to the next quarter hour, since the

@@ -82,6 +82,8 @@ enum CaffeinateStyle {
         static var options          : String { String(localized: "Caffeinate Options", table: "CaffeinateWidget", bundle: .module) }
         static var startLabel       : String { String(localized: "Start Caffeinate", table: "CaffeinateWidget", bundle: .module) }
         static var stopLabel        : String { String(localized: "Stop Caffeinate", table: "CaffeinateWidget", bundle: .module) }
+        static var rulerLength      : String { String(localized: "Length", table: "CaffeinateWidget", bundle: .module) }
+        static var rulerEnds        : String { String(localized: "Ends at", table: "CaffeinateWidget", bundle: .module) }
         static var forDuration      : String { String(localized: "For", table: "CaffeinateWidget", bundle: .module) }
         static var untilTime        : String { String(localized: "Until", table: "CaffeinateWidget", bundle: .module) }
         static var untilYouStopIt   : String { String(localized: "Until you stop it", table: "CaffeinateWidget", bundle: .module) }
@@ -160,6 +162,19 @@ extension PluginCaffeinateState {
         guard endsAt != nil else { return .indefinite }
 
         return nextTarget.kind == .until ? .until : .duration
+    }
+
+    /// staleAfter is how old, in seconds, the widget's content may be when its surface becomes
+    /// visible before the kernel asks the plugin for a fresh one: five minutes.
+    static let staleAfter = 300.0
+
+    /// dependsOnTheClock says the documents hold something worked out from "now": an end time
+    /// (the Until ruler's range and value, the status line's clock) or the minutes a running
+    /// session has left (the For ruler's value). Such content ages while nothing changes, so
+    /// the widget asks to be refreshed when it is shown stale; with an indefinite session or a
+    /// next length there is nothing to age.
+    var dependsOnTheClock: Bool {
+        shownKind == .until || (isActive && shownKind == .duration)
     }
 
     /// refusedToStart says the system would not hold the assertion: the session is not running,

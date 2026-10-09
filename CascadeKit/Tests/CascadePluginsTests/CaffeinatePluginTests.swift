@@ -828,24 +828,77 @@ struct CaffeinatePluginTests {
 
         #expect(entries.contains { $0.kind == .countdown(end: ends, style: .compact) })
         #expect(entries.contains { $0.kind == .timer(start: Self.started, end: ends, countsDown: true) })
-        #expect(!entries.contains { $0.kind == .date(ends, style: .time) })
         #expect(page.contains("Couldn't change the time (error 5)"))
         #expect(!page.contains("Error"))
         #expect(!page.contains { $0.hasPrefix("Couldn't prevent sleep") })
         #expect(symbols(entries).contains("exclamationmark.triangle.fill"))
     }
 
-    /// A running page has no caption: the time is the kernel's countdown, and an Until
-    /// session's end is the ruler's own value, so the page draws no second clock.
+    /// A running timed page says when the session ends under its countdown, in the kernel's
+    /// clock, for For and for Until alike; an indefinite one has no end to say.
     @Test
-    func aRunningPageCountsDownWithTheKernelAndDrawsNoCaption() throws {
-        let state   = timed()
-        let ends    = try #require(state.endsAt)
-        let entries = try nodes(optionsPublication(state))
+    func aRunningPageCountsDownAndSaysWhenItEnds() throws {
+        let until = PluginCaffeinateState(
+            startedAt        : Self.started,
+            endsAt           : Date(timeIntervalSince1970: Self.sixPM),
+            activityStartedAt: Self.started,
+            nextTarget       : .until(minuteOfDay: 18 * 60)
+        )
 
-        #expect(entries.contains { $0.kind == .timer(start: Self.started, end: ends, countsDown: true) })
-        #expect(!entries.contains { $0.kind == .date(ends, style: .time) })
-        #expect(!texts(entries).contains("until"))
+        for state in [timed(), until] {
+            let ends    = try #require(state.endsAt)
+            let entries = try nodes(optionsPublication(state))
+
+            #expect(entries.contains { $0.kind == .timer(start: Self.started, end: ends, countsDown: true) })
+            let clock = try #require(entries.first { $0.kind == .date(ends, style: .time) })
+            #expect(entries.filter { $0.kind == .date(ends, style: .time) }.count == 1)
+            #expect(clock.modifiers.contains(.font(.system(size: 10, weight: .medium))))
+            #expect(clock.modifiers.contains(.foregroundStyle(.color(PluginColor(red: 0.70, green: 0.70, blue: 0.74)))))
+            #expect(texts(entries).contains("until"))
+        }
+
+        let open = try nodes(optionsPublication(indefinite()))
+        #expect(!open.contains { if case .date = $0.kind { true } else { false } })
+        #expect(!texts(open).contains("until"))
+    }
+
+    // MARK: - Staleness
+
+    /// A widget whose content is worked out from "now" asks the kernel to refresh it when it is
+    /// shown stale: the Until ruler and status line, and a running For ruler. A next length and
+    /// an indefinite session age no way.
+    @Test
+    func theWidgetIsStaleAfterFiveMinutesOnlyWhileItDependsOnTheClock() throws {
+        func stale(_ state: PluginCaffeinateState) throws -> Double? {
+            widget(try send(state, to: plugin()))?.staleAfter
+        }
+
+        let runningUntil = PluginCaffeinateState(
+            startedAt        : Self.started,
+            endsAt           : Date(timeIntervalSince1970: Self.sixPM),
+            activityStartedAt: Self.started,
+            nextTarget       : .until(minuteOfDay: 18 * 60)
+        )
+
+        #expect(try stale(off(nextTarget: .until(minuteOfDay: 18 * 60))) == 300)
+        #expect(try stale(runningUntil) == 300)
+        #expect(try stale(timed()) == 300)
+        #expect(try stale(off(nextTarget: .duration(minutes: 90))) == nil)
+        #expect(try stale(off(nextTarget: .indefinite)) == nil)
+        #expect(try stale(indefinite()) == nil)
+    }
+
+    @Test
+    func theRulerSpeaksWhatItMeasures() throws {
+        func label(_ state: PluginCaffeinateState) throws -> String? {
+            try #require(try ruler(state)).modifiers.compactMap { modifier -> String? in
+                if case .accessibilityLabel(let label) = modifier { label } else { nil }
+            }.first
+        }
+
+        #expect(try label(off(nextTarget: .duration(minutes: 90))) == "Length")
+        #expect(try label(off(nextTarget: .until(minuteOfDay: 18 * 60))) == "Ends at")
+        #expect(try label(timed()) == "Length")
     }
 
     @Test
@@ -895,6 +948,8 @@ struct CaffeinateStringsTests {
         ("Until you stop it", "Finché non lo fermi"),
         ("until", "fino alle"),
         ("%@, selected", "%@, selezionato"),
+        ("Length", "Durata"),
+        ("Ends at", "Termina alle"),
     ]
 
     private func catalog() throws -> [String: [String: Any]] {

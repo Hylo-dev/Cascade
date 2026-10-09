@@ -23,7 +23,8 @@ import Foundation
 /// or the running session (`CaffeinateRuler`); with ∞ there is nothing to measure, and the
 /// space says so instead. The time is the next session's length, its end time drawn by the kernel,
 /// or the sign, in white, while off; and the kernel's countdown, or the elapsed time of an
-/// indefinite session, in amber, while one runs. The kernel keeps them current, so the page ticks
+/// indefinite session, in amber, while one runs, with the end's clock under the countdown of a
+/// timed one. The kernel keeps them current, so the page ticks
 /// without waking the plugin.
 ///
 /// A refusal takes the top band's free space, with its sentence and code, in the warning colour:
@@ -269,6 +270,7 @@ enum CaffeinateOptionsFace {
         .foregroundStyle(Palette.amber)
         .frame(height: rulerHeight, maxWidth: .infinity)
         .id(Node.ruler)
+        .accessibilityLabel(scale.labels == .duration ? Copy.rulerLength : Copy.rulerEnds)
     }
 
     /// nothingToMeasure takes the ruler's place with ∞, which has no length to choose.
@@ -283,6 +285,26 @@ enum CaffeinateOptionsFace {
 
     // MARK: - Time
 
+    /// endLine says when a running timed session ends, under its countdown: "until" and the
+    /// end's clock, which the kernel draws in the user's locale. A time node carries its own
+    /// font and colour.
+    private static func endLine(_ endsAt: Date) -> PluginNode {
+        let font = PluginFont.system(size: 10, weight: .medium)
+
+        return HStack(spacing: 3) {
+
+            Text(Copy.until)
+                .font(font)
+                .foregroundStyle(Palette.secondary)
+                .lineLimit(1)
+
+            Text(endsAt, style: .time)
+                .font(font)
+                .foregroundStyle(Palette.secondary)
+                .lineLimit(1)
+        }
+    }
+
     /// time is the big number, in rounded digits that keep their width. Its font and its tint
     /// sit on the node itself, because the kernel reads them from a time node and never from a
     /// parent.
@@ -292,12 +314,17 @@ enum CaffeinateOptionsFace {
     ) -> PluginNode {
         let font = PluginFont.system(size: 26, weight: .semibold, design: .rounded).monospacedDigit()
 
-        if state.isActive, let elapsed = state.elapsed {
-            return Text(timerInterval: elapsed, countsDown: true)
-                .font(font)
-                .foregroundStyle(Palette.amber)
-                .lineLimit(1)
-                .frame(width: timeWidth, alignment: .trailing)
+        if state.isActive, let elapsed = state.elapsed, let endsAt = state.endsAt {
+            return VStack(alignment: .trailing, spacing: 0) {
+
+                Text(timerInterval: elapsed, countsDown: true)
+                    .font(font)
+                    .foregroundStyle(Palette.amber)
+                    .lineLimit(1)
+
+                endLine(endsAt)
+            }
+            .frame(width: timeWidth, alignment: .trailing)
         }
 
         if let countUp = state.countUp {

@@ -15,7 +15,9 @@ import Synchronization
 /// It publishes the widget whenever its document changes, and the activity while a session runs:
 /// again whenever its content or attributes change, and withdrawn once when the session stops,
 /// if one was out. A snapshot that changes nothing publishes nothing (the ruler's range follows
-/// the clock, so a repeat that comes a quarter hour later is not nothing), and a `refresh`, which
+/// the clock, so a repeat that comes a quarter hour later is not nothing; and the widget carries
+/// a `staleAfter` while its content depends on the clock, so the kernel asks for a `refresh` when
+/// the notch shows it stale), and a `refresh`, which
 /// comes at start and after a restart, gets the last documents again. It never asks for a wake:
 /// the time left, the elapsed time and the end time are drawn and kept current by the kernel,
 /// and a user's tap is an action the native owner answers by name, so an action returns an

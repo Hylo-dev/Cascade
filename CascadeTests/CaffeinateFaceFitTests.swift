@@ -151,6 +151,40 @@ struct CaffeinateFaceFitTests {
         }
     }
 
+    /// aRunningTimeAndItsEndLineFitTheBottomBand: the kernel's countdown is an AppKit label that
+    /// an `ImageRenderer` does not draw, so its height is the line height of its font, and the
+    /// end line under it is measured as the SwiftUI text it is. Together they must fit the 46
+    /// points of the bottom band, in both widths of the clock (12 and 24 hours are one text
+    /// in the locale the process runs in).
+    @Test
+    func aRunningTimeAndItsEndLineFitTheBottomBand() throws {
+        let now     = Date.now
+        let started = now.addingTimeInterval(-36 * 60)
+        let running = PluginCaffeinateState(
+            startedAt        : started,
+            endsAt           : now.addingTimeInterval(5 * 3_600),
+            activityStartedAt: started,
+            nextTarget       : .until(minuteOfDay: 22 * 60 + 45)
+        )
+        let options = try #require(try publish(running).optionsRoot)
+
+        func find(_ node: PluginNode) -> PluginNode? {
+            if node.kind == .hStack(alignment: .center, spacing: 3), node.children.contains(where: { $0.kind == .text("until") }) {
+                return node
+            }
+
+            return (node.children + node.layers).lazy.compactMap(find).first
+        }
+
+        let line     = try #require(find(options))
+        let measured = try idealSize(of: PluginDocument(root: line))
+        let font     = PluginFont.system(size: 26, weight: .semibold, design: .rounded).monospacedDigit().nsFont
+        let height   = ceil(font.ascender - font.descender + font.leading)
+
+        #expect(measured.width > 20 && measured.width <= 124, "the end line measured \(measured.width) points wide")
+        #expect(height + measured.height <= 46, "the countdown (\(height)) and its end line (\(measured.height)) need more than 46 points")
+    }
+
     // MARK: - Helpers
 
     private func publish(_ state: PluginCaffeinateState) throws -> PluginDocument {

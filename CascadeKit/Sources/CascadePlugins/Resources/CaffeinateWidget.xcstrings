@@ -33,12 +33,20 @@
       "comment": "Accessibility label of the selector segment that is chosen. %@ is the segment's name: For, Until or Until you stop it.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "%@, selezionato" } } }
     },
+    "Length": {
+      "comment": "Accessibility label of the options page's ruler when it sets how long the session lasts.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Durata" } } }
+    },
+    "Ends at": {
+      "comment": "Accessibility label of the options page's ruler when it sets the time of day the session ends.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Termina alle" } } }
+    },
     "Keep display awake": {
       "comment": "Switch that also keeps the display from sleeping.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Schermo acceso" } } }
     },
     "until": {
-      "comment": "Small label before the time the next session will end, on the widget's second line.",
+      "comment": "Small label before the time a session ends: on the widget's second line for the next session, and under the countdown on the options page for a running one.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "fino alle" } } }
     },
     "Couldn't prevent sleep (error %@)": {

@@ -42,9 +42,9 @@ enum CaffeinateWidgetFace {
         calendar : Calendar
     ) throws -> PluginPublication {
         try PluginPublication(
-            feature : CaffeinatePlugin.feature,
-            surface : .widget,
-            document: PluginDocument(
+            feature   : CaffeinatePlugin.feature,
+            surface   : .widget,
+            document  : PluginDocument(
                 root: ViewThatFits(in: .vertical) {
 
                     tall(state, now: now, calendar: calendar)
@@ -63,7 +63,8 @@ enum CaffeinateWidgetFace {
                     calendar: calendar
                 ),
                 optionsAction: CaffeinateStyle.Action.options
-            )
+            ),
+            staleAfter: state.dependsOnTheClock ? PluginCaffeinateState.staleAfter : nil
         )
     }
 
