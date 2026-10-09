@@ -130,12 +130,13 @@ public final class PluginSurfaceRouter {
 
     /// open shows a feature's detail on the expanded display, where the click that asks for it
     /// happened, and reports it visible once the host has ended any detail it replaces; the host
-    /// reports it hidden through `onDismiss`, exactly once, however it ends. Without a detail
+    /// reports it hidden through `onDismiss`, exactly once, however it ends. A host that refuses
+    /// the show never calls `onDismiss`, so nothing is tracked or reported then. Without a detail
     /// publication yet there is nothing to open.
     private func open(detail key: PluginPublicationKey) {
         guard let detail = details[key] else { return }
 
-        host.showDetail(
+        let isShown = host.showDetail(
             detail,
             on       : nil,
             onDismiss: { [weak self, visibility] in
@@ -143,6 +144,8 @@ public final class PluginSurfaceRouter {
                 visibility(false, key)
             }
         )
+        guard isShown else { return }
+
         openDetails.insert(key)
         visibility(true, key)
     }

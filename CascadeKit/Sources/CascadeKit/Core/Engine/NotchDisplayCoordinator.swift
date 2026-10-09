@@ -445,23 +445,26 @@ final class NotchDisplayCoordinator {
     /// from a click on that display's grid, and a closed notch has nothing to draw it over. A
     /// refused detail is never shown, so its `onDismiss` is never called. A shown one replaces
     /// the previous detail, which is told after the new one is already on screen, so a
-    /// dismissal handler that reaches back in sees a settled coordinator.
+    /// dismissal handler that reaches back in sees a settled coordinator. It returns whether the
+    /// detail was shown.
+    @discardableResult
     func showDetail(
         _ page      : any NotchContextualPage,
         on displayID: CGDirectDisplayID?,
         onDismiss   : @escaping @MainActor () -> Void
-    ) {
+    ) -> Bool {
         guard isStarted,
               let displayID = displayID ?? expandedDisplayID,
               expandedDisplayID == displayID,
               closingDisplayID == nil,
               surfaces[displayID] != nil
-        else { return }
+        else { return false }
 
         let replaced = detail
         detail = (page, displayID, onDismiss)
         reconcilePresentations()
         replaced?.onDismiss()
+        return true
     }
 
     func dismissDetail(id: String) {

@@ -47,7 +47,7 @@ extension PluginHostTests {
                 _ page      : any NotchContextualPage,
                 on displayID: CGDirectDisplayID?,
                 onDismiss   : @escaping @MainActor () -> Void
-            ) {}
+            ) -> Bool { false }
 
             func dismissDetail(id: String) {}
         }

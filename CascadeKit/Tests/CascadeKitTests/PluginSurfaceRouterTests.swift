@@ -283,6 +283,17 @@ struct PluginSurfaceRouterTests {
     }
 
     @Test
+    func refusedDetailIsNeitherOpenNorVisible() throws {
+        let (rig, widget) = try openedDetailRig()
+        rig.host.refusesDetails = true
+
+        widget.openDetail?()
+
+        #expect(rig.host.shownDetails.isEmpty)
+        #expect(rig.visibility.isEmpty)
+    }
+
+    @Test
     func widgetWithoutDetailHasNoOpenAction() throws {
         let rig       = try rig()
         var publisher = PluginPublicationStore()

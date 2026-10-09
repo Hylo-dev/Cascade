@@ -1756,13 +1756,14 @@ struct NotchDisplayCoordinatorTests {
         let detail    = CoordinatorContextualPage(id: "detail", contentRevision: 1)
         var dismissed = 0
 
-        fixture.coordinator.showDetail(
+        let isShown = fixture.coordinator.showDetail(
             detail,
             on       : 20,
             onDismiss: { dismissed += 1 }
         )
         fixture.coordinator.dismissDetail(id: "detail")
 
+        #expect(isShown == false)
         #expect(fixture.surfaces[10]?.presentations.last?.detailPage == nil)
         #expect(fixture.surfaces[20]?.presentations.last?.detailPage == nil)
         #expect(dismissed == 0)
@@ -1773,12 +1774,13 @@ struct NotchDisplayCoordinatorTests {
         let fixture = expandedDetailFixture(displayIDs: [10, 20])
         let detail  = CoordinatorContextualPage(id: "detail", contentRevision: 1)
 
-        fixture.coordinator.showDetail(
+        let isShown = fixture.coordinator.showDetail(
             detail,
             on       : nil,
             onDismiss: {}
         )
 
+        #expect(isShown == true)
         #expect(fixture.surfaces[10]?.presentations.last?.detailPage === detail)
         #expect(fixture.surfaces[20]?.presentations.last?.detailPage == nil)
     }

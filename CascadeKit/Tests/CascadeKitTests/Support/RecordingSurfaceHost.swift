@@ -23,6 +23,9 @@ final class RecordingSurfaceHost: PluginSurfaceHosting {
     )] = []
     private(set) var dismissedDetailIDs: [String] = []
 
+    /// refusesDetails makes `showDetail` behave as a host whose display is not expanded does.
+    var refusesDetails = false
+
     func register(_ widget: NotchWidget) {
         registrations += 1
         widgets[widget.id] = widget
@@ -48,8 +51,11 @@ final class RecordingSurfaceHost: PluginSurfaceHosting {
         _ page      : any NotchContextualPage,
         on displayID: CGDirectDisplayID?,
         onDismiss   : @escaping @MainActor () -> Void
-    ) {
+    ) -> Bool {
+        guard !refusesDetails else { return false }
+
         shownDetails.append((page, displayID, onDismiss))
+        return true
     }
 
     func dismissDetail(id: String) {
