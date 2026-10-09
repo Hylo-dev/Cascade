@@ -1,0 +1,118 @@
+{
+  "architecture": "arm64",
+  "audibleEffectMeasured": false,
+  "callbackEnqueueStatus": 0,
+  "callbacks": 21,
+  "counterLockFree": true,
+  "defaultOutputID": 102,
+  "defaultOutputStatus": 0,
+  "deviceMuteOnProcessObject": {
+    "present": false
+  },
+  "deviceProcessMute": {
+    "present": true,
+    "readStatus": 0,
+    "settable": 1,
+    "settableStatus": 0,
+    "size": 4,
+    "sizeStatus": 0,
+    "value": 0
+  },
+  "osVersion": "Version 27.0 (Build 26A5425a)",
+  "otherProcessSettersCalled": 0,
+  "ownMuteRoundTrip": {
+    "after": {
+      "present": true,
+      "readStatus": 0,
+      "settable": 1,
+      "settableStatus": 0,
+      "size": 4,
+      "sizeStatus": 0,
+      "value": 0
+    },
+    "attempted": true,
+    "before": {
+      "present": true,
+      "readStatus": 0,
+      "settable": 1,
+      "settableStatus": 0,
+      "size": 4,
+      "sizeStatus": 0,
+      "value": 0
+    },
+    "muteStatus": 0,
+    "restoreStatus": 0,
+    "unmuteStatus": 0,
+    "whileMuted": {
+      "present": true,
+      "readStatus": 0,
+      "settable": 1,
+      "settableStatus": 0,
+      "size": 4,
+      "sizeStatus": 0,
+      "value": 1
+    },
+    "whileUnmuted": {
+      "present": true,
+      "readStatus": 0,
+      "settable": 1,
+      "settableStatus": 0,
+      "size": 4,
+      "sizeStatus": 0,
+      "value": 0
+    }
+  },
+  "ownProcessAudible": {
+    "present": true,
+    "readStatus": 0,
+    "settable": 1,
+    "settableStatus": 0,
+    "size": 4,
+    "sizeStatus": 0,
+    "value": 1
+  },
+  "ownProcessID": 146,
+  "ownProcessRunningOutput": {
+    "present": true,
+    "readStatus": 0,
+    "settable": 0,
+    "settableStatus": 0,
+    "size": 4,
+    "sizeStatus": 0,
+    "value": 1
+  },
+  "ownProcessStatus": 0,
+  "private": {
+    "frameworkLoaded": true,
+    "functionsCalled": 0,
+    "loaderError": "",
+    "symbols": {
+      "AudioDeviceDuck": true,
+      "FigRoutingContextCopyAllAudioContexts": true,
+      "FigRoutingContextCopyContextForUUID": true,
+      "FigRoutingContextCopySystemAudioContext": true,
+      "FigRoutingContextCreateAudioContext": true,
+      "FigRoutingContextGetTypeID": true,
+      "FigVolumeControllerCopySharedControllerRemote": true,
+      "FigVolumeControllerGetTypeID": true,
+      "MXSessionCopyProperty": true,
+      "MXSessionCreate": true,
+      "MXSessionCreateWithOptions": true,
+      "MXSessionSetProperty": true,
+      "kFigRoutingContextCreateOption_ClientPID": true,
+      "kFigVolumeControllerMasterVolumeKey_RoutingContextUUID": true,
+      "kFigVolumeControllerMasterVolumeKey_Volume": true,
+      "kMXSessionProperty_ClientPID": true,
+      "kMXSessionProperty_IsOutputMuted": true,
+      "kMXSessionProperty_UserVolume": true
+    }
+  },
+  "queueCreateStatus": 0,
+  "queueDisposeStatus": 0,
+  "queuePrepareStatus": 0,
+  "queueStartStatus": 0,
+  "retiredCallbacks": 3,
+  "retiringQueueStatus": 0,
+  "schemaVersion": 1,
+  "silentStreamRequested": true
+}
