@@ -14,15 +14,19 @@ import Synchronization
 ///
 /// It publishes the widget whenever its document changes, and the activity while a session runs:
 /// again whenever its content or attributes change, and withdrawn once when the session stops,
-/// if one was out. A snapshot that changes nothing publishes nothing, and a `refresh`, which
+/// if one was out. A snapshot that changes nothing publishes nothing (the ruler's range follows
+/// the clock, so a repeat that comes a quarter hour later is not nothing), and a `refresh`, which
 /// comes at start and after a restart, gets the last documents again. It never asks for a wake:
 /// the time left, the elapsed time and the end time are drawn and kept current by the kernel,
 /// and a user's tap is an action the native owner answers by name, so an action returns an
 /// empty output and the owner's next snapshot is the answer.
 ///
 /// Its only memory is the last snapshot and the two documents it last published. PluginHost
-/// runs it on one thread, so the lock is never contended. `now` is only read to dim a control
-/// near the 24-hour cap, so a test can pin it.
+/// runs it on one thread, so the lock is never contended. `now` and `calendar` are read to build
+/// the options page's ruler and the widget's end time, which are instants the plugin works out
+/// from the snapshot (the next occurrence of a time of day, the range of the clock ruler), so a
+/// test can pin both. The calendar is read at each publication, so a change of time zone shows
+/// at the next one.
 final class CaffeinatePlugin: PluginProvider {
 
     static let id      = PluginID(rawValue: "com.cascade.caffeinate")!
@@ -48,10 +52,15 @@ final class CaffeinatePlugin: PluginProvider {
     }
 
     private let memory = Mutex(Memory())
-    private let now   : @Sendable () -> Date
+    private let now     : @Sendable () -> Date
+    private let calendar: @Sendable () -> Calendar
 
-    init(now: @escaping @Sendable () -> Date = { Date() }) {
-        self.now = now
+    init(
+        now     : @escaping @Sendable () -> Date     = { Date() },
+        calendar: @escaping @Sendable () -> Calendar = { Calendar.autoupdatingCurrent }
+    ) {
+        self.now      = now
+        self.calendar = calendar
     }
 
     func handle(
@@ -81,7 +90,11 @@ final class CaffeinatePlugin: PluginProvider {
         force  : Bool
     ) throws -> PluginOutput {
         let moment = now()
-        let widget = try CaffeinateWidgetFace.publication(for: state, now: moment)
+        let widget = try CaffeinateWidgetFace.publication(
+            for     : state,
+            now     : moment,
+            calendar: calendar()
+        )
         let live   = state.isActive ? try CaffeinateActivityFace.publication(for: state, now: moment) : nil
         let ended  = try CaffeinateActivityFace.withdrawal()
 

@@ -17,41 +17,29 @@
       "comment": "Accessibility label of the switch that stops the keep-awake session.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Ferma Caffeinate" } } }
     },
-    "Shorter": {
-      "comment": "Accessibility label of the stepper button that picks a shorter duration.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Più breve" } } }
+    "For": {
+      "comment": "Selector segment on the options page: the session lasts a length of time you choose on the ruler.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Per" } } }
     },
-    "Longer": {
-      "comment": "Accessibility label of the stepper button that picks a longer duration.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Più lunga" } } }
+    "Until": {
+      "comment": "Selector segment on the options page: the session lasts until a time of day you choose on the ruler.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Fino a" } } }
     },
-    "Start": {
-      "comment": "Caption under the round button that starts a keep-awake session.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Avvia" } } }
+    "Until you stop it": {
+      "comment": "Accessibility label of the selector's infinity segment, and the text that replaces the ruler when the session has no time limit.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Finché non lo fermi" } } }
     },
-    "Stop": {
-      "comment": "Caption under the round button that stops the keep-awake session.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Ferma" } } }
-    },
-    "Display": {
-      "comment": "Caption under the round button that keeps the display awake.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Schermo" } } }
-    },
-    "Next session": {
-      "comment": "Caption under the length of the next keep-awake session, while no session runs.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Prossima sessione" } } }
+    "%@, selected": {
+      "comment": "Accessibility label of the selector segment that is chosen. %@ is the segment's name: For, Until or Until you stop it.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "%@, selezionato" } } }
     },
     "Keep display awake": {
       "comment": "Switch that also keeps the display from sleeping.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Schermo acceso" } } }
     },
     "until": {
-      "comment": "Small label before the time a timed session ends.",
+      "comment": "Small label before the time the next session will end, on the widget's second line.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "fino alle" } } }
-    },
-    "active for": {
-      "comment": "Small label above the elapsed time of a session without a time limit.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "attivo da" } } }
     },
     "Couldn't prevent sleep (error %@)": {
       "comment": "Options page line when the system refused to keep the Mac awake. %@ is the system's error code, written without digit grouping.",
@@ -70,7 +58,7 @@
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Errore" } } }
     },
     "Couldn't change the time (error %@)": {
-      "comment": "Options page line when the system refused to change the time of a running session, by a step either way. %@ is the system's error code.",
+      "comment": "Options page line when the system refused to change the time of a running session, by a move of the ruler. %@ is the system's error code.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Impossibile cambiare la durata (errore %@)" } } }
     }
   },

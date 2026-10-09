@@ -9,21 +9,25 @@ import Foundation
 
 /// CaffeinateOptionsFace is the page the kernel shows over the grid when the widget's text is
 /// pressed. It has the notch's expanded footprint below Cascade's Back control, about 400 by 86
-/// points, and it is one row, as the iOS Timer's: two round buttons leading, a stepper trailing.
+/// points, and it is two bands.
 ///
-/// The leading buttons are the power switch, an amber disc with Play while off, the one
-/// prominent action, and a grey disc with Stop while on, and the display switch, a moon on a
-/// grey disc while off and a display on an amber-tinted one while on. Each has a small caption
-/// under it, and the whole column is the switch, so its label is as easy to hit as its disc.
-/// State is never colour alone: the symbol changes with the fill.
+/// The top band has the selector leading: For, Until and ∞, three buttons in one track, the
+/// chosen one filled, which pick how the session ends. Trailing are two round switches, the
+/// display preference, a moon on grey while the display may sleep and a display on an amber
+/// tint while it is kept awake, and the power switch, an amber disc with Play while off, the one
+/// prominent action, and a grey disc with Stop while on. State is never colour alone: the
+/// symbol changes with the fill, and the selector's accessibility labels say which one is chosen.
 ///
-/// The trailing group is the time with a caption under it (Task 3 of the ruler plan puts the
-/// ruler and the selector there; the step buttons are gone). While off the time is the
-/// next session's length, in white, and the caption says "Next session". While a session runs
-/// the time is the kernel's timer, counting down to the end, or up for an indefinite session,
-/// in amber, and the caption says "until" and the end time, or "active for". The kernel draws
-/// and keeps them current, so the page ticks without waking the plugin. A refusal replaces the
-/// caption with its sentence and the code, in the warning colour.
+/// The bottom band has the ruler across most of the width and the big time trailing. The ruler is
+/// the kernel's, a slider in the `ruler` style, and measures the length or the end time of the next
+/// or the running session (`CaffeinateRuler`); with ∞ there is nothing to measure, and the
+/// space says so instead. The time is the next session's length, its end time drawn by the kernel,
+/// or the sign, in white, while off; and the kernel's countdown, or the elapsed time of an
+/// indefinite session, in amber, while one runs. The kernel keeps them current, so the page ticks
+/// without waking the plugin.
+///
+/// A refusal takes the top band's free space, with its sentence and code, in the warning colour:
+/// the page has no caption to replace, and the code is for diagnosis.
 enum CaffeinateOptionsFace {
 
     typealias Node    = CaffeinateStyle.Node
@@ -31,27 +35,130 @@ enum CaffeinateOptionsFace {
     typealias Palette = CaffeinateStyle.Palette
     typealias Copy    = CaffeinateStyle.Copy
 
-    /// timeWidth holds the big time at a width of its own, so the stepper's buttons do not
-    /// move as its digits change length.
+    /// The bands' heights and the gap between them: 30 + 6 + 46 is 82 of the page's 86 points.
+    private static let topHeight    = 30.0
+    private static let rulerHeight  = 46.0
+    private static let bandSpacing  = 6.0
+    private static let buttonSize   = 30.0
+
+    /// timeWidth holds the big time at a width of its own, so the ruler does not change size as
+    /// the digits change length. 124 points hold "10:45 PM" and "23:59:59" at 26 points.
     private static let timeWidth = 124.0
 
+    /// warningWidth is the most the refusal's sentence asks for, about what the top band leaves
+    /// between the selector and the round buttons in either language, so the page's natural
+    /// width stays inside the notch's and the sentence wraps instead.
+    private static let warningWidth = 160.0
+
     static func page(
-        _ state: PluginCaffeinateState,
-        now    : Date
+        _ state : PluginCaffeinateState,
+        now     : Date,
+        calendar: Calendar
     ) -> PluginNode {
-        HStack(alignment: .center, spacing: 14) {
+        let scale = CaffeinateRuler.scale(
+            for     : state,
+            now     : now,
+            calendar: calendar
+        )
 
-            powerButton(state)
+        return VStack(alignment: .leading, spacing: bandSpacing) {
 
-            displayButton(state)
+            topBand(state)
 
-            Spacer(minLength: 8)
-
-            timeAndCaption(state)
+            bottomBand(state, scale: scale)
         }
         .padding(.horizontal, 4)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .id("options.page")
+        .id(Node.page)
+    }
+
+    // MARK: - Top band
+
+    private static func topBand(_ state: PluginCaffeinateState) -> PluginNode {
+        HStack(alignment: .center, spacing: 8) {
+
+            selector(state)
+
+            if let failure = state.failure {
+                warning(failure)
+            } else {
+                Spacer(minLength: 4)
+            }
+
+            displayButton(state)
+
+            powerButton(state)
+        }
+        .frame(height: topHeight)
+    }
+
+    // MARK: - Selector
+
+    /// selector is the three segments in one track. A segment is a button of its own: the
+    /// native owner maps the action by name, and the chosen one is filled and says so to
+    /// VoiceOver.
+    private static func selector(_ state: PluginCaffeinateState) -> PluginNode {
+        let shown = state.shownKind
+
+        return HStack(spacing: 2) {
+
+            segment(
+                .duration,
+                title: Copy.forDuration,
+                spoken: Copy.forDuration,
+                shown : shown
+            )
+
+            segment(
+                .until,
+                title : Copy.untilTime,
+                spoken: Copy.untilTime,
+                shown : shown
+            )
+
+            segment(
+                .indefinite,
+                title : CaffeinateStyle.Format.sign,
+                spoken: Copy.untilYouStopIt,
+                shown : shown
+            )
+        }
+        .padding(2)
+        .background {
+
+            Capsule()
+                .foregroundStyle(Palette.track)
+        }
+    }
+
+    private static func segment(
+        _ kind : CaffeinateTargetKind,
+        title  : String,
+        spoken : String,
+        shown  : CaffeinateTargetKind
+    ) -> PluginNode {
+        let isChosen = kind == shown
+        let label    = Text(title)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(isChosen ? PluginColor.white : Palette.secondary)
+            .lineLimit(1)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+
+        return Button(action: Action.mode(kind)) {
+
+            if isChosen {
+                label.background {
+
+                    Capsule()
+                        .foregroundStyle(Palette.selected)
+                }
+            } else {
+                label
+            }
+        }
+        .id(Node.mode(kind))
+        .accessibilityLabel(isChosen ? Copy.selected(spoken) : spoken)
     }
 
     // MARK: - Round buttons
@@ -61,17 +168,15 @@ enum CaffeinateOptionsFace {
         Toggle(isOn: state.isActive, action: Action.power(isActive: state.isActive)) {
 
             roundButton(
-                symbol : "play.fill",
-                fill   : Palette.amber,
-                glyph  : Palette.ink,
-                caption: Copy.start
+                symbol: "play.fill",
+                fill  : Palette.amber,
+                glyph : Palette.ink
             )
 
             roundButton(
-                symbol : "stop.fill",
-                fill   : Palette.button,
-                glyph  : .white,
-                caption: Copy.stop
+                symbol: "stop.fill",
+                fill  : Palette.button,
+                glyph : .white
             )
         }
         .id(Node.powerOptions)
@@ -84,17 +189,15 @@ enum CaffeinateOptionsFace {
         Toggle(isOn: state.keepsDisplayAwake, action: Action.display) {
 
             roundButton(
-                symbol : "moon.zzz",
-                fill   : Palette.button,
-                glyph  : Palette.secondary,
-                caption: Copy.display
+                symbol: "moon.zzz",
+                fill  : Palette.button,
+                glyph : Palette.secondary
             )
 
             roundButton(
-                symbol : "display",
-                fill   : Palette.amber.opacity(0.28),
-                glyph  : Palette.amber,
-                caption: Copy.display
+                symbol: "display",
+                fill  : Palette.amber.opacity(0.28),
+                glyph : Palette.amber
             )
         }
         .id(Node.display)
@@ -102,49 +205,91 @@ enum CaffeinateOptionsFace {
     }
 
     private static func roundButton(
-        symbol : String,
-        fill   : PluginColor,
-        glyph  : PluginColor,
-        caption: String
+        symbol: String,
+        fill  : PluginColor,
+        glyph : PluginColor
     ) -> PluginNode {
-        VStack(spacing: 3) {
+        ZStack {
 
-            ZStack {
+            Circle()
+                .foregroundStyle(fill)
 
-                Circle()
-                    .foregroundStyle(fill)
-
-                Image(systemName: symbol)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(glyph)
-            }
-            .frame(width: 40, height: 40)
-
-            Text(caption)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(Palette.secondary)
-                .lineLimit(1)
+            Image(systemName: symbol)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(glyph)
         }
+        .frame(width: buttonSize, height: buttonSize)
+    }
+
+    /// warning is a refusal's sentence and code, on up to two lines in the free space between
+    /// the selector and the round buttons.
+    private static func warning(_ failure: CaffeinateFailure) -> PluginNode {
+        HStack(spacing: 4) {
+
+            Image(systemName: "exclamationmark.triangle.fill")
+
+            Text(Copy.refusedWithCode(failure))
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+        }
+        .font(.system(size: 10))
+        .foregroundStyle(Palette.warning)
+        .frame(maxWidth: .points(warningWidth), alignment: .leading)
+    }
+
+    // MARK: - Bottom band
+
+    private static func bottomBand(
+        _ state: PluginCaffeinateState,
+        scale  : CaffeinateRuler.Scale?
+    ) -> PluginNode {
+        HStack(alignment: .center, spacing: 8) {
+
+            if let scale {
+                ruler(scale)
+            } else {
+                nothingToMeasure()
+            }
+
+            time(state, scale: scale)
+        }
+        .frame(height: rulerHeight)
+    }
+
+    /// ruler is the kernel's ruler slider, tinted by its own foreground colour. It is greedy,
+    /// so it takes what the time leaves, and it needs a height of its own.
+    private static func ruler(_ scale: CaffeinateRuler.Scale) -> PluginNode {
+        Slider(
+            value : scale.value,
+            in    : scale.lowerBound...scale.upperBound,
+            step  : scale.step,
+            style : .ruler(labelEvery: CaffeinateRuler.labelEvery, labels: scale.labels),
+            action: scale.action
+        )
+        .foregroundStyle(Palette.amber)
+        .frame(height: rulerHeight, maxWidth: .infinity)
+        .id(Node.ruler)
+    }
+
+    /// nothingToMeasure takes the ruler's place with ∞, which has no length to choose.
+    private static func nothingToMeasure() -> PluginNode {
+        Text(Copy.untilYouStopIt)
+            .font(.system(size: 14, weight: .medium))
+            .foregroundStyle(Palette.secondary)
+            .lineLimit(1)
+            .padding(.leading, 6)
+            .frame(height: rulerHeight, maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Time
 
-    /// timeAndCaption is the time and, under it, what the time means. The ruler redesign puts
-    /// the controls that choose it here.
-    private static func timeAndCaption(_ state: PluginCaffeinateState) -> PluginNode {
-        VStack(spacing: 3) {
-
-            time(state)
-
-            caption(state)
-        }
-        .frame(height: 40 + 3 + 14)
-    }
-
     /// time is the big number, in rounded digits that keep their width. Its font and its tint
     /// sit on the node itself, because the kernel reads them from a time node and never from a
     /// parent.
-    private static func time(_ state: PluginCaffeinateState) -> PluginNode {
+    private static func time(
+        _ state: PluginCaffeinateState,
+        scale  : CaffeinateRuler.Scale?
+    ) -> PluginNode {
         let font = PluginFont.system(size: 26, weight: .semibold, design: .rounded).monospacedDigit()
 
         if state.isActive, let elapsed = state.elapsed {
@@ -152,7 +297,7 @@ enum CaffeinateOptionsFace {
                 .font(font)
                 .foregroundStyle(Palette.amber)
                 .lineLimit(1)
-                .frame(width: timeWidth)
+                .frame(width: timeWidth, alignment: .trailing)
         }
 
         if let countUp = state.countUp {
@@ -160,51 +305,22 @@ enum CaffeinateOptionsFace {
                 .font(font)
                 .foregroundStyle(Palette.amber)
                 .lineLimit(1)
-                .frame(width: timeWidth)
+                .frame(width: timeWidth, alignment: .trailing)
+        }
+
+        if state.nextTarget.kind == .until, let scale {
+            return Text(Date(timeIntervalSince1970: scale.value), style: .time)
+                .font(font)
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .frame(width: timeWidth, alignment: .trailing)
         }
 
         return Text(CaffeinateStyle.Format.target(state.nextTarget))
             .font(font)
             .foregroundStyle(.white)
             .lineLimit(1)
-            .frame(width: timeWidth)
-    }
-
-    /// caption says what the time is: the next session, the end of this one, or how long an
-    /// indefinite one has run. A refusal says so instead, with its code, because the code is
-    /// for diagnosis and this is the one place with the room for it.
-    private static func caption(_ state: PluginCaffeinateState) -> PluginNode {
-        if let failure = state.failure {
-            return warning(failure)
-        }
-
-        return HStack(spacing: 3) {
-
-            if !state.isActive {
-                Text(Copy.nextSession)
-            } else if let endsAt = state.endsAt {
-                Text(Copy.until)
-
-                Text(endsAt, style: .time)
-            } else {
-                Text(Copy.activeFor)
-            }
-        }
-        .font(.system(size: 11))
-        .foregroundStyle(Palette.secondary)
-        .lineLimit(1)
-    }
-
-    private static func warning(_ failure: CaffeinateFailure) -> PluginNode {
-        HStack(spacing: 4) {
-
-            Image(systemName: "exclamationmark.triangle.fill")
-
-            Text(Copy.refusedWithCode(failure))
-        }
-        .font(.system(size: 11))
-        .foregroundStyle(Palette.warning)
-        .lineLimit(1)
-        .minimumScaleFactor(0.7)
+            .frame(width: timeWidth, alignment: .trailing)
     }
 }

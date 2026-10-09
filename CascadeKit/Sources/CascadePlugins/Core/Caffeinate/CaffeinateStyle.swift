@@ -20,6 +20,10 @@ enum CaffeinateStyle {
     /// because identities are unique within a document and the widget's three faces and its
     /// options page each draw one. The 2x2 face's opener is `options`, the 2x1 face's
     /// `options.large`, for the same reason.
+    ///
+    /// The options page's selector has one button for each way a session can end, and the
+    /// ruler keeps one identity whatever it measures, so choosing For or Until updates it in
+    /// place, with its range, instead of replacing it.
     enum Node {
 
         static let powerMedium  = "power.medium"
@@ -29,6 +33,13 @@ enum CaffeinateStyle {
         static let display      = "display"
         static let opener       = "options"
         static let openerLarge  = "options.large"
+        static let page         = "options.page"
+        static let ruler        = "ruler"
+
+        /// mode is the selector's segment for a kind of target.
+        static func mode(_ kind: CaffeinateTargetKind) -> String {
+            "mode.\(kind.rawValue)"
+        }
     }
 
     enum Action {
@@ -37,6 +48,14 @@ enum CaffeinateStyle {
         static let stop         = "caffeinate.stop"
         static let display      = "caffeinate.display"
         static let options      = "caffeinate.options"
+        static let durationSet  = "caffeinate.duration.set"
+        static let untilSet     = "caffeinate.until.set"
+
+        /// mode is the one action a selector segment sends: it is a button, and the native
+        /// owner answers by name.
+        static func mode(_ kind: CaffeinateTargetKind) -> String {
+            "caffeinate.mode.\(kind.rawValue)"
+        }
 
         /// power is the one action a power control sends in a given state: it is a toggle whose
         /// value says "on", and the owner answers by name.
@@ -53,6 +72,8 @@ enum CaffeinateStyle {
         static let secondary = PluginColor(red: 0.70, green: 0.70, blue: 0.74)
         static let disc      = PluginColor.white.opacity(0.14)
         static let button    = PluginColor.white.opacity(0.16)
+        static let track     = PluginColor.white.opacity(0.12)
+        static let selected  = PluginColor.white.opacity(0.24)
     }
 
     enum Copy {
@@ -61,14 +82,18 @@ enum CaffeinateStyle {
         static var options          : String { String(localized: "Caffeinate Options", table: "CaffeinateWidget", bundle: .module) }
         static var startLabel       : String { String(localized: "Start Caffeinate", table: "CaffeinateWidget", bundle: .module) }
         static var stopLabel        : String { String(localized: "Stop Caffeinate", table: "CaffeinateWidget", bundle: .module) }
-        static var start            : String { String(localized: "Start", table: "CaffeinateWidget", bundle: .module) }
-        static var stop             : String { String(localized: "Stop", table: "CaffeinateWidget", bundle: .module) }
-        static var display          : String { String(localized: "Display", table: "CaffeinateWidget", bundle: .module) }
-        static var nextSession      : String { String(localized: "Next session", table: "CaffeinateWidget", bundle: .module) }
+        static var forDuration      : String { String(localized: "For", table: "CaffeinateWidget", bundle: .module) }
+        static var untilTime        : String { String(localized: "Until", table: "CaffeinateWidget", bundle: .module) }
+        static var untilYouStopIt   : String { String(localized: "Until you stop it", table: "CaffeinateWidget", bundle: .module) }
         static var keepDisplayAwake : String { String(localized: "Keep display awake", table: "CaffeinateWidget", bundle: .module) }
         static var until            : String { String(localized: "until", table: "CaffeinateWidget", bundle: .module) }
-        static var activeFor        : String { String(localized: "active for", table: "CaffeinateWidget", bundle: .module) }
         static var error            : String { String(localized: "Error", table: "CaffeinateWidget", bundle: .module) }
+
+        /// selected is a selector segment's spoken name once it is the chosen one: colour and
+        /// fill do not reach VoiceOver, so the label says it.
+        static func selected(_ name: String) -> String {
+            String(localized: "\(name), selected", table: "CaffeinateWidget", bundle: .module)
+        }
 
         /// activityLabel is the activity's spoken sentence. It is a string the plugin formats, so
         /// its time is fixed at publication: the SDK has no kernel-drawn time for an accessibility
@@ -96,11 +121,14 @@ enum CaffeinateStyle {
 
     enum Format {
 
+        /// sign is the indefinite session: it has no end, and the sign says so in any language.
+        static let sign = "∞"
+
         /// target is the next session's length: the hours and minutes the system abbreviates for
         /// a duration, `∞` otherwise. The units come from the system's formatting, not from
-        /// literals. The ruler redesign gives an end time its own wording.
+        /// literals. An end time is not formatted here: the kernel draws its clock.
         static func target(_ target: CaffeinateTarget) -> String {
-            guard case .duration(let minutes) = target else { return "∞" }
+            guard case .duration(let minutes) = target else { return sign }
 
             return Self.minutes(TimeInterval(minutes * 60))
         }
@@ -121,6 +149,17 @@ extension PluginCaffeinateState {
     /// symbol is the glyph's look: filled while a session runs, its outline while off.
     var symbol: String {
         isActive ? glyph.filledSymbol : glyph.outlineSymbol
+    }
+
+    /// shownKind is the kind of target the options page's selector shows as chosen. Off, it is
+    /// the next session's. Running, it is the session's own: one without an end is indefinite,
+    /// and a timed one is shown as the kind the user last gave it, For when it was given neither
+    /// (a session that was indefinite and was timed from outside the page).
+    var shownKind: CaffeinateTargetKind {
+        guard isActive else { return nextTarget.kind }
+        guard endsAt != nil else { return .indefinite }
+
+        return nextTarget.kind == .until ? .until : .duration
     }
 
     /// refusedToStart says the system would not hold the assertion: the session is not running,

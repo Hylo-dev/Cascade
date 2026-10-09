@@ -19,8 +19,21 @@ struct CaffeinatePluginTests {
 
     private let context = PluginContext(plugin: CaffeinatePlugin.id)
 
+    /// The tests live in UTC. 2_000_000_000 is 03:33:20 there, so the ruler's Until range runs
+    /// from 04:00, the first quarter hour 15 minutes ahead, to 03:30 the next day.
+    private static let utc: Calendar = {
+        var calendar      = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+
+        return calendar
+    }()
+
+    private static let rangeStart = 2_000_001_600.0
+    private static let rangeEnd   = 2_000_086_200.0
+    private static let sixPM      = 2_000_052_000.0
+
     private func plugin() -> CaffeinatePlugin {
-        CaffeinatePlugin(now: { Self.now })
+        CaffeinatePlugin(now: { Self.now }, calendar: { Self.utc })
     }
 
     private func off(nextTarget: CaffeinateTarget = .duration(minutes: 90)) -> PluginCaffeinateState {
@@ -257,7 +270,7 @@ struct CaffeinatePluginTests {
         #expect(root.children.count == 3)
         #expect(root.children[1].kind == .spacer(minLength: 0))
         #expect(options.contains { $0.kind == .timer(start: started, end: started.addingTimeInterval(365 * 86_400), countsDown: false) })
-        #expect(texts(options).contains("active for"))
+        #expect(texts(options).contains("Until you stop it"))
         #expect(!options.contains { if case .countdown = $0.kind { true } else { false } })
     }
 
@@ -286,7 +299,7 @@ struct CaffeinatePluginTests {
         }
     }
 
-    /// anIndefiniteCountUpRunsPastADay keeps "active for" counting after 24 hours: the 2x2 and
+    /// anIndefiniteCountUpRunsPastADay keeps the elapsed time counting after 24 hours: the 2x2 and
     /// 2x1 faces and the options page all count in an interval far longer than a day.
     @Test
     func anIndefiniteCountUpRunsPastADay() throws {
@@ -339,34 +352,282 @@ struct CaffeinatePluginTests {
 
         #expect(time.modifiers.contains(.font(.system(size: 26, weight: .semibold, design: .rounded).monospacedDigit())))
         #expect(time.modifiers.contains(.foregroundStyle(.color(.white))))
-        #expect(texts(entries).contains("Next session"))
-        #expect(!texts(entries).contains("until"))
     }
 
-    /// theOptionsPageIsOneRowOfTwoRoundButtonsAndATime checks the Timer-style layout by what
-    /// it contains: Start/Stop and Display captions, the two switches, − and +, and no ＋15m.
     @Test
-    func theOptionsPageIsOneRowOfTwoRoundButtonsAndATime() throws {
-        func optionsEntries(_ state: PluginCaffeinateState) throws -> [PluginNodeTable.Entry] {
-            let output = try send(state, to: plugin())
+    func theOffTimeOfAnEndTimeIsTheKernelsClockAndOfInfinityTheSign() throws {
+        let big = PluginFont.system(size: 26, weight: .semibold, design: .rounded).monospacedDigit()
 
-            return try nodes(PluginPublication(
-                feature : CaffeinatePlugin.feature,
-                surface : .widget,
-                document: PluginDocument(root: try #require(widget(output)?.document?.optionsRoot))
-            ))
+        let until   = try nodes(optionsPublication(off(nextTarget: .until(minuteOfDay: 18 * 60))))
+        let clock   = try #require(until.first { $0.kind == .date(Date(timeIntervalSince1970: Self.sixPM), style: .time) })
+        #expect(clock.modifiers.contains(.font(big)))
+        #expect(clock.modifiers.contains(.foregroundStyle(.color(.white))))
+
+        let forever = try nodes(optionsPublication(off(nextTarget: .indefinite)))
+        let sign    = try #require(forever.first { $0.kind == .text("∞") && $0.modifiers.contains(.font(big)) })
+        #expect(sign.modifiers.contains(.foregroundStyle(.color(.white))))
+    }
+
+    /// optionsPublication wraps the options page of a state in a document of its own, so the
+    /// node table can list it.
+    private func optionsPublication(_ state: PluginCaffeinateState) throws -> PluginPublication {
+        let output = try send(state, to: plugin())
+
+        return try PluginPublication(
+            feature : CaffeinatePlugin.feature,
+            surface : .widget,
+            document: PluginDocument(root: try #require(widget(output)?.document?.optionsRoot))
+        )
+    }
+
+    private func optionsRoot(_ state: PluginCaffeinateState) throws -> PluginNode {
+        try #require(widget(try send(state, to: plugin()))?.document?.optionsRoot)
+    }
+
+    private func find(
+        _ id: String,
+        in node: PluginNode
+    ) -> PluginNode? {
+        if node.id == id { return node }
+
+        for child in node.children + node.layers {
+            if let found = find(id, in: child) { return found }
         }
 
-        let idle = try optionsEntries(off())
+        return nil
+    }
+
+    private func ids(_ node: PluginNode) -> [String] {
+        (node.id.map { [$0] } ?? []) + (node.children + node.layers).flatMap(ids)
+    }
+
+    private func ruler(_ state: PluginCaffeinateState) throws -> PluginNode? {
+        find("ruler", in: try optionsRoot(state))
+    }
+
+    /// theOptionsPageIsTwoBandsOfControls checks layout A by what it contains: the selector's
+    /// three buttons and the two round switches on top, the ruler and the time under them, and
+    /// no stepper and no captions.
+    @Test
+    func theOptionsPageIsTwoBandsOfControls() throws {
+        let idle = try nodes(optionsPublication(off()))
         #expect(idle.contains { $0.id.rawValue == "#power.options:toggle" && $0.kind == .toggle(isOn: false, action: "caffeinate.start") })
         #expect(idle.contains { $0.id.rawValue == "#display:toggle" && $0.kind == .toggle(isOn: true, action: "caffeinate.display") })
+        #expect(idle.contains { $0.id.rawValue == "#mode.duration:button" && $0.kind == .button(action: "caffeinate.mode.duration") })
+        #expect(idle.contains { $0.id.rawValue == "#mode.until:button" && $0.kind == .button(action: "caffeinate.mode.until") })
+        #expect(idle.contains { $0.id.rawValue == "#mode.indefinite:button" && $0.kind == .button(action: "caffeinate.mode.indefinite") })
+        #expect(idle.contains { $0.id.rawValue == "#ruler:slider" })
         #expect(symbols(idle).isSuperset(of: ["play.fill", "stop.fill", "display", "moon.zzz"]))
-        #expect(Set(texts(idle)).isSuperset(of: ["Start", "Stop", "Display"]))
+        #expect(Set(texts(idle)).isSuperset(of: ["For", "Until", "∞"]))
         #expect(!idle.contains { $0.kind == .button(action: "caffeinate.extend") })
+        #expect(!idle.contains { $0.kind == .button(action: "caffeinate.duration.up") })
+        #expect(!idle.contains { $0.kind == .button(action: "caffeinate.duration.down") })
+        #expect(!texts(idle).contains("Next session"))
 
-        let running = try optionsEntries(timed())
+        let running = try nodes(optionsPublication(timed()))
         #expect(running.contains { $0.id.rawValue == "#power.options:toggle" && $0.kind == .toggle(isOn: true, action: "caffeinate.stop") })
-        #expect(!running.contains { $0.kind == .button(action: "caffeinate.extend") })
+    }
+
+    /// everyExplicitIdentityIsUnique: the options page and the faces share a document, and an
+    /// identity may name only one node of it, in every state and in every mode.
+    @Test
+    func everyExplicitIdentityIsUniqueInEveryState() throws {
+        let states = [
+            off(), off(nextTarget: .indefinite), off(nextTarget: .until(minuteOfDay: 18 * 60)),
+            timed(), indefinite(), PluginCaffeinateState(failure: .assertionRefused(-1)),
+        ]
+
+        for state in states {
+            let document = try #require(widget(try send(state, to: plugin()))?.document)
+            let all      = ids(document.root) + ids(try #require(document.optionsRoot))
+
+            #expect(Set(all).count == all.count, "\(all)")
+            #expect(Set(all).isSuperset(of: ["options.page", "mode.duration", "mode.until", "mode.indefinite", "display", "power.options"]))
+        }
+    }
+
+    // MARK: - The selector
+
+    private func selectedSegments(_ state: PluginCaffeinateState) throws -> [String] {
+        let root = try optionsRoot(state)
+
+        return ["mode.duration", "mode.until", "mode.indefinite"].filter { id in
+            guard let segment = find(id, in: root) else { return false }
+
+            return !segment.layers.isEmpty || segment.children.contains { !$0.layers.isEmpty }
+        }
+    }
+
+    @Test
+    func theSelectorFillsTheSegmentOfTheTarget() throws {
+        #expect(try selectedSegments(off(nextTarget: .indefinite)) == ["mode.indefinite"])
+        #expect(try selectedSegments(off(nextTarget: .duration(minutes: 90))) == ["mode.duration"])
+        #expect(try selectedSegments(off(nextTarget: .until(minuteOfDay: 18 * 60))) == ["mode.until"])
+    }
+
+    /// While a session runs the selector shows the session: indefinite is the sign, a timed one
+    /// is For or Until by the kind it was last given, and For when it was given neither.
+    @Test
+    func aRunningSessionSelectsItsOwnMode() throws {
+        #expect(try selectedSegments(indefinite()) == ["mode.indefinite"])
+        #expect(try selectedSegments(timed()) == ["mode.duration"])
+
+        let until = PluginCaffeinateState(
+            startedAt        : Self.started,
+            endsAt           : Date(timeIntervalSince1970: Self.sixPM),
+            activityStartedAt: Self.started,
+            nextTarget       : .until(minuteOfDay: 18 * 60)
+        )
+        #expect(try selectedSegments(until) == ["mode.until"])
+
+        let counted = PluginCaffeinateState(
+            startedAt        : Self.started,
+            endsAt           : Self.now.addingTimeInterval(3_600),
+            activityStartedAt: Self.started,
+            nextTarget       : .duration(minutes: 60)
+        )
+        #expect(try selectedSegments(counted) == ["mode.duration"])
+    }
+
+    @Test
+    func theSegmentsSpeakTheirNameAndWhichOneIsSelected() throws {
+        func labels(_ state: PluginCaffeinateState) throws -> [String] {
+            let root = try optionsRoot(state)
+
+            return try ["mode.duration", "mode.until", "mode.indefinite"].map { id in
+                let segment = try #require(find(id, in: root))
+
+                return try #require(segment.modifiers.compactMap { modifier -> String? in
+                    if case .accessibilityLabel(let label) = modifier { label } else { nil }
+                }.first)
+            }
+        }
+
+        #expect(try labels(off(nextTarget: .duration(minutes: 90))) == ["For, selected", "Until", "Until you stop it"])
+        #expect(try labels(off(nextTarget: .until(minuteOfDay: 0))) == ["For", "Until, selected", "Until you stop it"])
+        #expect(try labels(off(nextTarget: .indefinite)) == ["For", "Until", "Until you stop it, selected"])
+    }
+
+    // MARK: - The ruler
+
+    private func rulerKind(_ state: PluginCaffeinateState) throws -> PluginNodeKind? {
+        try ruler(state)?.kind
+    }
+
+    private func durationRuler(_ minutes: Double) -> PluginNodeKind {
+        .slider(
+            value  : minutes,
+            minimum: 15,
+            maximum: 1_440,
+            step   : 15,
+            style  : .ruler(labelEvery: 4, labels: .duration),
+            action : "caffeinate.duration.set"
+        )
+    }
+
+    private func clockRuler(
+        _ value: Double,
+        from lower: Double = CaffeinatePluginTests.rangeStart,
+        to upper  : Double = CaffeinatePluginTests.rangeEnd
+    ) -> PluginNodeKind {
+        .slider(
+            value  : value,
+            minimum: lower,
+            maximum: upper,
+            step   : 900,
+            style  : .ruler(labelEvery: 4, labels: .clockTime),
+            action : "caffeinate.until.set"
+        )
+    }
+
+    @Test
+    func offForRulesTheNextDurationOnTheMinuteScale() throws {
+        #expect(try rulerKind(off(nextTarget: .duration(minutes: 90))) == durationRuler(90))
+        #expect(try rulerKind(off(nextTarget: .duration(minutes: 15))) == durationRuler(15))
+        #expect(try rulerKind(off(nextTarget: .duration(minutes: 1_440))) == durationRuler(1_440))
+    }
+
+    /// offUntil: the value is the next occurrence of the minute of the day that is 15 minutes
+    /// ahead or more, as the service resolves it, and the range is the quarter hours from 15
+    /// minutes ahead to a day ahead.
+    @Test
+    func offUntilRulesTheNextOccurrenceOnTheClockScale() throws {
+        #expect(try rulerKind(off(nextTarget: .until(minuteOfDay: 18 * 60))) == clockRuler(Self.sixPM))
+
+        // The edges of the range are on the ruler.
+        #expect(try rulerKind(off(nextTarget: .until(minuteOfDay: 4 * 60))) == clockRuler(Self.rangeStart))
+        #expect(try rulerKind(off(nextTarget: .until(minuteOfDay: 3 * 60 + 30))) == clockRuler(Self.rangeEnd))
+
+        // 03:45 is twelve minutes ahead and tomorrow's is more than a day away, so the end a
+        // start would get is today's, before the range starts: the range grows to hold it.
+        #expect(try rulerKind(off(nextTarget: .until(minuteOfDay: 3 * 60 + 45))) == clockRuler(2_000_000_700, from: 2_000_000_700))
+    }
+
+    @Test
+    func aRunningDurationRulesTheMinutesLeftRoundedUpToAQuarter() throws {
+        #expect(try rulerKind(timed(minutesLeft: 24)) == durationRuler(30))
+        #expect(try rulerKind(timed(minutesLeft: 30)) == durationRuler(30))
+        #expect(try rulerKind(timed(minutesLeft: 30.5)) == durationRuler(45))
+        #expect(try rulerKind(timed(minutesLeft: 2)) == durationRuler(15))
+        #expect(try rulerKind(timed(minutesLeft: 0)) == durationRuler(15))
+        #expect(try rulerKind(timed(minutesLeft: 1_440)) == durationRuler(1_440))
+        #expect(try rulerKind(timed(minutesLeft: 1_500)) == durationRuler(1_440))
+    }
+
+    @Test
+    func aRunningUntilRulesTheSessionsEnd() throws {
+        func until(_ end: Double) -> PluginCaffeinateState {
+            PluginCaffeinateState(
+                startedAt        : Self.started,
+                endsAt           : Date(timeIntervalSince1970: end),
+                activityStartedAt: Self.started,
+                nextTarget       : .until(minuteOfDay: 18 * 60)
+            )
+        }
+
+        #expect(try rulerKind(until(Self.sixPM)) == clockRuler(Self.sixPM))
+
+        // An end closer than the range starts, or off the quarter, stays on the ruler: the
+        // range grows to hold it, and the end is the nearest quarter hour.
+        #expect(try rulerKind(until(Self.now.timeIntervalSince1970 + 900)) == clockRuler(2_000_000_700, from: 2_000_000_700))
+        #expect(try rulerKind(until(Self.sixPM + 100)) == clockRuler(Self.sixPM))
+        #expect(try rulerKind(until(Self.rangeEnd + 3_000)) == clockRuler(Self.rangeEnd + 2_700, to: Self.rangeEnd + 2_700))
+    }
+
+    @Test
+    func infinityHidesTheRulerAndSaysUntilYouStopIt() throws {
+        for state in [off(nextTarget: .indefinite), indefinite()] {
+            let root = try optionsRoot(state)
+
+            #expect(find("ruler", in: root) == nil)
+            #expect(!kinds(root).contains { if case .slider = $0 { true } else { false } })
+            #expect(kinds(root).contains(.text("Until you stop it")))
+        }
+
+        #expect(!kinds(try optionsRoot(off())).contains(.text("Until you stop it")))
+    }
+
+    @Test
+    func theRulerIsAmberAndFillsTheWidth() throws {
+        let node = try #require(try ruler(off()))
+
+        #expect(node.modifiers.contains(.foregroundStyle(.color(Self.amber))))
+        #expect(node.modifiers.contains { modifier in
+            if case .frame(_, let height?, .infinity?, _, _) = modifier { height > 30 } else { false }
+        })
+    }
+
+    @Test
+    func aRulerNeverGoesOutsideItsRange() throws {
+        let states = [
+            off(nextTarget: .until(minuteOfDay: 0)), off(nextTarget: .until(minuteOfDay: 1_425)),
+            off(nextTarget: .duration(minutes: 15)), timed(minutesLeft: -5), timed(minutesLeft: 1_439),
+        ]
+
+        for state in states {
+            // The document validates its sliders, so building it is the check.
+            #expect(throws: Never.self) { _ = try send(state, to: plugin()) }
+        }
     }
 
     @Test
@@ -496,15 +757,39 @@ struct CaffeinatePluginTests {
         #expect(glyphs.allSatisfy { $0.modifiers.contains(.contentTransition(.symbolEffect)) })
     }
 
-    /// Until Task 3 draws the ruler, the widget shows the duration when the next target is one
-    /// and the infinity sign otherwise.
+    /// The widget's second line follows the target: the sign, the length, or "until" and the
+    /// kernel's clock, each with the chevron that says the text opens more.
     @Test
-    func theWidgetShowsTheNextTargetWhileOff() throws {
-        let duration = try nodes(widget(try send(off(nextTarget: .duration(minutes: 90)), to: plugin())))
-        #expect(texts(duration).contains("1h 30m"))
+    func theWidgetStatusLineFollowsTheTarget() throws {
+        let sixPM = Date(timeIntervalSince1970: Self.sixPM)
 
-        let infinite = try nodes(widget(try send(off(nextTarget: .indefinite), to: plugin())))
-        #expect(texts(infinite).contains("∞"))
+        func face(_ target: CaffeinateTarget) throws -> PluginNode {
+            try #require(widget(try send(off(nextTarget: target), to: plugin()))?.document?.root)
+        }
+
+        // The faces only: the options page has a ∞ and a clock of its own.
+        let infinite = kinds(try face(.indefinite))
+        #expect(infinite.contains(.text("∞")))
+        #expect(!infinite.contains(.date(sixPM, style: .time)))
+
+        let duration = kinds(try face(.duration(minutes: 90)))
+        #expect(duration.contains(.text("1h 30m")))
+        #expect(!duration.contains(.text("∞")))
+
+        let until = kinds(try face(.until(minuteOfDay: 18 * 60)))
+        #expect(until.contains(.text("until")))
+        #expect(until.contains(.date(sixPM, style: .time)))
+        #expect(until.contains(.symbol(name: "chevron.right")))
+        #expect(!until.contains(.text("∞")))
+
+        // Both the 2x2 and the 2x1 face say it, the 1x1 face has no line.
+        let root = try face(.until(minuteOfDay: 18 * 60))
+        let rest = root.children[1]
+        for node in [root.children[0], rest.children[0]] {
+            #expect(kinds(node).contains(.date(sixPM, style: .time)))
+            #expect(kinds(node).contains(.text("until")))
+        }
+        #expect(!kinds(rest.children[1]).contains(.text("until")))
     }
 
     @Test
@@ -515,7 +800,6 @@ struct CaffeinatePluginTests {
 
         #expect(entries.contains { $0.kind == .countdown(end: ends, style: .compact) })
         #expect(entries.contains { $0.kind == .timer(start: Self.started, end: ends, countsDown: true) })
-        #expect(entries.contains { $0.kind == .date(ends, style: .time) })
     }
 
     @Test
@@ -551,21 +835,27 @@ struct CaffeinatePluginTests {
         #expect(symbols(entries).contains("exclamationmark.triangle.fill"))
     }
 
+    /// A running page has no caption: the time is the kernel's countdown, and an Until
+    /// session's end is the ruler's own value, so the page draws no second clock.
     @Test
-    func theOptionsPageDrawsTheEndTimeWithTheKernel() throws {
+    func aRunningPageCountsDownWithTheKernelAndDrawsNoCaption() throws {
         let state   = timed()
         let ends    = try #require(state.endsAt)
-        let entries = try nodes(widget(try send(state, to: plugin())))
+        let entries = try nodes(optionsPublication(state))
 
-        #expect(texts(entries).contains("until"))
-        #expect(entries.filter { $0.kind == .date(ends, style: .time) }.count == 1)
+        #expect(entries.contains { $0.kind == .timer(start: Self.started, end: ends, countsDown: true) })
+        #expect(!entries.contains { $0.kind == .date(ends, style: .time) })
+        #expect(!texts(entries).contains("until"))
     }
 
     @Test
     func everyControlActionIsDeclared() throws {
         let manifest = try #require(FirstPartyPlugins.manifests().first { $0.id == CaffeinatePlugin.id })
         let feature  = try #require(manifest.features.first)
-        let states   = [off(), timed(), indefinite(), PluginCaffeinateState(failure: .extensionRefused(5))]
+        let states   = [
+            off(), timed(), indefinite(), PluginCaffeinateState(failure: .extensionRefused(5)),
+            off(nextTarget: .indefinite), off(nextTarget: .until(minuteOfDay: 18 * 60)),
+        ]
 
         #expect(feature.supportsFullscreen)
         #expect(feature.sources == [PluginCaffeinateState.source])
@@ -579,7 +869,7 @@ struct CaffeinatePluginTests {
             for publication in output.publications where publication.document != nil {
                 for entry in try nodes(publication) {
                     switch entry.kind {
-                        case .button(let action), .toggle(_, let action):
+                        case .button(let action), .toggle(_, let action), .slider(_, _, _, _, _, let action):
                             #expect(feature.actions.contains(action))
 
                         default:
@@ -588,5 +878,72 @@ struct CaffeinatePluginTests {
                 }
             }
         }
+    }
+}
+
+/// CaffeinateStringsTests checks the words of the options page in both languages the app ships:
+/// every phrase the faces use is in the catalog, translated, and keeps the placeholders of its
+/// English form.
+@Suite
+struct CaffeinateStringsTests {
+
+    /// The phrases the selector, the ruler's empty state and the status line speak, with the
+    /// translation Italian users read.
+    private static let italian: [(english: String, italian: String)] = [
+        ("For", "Per"),
+        ("Until", "Fino a"),
+        ("Until you stop it", "Finché non lo fermi"),
+        ("until", "fino alle"),
+        ("%@, selected", "%@, selezionato"),
+    ]
+
+    private func catalog() throws -> [String: [String: Any]] {
+        var url = URL(fileURLWithPath: #filePath)
+        for _ in 0..<3 { url.deleteLastPathComponent() }
+        url.append(path: "Sources/CascadePlugins/Resources/CaffeinateWidget.xcstrings")
+
+        let root = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+
+        return try #require(root["strings"] as? [String: [String: Any]])
+    }
+
+    private func translation(
+        of key: String,
+        in catalog: [String: [String: Any]]
+    ) -> String? {
+        let localizations = catalog[key]?["localizations"] as? [String: [String: Any]]
+        let unit          = localizations?["it"]?["stringUnit"] as? [String: String]
+
+        return unit?["state"] == "translated" ? unit?["value"] : nil
+    }
+
+    @Test
+    func theRulerPagesPhrasesAreTranslatedIntoItalian() throws {
+        let catalog = try catalog()
+
+        for (english, italian) in Self.italian {
+            #expect(translation(of: english, in: catalog) == italian, "\(english)")
+        }
+    }
+
+    @Test
+    func everyPhraseOfTheCatalogIsTranslatedAndKeepsItsPlaceholders() throws {
+        let catalog = try catalog()
+
+        for key in catalog.keys {
+            let italian = try #require(translation(of: key, in: catalog), "\(key) has no Italian")
+
+            #expect(italian.components(separatedBy: "%@").count == key.components(separatedBy: "%@").count, "\(key)")
+        }
+    }
+
+    @Test
+    func theCompiledBundleSpeaksBothLanguages() throws {
+        let path = try #require(Bundle.module.path(forResource: "it", ofType: "lproj"))
+        let it   = try #require(Bundle(path: path))
+
+        #expect(it.localizedString(forKey: "For", value: nil, table: "CaffeinateWidget") == "Per")
+        #expect(it.localizedString(forKey: "Until you stop it", value: nil, table: "CaffeinateWidget") == "Finché non lo fermi")
+        #expect(Bundle.module.localizedString(forKey: "For", value: "For", table: "CaffeinateWidget") == "For")
     }
 }

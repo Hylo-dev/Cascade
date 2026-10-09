@@ -38,6 +38,18 @@ struct CaffeinateFaceFitTests {
 
         return [
             ("off", PluginCaffeinateState()),
+            ("off for", PluginCaffeinateState(nextTarget: .duration(minutes: 1_425))),
+            ("off until", PluginCaffeinateState(nextTarget: .until(minuteOfDay: 22 * 60 + 45))),
+            ("off indefinite", PluginCaffeinateState(nextTarget: .indefinite)),
+            (
+                "running until",
+                PluginCaffeinateState(
+                    startedAt        : started,
+                    endsAt           : now.addingTimeInterval(5 * 3_600),
+                    activityStartedAt: started,
+                    nextTarget       : .until(minuteOfDay: 22 * 60 + 45)
+                )
+            ),
             (
                 "timed",
                 PluginCaffeinateState(

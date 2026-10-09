@@ -14,16 +14,19 @@ import Foundation
 /// The 2x2 face stacks them, as that tile is tall: the disc above, the title and the second
 /// line below, all of them still inside the opener.
 /// They are siblings, so starting a session never opens the page and opening it never starts a
-/// session. Off, the disc is grey with the outline glyph and the second line is the duration the
-/// next session will last, with a chevron saying the text opens more; on, the disc is tinted
-/// with the filled glyph and the second line is the time left, drawn by the kernel. State is
-/// never colour alone: the glyph's fill and the text change with it.
+/// session. Off, the disc is grey with the outline glyph and the second line is how the next
+/// session will end, with a chevron saying the text opens more: the sign, a length such as
+/// "1h 30m", or "until" and the end's clock, which the kernel draws. On, the disc is tinted with
+/// the filled glyph and the second line is the time left, drawn by the kernel. State is never
+/// colour alone: the glyph's fill and the text change with it.
 ///
 /// The 2x2 tile is 110 by 86 points in the default notch, the 2x1 tile 110 by 40 and the 1x1
 /// tile 52 by 40. The tall face is held at 68 points high and the large one at 100 wide because
 /// `ViewThatFits` measures a face's ideal size against the tile: a face bigger than the tile
 /// never fits, and one that could shrink would pass for a smaller tile's. The tall face is
 /// tried on the height alone, so a 2x1 tile, as wide, still falls through to the large face.
+/// The 2x1 tile leaves its text about 60 points, which "until 10:45 PM" does not fit at its size:
+/// the words scale down to 60 % before the system cuts them.
 enum CaffeinateWidgetFace {
 
     typealias Node    = CaffeinateStyle.Node
@@ -35,7 +38,8 @@ enum CaffeinateWidgetFace {
 
     static func publication(
         for state: PluginCaffeinateState,
-        now      : Date
+        now      : Date,
+        calendar : Calendar
     ) throws -> PluginPublication {
         try PluginPublication(
             feature : CaffeinatePlugin.feature,
@@ -43,17 +47,21 @@ enum CaffeinateWidgetFace {
             document: PluginDocument(
                 root: ViewThatFits(in: .vertical) {
 
-                    tall(state)
+                    tall(state, now: now, calendar: calendar)
 
                     ViewThatFits(in: .horizontal) {
 
-                        large(state)
+                        large(state, now: now, calendar: calendar)
 
                         small(state)
                     }
                 }
                 .foregroundStyle(.white),
-                optionsRoot  : CaffeinateOptionsFace.page(state, now: now),
+                optionsRoot  : CaffeinateOptionsFace.page(
+                    state,
+                    now     : now,
+                    calendar: calendar
+                ),
                 optionsAction: CaffeinateStyle.Action.options
             )
         )
@@ -62,7 +70,11 @@ enum CaffeinateWidgetFace {
     // MARK: - Faces
 
     /// tall is the 2x2 face: the disc on top, the title and the second line below it.
-    private static func tall(_ state: PluginCaffeinateState) -> PluginNode {
+    private static func tall(
+        _ state : PluginCaffeinateState,
+        now     : Date,
+        calendar: Calendar
+    ) -> PluginNode {
         VStack(alignment: .leading, spacing: 0) {
 
             powerSwitch(
@@ -82,7 +94,7 @@ enum CaffeinateWidgetFace {
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
 
-                    caption(state, size: 12)
+                    caption(state, size: 12, now: now, calendar: calendar)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -99,7 +111,11 @@ enum CaffeinateWidgetFace {
     }
 
     /// large is the 2x1 face: the disc, then the title and the second line, which open the page.
-    private static func large(_ state: PluginCaffeinateState) -> PluginNode {
+    private static func large(
+        _ state : PluginCaffeinateState,
+        now     : Date,
+        calendar: Calendar
+    ) -> PluginNode {
         HStack(spacing: 6) {
 
             powerSwitch(
@@ -117,7 +133,7 @@ enum CaffeinateWidgetFace {
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
 
-                    caption(state, size: 11)
+                    caption(state, size: 11, now: now, calendar: calendar)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -148,8 +164,10 @@ enum CaffeinateWidgetFace {
     /// and the code. A refused extension leaves the session as it was, so the normal line stays
     /// and a small warning symbol sits beside it.
     private static func caption(
-        _ state: PluginCaffeinateState,
-        size   : Double
+        _ state : PluginCaffeinateState,
+        size    : Double,
+        now     : Date,
+        calendar: Calendar
     ) -> PluginNode {
         if state.refusedToStart {
             return HStack(spacing: 2) {
@@ -164,11 +182,13 @@ enum CaffeinateWidgetFace {
             .foregroundStyle(Palette.warning)
         }
 
-        guard state.refusedToExtend else { return status(state, size: size) }
+        guard state.refusedToExtend else {
+            return status(state, size: size, now: now, calendar: calendar)
+        }
 
         return HStack(spacing: 3) {
 
-            status(state, size: size)
+            status(state, size: size, now: now, calendar: calendar)
 
             warningSymbol()
                 .foregroundStyle(Palette.warning)
@@ -180,12 +200,14 @@ enum CaffeinateWidgetFace {
             .font(.system(size: 8, weight: .semibold))
     }
 
-    /// status is the time left, the elapsed time of an indefinite session, or the next session's
-    /// length. Each time node carries its own font and colour, because the kernel reads them
-    /// from the node and never from a parent.
+    /// status is the time left, the elapsed time of an indefinite session, or how the next
+    /// session will end. Each time node carries its own font and colour, because the kernel
+    /// reads them from the node and never from a parent.
     private static func status(
-        _ state: PluginCaffeinateState,
-        size   : Double
+        _ state : PluginCaffeinateState,
+        size    : Double,
+        now     : Date,
+        calendar: Calendar
     ) -> PluginNode {
         if state.isActive, let endsAt = state.endsAt {
             return Text(countdownTo: endsAt)
@@ -206,15 +228,41 @@ enum CaffeinateWidgetFace {
             }
         }
 
+        let font = PluginFont.system(size: size - 1, weight: .medium)
+
+        if let end = CaffeinateRuler.nextEnd(of: state, now: now, calendar: calendar) {
+            return HStack(spacing: 2) {
+
+                Text(Copy.until)
+                    .font(font)
+                    .foregroundStyle(Palette.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+
+                Text(end, style: .time)
+                    .font(font)
+                    .foregroundStyle(Palette.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+
+                chevron(size: size)
+            }
+            .foregroundStyle(Palette.secondary)
+        }
+
         return HStack(spacing: 2) {
 
             Text(CaffeinateStyle.Format.target(state.nextTarget))
-                .font(.system(size: size - 1, weight: .medium))
+                .font(font)
 
-            Image(systemName: "chevron.right")
-                .font(.system(size: size - 3, weight: .semibold))
+            chevron(size: size)
         }
         .foregroundStyle(Palette.secondary)
+    }
+
+    private static func chevron(size: Double) -> PluginNode {
+        Image(systemName: "chevron.right")
+            .font(.system(size: size - 3, weight: .semibold))
     }
 
     // MARK: - The disc
