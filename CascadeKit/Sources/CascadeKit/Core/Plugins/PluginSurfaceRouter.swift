@@ -64,6 +64,7 @@ public final class PluginSurfaceRouter {
                 case .widget  : route(widget: change)
                 case .notice  : route(notice: change)
                 case .activity: break
+                case .detail  : break
             }
         }
 

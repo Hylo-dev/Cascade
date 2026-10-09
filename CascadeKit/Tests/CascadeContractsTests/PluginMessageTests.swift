@@ -100,4 +100,14 @@ struct PluginMessageTests {
         #expect(!surfaces.declares(.widget))
         #expect(!surfaces.declares(.notice))
     }
+
+    @Test
+    func detailPublicationRejectsRegions() throws {
+        let regions = PluginNode(.regions, children: (0..<3).map { PluginNode(.text("\($0)")) })
+
+        #expect(throws: AddonFailure.self) {
+            try PluginPublication(feature: "audio", surface: .detail, document: PluginDocument(root: regions))
+        }
+        _ = try PluginPublication(feature: "audio", surface: .detail, document: PluginDocument(root: PluginNode(.text("Mixer"))))
+    }
 }

@@ -23,6 +23,8 @@ public enum PluginCatalog {
         "audio.spectrum"    : 1,
         "media.scrubber"    : 1,
         "audio.outputPicker": 1,
+        "audio.volumeBar"   : 1,
+        "audio.mixer"       : 1,
         "power.battery"     : 1,
         "volume.level"      : 1,
         "bluetooth.device"  : 1,

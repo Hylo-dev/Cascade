@@ -126,4 +126,12 @@ struct PluginBluetoothStateTests {
         let neutral = try PluginNoticeAttributes(duration: 4, border: .neutral, compactWidth: 40, accessibilityLabel: "AirPods, Connected")
         #expect(try JSONDecoder().decode(PluginNoticeAttributes.self, from: JSONEncoder().encode(neutral)).border == .neutral)
     }
+
+    @Test
+    func outputAddressAcceptsOnlyTheOutputUIDShape() {
+        #expect(PluginBluetoothAddress.outputAddress(fromUID: "a0-b1-c2-d3-e4-f5:output") == "A0-B1-C2-D3-E4-F5")
+        #expect(PluginBluetoothAddress.outputAddress(fromUID: "A0-B1-C2-D3-E4-F5:input") == nil)
+        #expect(PluginBluetoothAddress.outputAddress(fromUID: "BuiltInSpeakerDevice") == nil)
+        #expect(PluginBluetoothAddress.outputAddress(fromUID: "A0-B1-C2-D3-E4:output") == nil)
+    }
 }

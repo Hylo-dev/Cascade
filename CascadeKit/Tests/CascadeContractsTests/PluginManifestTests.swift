@@ -200,4 +200,35 @@ struct PluginManifestTests {
 
         #expect(rejected)
     }
+
+    @Test
+    func detailNeedsAWidgetInTheSameFeature() throws {
+        #expect(throws: AddonFailure.self) {
+            try PluginSurfaces(detail: PluginPlainSurface())
+        }
+
+        let surfaces = try PluginSurfaces(
+            widget: PluginWidgetSurface(sizes: [PluginWidgetSize(columns: 1, rows: 2)]),
+            detail: PluginPlainSurface()
+        )
+
+        #expect(surfaces.declares(.detail))
+        #expect(!surfaces.declares(.notice))
+    }
+
+    @Test
+    func detailDecodesFromTheManifest() throws {
+        let json     = #"{"widget":{"sizes":["1x2"]},"detail":{}}"#
+        let surfaces = try JSONDecoder().decode(PluginSurfaces.self, from: Data(json.utf8))
+
+        #expect(surfaces.detail != nil)
+        #expect(try JSONDecoder().decode(PluginSurfaces.self, from: JSONEncoder().encode(surfaces)) == surfaces)
+    }
+
+    @Test
+    func catalogOffersTheAudioComponents() {
+        #expect(PluginCatalog.components["audio.volumeBar"] == 1)
+        #expect(PluginCatalog.components["audio.mixer"] == 1)
+        #expect(PluginCatalog.components["audio.outputPicker"] == 1)
+    }
 }
