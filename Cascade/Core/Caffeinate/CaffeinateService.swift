@@ -46,10 +46,6 @@ nonisolated final class CaffeinateService: Sendable {
     /// under the user's tap.
     static let activityLifetime: TimeInterval = 8 * 60 * 60
 
-    /// shortestUntil is the least an end time may be ahead of now to be taken, one minute: below it
-    /// the instant is already past by the time the assertions hear of it.
-    private static let shortestUntil: TimeInterval = 60
-
     /// maximumStaleIdentifiers bounds the identifiers whose release failed and are retried, so an
     /// identifier the system will never accept again cannot grow the list for ever.
     private static let maximumStaleIdentifiers = 16
@@ -494,7 +490,7 @@ nonisolated final class CaffeinateService: Sendable {
     /// hour on the wall clock, read when it is wanted so that it is the hour after now, not the
     /// hour after the launch.
     private func nextFullHour(after now: Date) -> Int {
-        (calendar().component(.hour, from: now) + 1) % 24 * CaffeinateTarget.step * 4
+        (calendar().component(.hour, from: now) + 1) * CaffeinateTarget.minutesPerHour % CaffeinateTarget.minutesPerDay
     }
 
     /// setDuration is the ruler's absolute duration, in minutes. One off the scale is ignored.
@@ -530,10 +526,10 @@ nonisolated final class CaffeinateService: Sendable {
         let quarter = TimeInterval(CaffeinateTarget.step * 60)
         let end     = Date(timeIntervalSince1970: (instant.timeIntervalSince1970 / quarter).rounded() * quarter)
         let ahead   = end.timeIntervalSince(now)
-        guard ahead >= Self.shortestUntil, ahead <= CaffeinateTarget.maximumLength else { return nil }
+        guard ahead >= CaffeinateTarget.shortestLead, ahead <= CaffeinateTarget.maximumLength else { return nil }
 
         let parts       = calendar().dateComponents([.hour, .minute], from: end)
-        let minutes     = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
+        let minutes     = (parts.hour ?? 0) * CaffeinateTarget.minutesPerHour + (parts.minute ?? 0)
         let minuteOfDay = ((minutes + CaffeinateTarget.step / 2) / CaffeinateTarget.step * CaffeinateTarget.step) % CaffeinateTarget.minutesPerDay
 
         return (end, minuteOfDay)

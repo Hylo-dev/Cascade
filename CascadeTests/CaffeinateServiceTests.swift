@@ -608,7 +608,7 @@ struct CaffeinateServiceTests {
     }
 
     @Test
-    func anUntilFollowsATimeZoneChangeWhileRunning() {
+    func anEndTimeIsStoredAsTheMinuteOfTheDayInTheZoneOfTheMoment() {
         let zone    = ChangingCalendar()
         let harness = CaffeinateHarness(nextTarget: .indefinite, calendar: { zone.calendar })
         let chosen  = origin.addingTimeInterval(10 * 3600)
@@ -676,7 +676,7 @@ struct CaffeinateServiceTests {
     @Test
     func theTwentyFiveHourDayDoesNotLeaveAnOffGridEnd() throws {
         let newYork = CaffeinateHarness.newYork()
-        // The clocks go back on 2027-11-07; from 2027-11-06 20:30 EDT the next 20:15 is 24.5 h away
+        // The clocks go back on 2027-11-07; from 2027-11-06 20:30 EDT the next 20:15 is 24 h 45 min away
         // and the previous one is already past, so the cap is the last resort.
         let evening = try #require(newYork.date(from: DateComponents(year: 2027, month: 11, day: 6, hour: 20, minute: 30)))
         let late    = CaffeinateHarness(nextTarget: .until(minuteOfDay: 20 * 60 + 15), calendar: { newYork }, startingAt: evening)

@@ -24,7 +24,10 @@ public enum CaffeinateTargetKind: String, CaseIterable, Hashable, Sendable {
 /// A duration is 15 to 1440 minutes: 1440 minutes is 86 400 s, the longest timeout IOKit accepts
 /// for a power assertion. An end time is a minute of the local day, 0 to 1425, which says "18:00"
 /// and nothing about which day, since the day depends on when the session starts: the session
-/// ends at the next occurrence, never less than 15 minutes ahead.
+/// ends at the next occurrence at least 15 minutes ahead. Only when that occurrence is more than
+/// a day away (the 25-hour day when the clocks go back) is the previous one used, down to a
+/// minute ahead (`shortestLead`), and the day's cap when even that is too close; `end(startingAt:
+/// calendar:)` has the details.
 public enum CaffeinateTarget: Hashable, Sendable {
 
     case indefinite
@@ -33,13 +36,16 @@ public enum CaffeinateTarget: Hashable, Sendable {
 
     public static let step           = 15
     public static let maximumMinutes = 1440
+    public static let minutesPerHour = 60
     public static let minutesPerDay  = 1440
 
     /// minimumLead is how far ahead an end time must be: fifteen minutes, one tick of the ruler.
     public static let minimumLead: TimeInterval = TimeInterval(step * 60)
 
-    /// shortestLead is the least an end may be ahead of the start when the 15-minute rule cannot
-    /// be met within a day: one minute, the floor `setUntil` applies to a chosen instant.
+    /// shortestLead is the least an end time may be ahead of the start: one minute, below which
+    /// the instant is already past by the time the assertions hear of it. It is the floor the
+    /// native owner applies to an instant the ruler chose, and what `end(startingAt:calendar:)`
+    /// accepts of an earlier occurrence when the 15-minute rule cannot be met within a day.
     public static let shortestLead: TimeInterval = 60
 
     /// maximumLength is the longest a session may be asked to run, one day: IOKit's longest
@@ -132,8 +138,8 @@ public enum CaffeinateTarget: Hashable, Sendable {
                 let earliest = start.addingTimeInterval(Self.minimumLead - 0.001)
                 let latest   = start.addingTimeInterval(Self.maximumLength)
                 let wanted   = DateComponents(
-                    hour  : minuteOfDay / 60,
-                    minute: minuteOfDay % 60,
+                    hour  : minuteOfDay / Self.minutesPerHour,
+                    minute: minuteOfDay % Self.minutesPerHour,
                     second: 0
                 )
                 guard let next = calendar.nextDate(
