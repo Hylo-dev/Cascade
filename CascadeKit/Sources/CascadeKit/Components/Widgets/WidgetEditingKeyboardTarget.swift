@@ -6,11 +6,11 @@
 import AppKit
 import SwiftUI
 
-/// WidgetEditingKeyboardTarget lets Escape end widget editing. The notch panel never takes the
-/// keyboard on its own, so while editing this zero-size native view becomes its first responder
-/// and makes it key, which a nonactivating panel does without activating Cascade; it gives the
-/// keyboard back when editing ends and the view leaves the window. Every other key is swallowed
-/// while editing, so typing does not beep.
+/// WidgetEditingKeyboardTarget lets Escape end widget editing or close a plugin's detail page.
+/// The notch panel never takes the keyboard on its own, so while either is up this zero-size
+/// native view becomes its first responder and makes it key, which a nonactivating panel does
+/// without activating Cascade; it gives the keyboard back when the view leaves the window. Every
+/// other key is swallowed meanwhile, so typing does not beep.
 struct WidgetEditingKeyboardTarget: NSViewRepresentable {
 
     let onEscape: () -> Void

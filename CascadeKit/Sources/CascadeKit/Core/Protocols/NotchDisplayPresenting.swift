@@ -26,6 +26,10 @@ protocol NotchDisplayPresenting: AnyObject {
     var onFileDrop                    : (([URL]) -> Bool)? { get set }
     var onUnsupportedFileDrop         : (() -> Void)? { get set }
 
+    /// onDetailDismissRequested is the surface asking to close the detail page it shows, which it
+    /// does on Escape. The surface never closes the page itself: the coordinator owns the slot.
+    var onDetailDismissRequested      : (() -> Void)? { get set }
+
     /// Exact provider instances still owned by the renderer, including its
     /// current mounted projection and roots leaving through a transition.
     var retainedActivityRoots: [any NotchActivity] { get }

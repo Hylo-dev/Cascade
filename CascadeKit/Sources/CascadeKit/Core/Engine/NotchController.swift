@@ -212,6 +212,8 @@ final class NotchController: NotchDisplayPresenting {
     var onFileDrop                    : (([URL]) -> Bool)?
     @ObservationIgnored
     var onUnsupportedFileDrop         : (() -> Void)?
+    @ObservationIgnored
+    var onDetailDismissRequested      : (() -> Void)?
 
     var retainedActivityRoots: [any NotchActivity] {
         let mounted           = mountedActivityRoots
@@ -259,6 +261,9 @@ final class NotchController: NotchDisplayPresenting {
         let contextualPageID        : String?
         let contextualPageRevision  : UInt64?
         let contextualPageIsSelected: Bool
+        let detailPageIdentity      : ObjectIdentifier?
+        let detailPageID            : String?
+        let detailPageRevision      : UInt64?
         let widgetContentRevision   : UInt64
         let style                   : ExternalNotchStyle
     }
@@ -574,6 +579,9 @@ final class NotchController: NotchDisplayPresenting {
             contextualPageID        : presentation.contextualPage?.id,
             contextualPageRevision  : presentation.contextualPage?.contentRevision,
             contextualPageIsSelected: presentation.contextualPageIsSelected,
+            detailPageIdentity      : presentation.detailPage.map(ObjectIdentifier.init),
+            detailPageID            : presentation.detailPage?.id,
+            detailPageRevision      : presentation.detailPage?.contentRevision,
             widgetContentRevision   : presentation.widgetContentRevision,
             style                   : presentation.style
         )
@@ -732,10 +740,15 @@ final class NotchController: NotchDisplayPresenting {
         return displayPresentation.secondary
     }
 
+    /// displayedContextualPage is the page the expanded surface draws instead of the grid. The
+    /// detail comes first: it is a slot of its own over whatever else was selected, and it never
+    /// alters that selection, so the shelf or the grid is simply still there once it closes.
     private var displayedContextualPage: (any NotchContextualPage)? {
-        guard !state.isClosed,
-              displayPresentation?.contextualPageIsSelected == true
-        else { return nil }
+        guard !state.isClosed else { return nil }
+
+        if let detail = displayPresentation?.detailPage { return detail }
+
+        guard displayPresentation?.contextualPageIsSelected == true else { return nil }
 
         return displayPresentation?.contextualPage
     }
@@ -1956,7 +1969,13 @@ final class NotchController: NotchDisplayPresenting {
             let hardwareNotchHeight = display.hasHardwareNotch ? resting.height : 0
             let requested           = hardwareNotchHeight
                 + expandedTopInset + expandedBottomInset + contentHeight
-            return max(resting.height, min(normalizedMaximumExpandedHeight(), requested))
+
+            // A detail is a plugin's own surface, so it gets the activity ceiling, not the
+            // file shelf's ordinary one.
+            let ceiling = displayPresentation?.detailPage === page
+                ? normalizedActivityMaximumHeight()
+                : normalizedMaximumExpandedHeight()
+            return max(resting.height, min(ceiling, requested))
         }
 
         guard let activity = displayedPrimaryActivity else {
@@ -2190,11 +2209,24 @@ final class NotchController: NotchDisplayPresenting {
                 obstructionFrame = .zero
             }
 
+            let pageView = page.makeContentView(in: NotchContextualPageContext(
+                availableSize         : pageFrame.size,
+                centerObstructionFrame: obstructionFrame
+            ))
+
+            // The panel never takes the keyboard on its own. A detail brings the same zero-size
+            // key view the widget gallery uses, so Escape reaches the coordinator, which owns
+            // closing it; the file shelf and other pages stay keyboard-free.
+            let isDetail = displayPresentation?.detailPage === page
             hostView.setContent(
-                page.makeContentView(in: NotchContextualPageContext(
-                    availableSize         : pageFrame.size,
-                    centerObstructionFrame: obstructionFrame
-                )),
+                isDetail
+                    ? AnyView(pageView.background {
+                        WidgetEditingKeyboardTarget { [weak self] in
+                            self?.onDetailDismissRequested?()
+                        }
+                        .frame(width: 0, height: 0)
+                    })
+                    : pageView,
                 frame    : pageFrame,
                 isVisible: true
             )

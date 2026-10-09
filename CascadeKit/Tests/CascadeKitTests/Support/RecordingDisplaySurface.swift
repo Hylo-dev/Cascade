@@ -24,6 +24,7 @@ final class RecordingDisplaySurface: NotchDisplayPresenting {
     var onFileDragHoverChanged        : (([URL]?) -> Void)?
     var onFileDrop                    : (([URL]) -> Bool)?
     var onUnsupportedFileDrop         : (() -> Void)?
+    var onDetailDismissRequested      : (() -> Void)?
 
     private var mountedActivityRoots : [any NotchActivity] = []
     private var outgoingActivityRoots: [any NotchActivity] = []
@@ -170,6 +171,8 @@ final class RecordingDisplaySurface: NotchDisplayPresenting {
     func requestCollapse() { onCollapseRequested?() }
 
     func finishCollapse(generation: UInt64) { onCollapseFinished?(generation) }
+
+    func requestDetailDismissal() { onDetailDismissRequested?() }
 
     func releaseOutgoingRoots() {
         outgoingActivityRoots.removeAll()

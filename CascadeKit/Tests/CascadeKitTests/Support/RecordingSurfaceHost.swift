@@ -3,6 +3,7 @@
 //  CascadeKit
 //
 
+import CoreGraphics
 @testable import CascadeKit
 
 /// RecordingSurfaceHost keeps what the plugin surface router placed, showed and removed.
@@ -14,6 +15,13 @@ final class RecordingSurfaceHost: PluginSurfaceHosting {
     private(set) var shown        : [(notice: any NotchTransientNotice, revision: UInt64)] = []
     private(set) var dismissed    : [String] = []
     private(set) var updated      : [UInt64] = []
+
+    private(set) var shownDetails: [(
+        page     : any NotchContextualPage,
+        displayID: CGDirectDisplayID?,
+        onDismiss: @MainActor () -> Void
+    )] = []
+    private(set) var dismissedDetailIDs: [String] = []
 
     func register(_ widget: NotchWidget) {
         registrations += 1
@@ -34,5 +42,17 @@ final class RecordingSurfaceHost: PluginSurfaceHosting {
 
     func dismissActivity(id: String) {
         dismissed.append(id)
+    }
+
+    func showDetail(
+        _ page      : any NotchContextualPage,
+        on displayID: CGDirectDisplayID?,
+        onDismiss   : @escaping @MainActor () -> Void
+    ) {
+        shownDetails.append((page, displayID, onDismiss))
+    }
+
+    func dismissDetail(id: String) {
+        dismissedDetailIDs.append(id)
     }
 }
