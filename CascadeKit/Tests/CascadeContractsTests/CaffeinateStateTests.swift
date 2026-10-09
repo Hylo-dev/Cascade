@@ -71,12 +71,27 @@ struct CaffeinateStateTests {
     }
 
     @Test
-    func anEndTimeBarelyShortOfFifteenMinutesGoesToTomorrowButNeverPastADay() {
-        // 08:00:30 UTC: 08:15 is 14 min 30 s ahead, so the next 08:15 is a day away, which the
-        // cap holds to exactly a day after the start.
+    func anEndTimeBarelyShortOfFifteenMinutesTakesTheEarlierOccurrenceRatherThanAnOffGridCap() {
+        // 08:00:30 UTC: the next 08:15 is a day and 14 m 30 s away, past the one-day cap, so
+        // today's 08:15, 14 m 30 s ahead and past the one-minute floor, is the end.
         let start = Date(timeIntervalSince1970: 1_800_000_030)
 
-        #expect(CaffeinateTarget.until(minuteOfDay: 8 * 60 + 15).end(startingAt: start, calendar: utc) == start.addingTimeInterval(86_400))
+        #expect(CaffeinateTarget.until(minuteOfDay: 8 * 60 + 15).end(startingAt: start, calendar: utc) == start.addingTimeInterval(870))
+    }
+
+    @Test
+    func theCapIsTheLastResortWhenNoEarlierOccurrenceIsAtLeastAMinuteAhead() throws {
+        var newYork      = Calendar(identifier: .gregorian)
+        newYork.timeZone = try #require(TimeZone(identifier: "America/New_York"))
+
+        // The clocks go back on 2027-11-07. From 20:30 EDT the next 20:15 is 24.5 hours away and
+        // the previous one is in the past.
+        let start = try #require(newYork.date(from: DateComponents(year: 2027, month: 11, day: 6, hour: 20, minute: 30)))
+        #expect(CaffeinateTarget.until(minuteOfDay: 20 * 60 + 15).end(startingAt: start, calendar: newYork) == start.addingTimeInterval(86_400))
+
+        // From 08:00:30 EDT the next 08:15 is 25 hours 14 m 30 s away; today's is on the clock.
+        let morning = try #require(newYork.date(from: DateComponents(year: 2027, month: 11, day: 6, hour: 8, second: 30)))
+        #expect(CaffeinateTarget.until(minuteOfDay: 8 * 60 + 15).end(startingAt: morning, calendar: newYork) == morning.addingTimeInterval(870))
     }
 
     @Test

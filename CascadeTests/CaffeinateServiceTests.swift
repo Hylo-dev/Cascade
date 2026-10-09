@@ -258,7 +258,7 @@ nonisolated final class CaffeinateHarness: Sendable {
         keepsDisplayAwake: Bool             = true,
         lastDuration     : Int?             = nil,
         lastUntil        : Int?             = nil,
-        calendar         : Calendar         = CaffeinateHarness.utc,
+        calendar         : @escaping @Sendable () -> Calendar = { CaffeinateHarness.utc },
         startingAt       : Date             = TestClock.origin
     ) {
         let assertions  = FakeAssertions()
@@ -409,7 +409,7 @@ struct CaffeinateServiceTests {
         let evening = try #require(newYork.date(from: DateComponents(year: 2027, month: 3, day: 13, hour: 20)))
         let harness = CaffeinateHarness(
             nextTarget: .until(minuteOfDay: 8 * 60),
-            calendar  : newYork,
+            calendar  : { newYork },
             startingAt: evening
         )
 
@@ -511,7 +511,7 @@ struct CaffeinateServiceTests {
     func anUntilIsStoredAsTheMinuteOfDayInTheCalendarsTimeZone() throws {
         let newYork = CaffeinateHarness.newYork()
         let noon    = try #require(newYork.date(from: DateComponents(year: 2027, month: 1, day: 15, hour: 12)))
-        let harness = CaffeinateHarness(nextTarget: .indefinite, calendar: newYork, startingAt: noon)
+        let harness = CaffeinateHarness(nextTarget: .indefinite, calendar: { newYork }, startingAt: noon)
 
         harness.perform(.setUntil(noon.addingTimeInterval(6 * 3600)))
 
@@ -557,7 +557,7 @@ struct CaffeinateServiceTests {
     func anUntilInThePastOrMoreThanADayAheadIsIgnoredWithoutAnEmission() {
         let harness = CaffeinateHarness(nextTarget: .duration(minutes: 60))
 
-        for offset: TimeInterval in [-3600, 0, 30, 59, 86_401, 90_000, 200_000] {
+        for offset: TimeInterval in [-3600, 0, 30, 59, 87_000, 90_000, 200_000] {
             harness.perform(.setUntil(origin.addingTimeInterval(offset)))
         }
         // 60 seconds ahead rounds to now, which is not a future end.
@@ -571,19 +571,145 @@ struct CaffeinateServiceTests {
         harness.assertions.clearCalls()
         harness.emitted.clear()
         harness.perform(.setUntil(origin.addingTimeInterval(-60)))
-        harness.perform(.setUntil(origin.addingTimeInterval(86_401)))
+        harness.perform(.setUntil(origin.addingTimeInterval(87_000)))
         #expect(harness.assertions.calls.isEmpty)
         #expect(harness.emitted.count == 0)
         #expect(harness.service.state.endsAt == origin.addingTimeInterval(3600))
     }
 
     @Test
-    func anUntilExactlyADayAheadIsAccepted() {
+    func anUntilThatRoundsToExactlyADayAheadIsAccepted() {
         let harness = CaffeinateHarness(nextTarget: .indefinite)
 
-        harness.perform(.setUntil(origin.addingTimeInterval(86_400)))
-
+        // Only the rounded value is checked: a second over a day rounds to a day.
+        harness.perform(.setUntil(origin.addingTimeInterval(86_401)))
         #expect(harness.service.state.nextTarget == .until(minuteOfDay: 8 * 60))
+
+        let running = CaffeinateHarness(nextTarget: .indefinite)
+        running.perform(.start)
+        running.perform(.setUntil(origin.addingTimeInterval(86_400)))
+        #expect(running.service.state.endsAt == origin.addingTimeInterval(86_400))
+    }
+
+    // MARK: Calendar, defaults and the 24-hour edge
+
+    /// ChangingCalendar plays a user who crosses a time zone while Cascade runs.
+    nonisolated final class ChangingCalendar: Sendable {
+
+        private let current = Mutex(CaffeinateHarness.utc)
+
+        var calendar: Calendar { current.withLock { $0 } }
+
+        func move(to identifier: String) {
+            var calendar      = Calendar(identifier: .gregorian)
+            calendar.timeZone = TimeZone(identifier: identifier)!
+            current.withLock { $0 = calendar }
+        }
+    }
+
+    @Test
+    func anUntilFollowsATimeZoneChangeWhileRunning() {
+        let zone    = ChangingCalendar()
+        let harness = CaffeinateHarness(nextTarget: .indefinite, calendar: { zone.calendar })
+        let chosen  = origin.addingTimeInterval(10 * 3600)
+
+        // 18:00 UTC.
+        harness.perform(.setUntil(chosen))
+        #expect(harness.service.state.nextTarget == .until(minuteOfDay: 18 * 60))
+
+        // The same instant is 13:00 in New York in January.
+        zone.move(to: "America/New_York")
+        harness.perform(.setUntil(chosen))
+        #expect(harness.service.state.nextTarget == .until(minuteOfDay: 13 * 60))
+    }
+
+    @Test
+    func aStartResolvesTheEndTimeInTheZoneOfTheMoment() {
+        let zone    = ChangingCalendar()
+        let harness = CaffeinateHarness(nextTarget: .until(minuteOfDay: 10 * 60), calendar: { zone.calendar })
+
+        // 10:00 UTC is two hours after the 08:00 UTC start.
+        harness.perform(.start)
+        #expect(harness.service.state.endsAt == origin.addingTimeInterval(2 * 3600))
+        harness.perform(.stop)
+
+        // In New York it is 03:00, so 10:00 is seven hours away.
+        zone.move(to: "America/New_York")
+        harness.perform(.start)
+        #expect(harness.service.state.endsAt == origin.addingTimeInterval(7 * 3600))
+    }
+
+    @Test
+    func theNextFullHourIsTakenFromTheMomentItIsUsed() {
+        let harness = CaffeinateHarness(nextTarget: .indefinite)
+
+        // Days later, at 13:20, long after the service was created at 08:00.
+        harness.clock.advance(by: 3 * 86_400 + 5 * 3600 + 20 * 60)
+        harness.perform(.setMode(.until))
+
+        #expect(harness.service.state.nextTarget == .until(minuteOfDay: 14 * 60))
+        #expect(harness.preferences.lastUntilMinuteOfDay == nil)
+
+        // And for a running indefinite session it is not frozen into the preferences either.
+        harness.perform(.setMode(.indefinite))
+        harness.perform(.start)
+        harness.clock.advance(by: 3600)
+        harness.perform(.setMode(.until))
+        #expect(harness.service.state.nextTarget == .until(minuteOfDay: 15 * 60))
+        #expect(harness.service.state.endsAt == harness.clock.now.addingTimeInterval(40 * 60))
+        #expect(harness.preferences.lastUntilMinuteOfDay == nil)
+    }
+
+    @Test
+    func anEndTimeJustShortOfFifteenMinutesTakesTheEarlierOccurrenceNotAnOffGridCap() {
+        // 08:00:30 UTC with until 08:15: tomorrow's 08:15 is 24 h 14 m away, so today's, 14 m 30 s
+        // ahead and so past the one-minute floor, is the end.
+        let start   = origin.addingTimeInterval(30)
+        let harness = CaffeinateHarness(nextTarget: .until(minuteOfDay: 8 * 60 + 15), startingAt: start)
+
+        harness.perform(.start)
+
+        #expect(harness.service.state.endsAt == origin.addingTimeInterval(900))
+        #expect(harness.assertions.calls.first == .acquire(.system, 870))
+    }
+
+    @Test
+    func theTwentyFiveHourDayDoesNotLeaveAnOffGridEnd() throws {
+        let newYork = CaffeinateHarness.newYork()
+        // The clocks go back on 2027-11-07; from 2027-11-06 20:30 EDT the next 20:15 is 24.5 h away
+        // and the previous one is already past, so the cap is the last resort.
+        let evening = try #require(newYork.date(from: DateComponents(year: 2027, month: 11, day: 6, hour: 20, minute: 30)))
+        let late    = CaffeinateHarness(nextTarget: .until(minuteOfDay: 20 * 60 + 15), calendar: { newYork }, startingAt: evening)
+        late.perform(.start)
+        #expect(late.service.state.endsAt == evening.addingTimeInterval(86_400))
+
+        // From 08:00:30 with until 08:15 the next one is 25 h 14 m away and today's is 14 m 30 s ahead.
+        let morning = try #require(newYork.date(from: DateComponents(year: 2027, month: 11, day: 6, hour: 8, minute: 0, second: 30)))
+        let early   = CaffeinateHarness(nextTarget: .until(minuteOfDay: 8 * 60 + 15), calendar: { newYork }, startingAt: morning)
+        early.perform(.start)
+        #expect(early.service.state.endsAt == morning.addingTimeInterval(870))
+    }
+
+    // MARK: A standing failure and an ignored command
+
+    @Test
+    func anIgnoredCommandLeavesAStandingFailureAlone() {
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 60))
+        harness.assertions.refuseAcquire(.system, code: 5)
+        harness.perform(.start)
+        #expect(harness.service.state.failure == .assertionRefused(5))
+        harness.emitted.clear()
+
+        harness.perform(.setDuration(minutes: 10))
+        harness.perform(.setUntil(origin.addingTimeInterval(-60)))
+        harness.perform(.setUntil(origin.addingTimeInterval(200_000)))
+
+        #expect(harness.service.state.failure == .assertionRefused(5))
+        #expect(harness.emitted.count == 0)
+
+        harness.perform(.setDuration(minutes: 45))
+        #expect(harness.service.state.failure == nil)
+        #expect(harness.emitted.count == 1)
     }
 
     // MARK: Mode and targets while a session runs
@@ -1332,7 +1458,7 @@ struct CaffeinateServiceTests {
             assertions : FakeAssertions(),
             preferences: preferences,
             now        : { TestClock.origin },
-            calendar   : CaffeinateHarness.utc
+            calendar   : { CaffeinateHarness.utc }
         )
 
         service.perform(.setMode(.duration))

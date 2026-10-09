@@ -64,9 +64,10 @@ nonisolated final class CaffeinateService: Sendable {
         var nextTarget       : CaffeinateTarget
 
         /// lastDuration is the last duration the user chose, in minutes; lastUntil the last end
-        /// time, as a minute of the local day. They are what switching the mode restores.
+        /// time, as a minute of the local day, nil until one is chosen. They are what switching
+        /// the mode restores.
         var lastDuration     : Int
-        var lastUntil        : Int
+        var lastUntil        : Int?
         var keepsDisplayAwake: Bool
         var glyph            : CaffeinateGlyph
         var failure          : CaffeinateFailure?
@@ -110,7 +111,7 @@ nonisolated final class CaffeinateService: Sendable {
     private let assertions : any CaffeinateAssertions
     private let preferences: any CaffeinatePreferences
     private let clock      : @Sendable () -> Date
-    private let calendar   : Calendar
+    private let calendar   : @Sendable () -> Calendar
     private let queue      : DispatchQueue
     private let storage    : Mutex<Storage>
     private let deadline   : any DispatchSourceTimer
@@ -119,15 +120,18 @@ nonisolated final class CaffeinateService: Sendable {
 
     /// init reads the preferences once and registers the wake observer once. The queue must be
     /// serial; it is where every command, the deadline and every emission run. The calendar
-    /// decides what a time of day means: its time zone is the user's, `.current` in the app and a
-    /// fixed one in tests. A remembered duration or end time that was never chosen falls back to
-    /// the target already stored when it is of that kind, then to an hour, and to the next full
-    /// hour of the calendar.
+    /// is a provider, read each time a time of day is resolved, because what 18:00 means follows
+    /// the user's time zone: the app passes `Calendar.autoupdatingCurrent`, which tracks a zone
+    /// change while Cascade runs (a fixed `Calendar.current` would keep the zone of the launch),
+    /// and a test passes a closure it can change between two operations. A remembered duration
+    /// that was never chosen falls back to the target already stored when it is a duration, then
+    /// to an hour. A remembered end time that was never chosen stays unset and is the next full
+    /// hour of the moment it is used, never of the launch.
     init(
         assertions : any CaffeinateAssertions,
         preferences: any CaffeinatePreferences,
         now        : @escaping @Sendable () -> Date = { Date() },
-        calendar   : Calendar                       = .current,
+        calendar   : @escaping @Sendable () -> Calendar = { .autoupdatingCurrent },
         queue      : DispatchQueue                   = DispatchQueue(label: "Cascade.Caffeinate", qos: .utility)
     ) {
         self.assertions  = assertions
@@ -145,13 +149,12 @@ nonisolated final class CaffeinateService: Sendable {
             case .until(let minuteOfDay) : lastUntil    = lastUntil ?? minuteOfDay
             case .indefinite             : break
         }
-        let nextFullHour = (calendar.component(.hour, from: now()) + 1) % 24 * 60
         self.storage     = Mutex(
             Storage(
                 session: Session(
                     nextTarget       : nextTarget,
                     lastDuration     : lastDuration ?? 60,
-                    lastUntil        : lastUntil ?? nextFullHour,
+                    lastUntil        : lastUntil,
                     keepsDisplayAwake: preferences.keepsDisplayAwake,
                     glyph            : preferences.glyph
                 )
@@ -335,10 +338,27 @@ nonisolated final class CaffeinateService: Sendable {
         }
     }
 
+    /// accepts says whether a command is well formed: a duration on the scale, an end time the
+    /// ruler can reach. Everything else is always well formed.
+    private func accepts(
+        _ command: CaffeinateCommand,
+        now      : Date
+    ) -> Bool {
+        switch command {
+            case .setDuration(let minutes): CaffeinateTarget.isValid(minutes: minutes)
+            case .setUntil(let instant)   : resolveUntil(instant, now: now) != nil
+            default                       : true
+        }
+    }
+
     private func run(_ command: CaffeinateCommand) {
         transact { session, now in
-            // A command answers the failure of the one before it: it starts clean.
-            session.failure = nil
+            // A command answers the failure of the one before it: it starts clean. One that is
+            // going to be ignored as invalid answers nothing, so it leaves a standing failure,
+            // and the state, exactly as it was.
+            if accepts(command, now: now) {
+                session.failure = nil
+            }
 
             // A session whose end has passed but whose timer has not fired yet is over; ending
             // it first means a gesture never steps or toggles a dead session.
@@ -413,7 +433,7 @@ nonisolated final class CaffeinateService: Sendable {
     ) {
         guard !session.isActive else { return }
 
-        let end     = session.nextTarget.end(startingAt: now, calendar: calendar)
+        let end     = session.nextTarget.end(startingAt: now, calendar: calendar())
         let seconds = end.map { $0.timeIntervalSince(now) }
 
         let systemIdentifier: UInt32
@@ -455,7 +475,7 @@ nonisolated final class CaffeinateService: Sendable {
         let target: CaffeinateTarget = switch kind {
             case .indefinite: .indefinite
             case .duration  : .duration(minutes: session.lastDuration)
-            case .until     : .until(minuteOfDay: session.lastUntil)
+            case .until     : .until(minuteOfDay: session.lastUntil ?? nextFullHour(after: now))
         }
 
         guard session.isActive else {
@@ -466,8 +486,15 @@ nonisolated final class CaffeinateService: Sendable {
         if kind != .indefinite, session.endsAt != nil {
             session.nextTarget = target
         } else {
-            retarget(&session, to: target, end: target.end(startingAt: now, calendar: calendar), now: now)
+            retarget(&session, to: target, end: target.end(startingAt: now, calendar: calendar()), now: now, remembers: false)
         }
+    }
+
+    /// nextFullHour is the default end time of a user who never chose one: the start of the next
+    /// hour on the wall clock, read when it is wanted so that it is the hour after now, not the
+    /// hour after the launch.
+    private func nextFullHour(after now: Date) -> Int {
+        (calendar().component(.hour, from: now) + 1) % 24 * CaffeinateTarget.step * 4
     }
 
     /// setDuration is the ruler's absolute duration, in minutes. One off the scale is ignored.
@@ -488,30 +515,42 @@ nonisolated final class CaffeinateService: Sendable {
             return
         }
 
-        retarget(&session, to: target, end: target.end(startingAt: now, calendar: calendar), now: now)
+        retarget(&session, to: target, end: target.end(startingAt: now, calendar: calendar()), now: now)
     }
 
-    /// setUntil is the ruler's absolute end time, an instant. It is rounded to the nearest quarter
-    /// hour and ignored unless the result is between a minute and a day ahead, the bounds the
-    /// ruler can reach: a past or distant instant is a stale or hostile one. While off it is
-    /// stored as the minute of the day in the calendar's time zone and remembered; while a
-    /// session runs the end moves to that instant.
+    /// resolveUntil turns the ruler's instant into the quarter hour it means and the minute of the
+    /// day in the calendar's time zone, or nil when the instant is not one the ruler can reach.
+    /// The instant is rounded to the nearest quarter hour first and only the rounded value is
+    /// checked: it must lie between a minute and a day ahead, so a past or distant instant, a
+    /// stale or hostile one, is refused, and an instant that rounds to exactly a day is not.
+    private func resolveUntil(
+        _ instant: Date,
+        now      : Date
+    ) -> (end: Date, minuteOfDay: Int)? {
+        let quarter = TimeInterval(CaffeinateTarget.step * 60)
+        let end     = Date(timeIntervalSince1970: (instant.timeIntervalSince1970 / quarter).rounded() * quarter)
+        let ahead   = end.timeIntervalSince(now)
+        guard ahead >= Self.shortestUntil, ahead <= CaffeinateTarget.maximumLength else { return nil }
+
+        let parts       = calendar().dateComponents([.hour, .minute], from: end)
+        let minutes     = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
+        let minuteOfDay = ((minutes + CaffeinateTarget.step / 2) / CaffeinateTarget.step * CaffeinateTarget.step) % CaffeinateTarget.minutesPerDay
+
+        return (end, minuteOfDay)
+    }
+
+    /// setUntil is the ruler's absolute end time, an instant, ignored unless `resolveUntil`
+    /// accepts it. While off it is stored as the minute of the day in the calendar's time zone,
+    /// read now and not at launch, and remembered; while a session runs the end moves to that
+    /// instant.
     private func setUntil(
         _ instant: Date,
         in session: inout Session,
         now      : Date
     ) {
-        let raw = instant.timeIntervalSince(now)
-        guard raw >= Self.shortestUntil, raw <= CaffeinateTarget.maximumLength else { return }
+        guard let (end, minuteOfDay) = resolveUntil(instant, now: now) else { return }
 
-        let quarter = TimeInterval(CaffeinateTarget.step * 60)
-        let end     = Date(timeIntervalSince1970: (instant.timeIntervalSince1970 / quarter).rounded() * quarter)
-        let rounded = end.timeIntervalSince(now)
-        guard rounded >= Self.shortestUntil, rounded <= CaffeinateTarget.maximumLength else { return }
-
-        let parts       = calendar.dateComponents([.hour, .minute], from: end)
-        let minuteOfDay = ((((parts.hour ?? 0) * 60 + (parts.minute ?? 0) + 7) / CaffeinateTarget.step) * CaffeinateTarget.step) % CaffeinateTarget.minutesPerDay
-        let target      = CaffeinateTarget.until(minuteOfDay: minuteOfDay)
+        let target = CaffeinateTarget.until(minuteOfDay: minuteOfDay)
 
         guard session.isActive else {
             session.nextTarget = target
@@ -525,12 +564,14 @@ nonisolated final class CaffeinateService: Sendable {
     /// retarget moves a running session's end in place and, only if the assertions accepted it,
     /// makes `target` the next one and remembers it. A refusal leaves the session, its end and the
     /// target as they were and publishes `extensionRefused`. Nothing is called when the end does
-    /// not move.
+    /// not move. A change of mode on a running session (`remembers` false) chooses the last value
+    /// of its kind and so has nothing new to remember.
     private func retarget(
-        _ session: inout Session,
-        to target: CaffeinateTarget,
-        end      : Date?,
-        now      : Date
+        _ session : inout Session,
+        to target : CaffeinateTarget,
+        end       : Date?,
+        now       : Date,
+        remembers : Bool = true
     ) {
         if end != session.endsAt, let code = retime(&session, to: end, now: now) {
             session.failure = .extensionRefused(code)
@@ -538,6 +579,8 @@ nonisolated final class CaffeinateService: Sendable {
         }
 
         session.nextTarget = target
+        guard remembers else { return }
+
         switch target {
             case .duration(let minutes)  : session.lastDuration = minutes
             case .until(let minuteOfDay) : session.lastUntil    = minuteOfDay

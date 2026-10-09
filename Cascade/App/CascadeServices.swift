@@ -303,7 +303,8 @@ final class CascadeServices {
         let caffeinatePreferences = UserDefaultsCaffeinatePreferences(defaults: preferences)
         let caffeinateService     = CaffeinateService(
             assertions : IOKitCaffeinateAssertions(),
-            preferences: caffeinatePreferences
+            preferences: caffeinatePreferences,
+            calendar   : { .autoupdatingCurrent }
         )
         self.caffeinatePreferences  = caffeinatePreferences
         self.caffeinateService      = caffeinateService

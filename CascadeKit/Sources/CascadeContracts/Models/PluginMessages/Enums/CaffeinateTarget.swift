@@ -38,6 +38,10 @@ public enum CaffeinateTarget: Hashable, Sendable {
     /// minimumLead is how far ahead an end time must be: fifteen minutes, one tick of the ruler.
     public static let minimumLead: TimeInterval = TimeInterval(step * 60)
 
+    /// shortestLead is the least an end may be ahead of the start when the 15-minute rule cannot
+    /// be met within a day: one minute, the floor `setUntil` applies to a chosen instant.
+    public static let shortestLead: TimeInterval = 60
+
     /// maximumLength is the longest a session may be asked to run, one day: IOKit's longest
     /// timeout, and the end of the ruler.
     public static let maximumLength: TimeInterval = TimeInterval(maximumMinutes * 60)
@@ -108,7 +112,9 @@ public enum CaffeinateTarget: Hashable, Sendable {
     /// zone so a daylight saving change moves the end with the clock on the wall: on a day that
     /// is 23 or 25 hours long the session is 23 or 25 hours long, and a time the clock skips
     /// ends when the clock next shows a later one. The result is never more than a day past the
-    /// start, since IOKit would cut a longer assertion short of the published end.
+    /// start, since IOKit would cut a longer assertion short of the published end: when the next
+    /// occurrence is further away, the previous one is used if it is at least a minute ahead
+    /// (shorter than 15 minutes, but on the clock), and the cap itself only as a last resort.
     public func end(
         startingAt start: Date,
         calendar        : Calendar
@@ -124,18 +130,34 @@ public enum CaffeinateTarget: Hashable, Sendable {
                 // nextDate(after:) is strictly after, so the earliest acceptable instant is
                 // nudged back by a millisecond to be accepted itself.
                 let earliest = start.addingTimeInterval(Self.minimumLead - 0.001)
+                let latest   = start.addingTimeInterval(Self.maximumLength)
                 let wanted   = DateComponents(
                     hour  : minuteOfDay / 60,
                     minute: minuteOfDay % 60,
                     second: 0
                 )
-                let next = calendar.nextDate(
+                guard let next = calendar.nextDate(
                     after         : earliest,
                     matching      : wanted,
                     matchingPolicy: .nextTime
-                )
+                ) else { return latest }
 
-                return min(next ?? start.addingTimeInterval(Self.maximumLength), start.addingTimeInterval(Self.maximumLength))
+                if next <= latest { return next }
+
+                // The next occurrence is more than a day away (a start just short of the 15
+                // minutes, or the 25-hour day when the clocks go back). The previous one is
+                // still on the wall clock's grid, and is taken when it is at least a minute
+                // ahead; only when it is not, the cap itself is the end.
+                if let previous = calendar.nextDate(
+                    after         : next,
+                    matching      : wanted,
+                    matchingPolicy: .nextTime,
+                    direction     : .backward
+                ), previous.timeIntervalSince(start) >= Self.shortestLead {
+                    return previous
+                }
+
+                return latest
         }
     }
 }
