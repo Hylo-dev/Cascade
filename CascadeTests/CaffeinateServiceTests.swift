@@ -155,7 +155,9 @@ nonisolated final class InMemoryCaffeinatePreferences: CaffeinatePreferences {
 
     private struct Values {
 
-        var nextDuration     : CaffeinateDuration  = .minutes(60)
+        var nextTarget       : CaffeinateTarget    = .indefinite
+        var lastDuration     : Int?                = nil
+        var lastUntil        : Int?                = nil
         var keepsDisplayAwake: Bool                = true
         var glyph            : CaffeinateGlyph     = .cupHeatWaves
         var shortcut         : CaffeinateShortcut? = .default
@@ -166,9 +168,19 @@ nonisolated final class InMemoryCaffeinatePreferences: CaffeinatePreferences {
 
     var writes: Int { values.withLock { $0.writes } }
 
-    var nextDuration: CaffeinateDuration {
-        get { values.withLock { $0.nextDuration } }
-        set { values.withLock { $0.nextDuration = newValue; $0.writes += 1 } }
+    var nextTarget: CaffeinateTarget {
+        get { values.withLock { $0.nextTarget } }
+        set { values.withLock { $0.nextTarget = newValue; $0.writes += 1 } }
+    }
+
+    var lastDurationMinutes: Int? {
+        get { values.withLock { $0.lastDuration } }
+        set { values.withLock { $0.lastDuration = newValue; $0.writes += 1 } }
+    }
+
+    var lastUntilMinuteOfDay: Int? {
+        get { values.withLock { $0.lastUntil } }
+        set { values.withLock { $0.lastUntil = newValue; $0.writes += 1 } }
     }
 
     var keepsDisplayAwake: Bool {
@@ -227,23 +239,43 @@ nonisolated final class CaffeinateHarness: Sendable {
     let emitted    : EmittedStates
     let service    : CaffeinateService
 
+    static var utc: Calendar {
+        var calendar      = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        return calendar
+    }
+
+    static func newYork() -> Calendar {
+        var calendar      = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/New_York")!
+        return calendar
+    }
+
     /// init builds a service with sessions allowed, an emitter already set and the initial
     /// snapshot forgotten, so a test counts only the transitions it causes.
     init(
-        nextDuration     : CaffeinateDuration = .minutes(60),
-        keepsDisplayAwake: Bool               = true
+        nextTarget       : CaffeinateTarget = .duration(minutes: 60),
+        keepsDisplayAwake: Bool             = true,
+        lastDuration     : Int?             = nil,
+        lastUntil        : Int?             = nil,
+        calendar         : Calendar         = CaffeinateHarness.utc,
+        startingAt       : Date             = TestClock.origin
     ) {
         let assertions  = FakeAssertions()
         let preferences = InMemoryCaffeinatePreferences()
         let clock       = TestClock()
         let emitted     = EmittedStates()
 
-        preferences.nextDuration      = nextDuration
-        preferences.keepsDisplayAwake = keepsDisplayAwake
+        clock.now = startingAt
+        preferences.nextTarget           = nextTarget
+        preferences.keepsDisplayAwake    = keepsDisplayAwake
+        preferences.lastDurationMinutes  = lastDuration
+        preferences.lastUntilMinuteOfDay = lastUntil
         let service = CaffeinateService(
             assertions : assertions,
             preferences: preferences,
-            now        : { clock.now }
+            now        : { clock.now },
+            calendar   : calendar
         )
         assertions.watch(service)
         service.setSessionsAllowed(true)
@@ -272,7 +304,7 @@ struct CaffeinateServiceTests {
 
     @Test
     func startAcquiresSystemAndDisplayWithTheNextDurationAsTimeout() {
-        let harness = CaffeinateHarness(nextDuration: .minutes(30))
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 30))
 
         harness.perform(.start)
 
@@ -296,7 +328,7 @@ struct CaffeinateServiceTests {
 
     @Test
     func anIndefiniteStartHasNoTimeoutAndNoEnd() {
-        let harness = CaffeinateHarness(nextDuration: .indefinite)
+        let harness = CaffeinateHarness(nextTarget: .indefinite)
 
         harness.perform(.start)
 
@@ -320,7 +352,7 @@ struct CaffeinateServiceTests {
         #expect(state.startedAt         == nil)
         #expect(state.endsAt            == nil)
         #expect(state.activityStartedAt == nil)
-        #expect(state.nextDuration      == .minutes(60))
+        #expect(state.nextTarget        == .duration(minutes: 60))
     }
 
     @Test
@@ -335,124 +367,439 @@ struct CaffeinateServiceTests {
         #expect(harness.assertions.liveCount == 0)
     }
 
-    // MARK: Lengthening by a step
+    // MARK: Targets at start
 
     @Test
-    func steppingUpMovesBothTimeoutsAndTheEnd() {
-        let harness = CaffeinateHarness(nextDuration: .minutes(30))
+    func anUntilTargetEndsAtTheNextOccurrenceOfThatTime() {
+        // origin is 08:00 UTC.
+        let harness = CaffeinateHarness(nextTarget: .until(minuteOfDay: 10 * 60))
+
+        harness.perform(.start)
+
+        #expect(harness.assertions.calls == [.acquire(.system, 7200), .acquire(.display, 7200)])
+        #expect(harness.service.state.endsAt == origin.addingTimeInterval(7200))
+        #expect(harness.service.armedDeadline == origin.addingTimeInterval(7200))
+    }
+
+    @Test
+    func anUntilTargetAcrossMidnightEndsTomorrow() {
+        let harness = CaffeinateHarness(nextTarget: .until(minuteOfDay: 6 * 60))
+
+        harness.perform(.start)
+
+        #expect(harness.service.state.endsAt == origin.addingTimeInterval(22 * 3600))
+        #expect(harness.assertions.calls.first == .acquire(.system, 22 * 3600))
+    }
+
+    @Test
+    func anUntilTargetThatIsNowOrWithinFifteenMinutesGoesToTomorrow() {
+        let now = CaffeinateHarness(nextTarget: .until(minuteOfDay: 8 * 60))
+        now.perform(.start)
+        #expect(now.service.state.endsAt == origin.addingTimeInterval(86_400))
+
+        let soon = CaffeinateHarness(nextTarget: .until(minuteOfDay: 8 * 60 + 15))
+        soon.perform(.start)
+        #expect(soon.service.state.endsAt == origin.addingTimeInterval(900))
+    }
+
+    @Test
+    func anUntilTargetFollowsTheWallClockAcrossADaylightSavingChange() throws {
+        let newYork = CaffeinateHarness.newYork()
+        // 2027-03-13 20:00 EST; the clocks go forward in the night.
+        let evening = try #require(newYork.date(from: DateComponents(year: 2027, month: 3, day: 13, hour: 20)))
+        let harness = CaffeinateHarness(
+            nextTarget: .until(minuteOfDay: 8 * 60),
+            calendar  : newYork,
+            startingAt: evening
+        )
+
+        harness.perform(.start)
+
+        // 08:00 EDT is twelve hours on the wall and eleven on a stopwatch.
+        #expect(harness.assertions.calls.first == .acquire(.system, 11 * 3600))
+        #expect(harness.service.state.endsAt == evening.addingTimeInterval(11 * 3600))
+    }
+
+    @Test
+    func startingDoesNotChangeTheTarget() {
+        let harness = CaffeinateHarness(nextTarget: .until(minuteOfDay: 10 * 60))
+
+        harness.perform(.start)
+        harness.perform(.stop)
+
+        #expect(harness.service.state.nextTarget == .until(minuteOfDay: 10 * 60))
+    }
+
+    // MARK: Mode
+
+    @Test
+    func theModeWhileOffRestoresTheLastDurationAndTheLastUntil() {
+        let harness = CaffeinateHarness(nextTarget: .indefinite, lastDuration: 90, lastUntil: 18 * 60)
+
+        harness.perform(.setMode(.duration))
+        #expect(harness.service.state.nextTarget == .duration(minutes: 90))
+        #expect(harness.preferences.nextTarget   == .duration(minutes: 90))
+
+        harness.perform(.setMode(.until))
+        #expect(harness.service.state.nextTarget == .until(minuteOfDay: 18 * 60))
+        #expect(harness.preferences.nextTarget   == .until(minuteOfDay: 18 * 60))
+
+        harness.perform(.setMode(.indefinite))
+        #expect(harness.service.state.nextTarget == .indefinite)
+        #expect(harness.preferences.nextTarget   == .indefinite)
+
+        harness.perform(.setMode(.duration))
+        #expect(harness.service.state.nextTarget == .duration(minutes: 90))
+        #expect(harness.assertions.calls.isEmpty)
+        #expect(harness.emitted.count == 4)
+    }
+
+    @Test
+    func withNothingRememberedTheDurationIsAnHourAndTheUntilIsTheNextFullHour() {
+        // origin is 08:00 UTC: the next full hour is 09:00.
+        let harness = CaffeinateHarness(nextTarget: .indefinite)
+
+        harness.perform(.setMode(.duration))
+        #expect(harness.service.state.nextTarget == .duration(minutes: 60))
+
+        harness.perform(.setMode(.until))
+        #expect(harness.service.state.nextTarget == .until(minuteOfDay: 9 * 60))
+    }
+
+    @Test
+    func theNextFullHourWrapsAfterTheLastHourOfTheDay() throws {
+        let late = try #require(CaffeinateHarness.utc.date(from: DateComponents(year: 2027, month: 1, day: 15, hour: 23, minute: 20)))
+        let harness = CaffeinateHarness(nextTarget: .indefinite, startingAt: late)
+
+        harness.perform(.setMode(.until))
+
+        #expect(harness.service.state.nextTarget == .until(minuteOfDay: 0))
+    }
+
+    @Test
+    func aTargetFromThePreferencesIsRememberedAsTheLastOfItsKind() {
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 45))
+
+        harness.perform(.setMode(.indefinite))
+        harness.perform(.setMode(.duration))
+
+        #expect(harness.service.state.nextTarget == .duration(minutes: 45))
+    }
+
+    @Test
+    func theDurationAndTheUntilWhileOffAreStoredAndRemembered() {
+        let harness = CaffeinateHarness(nextTarget: .indefinite)
+
+        harness.perform(.setDuration(minutes: 120))
+        #expect(harness.service.state.nextTarget == .duration(minutes: 120))
+        harness.perform(.setMode(.indefinite))
+        harness.perform(.setMode(.duration))
+        #expect(harness.service.state.nextTarget == .duration(minutes: 120))
+        #expect(harness.preferences.lastDurationMinutes == 120)
+
+        // 18:00 UTC, ten hours ahead.
+        harness.perform(.setUntil(origin.addingTimeInterval(10 * 3600)))
+        #expect(harness.service.state.nextTarget == .until(minuteOfDay: 18 * 60))
+        harness.perform(.setMode(.duration))
+        harness.perform(.setMode(.until))
+        #expect(harness.service.state.nextTarget == .until(minuteOfDay: 18 * 60))
+        #expect(harness.preferences.lastUntilMinuteOfDay == 18 * 60)
+        #expect(harness.assertions.calls.isEmpty)
+    }
+
+    @Test
+    func anUntilIsStoredAsTheMinuteOfDayInTheCalendarsTimeZone() throws {
+        let newYork = CaffeinateHarness.newYork()
+        let noon    = try #require(newYork.date(from: DateComponents(year: 2027, month: 1, day: 15, hour: 12)))
+        let harness = CaffeinateHarness(nextTarget: .indefinite, calendar: newYork, startingAt: noon)
+
+        harness.perform(.setUntil(noon.addingTimeInterval(6 * 3600)))
+
+        #expect(harness.service.state.nextTarget == .until(minuteOfDay: 18 * 60))
+    }
+
+    @Test
+    func anUntilRoundsToTheNearestQuarterHour() {
+        let harness = CaffeinateHarness(nextTarget: .indefinite)
+
+        // 08:00 + 2h07m is 10:07, which rounds down to 10:00; 10:08 rounds up to 10:15.
+        harness.perform(.setUntil(origin.addingTimeInterval(2 * 3600 + 7 * 60)))
+        #expect(harness.service.state.nextTarget == .until(minuteOfDay: 10 * 60))
+
+        harness.perform(.setUntil(origin.addingTimeInterval(2 * 3600 + 8 * 60)))
+        #expect(harness.service.state.nextTarget == .until(minuteOfDay: 10 * 60 + 15))
+    }
+
+    @Test
+    func aDurationOffTheScaleIsIgnoredWithoutAnEmission() {
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 60))
+
+        for minutes in [0, 10, 14, 100, 1455, 1500, -15] {
+            harness.perform(.setDuration(minutes: minutes))
+        }
+
+        #expect(harness.service.state.nextTarget == .duration(minutes: 60))
+        #expect(harness.emitted.count == 0)
+        #expect(harness.assertions.calls.isEmpty)
+
+        harness.perform(.start)
+        harness.assertions.clearCalls()
+        harness.emitted.clear()
+        for minutes in [0, 10, 1455] {
+            harness.perform(.setDuration(minutes: minutes))
+        }
+        #expect(harness.assertions.calls.isEmpty)
+        #expect(harness.emitted.count == 0)
+        #expect(harness.service.state.endsAt == origin.addingTimeInterval(3600))
+    }
+
+    @Test
+    func anUntilInThePastOrMoreThanADayAheadIsIgnoredWithoutAnEmission() {
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 60))
+
+        for offset: TimeInterval in [-3600, 0, 30, 59, 86_401, 90_000, 200_000] {
+            harness.perform(.setUntil(origin.addingTimeInterval(offset)))
+        }
+        // 60 seconds ahead rounds to now, which is not a future end.
+        harness.perform(.setUntil(origin.addingTimeInterval(60)))
+
+        #expect(harness.service.state.nextTarget == .duration(minutes: 60))
+        #expect(harness.emitted.count == 0)
+        #expect(harness.assertions.calls.isEmpty)
+
+        harness.perform(.start)
+        harness.assertions.clearCalls()
+        harness.emitted.clear()
+        harness.perform(.setUntil(origin.addingTimeInterval(-60)))
+        harness.perform(.setUntil(origin.addingTimeInterval(86_401)))
+        #expect(harness.assertions.calls.isEmpty)
+        #expect(harness.emitted.count == 0)
+        #expect(harness.service.state.endsAt == origin.addingTimeInterval(3600))
+    }
+
+    @Test
+    func anUntilExactlyADayAheadIsAccepted() {
+        let harness = CaffeinateHarness(nextTarget: .indefinite)
+
+        harness.perform(.setUntil(origin.addingTimeInterval(86_400)))
+
+        #expect(harness.service.state.nextTarget == .until(minuteOfDay: 8 * 60))
+    }
+
+    // MARK: Mode and targets while a session runs
+
+    @Test
+    func chooseInfinityWhileRunningRemovesTheEndWithoutAGap() {
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 60))
+        harness.perform(.start)
+        harness.clock.advance(by: 600)
+        harness.assertions.clearCalls()
+
+        harness.perform(.setMode(.indefinite))
+
+        #expect(harness.assertions.calls == [.setTimeout(.system, nil), .setTimeout(.display, nil)])
+        #expect(harness.assertions.acquiredCount == 2)
+        #expect(harness.assertions.releasedCount == 0)
+        #expect(harness.service.state.endsAt == nil)
+        #expect(harness.service.state.startedAt == origin)
+        #expect(harness.service.state.nextTarget == .indefinite)
+        #expect(harness.service.armedDeadline == nil)
+    }
+
+    @Test
+    func chooseForOrUntilWhileTimedKeepsTheEnd() {
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 60), lastDuration: 90, lastUntil: 18 * 60)
+        harness.perform(.start)
+        harness.assertions.clearCalls()
+        harness.emitted.clear()
+
+        harness.perform(.setMode(.until))
+
+        #expect(harness.assertions.calls.isEmpty)
+        #expect(harness.service.state.endsAt == origin.addingTimeInterval(3600))
+        #expect(harness.service.state.nextTarget == .until(minuteOfDay: 18 * 60))
+
+        harness.perform(.setMode(.duration))
+
+        #expect(harness.assertions.calls.isEmpty)
+        #expect(harness.service.state.endsAt == origin.addingTimeInterval(3600))
+        #expect(harness.service.state.nextTarget == .duration(minutes: 90))
+    }
+
+    @Test
+    func chooseForWhileIndefiniteAppliesTheLastDurationFromNow() {
+        let harness = CaffeinateHarness(nextTarget: .indefinite, lastDuration: 90)
+        harness.perform(.start)
+        harness.clock.advance(by: 600)
+        harness.assertions.clearCalls()
+
+        harness.perform(.setMode(.duration))
+
+        let end = origin.addingTimeInterval(600 + 5400)
+        #expect(harness.assertions.calls == [.setTimeout(.system, 5400), .setTimeout(.display, 5400)])
+        #expect(harness.service.state.endsAt == end)
+        #expect(harness.service.armedDeadline == end)
+        #expect(harness.service.state.nextTarget == .duration(minutes: 90))
+        #expect(harness.assertions.releasedCount == 0)
+    }
+
+    @Test
+    func chooseUntilWhileIndefiniteAppliesTheLastUntilFromNow() {
+        let harness = CaffeinateHarness(nextTarget: .indefinite, lastUntil: 18 * 60)
+        harness.perform(.start)
+        harness.assertions.clearCalls()
+
+        harness.perform(.setMode(.until))
+
+        #expect(harness.assertions.calls == [.setTimeout(.system, 36_000), .setTimeout(.display, 36_000)])
+        #expect(harness.service.state.endsAt == origin.addingTimeInterval(36_000))
+        #expect(harness.service.state.nextTarget == .until(minuteOfDay: 18 * 60))
+    }
+
+    @Test
+    func settingTheDurationWhileRunningMovesTheEndWithoutReleasing() {
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 30))
+        harness.perform(.start)
+        harness.clock.advance(by: 300)
+        harness.assertions.clearCalls()
+        harness.emitted.clear()
+
+        harness.perform(.setDuration(minutes: 45))
+
+        let end = origin.addingTimeInterval(300 + 2700)
+        #expect(harness.assertions.calls == [.setTimeout(.system, 2700), .setTimeout(.display, 2700)])
+        #expect(harness.assertions.acquiredCount == 2)
+        #expect(harness.assertions.releasedCount == 0)
+        #expect(harness.service.state.endsAt == end)
+        #expect(harness.service.state.startedAt == origin)
+        #expect(harness.service.state.nextTarget == .duration(minutes: 45))
+        #expect(harness.service.armedDeadline == end)
+        #expect(harness.emitted.count == 1)
+        #expect(harness.preferences.lastDurationMinutes == 45)
+    }
+
+    @Test
+    func settingTheDurationWhileRunningCanShortenAndNeverPassesADay() {
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 1440))
+        harness.perform(.start)
+        harness.clock.advance(by: 600)
+        harness.assertions.clearCalls()
+
+        harness.perform(.setDuration(minutes: 15))
+        #expect(harness.service.state.endsAt == origin.addingTimeInterval(600 + 900))
+
+        harness.perform(.setDuration(minutes: 1440))
+        #expect(harness.service.state.endsAt == origin.addingTimeInterval(600 + 86_400))
+        #expect(harness.assertions.calls.last == .setTimeout(.display, 86_400))
+    }
+
+    @Test
+    func settingTheUntilWhileRunningMovesTheEndToThatInstant() {
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 30))
         harness.perform(.start)
         harness.clock.advance(by: 300)
         harness.assertions.clearCalls()
 
-        harness.perform(.stepUp)
+        let chosen = origin.addingTimeInterval(3 * 3600)
+        harness.perform(.setUntil(chosen))
 
-        let remaining: TimeInterval = 45 * 60
+        let remaining = chosen.timeIntervalSince(harness.clock.now)
         #expect(harness.assertions.calls == [.setTimeout(.system, remaining), .setTimeout(.display, remaining)])
-        #expect(harness.service.state.endsAt == origin.addingTimeInterval(300 + remaining))
-        #expect(harness.service.state.startedAt == origin)
+        #expect(harness.service.state.endsAt == chosen)
+        #expect(harness.service.state.nextTarget == .until(minuteOfDay: 11 * 60))
+        #expect(harness.service.armedDeadline == chosen)
+        #expect(harness.assertions.releasedCount == 0)
     }
 
     @Test
-    func steppingUpAfterExpiryDoesNothing() {
-        let harness = CaffeinateHarness(nextDuration: .minutes(15))
+    func settingTheUntilWhileRunningRoundsTheEnd() {
+        let harness = CaffeinateHarness(nextTarget: .indefinite)
+        harness.perform(.start)
+        harness.assertions.clearCalls()
+
+        harness.perform(.setUntil(origin.addingTimeInterval(3 * 3600 + 400)))
+
+        // 11:06:40 rounds to 11:00.
+        #expect(harness.service.state.endsAt == origin.addingTimeInterval(3 * 3600))
+    }
+
+    @Test
+    func aTargetChangeAfterExpiryDoesNotTouchADeadSession() {
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 15), lastDuration: 90)
         harness.perform(.start)
         harness.clock.advance(by: 901)
         harness.assertions.clearCalls()
 
-        harness.perform(.stepUp)
+        harness.perform(.setMode(.duration))
 
         #expect(!harness.assertions.calls.contains { if case .setTimeout = $0 { true } else { false } })
         #expect(!harness.service.state.isActive)
         #expect(harness.assertions.liveCount == 0)
-        #expect(harness.emitted.all.last?.startedAt == nil)
+        #expect(harness.service.state.nextTarget == .duration(minutes: 90))
     }
 
+    // MARK: Target commands and the session gate
+
+    /// Mode and target commands are preferences while no session runs and session commands while
+    /// one does; the second case cannot be reached with sessions not allowed, since withdrawing
+    /// the permission stops the session first.
     @Test
-    func steppingUpNeverLetsTheSessionPassTwentyFourHours() {
-        let harness = CaffeinateHarness(nextDuration: .minutes(1440))
-        harness.perform(.start)
-        harness.assertions.clearCalls()
+    func targetCommandsRunWhileNotAllowedAndOff() {
+        let harness = CaffeinateHarness(nextTarget: .indefinite)
+        harness.service.setSessionsAllowed(false)
+        harness.service.drain()
+        harness.emitted.clear()
 
-        harness.perform(.stepUp)
+        harness.perform(.setDuration(minutes: 75))
+        #expect(harness.service.state.nextTarget == .duration(minutes: 75))
 
-        #expect(harness.assertions.calls.isEmpty)
-        #expect(harness.service.state.endsAt == origin.addingTimeInterval(86_400))
-
-        harness.clock.advance(by: 600)
-        harness.perform(.stepUp)
-
-        #expect(harness.service.state.endsAt == origin.addingTimeInterval(86_400))
-        #expect(harness.assertions.calls.isEmpty)
-    }
-
-    // MARK: Steps
-
-    @Test
-    func stepsWhileOffMoveTheNextDurationAndPersistIt() {
-        let harness = CaffeinateHarness(nextDuration: .minutes(60))
-
-        harness.perform(.stepUp)
-        #expect(harness.service.state.nextDuration == .minutes(75))
-        #expect(harness.preferences.nextDuration   == .minutes(75))
-
-        harness.perform(.stepDown)
-        harness.perform(.stepDown)
-        #expect(harness.service.state.nextDuration == .minutes(45))
+        harness.perform(.setMode(.indefinite))
+        #expect(harness.service.state.nextTarget == .indefinite)
         #expect(harness.assertions.calls.isEmpty)
     }
 
     @Test
-    func aStepAtTheEdgeOfTheScaleDoesNothing() {
-        let harness = CaffeinateHarness(nextDuration: .indefinite)
+    func aTargetCommandQueuedAfterSessionsAreDisallowedActsOnAStoppedSession() {
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 30))
+        harness.perform(.start)
 
-        harness.perform(.stepDown)
+        harness.service.setSessionsAllowed(false)
+        harness.service.perform(.setDuration(minutes: 120))
+        harness.service.drain()
 
-        #expect(harness.service.state.nextDuration == .indefinite)
-        #expect(harness.emitted.count == 0)
+        #expect(!harness.service.state.isActive)
+        #expect(harness.assertions.liveCount == 0)
+        #expect(!harness.assertions.calls.contains { if case .setTimeout = $0 { true } else { false } })
+        #expect(harness.service.state.nextTarget == .duration(minutes: 120))
     }
 
     @Test
-    func stepWhileActiveUsesTimeLeftRoundedUp() {
-        let harness = CaffeinateHarness(nextDuration: .minutes(60))
+    func aRefusedRetimeKeepsTheEndAndTheTargetAndPublishesTheFailure() {
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 30))
         harness.perform(.start)
-        harness.clock.advance(by: 50 * 60)
+        harness.assertions.refuseSetTimeout(.display, code: 12)
         harness.assertions.clearCalls()
 
-        harness.perform(.stepDown)
+        harness.perform(.setDuration(minutes: 45))
 
-        #expect(harness.service.state.endsAt       == nil)
-        #expect(harness.service.state.startedAt    == origin)
-        #expect(harness.service.state.nextDuration == .indefinite)
-        #expect(harness.assertions.calls == [.setTimeout(.system, nil), .setTimeout(.display, nil)])
-
-        harness.clock.advance(by: 3600)
-        harness.perform(.stepUp)
-
-        #expect(harness.service.state.endsAt       == harness.clock.now.addingTimeInterval(900))
-        #expect(harness.service.state.nextDuration == .minutes(15))
-    }
-
-    @Test
-    func stepUpWithTenMinutesLeftGoesToThirty() {
-        let harness = CaffeinateHarness(nextDuration: .minutes(60))
-        harness.perform(.start)
-        harness.clock.advance(by: 50 * 60)
-        harness.assertions.clearCalls()
-
-        harness.perform(.stepUp)
-
-        #expect(harness.service.state.endsAt       == harness.clock.now.addingTimeInterval(1800))
-        #expect(harness.service.state.nextDuration == .minutes(30))
-        #expect(harness.assertions.calls == [.setTimeout(.system, 1800), .setTimeout(.display, 1800)])
-        #expect(harness.assertions.acquiredCount == 2)
-        #expect(harness.assertions.releasedCount == 0)
+        let state = harness.service.state
+        #expect(state.endsAt     == origin.addingTimeInterval(1800))
+        #expect(state.nextTarget == .duration(minutes: 30))
+        #expect(state.failure    == .extensionRefused(12))
+        #expect(harness.assertions.liveCount == 2)
+        #expect(harness.assertions.calls == [
+            .setTimeout(.system, 2700),
+            .setTimeout(.display, 2700),
+            .setTimeout(.system, 1800),
+        ])
+        #expect(harness.preferences.lastDurationMinutes != 45)
     }
 
     // MARK: Display preference
 
     @Test
     func theDisplayToggleDuringASessionAcquiresOrReleasesOnlyTheDisplay() {
-        let harness = CaffeinateHarness(nextDuration: .minutes(30))
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 30))
         harness.perform(.start)
         harness.clock.advance(by: 600)
         harness.assertions.clearCalls()
@@ -554,26 +901,6 @@ struct CaffeinateServiceTests {
     }
 
     @Test
-    func aRefusedStepKeepsTheSessionAndItsEndAndPublishesTheFailure() {
-        let harness = CaffeinateHarness(nextDuration: .minutes(30))
-        harness.perform(.start)
-        harness.assertions.refuseSetTimeout(.display, code: 12)
-        harness.assertions.clearCalls()
-
-        harness.perform(.stepUp)
-
-        let state = harness.service.state
-        #expect(state.endsAt  == origin.addingTimeInterval(1800))
-        #expect(state.failure == .extensionRefused(12))
-        #expect(harness.assertions.liveCount == 2)
-        #expect(harness.assertions.calls == [
-            .setTimeout(.system, 2700),
-            .setTimeout(.display, 2700),
-            .setTimeout(.system, 1800),
-        ])
-    }
-
-    @Test
     func aFailedReleaseKeepsTheIdentifierAndTheNextStopRetriesIt() {
         let harness = CaffeinateHarness()
         harness.perform(.start)
@@ -596,7 +923,7 @@ struct CaffeinateServiceTests {
 
     @Test
     func expiryPublishesOffAndReleasesTheAssertions() {
-        let harness = CaffeinateHarness(nextDuration: .minutes(15))
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 15))
         harness.perform(.start)
         harness.emitted.clear()
         harness.clock.advance(by: 900)
@@ -612,7 +939,7 @@ struct CaffeinateServiceTests {
 
     @Test
     func expiryBeforeTheEndDoesNothing() {
-        let harness = CaffeinateHarness(nextDuration: .minutes(15))
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 15))
         harness.perform(.start)
         harness.emitted.clear()
         harness.clock.advance(by: 899)
@@ -627,7 +954,7 @@ struct CaffeinateServiceTests {
 
     @Test
     func wakingPastTheEndPublishesOffButNotBeforeIt() {
-        let harness = CaffeinateHarness(nextDuration: .minutes(15))
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 15))
         harness.perform(.start)
 
         harness.clock.advance(by: 600)
@@ -644,7 +971,7 @@ struct CaffeinateServiceTests {
 
     @Test
     func expiryDoesNotEndAnIndefiniteSession() {
-        let harness = CaffeinateHarness(nextDuration: .indefinite)
+        let harness = CaffeinateHarness(nextTarget: .indefinite)
         harness.perform(.start)
         harness.clock.advance(by: 10 * 86_400)
 
@@ -656,21 +983,20 @@ struct CaffeinateServiceTests {
 
     @Test
     func theDeadlineTimerIsArmedOnlyWhileATimedSessionRuns() {
-        let harness = CaffeinateHarness(nextDuration: .minutes(15))
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 15))
         #expect(harness.service.armedDeadline == nil)
 
         harness.perform(.start)
         #expect(harness.service.armedDeadline == origin.addingTimeInterval(900))
 
-        harness.perform(.stepUp)
+        harness.perform(.setDuration(minutes: 30))
         #expect(harness.service.armedDeadline == origin.addingTimeInterval(1800))
 
-        harness.perform(.stepDown)
-        harness.perform(.stepDown)
+        harness.perform(.setMode(.indefinite))
         #expect(harness.service.armedDeadline == nil)
         #expect(harness.service.state.endsAt == nil)
 
-        harness.perform(.stepUp)
+        harness.perform(.setDuration(minutes: 15))
         #expect(harness.service.armedDeadline == origin.addingTimeInterval(900))
 
         harness.perform(.stop)
@@ -679,7 +1005,7 @@ struct CaffeinateServiceTests {
 
     @Test
     func theDeadlineTimerEndsTheSessionOnItsOwn() async throws {
-        let harness = CaffeinateHarness(nextDuration: .minutes(15))
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 15))
         let start   = Date().addingTimeInterval(0.3 - 900)
         harness.clock.now = start
         harness.perform(.start)
@@ -699,7 +1025,7 @@ struct CaffeinateServiceTests {
     /// or just after a wake: the user saw a session and asked to stop it.
     @Test
     func aToggleOnAJustExpiredSessionOnlyStops() {
-        let harness = CaffeinateHarness(nextDuration: .minutes(15))
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 15))
         harness.perform(.start)
         harness.clock.advance(by: 900.1)
         harness.emitted.clear()
@@ -718,7 +1044,7 @@ struct CaffeinateServiceTests {
 
     @Test
     func aGestureRenewsTheActivityOnlyPastItsCap() {
-        let harness = CaffeinateHarness(nextDuration: .indefinite)
+        let harness = CaffeinateHarness(nextTarget: .indefinite)
         harness.perform(.start)
 
         harness.clock.advance(by: 7 * 3600)
@@ -735,7 +1061,7 @@ struct CaffeinateServiceTests {
 
     @Test
     func everyTransitionEmitsOnceAndANoOpEmitsNothing() {
-        let harness = CaffeinateHarness(nextDuration: .minutes(30))
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 30))
 
         harness.perform(.stop)
         harness.perform(.setKeepsDisplayAwake(true))
@@ -747,7 +1073,10 @@ struct CaffeinateServiceTests {
         harness.perform(.start)
         #expect(harness.emitted.count == 1)
 
-        harness.perform(.stepUp)
+        harness.perform(.setDuration(minutes: 45))
+        #expect(harness.emitted.count == 2)
+
+        harness.perform(.setDuration(minutes: 45))
         #expect(harness.emitted.count == 2)
 
         harness.perform(.stop)
@@ -773,7 +1102,7 @@ struct CaffeinateServiceTests {
     /// the host is back, catches up with the session as it is.
     @Test
     func aSessionSurvivesTheEmitterGoingAway() {
-        let harness = CaffeinateHarness(nextDuration: .minutes(30))
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 30))
         harness.perform(.start)
         harness.emitted.clear()
 
@@ -785,7 +1114,7 @@ struct CaffeinateServiceTests {
         #expect(harness.assertions.releasedCount == 0)
         #expect(harness.emitted.count == 0)
 
-        harness.perform(.stepUp)
+        harness.perform(.setDuration(minutes: 45))
         #expect(harness.service.state.endsAt == origin.addingTimeInterval(2700))
         #expect(harness.emitted.count == 0)
 
@@ -822,14 +1151,14 @@ struct CaffeinateServiceTests {
         harness.service.drain()
         harness.emitted.clear()
 
-        for command in [CaffeinateCommand.start, .toggle, .stepUp, .stepDown, .stop] {
+        for command in [CaffeinateCommand.start, .toggle, .stop] {
             harness.service.perform(command)
         }
         harness.service.drain()
 
         #expect(harness.assertions.calls.isEmpty)
         #expect(!harness.service.state.isActive)
-        #expect(harness.service.state.nextDuration == .minutes(60))
+        #expect(harness.service.state.nextTarget == .duration(minutes: 60))
         #expect(harness.emitted.count == 0)
 
         harness.service.setSessionsAllowed(true)
@@ -905,7 +1234,7 @@ struct CaffeinateServiceTests {
 
     @Test
     func systemClockDidChangeRechecksTheDeadline() {
-        let harness = CaffeinateHarness(nextDuration: .minutes(15))
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 15))
         harness.perform(.start)
         harness.clock.advance(by: 901)
 
@@ -921,8 +1250,8 @@ struct CaffeinateServiceTests {
 
     @Test
     func preferencesAreReadOnceAndWrittenOnlyOnChange() {
-        let harness = CaffeinateHarness(nextDuration: .minutes(30))
-        #expect(harness.service.state.nextDuration == .minutes(30))
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 30))
+        #expect(harness.service.state.nextTarget == .duration(minutes: 30))
         let baseline = harness.preferences.writes
 
         harness.perform(.start)
@@ -930,8 +1259,13 @@ struct CaffeinateServiceTests {
         harness.perform(.setKeepsDisplayAwake(true))
         #expect(harness.preferences.writes == baseline)
 
-        harness.perform(.stepUp)
-        #expect(harness.preferences.writes == baseline + 1)
+        // The target and the last duration both change.
+        harness.perform(.setDuration(minutes: 45))
+        #expect(harness.preferences.writes == baseline + 2)
+        #expect(harness.preferences.nextTarget == .duration(minutes: 45))
+
+        harness.perform(.setDuration(minutes: 45))
+        #expect(harness.preferences.writes == baseline + 2)
     }
 
     @Test
@@ -941,19 +1275,29 @@ struct CaffeinateServiceTests {
         defer { store.removePersistentDomain(forName: suite) }
 
         let preferences = UserDefaultsCaffeinatePreferences(defaults: store)
-        #expect(preferences.nextDuration      == .minutes(60))
-        #expect(preferences.keepsDisplayAwake == true)
-        #expect(preferences.glyph             == .cupHeatWaves)
+        #expect(preferences.nextTarget           == .indefinite)
+        #expect(preferences.lastDurationMinutes  == nil)
+        #expect(preferences.lastUntilMinuteOfDay == nil)
+        #expect(preferences.keepsDisplayAwake    == true)
+        #expect(preferences.glyph                == .cupHeatWaves)
 
-        preferences.nextDuration      = .indefinite
-        preferences.keepsDisplayAwake = false
-        preferences.glyph             = .pill
+        preferences.nextTarget           = .until(minuteOfDay: 1080)
+        preferences.lastDurationMinutes  = 90
+        preferences.lastUntilMinuteOfDay = 1080
+        preferences.keepsDisplayAwake    = false
+        preferences.glyph                = .pill
 
         let reread = UserDefaultsCaffeinatePreferences(defaults: store)
-        #expect(reread.nextDuration      == .indefinite)
-        #expect(reread.keepsDisplayAwake == false)
-        #expect(reread.glyph             == .pill)
-        #expect(store.integer(forKey: "caffeinate.nextDuration") == 0)
+        #expect(reread.nextTarget           == .until(minuteOfDay: 1080))
+        #expect(reread.lastDurationMinutes  == 90)
+        #expect(reread.lastUntilMinuteOfDay == 1080)
+        #expect(reread.keepsDisplayAwake    == false)
+        #expect(reread.glyph                == .pill)
+
+        for target: CaffeinateTarget in [.indefinite, .duration(minutes: 15), .duration(minutes: 1440), .until(minuteOfDay: 0)] {
+            preferences.nextTarget = target
+            #expect(UserDefaultsCaffeinatePreferences(defaults: store).nextTarget == target)
+        }
     }
 
     @Test
@@ -962,20 +1306,50 @@ struct CaffeinateServiceTests {
         let store = try #require(UserDefaults(suiteName: suite))
         defer { store.removePersistentDomain(forName: suite) }
 
-        store.set(7, forKey: "caffeinate.nextDuration")
+        store.set("duration", forKey: "caffeinate.nextTarget.kind")
+        store.set(7, forKey: "caffeinate.nextTarget.value")
+        store.set(7, forKey: "caffeinate.lastDuration")
+        store.set(1440, forKey: "caffeinate.lastUntil")
         store.set("nonsense", forKey: "caffeinate.glyph")
 
         let preferences = UserDefaultsCaffeinatePreferences(defaults: store)
-        #expect(preferences.nextDuration == .minutes(60))
-        #expect(preferences.glyph        == .cupHeatWaves)
+        #expect(preferences.nextTarget           == .indefinite)
+        #expect(preferences.lastDurationMinutes  == nil)
+        #expect(preferences.lastUntilMinuteOfDay == nil)
+        #expect(preferences.glyph                == .cupHeatWaves)
+
+        store.set("forever", forKey: "caffeinate.nextTarget.kind")
+        #expect(UserDefaultsCaffeinatePreferences(defaults: store).nextTarget == .indefinite)
+    }
+
+    @Test
+    func theServiceReadsTheRememberedValuesFromThePreferences() {
+        let preferences = InMemoryCaffeinatePreferences()
+        preferences.nextTarget           = .indefinite
+        preferences.lastDurationMinutes  = 150
+        preferences.lastUntilMinuteOfDay = 1305
+        let service = CaffeinateService(
+            assertions : FakeAssertions(),
+            preferences: preferences,
+            now        : { TestClock.origin },
+            calendar   : CaffeinateHarness.utc
+        )
+
+        service.perform(.setMode(.duration))
+        service.drain()
+        #expect(service.state.nextTarget == .duration(minutes: 150))
+
+        service.perform(.setMode(.until))
+        service.drain()
+        #expect(service.state.nextTarget == .until(minuteOfDay: 1305))
     }
 
     // MARK: Concurrency
 
     @Test
     func concurrentCommandsNeverLeakAnAssertion() {
-        let harness  = CaffeinateHarness(nextDuration: .minutes(30))
-        let commands: [CaffeinateCommand] = [.start, .stop, .toggle, .stepUp, .stepDown, .setKeepsDisplayAwake(false), .setKeepsDisplayAwake(true)]
+        let harness  = CaffeinateHarness(nextTarget: .duration(minutes: 30))
+        let commands: [CaffeinateCommand] = [.start, .stop, .toggle, .setDuration(minutes: 45), .setMode(.indefinite), .setMode(.until), .setKeepsDisplayAwake(false), .setKeepsDisplayAwake(true)]
 
         DispatchQueue.concurrentPerform(iterations: 4) { thread in
             for index in 0 ..< 50 {
@@ -998,15 +1372,16 @@ struct CaffeinateServiceTests {
 
     @Test
     func noAssertionCallHappensWhileTheServiceLockIsHeld() {
-        let harness = CaffeinateHarness(nextDuration: .minutes(30))
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 30))
 
         harness.perform(.start)
-        harness.perform(.stepUp)
-        harness.perform(.stepDown)
+        harness.perform(.setDuration(minutes: 45))
+        harness.perform(.setMode(.indefinite))
+        harness.perform(.setUntil(origin.addingTimeInterval(3 * 3600)))
         harness.perform(.setKeepsDisplayAwake(false))
         harness.perform(.setKeepsDisplayAwake(true))
         harness.assertions.refuseSetTimeout(.display)
-        harness.perform(.stepUp)
+        harness.perform(.setDuration(minutes: 60))
         harness.assertions.allowEverything()
         harness.perform(.stop)
 
@@ -1025,8 +1400,19 @@ struct CaffeinateServiceTests {
         #expect(try command("caffeinate.start")                == .start)
         #expect(try command("caffeinate.stop")                 == .stop)
         #expect(try command("caffeinate.extend")               == nil)
-        #expect(try command("caffeinate.duration.up")          == .stepUp)
-        #expect(try command("caffeinate.duration.down")        == .stepDown)
+        #expect(try command("caffeinate.duration.up")          == nil)
+        #expect(try command("caffeinate.duration.down")        == nil)
+        #expect(try command("caffeinate.mode.indefinite")      == .setMode(.indefinite))
+        #expect(try command("caffeinate.mode.duration")        == .setMode(.duration))
+        #expect(try command("caffeinate.mode.until")           == .setMode(.until))
+        #expect(try command("caffeinate.duration.set", .number(90)) == .setDuration(minutes: 90))
+        #expect(try command("caffeinate.duration.set", .number(7))  == .setDuration(minutes: 7))
+        #expect(try command("caffeinate.duration.set", .number(90.5)) == nil)
+        #expect(try command("caffeinate.duration.set")              == nil)
+        #expect(try command("caffeinate.until.set", .number(1_800_003_600)) == .setUntil(Date(timeIntervalSince1970: 1_800_003_600)))
+        #expect(try command("caffeinate.until.set", .bool(true))    == nil)
+        #expect(try command("caffeinate.until.set")                 == nil)
+        #expect(try command("caffeinate.until.set", .number(1e300)) == nil)
         #expect(try command("caffeinate.display", .bool(false)) == .setKeepsDisplayAwake(false))
         #expect(try command("caffeinate.display")              == nil)
         #expect(try command("caffeinate.options")              == nil)
@@ -1035,7 +1421,7 @@ struct CaffeinateServiceTests {
 
     @Test
     func theSourceEmitsEveryTransitionUntilStoppedAndCatchesUpOnRestart() throws {
-        let harness = CaffeinateHarness(nextDuration: .minutes(30))
+        let harness = CaffeinateHarness(nextTarget: .duration(minutes: 30))
         harness.service.setEmitter(nil)
         harness.service.drain()
         let events = Mutex<[PluginSourceEvent]>([])
@@ -1056,7 +1442,7 @@ struct CaffeinateServiceTests {
         harness.service.drain()
         #expect(harness.service.state.isActive)
 
-        harness.perform(.stepUp)
+        harness.perform(.setDuration(minutes: 45))
         #expect(events.withLock { $0.count } == 2)
 
         source.start { event in events.withLock { $0.append(event) } }

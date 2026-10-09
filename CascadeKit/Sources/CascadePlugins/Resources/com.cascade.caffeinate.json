@@ -11,7 +11,7 @@
       "surfaces": { "widget": { "sizes": ["2x2", "2x1", "1x1"] }, "activity": {} },
       "sources": ["caffeinate"],
       "permissions": ["power.keepAwake"],
-      "actions": ["caffeinate.start", "caffeinate.stop", "caffeinate.duration.up", "caffeinate.duration.down", "caffeinate.display", "caffeinate.options"]
+      "actions": ["caffeinate.start", "caffeinate.stop", "caffeinate.display", "caffeinate.options", "caffeinate.mode.indefinite", "caffeinate.mode.duration", "caffeinate.mode.until", "caffeinate.duration.set", "caffeinate.until.set"]
     }
   ],
   "resources": { "profile": "eventDriven" }

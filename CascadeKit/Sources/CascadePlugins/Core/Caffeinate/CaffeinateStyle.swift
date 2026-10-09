@@ -26,8 +26,6 @@ enum CaffeinateStyle {
         static let powerLarge   = "power.large"
         static let powerSmall   = "power.small"
         static let powerOptions = "power.options"
-        static let durationDown = "duration.down"
-        static let durationUp   = "duration.up"
         static let display      = "display"
         static let opener       = "options"
         static let openerLarge  = "options.large"
@@ -37,8 +35,6 @@ enum CaffeinateStyle {
 
         static let start        = "caffeinate.start"
         static let stop         = "caffeinate.stop"
-        static let durationDown = "caffeinate.duration.down"
-        static let durationUp   = "caffeinate.duration.up"
         static let display      = "caffeinate.display"
         static let options      = "caffeinate.options"
 
@@ -59,22 +55,12 @@ enum CaffeinateStyle {
         static let button    = PluginColor.white.opacity(0.16)
     }
 
-    /// dimmed is the look of a stepper button or a control that can do nothing right now. It
-    /// stays a button: the owner ignores a step off the scale, so a stale press is harmless.
-    static let dimmed = 0.35
-
-    /// nearCap is fifteen minutes short of the longest a session may run, 24 hours: past it the
-    /// stepper's plus has little or nowhere to go.
-    static let nearCap: TimeInterval = (24 * 60 - 15) * 60
-
     enum Copy {
 
         static var title            : String { String(localized: "Caffeinate", table: "CaffeinateWidget", bundle: .module) }
         static var options          : String { String(localized: "Caffeinate Options", table: "CaffeinateWidget", bundle: .module) }
         static var startLabel       : String { String(localized: "Start Caffeinate", table: "CaffeinateWidget", bundle: .module) }
         static var stopLabel        : String { String(localized: "Stop Caffeinate", table: "CaffeinateWidget", bundle: .module) }
-        static var shorter          : String { String(localized: "Shorter", table: "CaffeinateWidget", bundle: .module) }
-        static var longer           : String { String(localized: "Longer", table: "CaffeinateWidget", bundle: .module) }
         static var start            : String { String(localized: "Start", table: "CaffeinateWidget", bundle: .module) }
         static var stop             : String { String(localized: "Stop", table: "CaffeinateWidget", bundle: .module) }
         static var display          : String { String(localized: "Display", table: "CaffeinateWidget", bundle: .module) }
@@ -110,12 +96,13 @@ enum CaffeinateStyle {
 
     enum Format {
 
-        /// duration is a stepper value: the hours and minutes the system abbreviates, `∞` for an
-        /// indefinite session. The units come from the system's formatting, not from literals.
-        static func duration(_ duration: CaffeinateDuration) -> String {
-            guard let seconds = duration.seconds else { return "∞" }
+        /// target is the next session's length: the hours and minutes the system abbreviates for
+        /// a duration, `∞` otherwise. The units come from the system's formatting, not from
+        /// literals. The ruler redesign gives an end time its own wording.
+        static func target(_ target: CaffeinateTarget) -> String {
+            guard case .duration(let minutes) = target else { return "∞" }
 
-            return minutes(seconds)
+            return Self.minutes(TimeInterval(minutes * 60))
         }
 
         static func minutes(_ seconds: TimeInterval) -> String {
@@ -168,10 +155,4 @@ extension PluginCaffeinateState {
         return startedAt...startedAt.addingTimeInterval(Self.countUpLength)
     }
 
-    /// remaining is the time a timed session has left when the document is built, nil for an
-    /// indefinite one. It is read once per publication: the dimming it decides is a hint, since
-    /// the owner enforces the cap whatever is pressed.
-    func remaining(at now: Date) -> TimeInterval? {
-        endsAt.map { $0.timeIntervalSince(now) }
-    }
 }

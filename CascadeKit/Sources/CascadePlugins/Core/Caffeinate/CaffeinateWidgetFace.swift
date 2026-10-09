@@ -208,7 +208,7 @@ enum CaffeinateWidgetFace {
 
         return HStack(spacing: 2) {
 
-            Text(CaffeinateStyle.Format.duration(state.nextDuration))
+            Text(CaffeinateStyle.Format.target(state.nextTarget))
                 .font(.system(size: size - 1, weight: .medium))
 
             Image(systemName: "chevron.right")

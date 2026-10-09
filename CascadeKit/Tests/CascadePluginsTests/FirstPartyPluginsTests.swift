@@ -76,8 +76,9 @@ struct FirstPartyPluginsTests {
         #expect(feature.supportsFullscreen)
         #expect(
             Set(feature.actions) == [
-                "caffeinate.start", "caffeinate.stop", "caffeinate.duration.up",
-                "caffeinate.duration.down", "caffeinate.display", "caffeinate.options",
+                "caffeinate.start", "caffeinate.stop", "caffeinate.display", "caffeinate.options",
+                "caffeinate.mode.indefinite", "caffeinate.mode.duration", "caffeinate.mode.until",
+                "caffeinate.duration.set", "caffeinate.until.set",
             ]
         )
     }

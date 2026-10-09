@@ -10,7 +10,7 @@ import Foundation
 /// another is drawn and kept current by the kernel without a single message more, and a late
 /// or repeated snapshot can only repeat the truth. `activityStartedAt` marks the live activity's
 /// own start, so a renewed activity can present again after its lifetime was capped while an
-/// unchanged one does not. `nextDuration` is what the next session will last, and the glyph is
+/// unchanged one does not. `nextTarget` is how the next session will end, and the glyph is
 /// the user's pick. The snapshot carries no control token: the widget's controls ask for
 /// absolute values.
 public struct PluginCaffeinateState: Equatable, Sendable {
@@ -20,7 +20,7 @@ public struct PluginCaffeinateState: Equatable, Sendable {
     public let startedAt        : Date?
     public let endsAt           : Date?
     public let activityStartedAt: Date?
-    public let nextDuration     : CaffeinateDuration
+    public let nextTarget       : CaffeinateTarget
     public let keepsDisplayAwake: Bool
     public let glyph            : CaffeinateGlyph
     public let failure          : CaffeinateFailure?
@@ -29,7 +29,7 @@ public struct PluginCaffeinateState: Equatable, Sendable {
         startedAt        : Date?               = nil,
         endsAt           : Date?               = nil,
         activityStartedAt: Date?               = nil,
-        nextDuration     : CaffeinateDuration  = .minutes(60),
+        nextTarget       : CaffeinateTarget    = .indefinite,
         keepsDisplayAwake: Bool                = true,
         glyph            : CaffeinateGlyph     = .cupHeatWaves,
         failure          : CaffeinateFailure?  = nil
@@ -37,7 +37,7 @@ public struct PluginCaffeinateState: Equatable, Sendable {
         self.startedAt         = startedAt
         self.endsAt            = endsAt
         self.activityStartedAt = activityStartedAt
-        self.nextDuration      = nextDuration
+        self.nextTarget        = nextTarget
         self.keepsDisplayAwake = keepsDisplayAwake
         self.glyph             = glyph
         self.failure           = failure
@@ -51,13 +51,15 @@ public struct PluginCaffeinateState: Equatable, Sendable {
     public init?(_ event: PluginSourceEvent) {
         guard event.source == Self.source,
               case .bool(let keepsDisplayAwake)? = event.fields["keepsDisplayAwake"],
-              case .number(let wireMinutes)?     = event.fields["nextDuration"],
+              case .string(let kindName)?        = event.fields["targetKind"],
+              case .number(let wireValue)?       = event.fields["targetValue"],
               case .string(let glyphName)?       = event.fields["glyph"],
-              wireMinutes.isFinite,
-              abs(wireMinutes) < 1e9,
-              wireMinutes == wireMinutes.rounded(),
-              let nextDuration = CaffeinateDuration(wireMinutes: Int(wireMinutes)),
-              let glyph        = CaffeinateGlyph(rawValue: glyphName)
+              wireValue.isFinite,
+              abs(wireValue) < 1e9,
+              wireValue == wireValue.rounded(),
+              let kind       = CaffeinateTargetKind(rawValue: kindName),
+              let nextTarget = CaffeinateTarget(kind: kind, value: Int(wireValue)),
+              let glyph      = CaffeinateGlyph(rawValue: glyphName)
         else { return nil }
 
         // A date field is optional, but one that is present must be a number a Date can hold.
@@ -95,7 +97,7 @@ public struct PluginCaffeinateState: Equatable, Sendable {
             startedAt        : startedAt,
             endsAt           : endsAt,
             activityStartedAt: activityStartedAt,
-            nextDuration     : nextDuration,
+            nextTarget       : nextTarget,
             keepsDisplayAwake: keepsDisplayAwake,
             glyph            : glyph,
             failure          : failure
@@ -105,7 +107,8 @@ public struct PluginCaffeinateState: Equatable, Sendable {
     /// event is the state as the source emits it; an absent date or failure is left out.
     public func event() throws -> PluginSourceEvent {
         var fields: [String: PluginValue] = [
-            "nextDuration"     : .number(Double(nextDuration.wireMinutes)),
+            "targetKind"       : .string(nextTarget.kind.rawValue),
+            "targetValue"      : .number(Double(nextTarget.value)),
             "keepsDisplayAwake": .bool(keepsDisplayAwake),
             "glyph"            : .string(glyph.rawValue),
         ]

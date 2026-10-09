@@ -28,6 +28,13 @@ import Synchronization
 /// Beneath both, the assertions carry an IOKit timeout of their own, so the Mac sleeps on time
 /// even if Cascade hangs or crashes.
 ///
+/// How a session ends is a `CaffeinateTarget`: never, after a duration, or at a time of day. An
+/// end time is resolved to an instant when the session starts, in the injected calendar's time
+/// zone, so a daylight saving change moves it with the wall clock. While a session runs, the
+/// target commands move its end in place (`setTimeout` on the held assertions), never releasing
+/// first; while none runs they only change what the next session will do. The last duration and
+/// the last end time chosen are remembered apart, so switching the mode brings them back.
+///
 /// The service marks every endpoint of its own `nonisolated` because the app defaults to the
 /// main actor, and its queue must be serial: `transact` checks it.
 nonisolated final class CaffeinateService: Sendable {
@@ -38,6 +45,10 @@ nonisolated final class CaffeinateService: Sendable {
     /// a gesture inside it must not, since the notch would end and re-present the activity
     /// under the user's tap.
     static let activityLifetime: TimeInterval = 8 * 60 * 60
+
+    /// shortestUntil is the least an end time may be ahead of now to be taken, one minute: below it
+    /// the instant is already past by the time the assertions hear of it.
+    private static let shortestUntil: TimeInterval = 60
 
     /// maximumStaleIdentifiers bounds the identifiers whose release failed and are retried, so an
     /// identifier the system will never accept again cannot grow the list for ever.
@@ -50,7 +61,12 @@ nonisolated final class CaffeinateService: Sendable {
         var startedAt        : Date?
         var endsAt           : Date?
         var activityStartedAt: Date?
-        var nextDuration     : CaffeinateDuration
+        var nextTarget       : CaffeinateTarget
+
+        /// lastDuration is the last duration the user chose, in minutes; lastUntil the last end
+        /// time, as a minute of the local day. They are what switching the mode restores.
+        var lastDuration     : Int
+        var lastUntil        : Int
         var keepsDisplayAwake: Bool
         var glyph            : CaffeinateGlyph
         var failure          : CaffeinateFailure?
@@ -69,7 +85,7 @@ nonisolated final class CaffeinateService: Sendable {
                 startedAt        : startedAt,
                 endsAt           : endsAt,
                 activityStartedAt: activityStartedAt,
-                nextDuration     : nextDuration,
+                nextTarget       : nextTarget,
                 keepsDisplayAwake: keepsDisplayAwake,
                 glyph            : glyph,
                 failure          : failure
@@ -94,6 +110,7 @@ nonisolated final class CaffeinateService: Sendable {
     private let assertions : any CaffeinateAssertions
     private let preferences: any CaffeinatePreferences
     private let clock      : @Sendable () -> Date
+    private let calendar   : Calendar
     private let queue      : DispatchQueue
     private let storage    : Mutex<Storage>
     private let deadline   : any DispatchSourceTimer
@@ -101,22 +118,40 @@ nonisolated final class CaffeinateService: Sendable {
     private let clockObserver = Mutex<(any NSObjectProtocol)?>(nil)
 
     /// init reads the preferences once and registers the wake observer once. The queue must be
-    /// serial; it is where every command, the deadline and every emission run.
+    /// serial; it is where every command, the deadline and every emission run. The calendar
+    /// decides what a time of day means: its time zone is the user's, `.current` in the app and a
+    /// fixed one in tests. A remembered duration or end time that was never chosen falls back to
+    /// the target already stored when it is of that kind, then to an hour, and to the next full
+    /// hour of the calendar.
     init(
         assertions : any CaffeinateAssertions,
         preferences: any CaffeinatePreferences,
         now        : @escaping @Sendable () -> Date = { Date() },
+        calendar   : Calendar                       = .current,
         queue      : DispatchQueue                   = DispatchQueue(label: "Cascade.Caffeinate", qos: .utility)
     ) {
         self.assertions  = assertions
         self.preferences = preferences
         self.clock       = now
+        self.calendar    = calendar
         self.queue       = queue
         self.deadline    = DispatchSource.makeTimerSource(queue: queue)
+
+        let nextTarget   = preferences.nextTarget
+        var lastDuration = preferences.lastDurationMinutes
+        var lastUntil    = preferences.lastUntilMinuteOfDay
+        switch nextTarget {
+            case .duration(let minutes)  : lastDuration = lastDuration ?? minutes
+            case .until(let minuteOfDay) : lastUntil    = lastUntil ?? minuteOfDay
+            case .indefinite             : break
+        }
+        let nextFullHour = (calendar.component(.hour, from: now()) + 1) % 24 * 60
         self.storage     = Mutex(
             Storage(
                 session: Session(
-                    nextDuration     : preferences.nextDuration,
+                    nextTarget       : nextTarget,
+                    lastDuration     : lastDuration ?? 60,
+                    lastUntil        : lastUntil ?? nextFullHour,
                     keepsDisplayAwake: preferences.keepsDisplayAwake,
                     glyph            : preferences.glyph
                 )
@@ -199,13 +234,20 @@ nonisolated final class CaffeinateService: Sendable {
     /// `setSessionsAllowed` writes the permission under the lock before it returns, so a command
     /// queued after it sees the new value.
     ///
+    /// A target command (`setMode`, `setDuration`, `setUntil`) is a preference while no session
+    /// runs, since it only chooses what the next one does, and a session command while one does,
+    /// since it moves the running end. So it passes the gate when sessions are allowed, or when
+    /// none is running; a stale one that meets a session the withdrawal has not yet stopped is
+    /// ignored, and the stop that follows it ends the session anyway.
+    ///
     /// The permission is deliberately not the emitter. The emitter follows the source's lease,
     /// which the kernel also ends when PluginHost goes away (a crash of any plugin, a memory kill,
     /// a restart from Settings); the session must outlive that, since the service owns it and
     /// needs no PluginHost to hold an assertion.
     func perform(_ command: CaffeinateCommand) {
         queue.async { [self] in
-            guard command.isPreference || storage.withLock({ $0.sessionsAllowed }) else { return }
+            let (allowed, running) = storage.withLock { ($0.sessionsAllowed, $0.session.isActive) }
+            guard command.isPreference || allowed || (command.isTargetChange && !running) else { return }
 
             run(command)
         }
@@ -322,11 +364,14 @@ nonisolated final class CaffeinateService: Sendable {
                         start(&session, now: now)
                     }
 
-                case .stepUp:
-                    step(&session, now: now, up: true)
+                case .setMode(let kind):
+                    setMode(kind, in: &session, now: now)
 
-                case .stepDown:
-                    step(&session, now: now, up: false)
+                case .setDuration(let minutes):
+                    setDuration(minutes, in: &session, now: now)
+
+                case .setUntil(let date):
+                    setUntil(date, in: &session, now: now)
 
                 case .setKeepsDisplayAwake(let keepsDisplayAwake):
                     setKeepsDisplayAwake(keepsDisplayAwake, in: &session, now: now)
@@ -359,7 +404,7 @@ nonisolated final class CaffeinateService: Sendable {
     // MARK: Commands
 
     /// start acquires the system assertion, and the display one when the preference says so, each
-    /// with the next duration as its timeout. A refusal leaves the session off and publishes the
+    /// with the time to the next target's end as its timeout, none for an indefinite one. A refusal leaves the session off and publishes the
     /// failure; if the display assertion is the one refused, the system assertion just taken is
     /// given back, so a refused start holds nothing. Starting a session that runs is a no-op.
     private func start(
@@ -368,7 +413,8 @@ nonisolated final class CaffeinateService: Sendable {
     ) {
         guard !session.isActive else { return }
 
-        let seconds = session.nextDuration.seconds
+        let end     = session.nextTarget.end(startingAt: now, calendar: calendar)
+        let seconds = end.map { $0.timeIntervalSince(now) }
 
         let systemIdentifier: UInt32
         do throws(CaffeinateAssertionError) {
@@ -392,33 +438,110 @@ nonisolated final class CaffeinateService: Sendable {
         session.systemIdentifier  = systemIdentifier
         session.displayIdentifier = displayIdentifier
         session.startedAt         = now
-        session.endsAt            = seconds.map { now + $0 }
+        session.endsAt            = end
         session.activityStartedAt = now
     }
 
-    /// step moves the duration one step on the scale. While off it moves the next duration. While
-    /// a session runs the stepper shows the time left rounded up to the scale, so a step starts
-    /// from that value and sets the end to now plus the neighbouring one: from 15 minutes down
-    /// is indefinite, and up from indefinite is fifteen minutes from now. The next duration
-    /// follows the stepped value, but only if the assertions accepted it.
-    private func step(
-        _ session: inout Session,
-        now      : Date,
-        up       : Bool
+    /// setMode picks how the next or the running session ends. While off it makes the next target
+    /// the last value of that kind (indefinite has none). While a session runs, indefinite
+    /// removes the end; a duration or an end time keeps the end it has, and only when the session
+    /// was indefinite applies that kind's last value, counted from now. The target follows only if
+    /// the assertions accepted the change.
+    private func setMode(
+        _ kind  : CaffeinateTargetKind,
+        in session: inout Session,
+        now     : Date
     ) {
+        let target: CaffeinateTarget = switch kind {
+            case .indefinite: .indefinite
+            case .duration  : .duration(minutes: session.lastDuration)
+            case .until     : .until(minuteOfDay: session.lastUntil)
+        }
+
         guard session.isActive else {
-            let neighbour = up ? session.nextDuration.steppedUp() : session.nextDuration.steppedDown()
-            if let neighbour { session.nextDuration = neighbour }
+            session.nextTarget = target
             return
         }
 
-        let shown: CaffeinateDuration = session.endsAt.map { .timeLeft($0.timeIntervalSince(now)) } ?? .indefinite
-        guard let target = up ? shown.steppedUp() : shown.steppedDown() else { return }
-
-        if let code = retime(&session, to: target.seconds.map { now + $0 }, now: now) {
-            session.failure = .extensionRefused(code)
+        if kind != .indefinite, session.endsAt != nil {
+            session.nextTarget = target
         } else {
-            session.nextDuration = target
+            retarget(&session, to: target, end: target.end(startingAt: now, calendar: calendar), now: now)
+        }
+    }
+
+    /// setDuration is the ruler's absolute duration, in minutes. One off the scale is ignored.
+    /// While off it is stored as the next target and remembered; while a session runs the end
+    /// becomes now plus that many minutes.
+    private func setDuration(
+        _ minutes: Int,
+        in session: inout Session,
+        now      : Date
+    ) {
+        guard CaffeinateTarget.isValid(minutes: minutes) else { return }
+
+        let target = CaffeinateTarget.duration(minutes: minutes)
+
+        guard session.isActive else {
+            session.nextTarget  = target
+            session.lastDuration = minutes
+            return
+        }
+
+        retarget(&session, to: target, end: target.end(startingAt: now, calendar: calendar), now: now)
+    }
+
+    /// setUntil is the ruler's absolute end time, an instant. It is rounded to the nearest quarter
+    /// hour and ignored unless the result is between a minute and a day ahead, the bounds the
+    /// ruler can reach: a past or distant instant is a stale or hostile one. While off it is
+    /// stored as the minute of the day in the calendar's time zone and remembered; while a
+    /// session runs the end moves to that instant.
+    private func setUntil(
+        _ instant: Date,
+        in session: inout Session,
+        now      : Date
+    ) {
+        let raw = instant.timeIntervalSince(now)
+        guard raw >= Self.shortestUntil, raw <= CaffeinateTarget.maximumLength else { return }
+
+        let quarter = TimeInterval(CaffeinateTarget.step * 60)
+        let end     = Date(timeIntervalSince1970: (instant.timeIntervalSince1970 / quarter).rounded() * quarter)
+        let rounded = end.timeIntervalSince(now)
+        guard rounded >= Self.shortestUntil, rounded <= CaffeinateTarget.maximumLength else { return }
+
+        let parts       = calendar.dateComponents([.hour, .minute], from: end)
+        let minuteOfDay = ((((parts.hour ?? 0) * 60 + (parts.minute ?? 0) + 7) / CaffeinateTarget.step) * CaffeinateTarget.step) % CaffeinateTarget.minutesPerDay
+        let target      = CaffeinateTarget.until(minuteOfDay: minuteOfDay)
+
+        guard session.isActive else {
+            session.nextTarget = target
+            session.lastUntil  = minuteOfDay
+            return
+        }
+
+        retarget(&session, to: target, end: end, now: now)
+    }
+
+    /// retarget moves a running session's end in place and, only if the assertions accepted it,
+    /// makes `target` the next one and remembers it. A refusal leaves the session, its end and the
+    /// target as they were and publishes `extensionRefused`. Nothing is called when the end does
+    /// not move.
+    private func retarget(
+        _ session: inout Session,
+        to target: CaffeinateTarget,
+        end      : Date?,
+        now      : Date
+    ) {
+        if end != session.endsAt, let code = retime(&session, to: end, now: now) {
+            session.failure = .extensionRefused(code)
+            return
+        }
+
+        session.nextTarget = target
+        switch target {
+            case .duration(let minutes)  : session.lastDuration = minutes
+            case .until(let minuteOfDay) : session.lastUntil    = minuteOfDay
+            case .indefinite             : break
         }
     }
 
@@ -562,7 +685,9 @@ nonisolated final class CaffeinateService: Sendable {
         from before: Session,
         to after   : Session
     ) {
-        if before.nextDuration      != after.nextDuration      { preferences.nextDuration      = after.nextDuration }
+        if before.nextTarget        != after.nextTarget        { preferences.nextTarget        = after.nextTarget }
+        if before.lastDuration      != after.lastDuration      { preferences.lastDurationMinutes  = after.lastDuration }
+        if before.lastUntil         != after.lastUntil         { preferences.lastUntilMinuteOfDay = after.lastUntil }
         if before.keepsDisplayAwake != after.keepsDisplayAwake { preferences.keepsDisplayAwake = after.keepsDisplayAwake }
         if before.glyph             != after.glyph             { preferences.glyph             = after.glyph }
     }

@@ -17,14 +17,13 @@ import Foundation
 /// under it, and the whole column is the switch, so its label is as easy to hit as its disc.
 /// State is never colour alone: the symbol changes with the fill.
 ///
-/// The trailing group is `− time +` with a caption under the time. While off the time is the
+/// The trailing group is the time with a caption under it (Task 3 of the ruler plan puts the
+/// ruler and the selector there; the step buttons are gone). While off the time is the
 /// next session's length, in white, and the caption says "Next session". While a session runs
 /// the time is the kernel's timer, counting down to the end, or up for an indefinite session,
 /// in amber, and the caption says "until" and the end time, or "active for". The kernel draws
 /// and keeps them current, so the page ticks without waking the plugin. A refusal replaces the
-/// caption with its sentence and the code, in the warning colour. At the limits the matching
-/// button is dimmed, never hidden: it stays a button and the native owner ignores a step off
-/// the scale.
+/// caption with its sentence and the code, in the warning colour.
 enum CaffeinateOptionsFace {
 
     typealias Node    = CaffeinateStyle.Node
@@ -48,7 +47,7 @@ enum CaffeinateOptionsFace {
 
             Spacer(minLength: 8)
 
-            stepper(state, now: now)
+            timeAndCaption(state)
         }
         .padding(.horizontal, 4)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
@@ -128,47 +127,18 @@ enum CaffeinateOptionsFace {
         }
     }
 
-    // MARK: - Stepper
+    // MARK: - Time
 
-    /// stepper is `− time +` and, under it, what the time means. While off the plus stops at 24
-    /// hours and the minus at indefinite; while running the minus stops at indefinite and the
-    /// plus dims within fifteen minutes of the cap.
-    private static func stepper(
-        _ state: PluginCaffeinateState,
-        now    : Date
-    ) -> PluginNode {
-        let remaining = state.remaining(at: now)
-        let canGoDown = state.isActive ? state.endsAt != nil : state.nextDuration != .indefinite
-        let canGoUp   = state.isActive
-            ? remaining.map { $0 <= CaffeinateStyle.nearCap } ?? true
-            : state.nextDuration != .minutes(CaffeinateDuration.maximumMinutes)
+    /// timeAndCaption is the time and, under it, what the time means. The ruler redesign puts
+    /// the controls that choose it here.
+    private static func timeAndCaption(_ state: PluginCaffeinateState) -> PluginNode {
+        VStack(spacing: 3) {
 
-        return VStack(spacing: 3) {
-
-            HStack(spacing: 10) {
-
-                stepButton(
-                    symbol : "minus",
-                    action : Action.durationDown,
-                    id     : Node.durationDown,
-                    label  : Copy.shorter,
-                    enabled: canGoDown
-                )
-
-                time(state)
-
-                stepButton(
-                    symbol : "plus",
-                    action : Action.durationUp,
-                    id     : Node.durationUp,
-                    label  : Copy.longer,
-                    enabled: canGoUp
-                )
-            }
-            .frame(height: 40)
+            time(state)
 
             caption(state)
         }
+        .frame(height: 40 + 3 + 14)
     }
 
     /// time is the big number, in rounded digits that keep their width. Its font and its tint
@@ -193,7 +163,7 @@ enum CaffeinateOptionsFace {
                 .frame(width: timeWidth)
         }
 
-        return Text(CaffeinateStyle.Format.duration(state.nextDuration))
+        return Text(CaffeinateStyle.Format.target(state.nextTarget))
             .font(font)
             .foregroundStyle(.white)
             .lineLimit(1)
@@ -236,27 +206,5 @@ enum CaffeinateOptionsFace {
         .foregroundStyle(Palette.warning)
         .lineLimit(1)
         .minimumScaleFactor(0.7)
-    }
-
-    private static func stepButton(
-        symbol : String,
-        action : String,
-        id     : String,
-        label  : String,
-        enabled: Bool
-    ) -> PluginNode {
-        Button(action: action) {
-
-            Image(systemName: symbol)
-                .font(.system(size: 13, weight: .bold))
-                .frame(width: 30, height: 30)
-                .background {
-                    Circle()
-                        .foregroundStyle(Palette.button)
-                }
-        }
-        .id(id)
-        .accessibilityLabel(label)
-        .opacity(enabled ? 1 : CaffeinateStyle.dimmed)
     }
 }

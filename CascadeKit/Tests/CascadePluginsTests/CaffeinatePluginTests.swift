@@ -23,8 +23,8 @@ struct CaffeinatePluginTests {
         CaffeinatePlugin(now: { Self.now })
     }
 
-    private func off(nextDuration: CaffeinateDuration = .minutes(90)) -> PluginCaffeinateState {
-        PluginCaffeinateState(nextDuration: nextDuration)
+    private func off(nextTarget: CaffeinateTarget = .duration(minutes: 90)) -> PluginCaffeinateState {
+        PluginCaffeinateState(nextTarget: nextTarget)
     }
 
     private func timed(
@@ -43,7 +43,7 @@ struct CaffeinatePluginTests {
         PluginCaffeinateState(
             startedAt        : Self.started,
             activityStartedAt: Self.started,
-            nextDuration     : .indefinite
+            nextTarget       : .indefinite
         )
     }
 
@@ -130,7 +130,7 @@ struct CaffeinatePluginTests {
         #expect(withdrawal.document == nil)
         #expect(withdrawal.activity == nil)
 
-        let again = try send(off(nextDuration: .minutes(30)), to: plugin)
+        let again = try send(off(nextTarget: .duration(minutes: 30)), to: plugin)
         #expect(activity(again) == nil)
         #expect(widget(again) != nil)
 
@@ -151,7 +151,7 @@ struct CaffeinatePluginTests {
 
         let second = try send(off(), to: plugin)
         #expect(second.publications.isEmpty)
-        #expect(activity(try send(off(nextDuration: .minutes(30)), to: plugin)) == nil)
+        #expect(activity(try send(off(nextTarget: .duration(minutes: 30)), to: plugin)) == nil)
     }
 
     @Test
@@ -328,7 +328,7 @@ struct CaffeinatePluginTests {
 
     @Test
     func theOffTimeIsWhiteAndShowsTheNextDuration() throws {
-        let output  = try send(off(nextDuration: .minutes(90)), to: plugin())
+        let output  = try send(off(nextTarget: .duration(minutes: 90)), to: plugin())
         let options = try #require(widget(output)?.document?.optionsRoot)
         let entries = try nodes(PluginPublication(
             feature : CaffeinatePlugin.feature,
@@ -343,10 +343,10 @@ struct CaffeinatePluginTests {
         #expect(!texts(entries).contains("until"))
     }
 
-    /// theOptionsPageIsOneRowOfTwoRoundButtonsAndAStepper checks the Timer-style layout by what
+    /// theOptionsPageIsOneRowOfTwoRoundButtonsAndATime checks the Timer-style layout by what
     /// it contains: Start/Stop and Display captions, the two switches, − and +, and no ＋15m.
     @Test
-    func theOptionsPageIsOneRowOfTwoRoundButtonsAndAStepper() throws {
+    func theOptionsPageIsOneRowOfTwoRoundButtonsAndATime() throws {
         func optionsEntries(_ state: PluginCaffeinateState) throws -> [PluginNodeTable.Entry] {
             let output = try send(state, to: plugin())
 
@@ -360,8 +360,6 @@ struct CaffeinatePluginTests {
         let idle = try optionsEntries(off())
         #expect(idle.contains { $0.id.rawValue == "#power.options:toggle" && $0.kind == .toggle(isOn: false, action: "caffeinate.start") })
         #expect(idle.contains { $0.id.rawValue == "#display:toggle" && $0.kind == .toggle(isOn: true, action: "caffeinate.display") })
-        #expect(idle.contains { $0.id.rawValue == "#duration.down:button" })
-        #expect(idle.contains { $0.id.rawValue == "#duration.up:button" })
         #expect(symbols(idle).isSuperset(of: ["play.fill", "stop.fill", "display", "moon.zzz"]))
         #expect(Set(texts(idle)).isSuperset(of: ["Start", "Stop", "Display"]))
         #expect(!idle.contains { $0.kind == .button(action: "caffeinate.extend") })
@@ -459,7 +457,7 @@ struct CaffeinatePluginTests {
         for id in ["power.medium", "power.large", "power.small", "power.options"] {
             #expect(idle.contains(PluginNodeID(rawValue: "#\(id):toggle")))
         }
-        for id in ["duration.down", "duration.up", "options", "options.large"] {
+        for id in ["options", "options.large"] {
             #expect(idle.contains(PluginNodeID(rawValue: "#\(id):button")))
         }
         #expect(idle.contains(PluginNodeID(rawValue: "#display:toggle")))
@@ -498,32 +496,15 @@ struct CaffeinatePluginTests {
         #expect(glyphs.allSatisfy { $0.modifiers.contains(.contentTransition(.symbolEffect)) })
     }
 
+    /// Until Task 3 draws the ruler, the widget shows the duration when the next target is one
+    /// and the infinity sign otherwise.
     @Test
-    func theStepperShowsTheNextDurationWhileOffAndDimsAtTheLimits() throws {
-        func dimmed(
-            _ state: PluginCaffeinateState,
-            _ action: String
-        ) throws -> Bool {
-            let entries = try nodes(widget(try send(state, to: plugin())))
-            let button  = try #require(entries.first { $0.kind == .button(action: action) })
+    func theWidgetShowsTheNextTargetWhileOff() throws {
+        let duration = try nodes(widget(try send(off(nextTarget: .duration(minutes: 90)), to: plugin())))
+        #expect(texts(duration).contains("1h 30m"))
 
-            return button.modifiers.contains(.opacity(0.35))
-        }
-
-        let middle = try nodes(widget(try send(off(nextDuration: .minutes(90)), to: plugin())))
-        #expect(texts(middle).contains("1h 30m"))
-        #expect(try dimmed(off(nextDuration: .minutes(90)), "caffeinate.duration.down") == false)
-        #expect(try dimmed(off(nextDuration: .minutes(90)), "caffeinate.duration.up") == false)
-
-        let infinite = try nodes(widget(try send(off(nextDuration: .indefinite), to: plugin())))
+        let infinite = try nodes(widget(try send(off(nextTarget: .indefinite), to: plugin())))
         #expect(texts(infinite).contains("∞"))
-        #expect(try dimmed(off(nextDuration: .indefinite), "caffeinate.duration.down"))
-        #expect(try dimmed(off(nextDuration: .minutes(1_440)), "caffeinate.duration.up"))
-
-        #expect(try dimmed(indefinite(), "caffeinate.duration.down"))
-        #expect(try dimmed(indefinite(), "caffeinate.duration.up") == false)
-        #expect(try dimmed(timed(minutesLeft: 1_430), "caffeinate.duration.up"))
-        #expect(try dimmed(timed(minutesLeft: 60), "caffeinate.duration.up") == false)
     }
 
     @Test
