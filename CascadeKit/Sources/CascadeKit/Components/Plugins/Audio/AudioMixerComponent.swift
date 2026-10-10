@@ -63,6 +63,7 @@ struct AudioMixerComponent: View {
                 .foregroundStyle(.white)
 
             AudioGlobalVolumeControl(
+                widthRatio     : 1,
                 model          : model,
                 system         : system,
                 showsPercentage: false,

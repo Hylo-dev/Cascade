@@ -15,6 +15,9 @@ import SwiftUI
 /// unavailable look and takes no input, rather than a control that would do nothing.
 struct AudioVolumeBarComponent: View {
 
+    /// widthRatio keeps the widget in its 1x2 slots but draws a thinner pill inside them.
+    private static let widthRatio: CGFloat = 0.6
+
     @Environment(\.pluginComponentServices)
     private var services
 
@@ -24,6 +27,7 @@ struct AudioVolumeBarComponent: View {
     var body: some View {
         if let model = services?.audio, let system = model.system {
             AudioGlobalVolumeControl(
+                widthRatio     : Self.widthRatio,
                 model          : model,
                 system         : system,
                 showsPercentage: model.isAdjusting,
@@ -36,21 +40,15 @@ struct AudioVolumeBarComponent: View {
 
     private var unavailable: some View {
         AudioVolumeCapsule(
+            widthRatio     : Self.widthRatio,
             level          : 0,
             isMuted        : false,
-            icon           : nil,
+            icon           : .symbol("speaker.slash"),
             showsPercentage: false,
             onLevel        : { _ in },
             onEnd          : {},
             onClick        : nil
         )
-        .overlay(alignment: .bottom) {
-            Image(systemName: "speaker.slash")
-                .font(.system(size: 17))
-                .foregroundStyle(.white.opacity(0.5))
-                .frame(width: AudioVolumeCapsule.iconSize, height: AudioVolumeCapsule.iconSize)
-                .padding(.bottom, AudioVolumeCapsule.iconInset)
-        }
         .accessibilityElement()
         .accessibilityLabel(AudioGlobalVolumeControl.accessibilityLabel)
         .accessibilityValue(AudioGlobalVolumeControl.accessibilityValue(of: nil))

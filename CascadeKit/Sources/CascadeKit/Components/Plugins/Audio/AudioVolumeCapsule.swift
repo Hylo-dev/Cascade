@@ -7,7 +7,9 @@ import SwiftUI
 
 /// AudioVolumeCapsule is the volume control's look and its press: a dark glass capsule that fills
 /// with white from the bottom up as the level rises, the output icon sitting inside the fill. The
-/// widget draws one and the mixer reuses it, so both feel the same under the finger.
+/// widget draws one and the mixer reuses it, so both feel the same under the finger. The pill's
+/// width is a ratio of the frame (`AudioVolumeCapsuleMetrics`), and everything inside scales
+/// with it.
 ///
 /// It owns no model. The level comes in, and what the user does goes out through three closures:
 /// `onLevel` for each level a drag chooses, `onEnd` once when a drag lets go, and `onClick` for a
@@ -20,12 +22,12 @@ import SwiftUI
 /// shows, driven by that flag alone, so dragging the level never animates frame by frame.
 struct AudioVolumeCapsule: View {
 
-    /// iconSize and iconInset place the icon: a square this big, this far above the bottom edge.
-    static let iconSize : CGFloat = 22
-    static let iconInset: CGFloat = 14
-
     private static let percentageInset: CGFloat = 10
 
+    /// widthRatio is how much of the given width the pill draws, centred. The grid widget passes
+    /// 0.6, a thinner pill in the same slots; the mixer passes 1 and fills what it is given. The
+    /// press still covers the whole frame, so a thin pill is no harder to grab.
+    let widthRatio     : CGFloat
     let level          : Double
     let isMuted        : Bool
     let icon           : AudioOutputIcon?
@@ -46,44 +48,54 @@ struct AudioVolumeCapsule: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let width      = geometry.size.width
+            let metrics    = AudioVolumeCapsuleMetrics(
+                availableWidth: geometry.size.width,
+                widthRatio    : widthRatio
+            )
             let height     = geometry.size.height
             let fillHeight = height * CGFloat(min(1, max(0, level)))
 
             ZStack(alignment: .bottom) {
-                RoundedRectangle(cornerRadius: width / 2)
+                RoundedRectangle(cornerRadius: metrics.cornerRadius)
                     .fill(Color(white: 0.33))
 
                 Rectangle()
                     .fill(isMuted ? Color(white: 0.56) : .white)
                     .frame(height: fillHeight)
                     .frame(maxHeight: .infinity, alignment: .bottom)
-                    .clipShape(RoundedRectangle(cornerRadius: width / 2))
+                    .clipShape(RoundedRectangle(cornerRadius: metrics.cornerRadius))
 
                 if let icon {
                     AudioOutputIconView(icon: icon)
-                        .font(.system(size: 17))
-                        .foregroundStyle(ink(covering: Self.iconInset + Self.iconSize / 2, fillHeight: fillHeight))
-                        .frame(width: Self.iconSize, height: Self.iconSize)
-                        .padding(.bottom, Self.iconInset)
+                        .font(.system(size: metrics.symbolFontSize))
+                        .foregroundStyle(
+                            ink(
+                                covering  : metrics.iconInset + metrics.iconSize / 2,
+                                fillHeight: fillHeight
+                            )
+                        )
+                        .frame(width: metrics.iconSize, height: metrics.iconSize)
+                        .padding(.bottom, metrics.iconInset)
                 }
             }
             .overlay(alignment: .top) {
                 if showsPercentage {
                     Text("\(Int((level * 100).rounded()))%")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: metrics.percentageFontSize, weight: .semibold))
                         .monospacedDigit()
                         .foregroundStyle(ink(covering: height - Self.percentageInset, fillHeight: fillHeight))
                         .padding(.top, Self.percentageInset)
                 }
             }
             .overlay {
-                RoundedRectangle(cornerRadius: width / 2)
+                RoundedRectangle(cornerRadius: metrics.cornerRadius)
                     .strokeBorder(.white.opacity(0.12), lineWidth: 1)
             }
-            .contentShape(Rectangle())
             .scaleEffect(showsPercentage ? 1.05 : 1)
             .animation(.snappy, value: showsPercentage)
+            .frame(width: metrics.width, height: height)
+            .frame(width: geometry.size.width, height: height)
+            .contentShape(Rectangle())
             .simultaneousGesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { value in

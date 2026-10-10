@@ -19,6 +19,7 @@ struct AudioGlobalVolumeControl: View {
     /// accessibilityStep is how far the VoiceOver increment and decrement move the level.
     private static let accessibilityStep = 1.0 / 16.0
 
+    let widthRatio     : CGFloat
     let model          : AudioMixerModel
     let system         : SystemAudioState
     let showsPercentage: Bool
@@ -33,6 +34,7 @@ struct AudioGlobalVolumeControl: View {
         )
 
         AudioVolumeCapsule(
+            widthRatio     : widthRatio,
             level          : system.level,
             isMuted        : system.isMuted,
             icon           : icon,
