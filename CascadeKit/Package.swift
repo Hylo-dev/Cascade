@@ -46,6 +46,10 @@ let package = Package(
             name   : "CascadePluginEngine",
             targets: ["CascadePluginEngine"]
         ),
+        .library(
+            name   : "CascadeAudioHost",
+            targets: ["CascadeAudioHost"]
+        ),
     ],
     targets: [
         .executableTarget(
@@ -108,6 +112,16 @@ let package = Package(
         .testTarget(
             name: "CascadePluginEngineTests",
             dependencies: ["CascadePluginEngine", "CascadePluginHost", "CascadePluginSDK", "CascadeContracts"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .target(
+            name: "CascadeAudioHost",
+            dependencies: ["CascadeContracts"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .testTarget(
+            name: "CascadeAudioHostTests",
+            dependencies: ["CascadeAudioHost", "CascadeContracts"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .target(
