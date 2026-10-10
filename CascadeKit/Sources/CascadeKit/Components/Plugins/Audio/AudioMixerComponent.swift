@@ -3,7 +3,6 @@
 //  CascadeKit
 //
 
-import AppKit
 import SwiftUI
 
 /// AudioMixerComponent is the tier-2 component audio.mixer, the whole body of the audio widget's
@@ -27,9 +26,6 @@ struct AudioMixerComponent: View {
 
     private static let columnWidth: CGFloat = 46
     private static let buttonSize : CGFloat = 20
-
-    /// accessibilityStep is how far the VoiceOver increment and decrement move the level.
-    private static let accessibilityStep = 1.0 / 16.0
 
     @Environment(\.pluginComponentServices)
     private var services
@@ -66,7 +62,14 @@ struct AudioMixerComponent: View {
                 .monospacedDigit()
                 .foregroundStyle(.white)
 
-            capsule(model: model, system: system)
+            AudioGlobalVolumeControl(
+                model          : model,
+                system         : system,
+                showsPercentage: false,
+                onClick        : {
+                    isPickerOpen = false
+                }
+            )
 
             HStack(spacing: 6) {
                 outputButton(system: system)
@@ -75,66 +78,6 @@ struct AudioMixerComponent: View {
         }
         .frame(width: Self.columnWidth)
         .padding(.trailing, 12)
-    }
-
-    private func capsule(
-        model : AudioMixerModel,
-        system: SystemAudioState
-    ) -> some View {
-        let output = system.outputs.first { $0.uid == system.selectedUIDs.first }
-        let icon   = AudioOutputIcon.resolve(
-            output : output,
-            level  : system.level,
-            isMuted: system.isMuted
-        )
-
-        return AudioVolumeCapsule(
-            level          : system.level,
-            isMuted        : system.isMuted,
-            icon           : icon,
-            showsPercentage: false,
-            onLevel        : { level in
-                guard system.supportsVolume else { return }
-
-                model.adjust(to: level)
-            },
-            onEnd          : {
-                model.endAdjusting()
-            },
-            onClick        : {
-                isPickerOpen = false
-            }
-        )
-        .background {
-            ScrollWheelReader { deltaY, isPrecise, phase, momentum in
-                scroll(
-                    model    : model,
-                    deltaY   : deltaY,
-                    isPrecise: isPrecise,
-                    phase    : phase,
-                    momentum : momentum
-                )
-            }
-        }
-        .accessibilityElement()
-        .accessibilityLabel(String(localized: "Global volume", bundle: .module))
-        .accessibilityValue(AudioVolumeBarComponent.accessibilityValue(of: system))
-        .accessibilityAdjustableAction { direction in
-            let step: Double
-            switch direction {
-                case .increment:
-                    step = Self.accessibilityStep
-
-                case .decrement:
-                    step = -Self.accessibilityStep
-
-                @unknown default:
-                    return
-            }
-
-            model.adjust(to: system.level + step)
-            model.endAdjusting()
-        }
     }
 
     private func outputButton(system: SystemAudioState) -> some View {
@@ -234,25 +177,5 @@ struct AudioMixerComponent: View {
 
     static func muteSymbol(isMuted: Bool) -> String {
         isMuted ? "speaker.slash.fill" : "speaker.fill"
-    }
-
-    /// scroll moves the level for one scroll event, with the bar's rules: a trackpad's inertia
-    /// after the fingers lift is ignored, and a burst ends with its phase or, for a wheel, at
-    /// each notch.
-    private func scroll(
-        model    : AudioMixerModel,
-        deltaY   : Double,
-        isPrecise: Bool,
-        phase    : NSEvent.Phase,
-        momentum : NSEvent.Phase
-    ) {
-        guard momentum.isEmpty, let system = model.system, system.supportsVolume else { return }
-
-        if deltaY != 0 {
-            model.adjust(to: VolumeGesture.scrolled(system.level, deltaY: deltaY, isPrecise: isPrecise))
-        }
-        if phase.isEmpty || phase.contains(.ended) || phase.contains(.cancelled) {
-            model.endAdjusting()
-        }
     }
 }

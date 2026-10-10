@@ -285,16 +285,16 @@ struct PluginNodeViewTests {
 
         #expect(host.fittingSize == CGSize(width: 60, height: 120))
         #expect(try opaquePixels(of: volumeBar(model: nil)) > 0)
-        #expect(AudioVolumeBarComponent.accessibilityValue(of: nil) == "\u{2014}")
+        #expect(AudioGlobalVolumeControl.accessibilityValue(of: nil) == "\u{2014}")
     }
 
     @Test
     func volumeBarExposesAnAdjustableElement() {
         let model = volumeModel(level: 0.5)
 
-        #expect(AudioVolumeBarComponent.accessibilityLabel == "Global volume")
-        #expect(AudioVolumeBarComponent.accessibilityValue(of: model.system) == "50%")
-        #expect(AudioVolumeBarComponent.accessibilityValue(of: volumeModel(level: 0.999).system) == "100%")
+        #expect(AudioGlobalVolumeControl.accessibilityLabel == "Global volume")
+        #expect(AudioGlobalVolumeControl.accessibilityValue(of: model.system) == "50%")
+        #expect(AudioGlobalVolumeControl.accessibilityValue(of: volumeModel(level: 0.999).system) == "100%")
     }
 
     @Test
