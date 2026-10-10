@@ -420,9 +420,10 @@ nonisolated final class CaffeinateService: Sendable {
     // MARK: Commands
 
     /// start acquires the system assertion, and the display one when the preference says so, each
-    /// with the time to the next target's end as its timeout, none for an indefinite one. A refusal leaves the session off and publishes the
-    /// failure; if the display assertion is the one refused, the system assertion just taken is
-    /// given back, so a refused start holds nothing. Starting a session that runs is a no-op.
+    /// with the time to the next target's end as its timeout, none for an indefinite one. A
+    /// refusal leaves the session off and publishes the failure; if the display assertion is the
+    /// one refused, the system assertion just taken is given back, so a refused start holds
+    /// nothing. Starting a session that runs is a no-op.
     private func start(
         _ session: inout Session,
         now      : Date
@@ -506,7 +507,7 @@ nonisolated final class CaffeinateService: Sendable {
         let target = CaffeinateTarget.duration(minutes: minutes)
 
         guard session.isActive else {
-            session.nextTarget  = target
+            session.nextTarget   = target
             session.lastDuration = minutes
             return
         }

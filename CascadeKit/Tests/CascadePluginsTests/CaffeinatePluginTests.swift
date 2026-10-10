@@ -6,6 +6,7 @@
 import CascadeContracts
 import CascadePluginSDK
 import Foundation
+import Synchronization
 import Testing
 
 @testable import CascadePlugins
@@ -224,6 +225,37 @@ struct CaffeinatePluginTests {
         )
     }
 
+    /// openingTheOptionsRefreshesTheClockRange: the press that opens the page republishes the
+    /// last state against the clock of the moment, so a page opened a quarter hour after the last
+    /// snapshot starts on a range that begins in the future, with no wake of the plugin's own.
+    @Test
+    func openingTheOptionsRepublishesTheLastStateAgainstTheClock() throws {
+        let clock  = Mutex(Self.now)
+        let plugin = CaffeinatePlugin(now: { clock.withLock { $0 } }, calendar: { Self.utc })
+        let open   = PluginEvent.action(
+            try PluginActionEvent(feature: CaffeinatePlugin.feature, action: "caffeinate.options")
+        )
+
+        #expect(try plugin.handle(open, context: context).publications.isEmpty)
+
+        let first = try send(off(nextTarget: .until(minuteOfDay: 18 * 60)), to: plugin)
+        #expect(try plugin.handle(open, context: context).publications.isEmpty)
+
+        clock.withLock { $0 = Self.now.addingTimeInterval(1_800) }
+        let opened = try plugin.handle(open, context: context)
+        let page   = try #require(widget(opened)?.document?.optionsRoot)
+        let ruler  = try #require(find("ruler", in: page))
+
+        #expect(opened.publications.count == 1)
+        #expect(opened.wake == nil)
+        #expect(widget(opened) != widget(first))
+        if case .slider(_, let lowest, _, _, _, _) = ruler.kind {
+            #expect(lowest == Self.rangeStart + 1_800)
+        } else {
+            Issue.record("the ruler is not a slider")
+        }
+    }
+
     @Test
     func noWakeEver() throws {
         let plugin = plugin()
@@ -339,33 +371,40 @@ struct CaffeinatePluginTests {
         #expect(time.modifiers.contains(.foregroundStyle(.color(Self.amber))))
     }
 
+    /// theOffTimeIsTheRulersLiveValue: whenever the page shows the ruler, off, the big time is a
+    /// `sliderValue` node that names the ruler, so it follows the ruler while dragged. It is white,
+    /// in the page's big font, and never a copy of the snapshot's value as text or as a date.
     @Test
-    func theOffTimeIsWhiteAndShowsTheNextDuration() throws {
-        let output  = try send(off(nextTarget: .duration(minutes: 90)), to: plugin())
-        let options = try #require(widget(output)?.document?.optionsRoot)
-        let entries = try nodes(PluginPublication(
-            feature : CaffeinatePlugin.feature,
-            surface : .widget,
-            document: PluginDocument(root: options)
-        ))
-        let time    = try #require(entries.first { $0.kind == .text("1h 30m") })
+    func theOffTimeIsTheRulersLiveValue() throws {
+        let big = PluginFont.system(size: 26, weight: .semibold, design: .rounded).monospacedDigit()
 
-        #expect(time.modifiers.contains(.font(.system(size: 26, weight: .semibold, design: .rounded).monospacedDigit())))
-        #expect(time.modifiers.contains(.foregroundStyle(.color(.white))))
+        for target in [CaffeinateTarget.duration(minutes: 90), .until(minuteOfDay: 18 * 60)] {
+            let entries = try nodes(optionsPublication(off(nextTarget: target)))
+            let time    = try #require(entries.first { $0.kind == .sliderValue(id: "ruler") }, "\(target)")
+
+            #expect(time.modifiers.contains(.font(big)))
+            #expect(time.modifiers.contains(.foregroundStyle(.color(.white))))
+            #expect(entries.contains { $0.id.rawValue == "#ruler:slider" })
+            #expect(!entries.contains { $0.kind == .text("1h 30m") })
+            #expect(!entries.contains { $0.kind == .date(Date(timeIntervalSince1970: Self.sixPM), style: .time) })
+        }
     }
 
     @Test
-    func theOffTimeOfAnEndTimeIsTheKernelsClockAndOfInfinityTheSign() throws {
+    func theOffTimeOfInfinityIsTheSignAndRunningTimesStayTimerNodes() throws {
         let big = PluginFont.system(size: 26, weight: .semibold, design: .rounded).monospacedDigit()
-
-        let until   = try nodes(optionsPublication(off(nextTarget: .until(minuteOfDay: 18 * 60))))
-        let clock   = try #require(until.first { $0.kind == .date(Date(timeIntervalSince1970: Self.sixPM), style: .time) })
-        #expect(clock.modifiers.contains(.font(big)))
-        #expect(clock.modifiers.contains(.foregroundStyle(.color(.white))))
 
         let forever = try nodes(optionsPublication(off(nextTarget: .indefinite)))
         let sign    = try #require(forever.first { $0.kind == .text("∞") && $0.modifiers.contains(.font(big)) })
         #expect(sign.modifiers.contains(.foregroundStyle(.color(.white))))
+        #expect(!forever.contains { if case .sliderValue = $0.kind { true } else { false } })
+
+        for running in [timed(), indefinite()] {
+            let entries = try nodes(optionsPublication(running))
+
+            #expect(!entries.contains { if case .sliderValue = $0.kind { true } else { false } })
+            #expect(entries.contains { if case .timer = $0.kind { true } else { false } })
+        }
     }
 
     /// optionsPublication wraps the options page of a state in a document of its own, so the
@@ -828,10 +867,36 @@ struct CaffeinatePluginTests {
 
         #expect(entries.contains { $0.kind == .countdown(end: ends, style: .compact) })
         #expect(entries.contains { $0.kind == .timer(start: Self.started, end: ends, countsDown: true) })
-        #expect(page.contains("Couldn't change the time (error 5)"))
+        #expect(page.contains("Couldn't change the length (error 5)"))
+        #expect(!page.contains { $0.hasPrefix("Couldn't change the end") })
         #expect(!page.contains("Error"))
         #expect(!page.contains { $0.hasPrefix("Couldn't prevent sleep") })
         #expect(symbols(entries).contains("exclamationmark.triangle.fill"))
+    }
+
+    /// aRefusedChangeNamesWhatTheRulerMoved: the sentence follows the mode the selector shows,
+    /// the length for For and the end for Until.
+    @Test
+    func aRefusedChangeNamesWhatTheRulerMoved() throws {
+        func refusal(_ target: CaffeinateTarget) throws -> [String] {
+            let state = PluginCaffeinateState(
+                startedAt        : Self.started,
+                endsAt           : Self.now.addingTimeInterval(1_440),
+                activityStartedAt: Self.started,
+                nextTarget       : target,
+                failure          : .extensionRefused(5)
+            )
+
+            return texts(try nodes(optionsPublication(state)))
+        }
+
+        let length = try refusal(.duration(minutes: 90))
+        #expect(length.contains("Couldn't change the length (error 5)"))
+        #expect(!length.contains { $0.hasPrefix("Couldn't change the end") })
+
+        let end = try refusal(.until(minuteOfDay: 18 * 60))
+        #expect(end.contains("Couldn't change the end (error 5)"))
+        #expect(!end.contains { $0.hasPrefix("Couldn't change the length") })
     }
 
     /// A running timed page says when the session ends under its countdown, in the kernel's
@@ -946,10 +1011,13 @@ struct CaffeinateStringsTests {
         ("For", "Per"),
         ("Until", "Fino a"),
         ("Until you stop it", "Finché non lo fermi"),
-        ("until", "fino alle"),
+        ("until", "fino alle ore"),
         ("%@, selected", "%@, selezionato"),
         ("Length", "Durata"),
         ("Ends at", "Termina alle"),
+        ("Couldn't change the length (error %@)", "Impossibile cambiare la durata (errore %@)"),
+        ("Couldn't change the end (error %@)", "Impossibile cambiare la fine (errore %@)"),
+        ("Caffeinate, awake until %@", "Caffeinate, sveglio fino alle ore %@"),
     ]
 
     private func catalog() throws -> [String: [String: Any]] {
@@ -979,6 +1047,11 @@ struct CaffeinateStringsTests {
         for (english, italian) in Self.italian {
             #expect(translation(of: english, in: catalog) == italian, "\(english)")
         }
+    }
+
+    @Test
+    func theUndividedRefusalSentenceIsGone() throws {
+        #expect(try catalog()["Couldn't change the time (error %@)"] == nil)
     }
 
     @Test

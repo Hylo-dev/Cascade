@@ -8,12 +8,12 @@ import Foundation
 
 /// CaffeinatePreferences is what Caffeinate remembers between launches: how the next session
 /// ends, the last duration and the last end time the user chose (so switching mode brings the
-/// last value of that mode back), whether a session also keeps the display awake, the glyph and the global shortcut. The
-/// service reads them once when it is created and, from its own queue, writes the first three only
-/// when the user changes them, so the store is never touched while a session just runs. The
-/// shortcut is the exception: Cascade's main actor writes it, when the user records a new one, and
-/// the service never touches it. It is a class-bound protocol so the service can keep one instance
-/// and write through it.
+/// last value of that mode back), whether a session also keeps the display awake, the glyph and
+/// the global shortcut. The service reads them once when it is created and, from its own queue,
+/// writes the first five only when the user changes them, so the store is never touched while a
+/// session just runs. The shortcut is the exception: Cascade's main actor writes it, when the user
+/// records a new one, and the service never touches it. It is a class-bound protocol so the
+/// service can keep one instance and write through it.
 nonisolated protocol CaffeinatePreferences: AnyObject, Sendable {
 
     var nextTarget       : CaffeinateTarget    { get set }

@@ -21,11 +21,12 @@ import Foundation
 /// The bottom band has the ruler across most of the width and the big time trailing. The ruler is
 /// the kernel's, a slider in the `ruler` style, and measures the length or the end time of the next
 /// or the running session (`CaffeinateRuler`); with ∞ there is nothing to measure, and the
-/// space says so instead. The time is the next session's length, its end time drawn by the kernel,
-/// or the sign, in white, while off; and the kernel's countdown, or the elapsed time of an
-/// indefinite session, in amber, while one runs, with the end's clock under the countdown of a
-/// timed one. The kernel keeps them current, so the page ticks
-/// without waking the plugin.
+/// space says so instead. The time is the ruler's own value while off, in white, drawn by the
+/// kernel from the ruler's live value (`Text(valueOf:)`), so it follows the ruler while it is
+/// dragged, without a publication; the sign, in white, with ∞; and the kernel's countdown, or
+/// the elapsed time of an indefinite session, in amber, while one runs, with the end's clock under
+/// the countdown of a timed one. The kernel keeps them current, so the page ticks without
+/// waking the plugin.
 ///
 /// A refusal takes the top band's free space, with its sentence and code, in the warning colour:
 /// the page has no caption to replace, and the code is for diagnosis.
@@ -81,7 +82,7 @@ enum CaffeinateOptionsFace {
             selector(state)
 
             if let failure = state.failure {
-                warning(failure)
+                warning(failure, shown: state.shownKind)
             } else {
                 Spacer(minLength: 4)
             }
@@ -224,12 +225,15 @@ enum CaffeinateOptionsFace {
 
     /// warning is a refusal's sentence and code, on up to two lines in the free space between
     /// the selector and the round buttons.
-    private static func warning(_ failure: CaffeinateFailure) -> PluginNode {
+    private static func warning(
+        _ failure: CaffeinateFailure,
+        shown    : CaffeinateTargetKind
+    ) -> PluginNode {
         HStack(spacing: 4) {
 
             Image(systemName: "exclamationmark.triangle.fill")
 
-            Text(Copy.refusedWithCode(failure))
+            Text(Copy.refusedWithCode(failure, shown: shown))
                 .lineLimit(2)
                 .minimumScaleFactor(0.8)
         }
@@ -307,7 +311,8 @@ enum CaffeinateOptionsFace {
 
     /// time is the big number, in rounded digits that keep their width. Its font and its tint
     /// sit on the node itself, because the kernel reads them from a time node and never from a
-    /// parent.
+    /// parent. Whenever the page shows the ruler, off, the number is the ruler's own value,
+    /// drawn from the ruler node and not copied from the snapshot, so a drag moves both.
     private static func time(
         _ state: PluginCaffeinateState,
         scale  : CaffeinateRuler.Scale?
@@ -335,8 +340,8 @@ enum CaffeinateOptionsFace {
                 .frame(width: timeWidth, alignment: .trailing)
         }
 
-        if state.nextTarget.kind == .until, let scale {
-            return Text(Date(timeIntervalSince1970: scale.value), style: .time)
+        if scale != nil {
+            return Text(valueOf: Node.ruler)
                 .font(font)
                 .foregroundStyle(.white)
                 .lineLimit(1)
@@ -344,7 +349,7 @@ enum CaffeinateOptionsFace {
                 .frame(width: timeWidth, alignment: .trailing)
         }
 
-        return Text(CaffeinateStyle.Format.target(state.nextTarget))
+        return Text(CaffeinateStyle.Format.sign)
             .font(font)
             .foregroundStyle(.white)
             .lineLimit(1)

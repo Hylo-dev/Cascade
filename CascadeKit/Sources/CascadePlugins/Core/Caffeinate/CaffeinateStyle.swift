@@ -110,13 +110,22 @@ enum CaffeinateStyle {
 
         /// refusedWithCode is the options page's longer line: the code is for diagnosis, so the
         /// tile only says "Error". The code is written as a string, so no digit grouping splits it.
-        static func refusedWithCode(_ failure: CaffeinateFailure) -> String {
+        /// A refused change of a running session says what the ruler was moving, by the mode the
+        /// selector shows: the length for For, the end for Until, and the length for the rest,
+        /// since a session that is not timed has no end to speak of.
+        static func refusedWithCode(
+            _ failure: CaffeinateFailure,
+            shown     : CaffeinateTargetKind
+        ) -> String {
             switch failure {
                 case .assertionRefused(let code):
                     String(localized: "Couldn't prevent sleep (error \(String(code)))", table: "CaffeinateWidget", bundle: .module)
 
+                case .extensionRefused(let code) where shown == .until:
+                    String(localized: "Couldn't change the end (error \(String(code)))", table: "CaffeinateWidget", bundle: .module)
+
                 case .extensionRefused(let code):
-                    String(localized: "Couldn't change the time (error \(String(code)))", table: "CaffeinateWidget", bundle: .module)
+                    String(localized: "Couldn't change the length (error \(String(code)))", table: "CaffeinateWidget", bundle: .module)
             }
         }
     }

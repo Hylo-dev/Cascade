@@ -47,7 +47,7 @@
     },
     "until": {
       "comment": "Small label before the time a session ends: on the widget's second line for the next session, and under the countdown on the options page for a running one.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "fino alle" } } }
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "fino alle ore" } } }
     },
     "Couldn't prevent sleep (error %@)": {
       "comment": "Options page line when the system refused to keep the Mac awake. %@ is the system's error code, written without digit grouping.",
@@ -55,7 +55,7 @@
     },
     "Caffeinate, awake until %@": {
       "comment": "Spoken sentence of the live activity of a timed session. %@ is the time the session ends.",
-      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Caffeinate, sveglio fino alle %@" } } }
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Caffeinate, sveglio fino alle ore %@" } } }
     },
     "Caffeinate, awake until you stop it": {
       "comment": "Spoken sentence of the live activity of a session without a time limit.",
@@ -65,9 +65,13 @@
       "comment": "Widget tile line when the system refused to keep the Mac awake; the options page has the sentence and the code.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Errore" } } }
     },
-    "Couldn't change the time (error %@)": {
-      "comment": "Options page line when the system refused to change the time of a running session, by a move of the ruler. %@ is the system's error code.",
+    "Couldn't change the length (error %@)": {
+      "comment": "Options page line when the system refused to change the length of a running session, by a move of the ruler while the selector shows For. %@ is the system's error code.",
       "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Impossibile cambiare la durata (errore %@)" } } }
+    },
+    "Couldn't change the end (error %@)": {
+      "comment": "Options page line when the system refused to change the end of a running session, by a move of the ruler while the selector shows Until. %@ is the system's error code.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Impossibile cambiare la fine (errore %@)" } } }
     }
   },
   "version": "1.0"
