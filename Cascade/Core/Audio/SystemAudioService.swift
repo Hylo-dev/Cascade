@@ -82,11 +82,16 @@ final class SystemAudioService: SystemAudioControlling {
         }
     }
 
+    /// stop hands the system back a real default output if Cascade's multi-output is the
+    /// current one, before it stops listening: once the service is stopped (the audio widget is
+    /// switched off) nothing would manage that aggregate any more. The restore is queued, never
+    /// waited for; only `restoreBeforeQuit` waits.
     func stop() {
         guard isStarted else { return }
 
         isStarted = false
-        queue.async { [hardware] in
+        queue.async { [hardware, multiOutput] in
+            multiOutput.restoreBeforeQuit()
             hardware.stopListening()
         }
     }
