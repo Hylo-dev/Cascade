@@ -283,6 +283,31 @@ struct PluginSurfaceRouterTests {
     }
 
     @Test
+    func theDetailReadsTheNotchObstructionFromItsContext() throws {
+        let (rig, widget) = try openedDetailRig()
+        widget.openDetail?()
+        let detail  = try #require(rig.host.shownDetails.first?.page as? PluginDetail)
+        let notch   = CGRect(x: 110, y: 0, width: 180, height: 28)
+        let context = NotchContextualPageContext(
+            availableSize         : CGSize(width: 400, height: 124),
+            centerObstructionFrame: notch
+        )
+
+        #expect(detail.detailView(in: context).obstruction == notch)
+        #expect(detail.contentHeight == 144)
+    }
+
+    @Test
+    func theBackButtonSitsInTheLeftShoulderBesideTheNotch() {
+        let covered = PluginDetailView.backButtonOrigin(obstruction: CGRect(x: 110, y: 0, width: 180, height: 32))
+        let free    = PluginDetailView.backButtonOrigin(obstruction: .zero)
+
+        #expect(covered == CGPoint(x: 4, y: 4))
+        #expect(free == CGPoint(x: 4, y: 4))
+        #expect(PluginDetailView.backButtonOrigin(obstruction: CGRect(x: 110, y: 0, width: 180, height: 40)).y == 8)
+    }
+
+    @Test
     func refusedDetailIsNeitherOpenNorVisible() throws {
         let (rig, widget) = try openedDetailRig()
         rig.host.refusesDetails = true

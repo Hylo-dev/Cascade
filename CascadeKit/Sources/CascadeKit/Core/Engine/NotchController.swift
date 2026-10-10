@@ -1970,12 +1970,9 @@ final class NotchController: NotchDisplayPresenting {
             let requested           = hardwareNotchHeight
                 + expandedTopInset + expandedBottomInset + contentHeight
 
-            // A detail is a plugin's own surface, so it gets the activity ceiling, not the
-            // file shelf's ordinary one.
-            let ceiling = displayPresentation?.detailPage === page
-                ? normalizedActivityMaximumHeight()
-                : normalizedMaximumExpandedHeight()
-            return max(resting.height, min(ceiling, requested))
+            // Every page, a detail included, stops at the ordinary expanded height: the notch
+            // never changes size because of what it shows.
+            return max(resting.height, min(normalizedMaximumExpandedHeight(), requested))
         }
 
         guard let activity = displayedPrimaryActivity else {

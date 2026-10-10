@@ -14,9 +14,10 @@ import SwiftUI
 @MainActor
 final class PluginDetail: NotchContextualPage {
 
-    /// contentHeight is the part of the page below the notch band; with it the host pins the
-    /// page at 240 pt.
-    let contentHeight: CGFloat = 196
+    /// contentHeight asks for more than the notch will ever give, as the file shelf does: the
+    /// host clamps every page to the ordinary expanded height, so the notch keeps its size
+    /// whatever it shows and the page lays itself out in what is left.
+    let contentHeight: CGFloat = 144
 
     let id   : String
     let store: PluginNodeStore
@@ -47,12 +48,19 @@ final class PluginDetail: NotchContextualPage {
     }
 
     func makeContentView(in context: NotchContextualPageContext) -> AnyView {
-        AnyView(
-            PluginDetailView(
-                store   : store,
-                services: services,
-                back    : back
-            )
+        AnyView(detailView(in: context))
+    }
+
+    /// detailView is the page's view with what the context says about the notch it sits under:
+    /// the hardware notch's obstruction goes into the view, which puts it in the environment
+    /// for the components. It is separate from `makeContentView`, which erases the type, so a
+    /// test can read what the page was given.
+    func detailView(in context: NotchContextualPageContext) -> PluginDetailView {
+        PluginDetailView(
+            store      : store,
+            services   : services,
+            obstruction: context.centerObstructionFrame,
+            back       : back
         )
     }
 

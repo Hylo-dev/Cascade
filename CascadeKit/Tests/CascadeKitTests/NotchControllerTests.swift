@@ -1486,9 +1486,9 @@ struct NotchControllerTests {
     }
 
     @Test
-    func detailPageExpandsToTheMaximumHeight() throws {
+    func detailPageKeepsTheNotchAtItsNormalHeight() throws {
         let fixture = ControllerFixture(reducesMotion: true)
-        let page    = ControllerContextualPage(contentHeight: 196)
+        let page    = ControllerContextualPage(contentHeight: 144)
         fixture.controller.start()
         defer { fixture.controller.stop() }
 
@@ -1496,8 +1496,7 @@ struct NotchControllerTests {
 
         let shape  = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
         let bounds = try #require(shape.path?.boundingBoxOfPath)
-        #expect(NotchConfiguration.default.maximumActivityExpandedHeight == 240)
-        #expect(bounds.height == NotchConfiguration.default.maximumActivityExpandedHeight)
+        #expect(bounds.height == NotchConfiguration.default.expandedHeight)
         #expect(page.contexts.count == 1)
     }
 
