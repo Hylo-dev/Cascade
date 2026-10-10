@@ -68,7 +68,9 @@ nonisolated public struct VolumeGesture: Equatable, Sendable {
 
     /// scrolled moves the level for one scroll event. A wheel steps by a sixteenth in the sign of
     /// `deltaY`, so every notch is the same; a trackpad is continuous and follows the finger.
-    /// Upward raises the level in both.
+    /// `deltaY` is the physical delta (`ScrollWheelReader.physicalDeltaY`): positive when the
+    /// fingers move up or the wheel rolls away, whatever the scrolling-direction setting, and
+    /// positive raises the level in both.
     public static func scrolled(
         _ level  : Double,
         deltaY   : Double,

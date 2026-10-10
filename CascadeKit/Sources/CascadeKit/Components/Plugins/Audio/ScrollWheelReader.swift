@@ -16,9 +16,25 @@ import SwiftUI
 /// the board would cost that work for nothing. It is installed in `viewDidMoveToWindow` and
 /// removed when the window goes nil, and again in `deinit` in case the window never said so.
 /// Events for another window, or outside the frame, are ignored after one comparison.
+///
+/// The delta it reports is the physical one: positive when the fingers move up the trackpad, or
+/// the wheel rolls away from the user, whatever the user's scrolling-direction setting. See
+/// `physicalDeltaY`.
 struct ScrollWheelReader: NSViewRepresentable {
 
     let onScroll: (_ deltaY: Double, _ isPrecise: Bool, _ phase: NSEvent.Phase, _ momentum: NSEvent.Phase) -> Void
+
+    /// physicalDeltaY undoes the user's scrolling-direction setting. With natural scrolling macOS
+    /// flips the sign of `scrollingDeltaY` so that content follows the fingers, which means a
+    /// swipe up arrives negative; a volume control wants the gesture itself, not the content's
+    /// motion, so it asks the event whether the device direction was inverted and flips it back.
+    /// Upward is positive, with natural scrolling on or off, on a trackpad or a wheel.
+    static func physicalDeltaY(
+        _ deltaY           : Double,
+        isDirectionInverted: Bool
+    ) -> Double {
+        isDirectionInverted ? -deltaY : deltaY
+    }
 
     func makeNSView(context: Context) -> ScrollWheelView {
         ScrollWheelView()
@@ -77,7 +93,10 @@ final class ScrollWheelView: NSView {
         else { return }
 
         onScroll?(
-            Double(event.scrollingDeltaY),
+            ScrollWheelReader.physicalDeltaY(
+                Double(event.scrollingDeltaY),
+                isDirectionInverted: event.isDirectionInvertedFromDevice
+            ),
             event.hasPreciseScrollingDeltas,
             event.phase,
             event.momentumPhase
