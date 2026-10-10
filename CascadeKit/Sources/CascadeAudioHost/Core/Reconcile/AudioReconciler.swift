@@ -31,7 +31,9 @@ import CascadeContracts
 ///   episode started at the first failure; within three seconds of it the app is `recovering`,
 ///   after that `notApplied`. A second episode for the identical configuration means the
 ///   configuration is hopeless: the app goes `native` and nothing is built until its
-///   configuration or its intent changes.
+///   configuration changes, the intent turns neutral, or the environment is invalidated. A gain
+///   or mute change never restarts a build: it is stored and sent to a running pipeline, and
+///   otherwise waits, so dragging the volume of a failing app cannot storm the HAL.
 ///
 /// The reducer never reads a clock: every method takes `now`, so tests drive time by hand.
 public struct AudioReconciler: Sendable {
@@ -106,7 +108,9 @@ public struct AudioReconciler: Sendable {
         return actions
     }
 
-    /// Reports how the build or crossfade identified by `token` ended.
+    /// Reports how the build or crossfade identified by `token` ended, or that the running
+    /// pipeline `token` broke (`succeeded: false` on a running token tears it down and starts a
+    /// failure episode; a success report for a running token is ignored).
     ///
     /// A token that is not the current one is an obsolete build and is ignored. On success the
     /// pipeline runs; if the intent moved while it was being built, one `updateCommand` catches
@@ -175,6 +179,28 @@ public struct AudioReconciler: Sendable {
                     }
                 }
 
+            case .running(let current, let configuration) where current == token && !succeeded:
+                // The service reports a live pipeline that broke (a device vanished, the tap was
+                // revoked). It is a failure like any other, and the only way an identical
+                // configuration can open a second episode once a wake clears the history.
+                let outcome = entry.recordFailure(of: configuration, now: now)
+                let since   = entry.failureStart(now)
+
+                actions.append(.teardown(app, token: token))
+                entry.commandedIntent = nil
+
+                switch outcome {
+                    case .retry(let attempts, let delay):
+                        entry.state = .failed(configuration, attempts: attempts, since: since)
+                        actions.append(.scheduleRetry(app, after: delay))
+
+                    case .exhausted(let attempts):
+                        entry.state = .failed(configuration, attempts: attempts, since: since)
+
+                    case .givenUp:
+                        entry.state = .native(configuration)
+                }
+
             default:
                 return []
         }
@@ -184,13 +210,14 @@ public struct AudioReconciler: Sendable {
         return actions
     }
 
-    /// Rebuilds every pipeline that is running, being built or crossfading, keeping the intents.
+    /// Rebuilds the pipeline of every app whose intent needs one, keeping the intents.
     ///
-    /// A wake from sleep, a coreaudiod restart or a format change leaves the HAL objects behind
-    /// the pipelines stale while every process ID, device UID and configuration still compares
-    /// equal, so `reconcile` alone would see nothing to do. This is the explicit invalidation.
-    /// It is not a failure: no episode starts, and a failed or `native` app is left to its own
-    /// retry rules. A crossfade in flight restarts directly on its target.
+    /// A wake from sleep, a device or format change and a coreaudiod restart leave the HAL
+    /// objects behind the pipelines stale while every process ID, device UID and configuration
+    /// still compares equal, so `reconcile` alone would see nothing to do. This is the explicit
+    /// invalidation. A new environment is a fresh start: every failure episode and every `native`
+    /// fallback is forgotten, and a failed or `native` app is built again like a running one.
+    /// It is not a failure itself. A crossfade in flight restarts directly on its target.
     public mutating func environmentInvalidated(now: Duration) -> [AudioReconcileAction] {
         var actions: [AudioReconcileAction] = []
 
@@ -214,11 +241,18 @@ public struct AudioReconciler: Sendable {
                 case .crossfading(_, _, let target):
                     configuration = target
 
-                case .none, .failed, .native:
+                case .failed(let failed, _, _):
+                    configuration = failed
+
+                case .native(let fallback):
+                    configuration = fallback
+
+                case .none:
                     continue
             }
 
             tearDown(&entry, of: identity, into: &actions)
+            entry.forgetFailures()
             issueBuild(&entry, of: identity, configuration: configuration, intent: intent, into: &actions)
 
             entries[identity] = entry
@@ -337,8 +371,6 @@ public struct AudioReconciler: Sendable {
         now          : Duration,
         into actions : inout [AudioReconcileAction]
     ) {
-        let intentChanged = entry.intent.map { $0 != intent } ?? false
-
         entry.intent              = intent
         entry.isBlockedByNoOutput = plan == .blocked
 
@@ -353,9 +385,11 @@ public struct AudioReconciler: Sendable {
             return
         }
 
-        // A failure episode ends when the configuration or the intent changes, and the verdict
-        // of an earlier episode ("native") ends with it.
-        if intentChanged || entry.episodeConfiguration != target {
+        // A failure episode ends when the configuration changes, and the verdict of an earlier
+        // episode ("native") ends with it. The intent is deliberately not a trigger: gain and
+        // mute are not part of the configuration, and a slider dragged at display rate must not
+        // restart builds on an app the HAL keeps refusing.
+        if entry.episodeConfiguration != target {
             entry.forgetFailures()
         }
 
@@ -391,6 +425,10 @@ public struct AudioReconciler: Sendable {
 
             case .crossfading(_, _, let configuration):
                 guard configuration != target else { return }
+
+                // The old configuration is not tracked well enough to crossfade again from a
+                // crossfade in flight, so the change tears down both ends and rebuilds: a brief
+                // audio gap, accepted because it takes a second change inside one build.
 
                 tearDown(&entry, of: identity, into: &actions)
                 issueBuild(&entry, of: identity, configuration: target, intent: intent, into: &actions)
@@ -552,6 +590,9 @@ public struct AudioReconciler: Sendable {
             now              : Duration
         ) -> FailureOutcome {
             var current: Failure
+
+            // History belongs to one configuration: a failure of another one starts afresh.
+            if episodeConfiguration != configuration { forgetFailures() }
 
             if let open = failure {
                 current = open

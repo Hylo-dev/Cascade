@@ -273,19 +273,19 @@ struct AudioReconcilerTests {
         _ = reconcile(&reconciler, intent: quarter, now: .zero)
         _ = reconciler.built(chrome, token: 2, succeeded: true, now: .milliseconds(5))
 
-        // Episode two: the identical configuration fails again, and Cascade stops trying.
-        _ = reconciler.environmentInvalidated(now: .seconds(60))
-
-        #expect(reconciler.built(chrome, token: 3, succeeded: false, now: .seconds(60)) == [])
+        // Episode two: the running pipeline breaks, and Cascade stops trying.
+        #expect(reconciler.built(chrome, token: 2, succeeded: false, now: .seconds(60)) == [
+            .teardown(chrome, token: 2),
+        ])
         #expect(reconciler.state(of: chrome) == .native(expected))
         #expect(reconciler.enforcement(of: chrome, now: .seconds(60)) == .notApplied)
         #expect(reconcile(&reconciler, intent: quarter, now: .seconds(90)) == [])
 
-        // A different intent lifts the verdict.
-        let louder = try intent(gain: 0.5)
+        // A different configuration lifts the verdict.
+        let toUSB = try intent(outputs: [Self.usb])
 
-        #expect(reconcile(&reconciler, intent: louder, now: .seconds(91)) == [
-            .build(chrome, token: 4, expected, louder),
+        #expect(reconcile(&reconciler, intent: toUSB, now: .seconds(91)) == [
+            .build(chrome, token: 3, configuration([10], [Self.usb]), toUSB),
         ])
     }
 
@@ -442,5 +442,141 @@ struct AudioReconcilerTests {
 
         #expect(reconciler.enforcement(of: chrome, now: .seconds(1)) == .recovering)
         #expect(reconciler.enforcement(of: chrome, now: .seconds(4)) == .notApplied)
+    }
+
+    // MARK: - Fix round 1
+
+    /// Drives an app to the native fallback: two failure episodes of the same configuration.
+    private func nativeReconciler(intent quarter: AudioAppIntent) -> AudioReconciler {
+        var reconciler = AudioReconciler()
+
+        _ = reconcile(&reconciler, intent: quarter)
+        _ = reconciler.built(chrome, token: 1, succeeded: false, now: .zero)
+        _ = reconcile(&reconciler, intent: quarter, now: .zero)
+        _ = reconciler.built(chrome, token: 2, succeeded: true, now: .milliseconds(5))
+        _ = reconciler.built(chrome, token: 2, succeeded: false, now: .seconds(60))
+
+        return reconciler
+    }
+
+    @Test
+    func wakeRetriesAnAppThatHadFailed() throws {
+        var reconciler = AudioReconciler()
+        let quarter    = try intent()
+
+        _ = reconcile(&reconciler, intent: quarter)
+
+        // Five failures spend the ladder; the app stays failed.
+        var now: Duration = .zero
+
+        for token in UInt64(1)...5 {
+            _ = reconciler.built(chrome, token: token, succeeded: false, now: now)
+            _ = reconcile(&reconciler, intent: quarter, now: now + .seconds(2))
+            now += .seconds(2)
+        }
+
+        #expect(reconciler.state(of: chrome) != .none)
+        #expect(reconcile(&reconciler, intent: quarter, now: now + .seconds(30)) == [])
+
+        let actions = reconciler.environmentInvalidated(now: now + .seconds(30))
+
+        #expect(actions == [.build(chrome, token: 6, configuration([10], [Self.builtIn]), quarter)])
+        #expect(reconciler.enforcement(of: chrome, now: now + .seconds(30)) == .recovering)
+    }
+
+    @Test
+    func wakeRetriesANativeFallback() throws {
+        let quarter    = try intent()
+        var reconciler = nativeReconciler(intent: quarter)
+        let expected   = configuration([10], [Self.builtIn])
+
+        #expect(reconciler.state(of: chrome) == .native(expected))
+
+        let actions = reconciler.environmentInvalidated(now: .seconds(120))
+
+        #expect(actions == [.build(chrome, token: 3, expected, quarter)])
+
+        // The fallback was forgotten: a failure now opens episode one, not a second one.
+        #expect(reconciler.built(chrome, token: 3, succeeded: false, now: .seconds(120)) == [
+            .scheduleRetry(chrome, after: .zero),
+        ])
+    }
+
+    @Test
+    func gainChangesOnAFailingAppDoNotRestartBuilds() throws {
+        var reconciler = nativeReconciler(intent: try intent())
+        let expected   = configuration([10], [Self.builtIn])
+
+        for step in 1...10 {
+            let louder  = try intent(gain: 0.25 + Double(step) / 20)
+            let actions = reconcile(&reconciler, intent: louder, now: .seconds(61 + Double(step)))
+
+            #expect(actions == [])
+        }
+
+        #expect(reconciler.state(of: chrome) == .native(expected))
+        #expect(reconciler.enforcement(of: chrome, now: .seconds(80)) == .notApplied)
+
+        // The same holds while a retry is pending: the gain is stored, nothing is built early.
+        var retrying = AudioReconciler()
+
+        _ = reconcile(&retrying, intent: try intent())
+        _ = retrying.built(chrome, token: 1, succeeded: false, now: .zero)
+        _ = reconcile(&retrying, intent: try intent(), now: .zero)
+        _ = retrying.built(chrome, token: 2, succeeded: false, now: .zero)
+
+        #expect(reconcile(&retrying, intent: try intent(gain: 0.5), now: .milliseconds(10)) == [])
+
+        // And when the retry comes due it builds with the intent as it is now.
+        let latest = try intent(gain: 0.75)
+
+        #expect(reconcile(&retrying, intent: latest, now: .milliseconds(100)) == [
+            .build(chrome, token: 3, expected, latest),
+        ])
+    }
+
+    @Test
+    func outputChangeOnANativeAppStartsAFreshEpisode() throws {
+        var reconciler = nativeReconciler(intent: try intent())
+        let toUSB      = try intent(outputs: [Self.usb])
+
+        #expect(reconcile(&reconciler, intent: toUSB, now: .seconds(70)) == [
+            .build(chrome, token: 3, configuration([10], [Self.usb]), toUSB),
+        ])
+
+        // Episode one of the new configuration: a retry, not a native verdict.
+        #expect(reconciler.built(chrome, token: 3, succeeded: false, now: .seconds(70)) == [
+            .scheduleRetry(chrome, after: .zero),
+        ])
+    }
+
+    @Test
+    func neutralIntentClearsNativeFallback() throws {
+        let quarter    = try intent()
+        var reconciler = nativeReconciler(intent: quarter)
+
+        #expect(reconcile(&reconciler, intent: .neutral, now: .seconds(70)) == [])
+        #expect(reconciler.state(of: chrome) == .none)
+        #expect(reconciler.enforcement(of: chrome, now: .seconds(70)) == .native)
+
+        // Asking for control again starts clean.
+        #expect(reconcile(&reconciler, intent: quarter, now: .seconds(80)) == [
+            .build(chrome, token: 3, configuration([10], [Self.builtIn]), quarter),
+        ])
+    }
+
+    @Test
+    func brokenRunningPipelineIsTornDownAndRetried() throws {
+        let quarter    = try intent()
+        var reconciler = runningReconciler(intent: quarter)
+
+        #expect(reconciler.built(chrome, token: 1, succeeded: false, now: .seconds(5)) == [
+            .teardown(chrome, token: 1),
+            .scheduleRetry(chrome, after: .zero),
+        ])
+        #expect(reconciler.enforcement(of: chrome, now: .seconds(5)) == .recovering)
+        #expect(reconcile(&reconciler, intent: quarter, now: .seconds(5)) == [
+            .build(chrome, token: 2, configuration([10], [Self.builtIn]), quarter),
+        ])
     }
 }
