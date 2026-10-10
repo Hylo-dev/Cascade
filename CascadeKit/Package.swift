@@ -115,13 +115,19 @@ let package = Package(
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .target(
+            name: "CascadeAudioRender",
+            cSettings: [
+                .unsafeFlags(["-O2", "-Wall", "-Wextra", "-Werror"])
+            ]
+        ),
+        .target(
             name: "CascadeAudioHost",
-            dependencies: ["CascadeContracts"],
+            dependencies: ["CascadeContracts", "CascadeAudioRender"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .testTarget(
             name: "CascadeAudioHostTests",
-            dependencies: ["CascadeAudioHost", "CascadeContracts"],
+            dependencies: ["CascadeAudioHost", "CascadeAudioRender", "CascadeContracts"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .target(
