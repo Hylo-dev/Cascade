@@ -22,6 +22,14 @@ import SwiftUI
 /// driven by `isAdjusting` alone, so dragging the level never animates frame by frame.
 struct AudioVolumeCapsule: View {
 
+    /// iconInkOnFill is the light blue the icon takes where the white level fill is behind it,
+    /// sRGB (0, 198, 234), matching the user's reference. Anywhere else the icon is white.
+    static let iconInkOnFill = Color(
+        red  : 0,
+        green: 198.0 / 255.0,
+        blue : 234.0 / 255.0
+    )
+
     private static let percentageInset: CGFloat = 10
 
     /// widthRatio is how much of the given width the pill draws, centred. The grid widget passes
@@ -72,9 +80,10 @@ struct AudioVolumeCapsule: View {
                     AudioOutputIconView(icon: icon)
                         .font(.system(size: metrics.symbolFontSize))
                         .foregroundStyle(
-                            ink(
-                                covering  : metrics.iconInset + metrics.iconSize / 2,
-                                fillHeight: fillHeight
+                            Self.iconInk(
+                                fillHeight: fillHeight,
+                                centre    : metrics.iconInset + metrics.iconSize / 2,
+                                isMuted   : isMuted
                             )
                         )
                         .opacity(iconOpacity)
@@ -112,9 +121,19 @@ struct AudioVolumeCapsule: View {
         }
     }
 
-    /// ink is dark where the white fill reaches the point and light where the glass shows, so an
-    /// icon or a percentage stays legible at any level. The icon is judged by its centre and the
-    /// percentage by its top, where a reading starts to matter.
+    /// iconInk is light blue where the white fill reaches the icon's centre, and white where it
+    /// does not: over the glass, or over the grey fill of a muted level, which is not white.
+    static func iconInk(
+        fillHeight: CGFloat,
+        centre    : CGFloat,
+        isMuted   : Bool
+    ) -> Color {
+        !isMuted && fillHeight >= centre ? iconInkOnFill : .white
+    }
+
+    /// ink is dark where the white fill reaches the point and light where the glass shows, so a
+    /// percentage stays legible at any level, judged by its top, where a reading starts to matter.
+    /// The icon has its own ink, `iconInk`.
     private func ink(
         covering point: CGFloat,
         fillHeight    : CGFloat
