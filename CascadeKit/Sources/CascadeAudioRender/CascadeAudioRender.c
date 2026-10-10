@@ -388,6 +388,58 @@ void CascadeAudioRenderProcess(
     }
 }
 
+/// How many frames a slice holds, as the IOProc knows it: the output's, else the tap's.
+///
+/// Core Audio hands an IOProc buffers, not a frame count, so the count is the capacity of
+/// the first output buffer in the output format. A device that gave no usable output buffer
+/// falls back to the tap's capacity; `Process` still clamps to the real buffers either way.
+static uint32_t ioProcFrameCount(
+    const CascadeAudioRender *renderer,
+    const AudioBufferList    *input,
+    const AudioBufferList    *output
+)
+{
+    Plane plane;
+    plane.channelCount  = 0;
+    plane.frameCapacity = 0;
+
+    if (output != NULL) {
+        buildPlane(&plane, output->mBuffers, output->mNumberBuffers, &renderer->outputFormat, false);
+        if (plane.frameCapacity != 0) {
+            return plane.frameCapacity;
+        }
+    }
+    if (input != NULL) {
+        buildPlane(&plane, input->mBuffers, input->mNumberBuffers, &renderer->inputFormat, true);
+        return plane.frameCapacity;
+    }
+    return 0;
+}
+
+OSStatus CascadeAudioRenderIOProc(
+    AudioObjectID          device,
+    const AudioTimeStamp   *now,
+    const AudioBufferList  *input,
+    const AudioTimeStamp   *inputTime,
+    AudioBufferList        *output,
+    const AudioTimeStamp   *outputTime,
+    void                   *client
+)
+{
+    (void)device;
+    (void)now;
+    (void)inputTime;
+    (void)outputTime;
+
+    CascadeAudioRender *renderer = (CascadeAudioRender *)client;
+    if (renderer == NULL) {
+        return noErr;
+    }
+
+    CascadeAudioRenderProcess(renderer, input, output, ioProcFrameCount(renderer, input, output));
+    return noErr;
+}
+
 // MARK: - END REALTIME
 
 static bool isValidFormat(CascadeAudioRenderFormat format)
@@ -417,6 +469,15 @@ CascadeAudioRender *CascadeAudioRenderCreate(
         return NULL;
     }
     memset(renderer, 0, size);
+
+    // Warm-up: the first sin/cos call may enter dyld to bind the symbol lazily, which is a
+    // lock and possibly a file read. Making that call here, on the control thread, means the
+    // first crossfade on the realtime thread finds them already bound. Both the argument and
+    // the result are `volatile`: a constant argument would be folded at compile time and the
+    // call would never happen, and an unused result would be deleted as dead.
+    volatile double warmUpArgument = 0.5;
+    volatile double warmUpResult   = sin(warmUpArgument) + cos(warmUpArgument);
+    (void)warmUpResult;
 
     uint64_t command = encodeCommand(gain, muted);
     renderer->inputFormat     = input;

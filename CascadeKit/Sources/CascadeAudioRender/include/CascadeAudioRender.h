@@ -6,6 +6,7 @@
 #ifndef CASCADE_AUDIO_RENDER_H
 #define CASCADE_AUDIO_RENDER_H
 
+#include <CoreAudio/CoreAudio.h>
 #include <CoreAudioTypes/CoreAudioTypes.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -88,6 +89,25 @@ void CascadeAudioRenderProcess(
     const AudioBufferList *_Nullable input,
     AudioBufferList       *_Nullable output,
     uint32_t                         frames
+);
+
+/// The IOProc Cascade registers on the aggregate device: a C trampoline into the kernel.
+///
+/// Core Audio calls it on its realtime thread, so it must not run Swift (no runtime,
+/// no allocation, no retain). It has exactly the shape of `AudioDeviceIOProc`, with
+/// `client` being the `CascadeAudioRender *` given to `AudioDeviceCreateIOProcID`.
+/// The frame count is not passed by Core Audio: it is how many frames the first
+/// output buffer holds in the output format, or the tap's own frames when the device
+/// handed over no output buffer. Always returns `noErr`; the callback never fails
+/// the device, an unusable slice just renders silence. REALTIME-SAFE.
+OSStatus CascadeAudioRenderIOProc(
+    AudioObjectID          device,
+    const AudioTimeStamp   *now,
+    const AudioBufferList  *input,
+    const AudioTimeStamp   *inputTime,
+    AudioBufferList        *output,
+    const AudioTimeStamp   *outputTime,
+    void *_Nullable        client
 );
 
 /// Number of Process calls so far. Atomic; the watchdog reads it to see the IOProc is alive.

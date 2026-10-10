@@ -32,7 +32,9 @@ private final class SyntheticBufferList {
         bytesPerSample = float64 ? 8 : 4
         frameCapacity  = frames
         channels       = buffers
-        pointer        = AudioBufferList.allocate(maximumBuffers: buffers.count)
+        // allocate traps on zero buffers, so an empty list is one slot whose count is then zeroed.
+        pointer        = AudioBufferList.allocate(maximumBuffers: max(buffers.count, 1))
+        pointer.count  = buffers.count
         var allocated  = [UnsafeMutableRawPointer]()
         for (index, channelCount) in buffers.enumerated() {
             let byteCount = frames * channelCount * bytesPerSample
@@ -591,5 +593,63 @@ struct AudioRenderKernelTests {
         #expect(CascadeAudioRenderCreate(badRate, good, 1, false) == nil)
         #expect(CascadeAudioRenderCreate(good, noChannels, 1, false) == nil)
         #expect(CascadeAudioRenderCreate(tooWide, good, 1, false) == nil)
+    }
+
+    // MARK: - IOProc trampoline
+
+    @Test
+    func theIOProcTrampolineRendersThroughTheKernelAndReturnsNoErr() throws {
+        let renderer = try makeRenderer(gain: 0.5)
+        defer { CascadeAudioRenderDestroy(renderer) }
+
+        // Compiles only if the trampoline has exactly the signature Core Audio registers.
+        let registered: AudioDeviceIOProc = CascadeAudioRenderIOProc
+        _ = registered
+
+        // The input is longer than the output: the frame count comes from the output buffer.
+        let input  = SyntheticBufferList(buffers: [2], frames: 100, float64: false)
+        input.write(buffer: 0, Array(repeating: 0.8, count: 200))
+        let output = SyntheticBufferList(buffers: [2], frames: 64, float64: false, poison: 0xFF)
+
+        var timestamp = AudioTimeStamp()
+        let status    = CascadeAudioRenderIOProc(
+            42,
+            &timestamp,
+            input.pointer.unsafePointer,
+            &timestamp,
+            output.pointer.unsafeMutablePointer,
+            &timestamp,
+            UnsafeMutableRawPointer(renderer)
+        )
+
+        #expect(status == noErr)
+        #expect(CascadeAudioRenderCallbackCount(renderer) == 1)
+
+        let rendered = output.read(buffer: 0)
+        #expect(rendered.count == 128)
+        #expect(rendered.allSatisfy { abs($0 - 0.4) < 1e-6 })
+    }
+
+    @Test
+    func theIOProcTrampolineSurvivesAnEmptyOutputList() throws {
+        let renderer = try makeRenderer(gain: 1)
+        defer { CascadeAudioRenderDestroy(renderer) }
+
+        let input  = SyntheticBufferList(buffers: [2], frames: 32, float64: false)
+        let output = SyntheticBufferList(buffers: [], frames: 0, float64: false)
+
+        var timestamp = AudioTimeStamp()
+        let status    = CascadeAudioRenderIOProc(
+            42,
+            &timestamp,
+            input.pointer.unsafePointer,
+            &timestamp,
+            output.pointer.unsafeMutablePointer,
+            &timestamp,
+            UnsafeMutableRawPointer(renderer)
+        )
+
+        #expect(status == noErr)
+        #expect(CascadeAudioRenderCallbackCount(renderer) == 1)
     }
 }
