@@ -20,13 +20,6 @@ import SwiftUI
 /// shows, driven by that flag alone, so dragging the level never animates frame by frame.
 struct AudioVolumeCapsule: View {
 
-    /// Press is the state of one press, from its first change to its release.
-    private final class Press {
-
-        var gesture: VolumeGesture?
-        var start  : ContinuousClock.Instant = .now
-    }
-
     /// iconSize and iconInset place the icon: a square this big, this far above the bottom edge.
     static let iconSize : CGFloat = 22
     static let iconInset: CGFloat = 14
@@ -41,10 +34,15 @@ struct AudioVolumeCapsule: View {
     let onEnd          : () -> Void
     let onClick        : (() -> Void)?
 
-    /// press is the gesture in progress. It is a reference the view never observes, so following a
-    /// drag does not invalidate the capsule on its own account.
+    /// gesture and pressStart are the press in progress, from its first change to its release.
+    /// They are plain values, so the view allocates nothing for them however often its parent
+    /// rebuilds it; writing them only invalidates the body during a press, when the level is
+    /// redrawing it anyway.
     @State
-    private var press = Press()
+    private var gesture: VolumeGesture?
+
+    @State
+    private var pressStart: ContinuousClock.Instant?
 
     var body: some View {
         GeometryReader { geometry in
@@ -112,28 +110,29 @@ struct AudioVolumeCapsule: View {
         _ value: DragGesture.Value,
         travel : Double
     ) {
-        let now = ContinuousClock.now
-        if press.gesture == nil {
-            press.gesture = VolumeGesture(startLevel: level, travel: travel)
-            press.start   = now
-        }
+        let now     = ContinuousClock.now
+        let start   = pressStart ?? now
+        var current = gesture ?? VolumeGesture(startLevel: level, travel: travel)
 
-        guard var gesture = press.gesture else { return }
+        let outcome = current.move(to: value.translation, elapsed: now - start)
+        gesture    = current
+        pressStart = start
 
-        let outcome = gesture.move(to: value.translation, elapsed: now - press.start)
-        press.gesture = gesture
         if case .level(let chosen) = outcome {
             onLevel(chosen)
         }
     }
 
     private func handleEnd(_ value: DragGesture.Value) {
-        defer { press.gesture = nil }
-        guard var gesture = press.gesture else { return }
+        defer {
+            gesture    = nil
+            pressStart = nil
+        }
+        guard var current = gesture, let start = pressStart else { return }
 
-        let outcome = gesture.end(
+        let outcome = current.end(
             translation: value.translation,
-            elapsed    : ContinuousClock.now - press.start
+            elapsed    : ContinuousClock.now - start
         )
         switch outcome {
             case .click:
