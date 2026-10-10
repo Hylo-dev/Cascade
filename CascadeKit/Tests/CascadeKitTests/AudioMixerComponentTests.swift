@@ -112,7 +112,7 @@ struct AudioMixerComponentTests {
     }
 
     @Test
-    func aRowNeverShowsAMuteOrLevelIcon() {
+    func aRowShowsTheDeviceEvenWhenMuted() {
         let muted = SystemAudioState(
             level          : 0,
             isMuted        : true,
@@ -123,7 +123,7 @@ struct AudioMixerComponentTests {
         )
         let rows = AudioOutputPickerRow.rows(for: muted, allowsSeveralOutputs: false)
 
-        #expect(rows.map(\.icon) == [.speaker(level: 100)])
+        #expect(rows.map(\.icon) == [.symbol("hifispeaker")])
     }
 
     @Test
