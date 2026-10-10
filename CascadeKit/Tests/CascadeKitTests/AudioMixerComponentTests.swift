@@ -96,7 +96,7 @@ struct AudioMixerComponentTests {
         #expect(rows.map(\.uid) == ["a", "b", "c"])
         #expect(rows.filter(\.isSelected).map(\.uid) == ["b"])
         #expect(rows.map(\.marker) == [.none, .checkmark, .none])
-        #expect(rows[0].icon == .speaker(level: 100))
+        #expect(rows[0].icon == .symbol("macbook"))
         #expect(rows[1].icon == .symbol("display"))
     }
 

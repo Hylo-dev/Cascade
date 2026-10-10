@@ -52,6 +52,37 @@ nonisolated public enum AudioOutputIcon: Equatable, Sendable {
         }
     }
 
+    /// device picks the icon of the output itself, for the places that show which device it is
+    /// (the picker's rows and the mixer's output button), where the pill's level speaker would
+    /// say nothing. The built-in output is the MacBook; a Bluetooth product is its model's
+    /// symbol, or headphones without a verified identity; a display, a television and AirPlay
+    /// have their own; anything else, or no output at all, is a hi-fi speaker. Mute and level
+    /// are not part of it: they belong to the capsule (`resolve`).
+    public static func device(for output: AudioOutputDevice?) -> AudioOutputIcon {
+        guard let output else { return .symbol("hifispeaker") }
+        if let identity = output.bluetooth { return .symbol(symbolName(for: identity)) }
+
+        switch output.transportType {
+            case kAudioDeviceTransportTypeBuiltIn:
+                return .symbol("macbook")
+
+            case kAudioDeviceTransportTypeDisplayPort:
+                return .symbol("display")
+
+            case kAudioDeviceTransportTypeHDMI:
+                return .symbol("tv")
+
+            case kAudioDeviceTransportTypeAirPlay:
+                return .symbol("airplayaudio")
+
+            case kAudioDeviceTransportTypeBluetooth, kAudioDeviceTransportTypeBluetoothLE:
+                return .symbol("headphones")
+
+            default:
+                return .symbol("hifispeaker")
+        }
+    }
+
     /// symbolName is the SF Symbol of a verified Bluetooth product. The AirPods names are the
     /// preferred, newer spellings; `AudioOutputSymbol` falls back to the older ones where the
     /// system lacks them. Any other product is plain headphones.

@@ -48,11 +48,7 @@ struct AudioOutputPickerRow: Equatable, Identifiable {
             return AudioOutputPickerRow(
                 uid   : output.uid,
                 name  : output.name,
-                icon  : AudioOutputIcon.resolve(
-                    output : output,
-                    level  : 1,
-                    isMuted: false
-                ),
+                icon  : AudioOutputIcon.device(for: output),
                 marker: marker
             )
         }

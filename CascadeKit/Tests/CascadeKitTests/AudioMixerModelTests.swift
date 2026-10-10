@@ -56,6 +56,26 @@ struct AudioMixerModelTests {
     }
 
     @Test
+    func deviceIconNamesTheOutputItself() {
+        let builtIn    = device(uid: "built-in", transport: kAudioDeviceTransportTypeBuiltIn)
+        let airPods    = device(uid: "pods", transport: kAudioDeviceTransportTypeBluetooth, bluetooth: airPodsIdentity)
+        let headset    = device(uid: "headset", transport: kAudioDeviceTransportTypeBluetoothLE)
+        let monitor    = device(uid: "dp", transport: kAudioDeviceTransportTypeDisplayPort)
+        let television = device(uid: "hdmi", transport: kAudioDeviceTransportTypeHDMI)
+        let airPlay    = device(uid: "airplay", transport: kAudioDeviceTransportTypeAirPlay)
+        let unknownUSB = device(uid: "usb", transport: kAudioDeviceTransportTypeUSB)
+
+        #expect(AudioOutputIcon.device(for: builtIn) == .symbol("macbook"))
+        #expect(AudioOutputIcon.device(for: airPods) == .symbol("airpods"))
+        #expect(AudioOutputIcon.device(for: headset) == .symbol("headphones"))
+        #expect(AudioOutputIcon.device(for: monitor) == .symbol("display"))
+        #expect(AudioOutputIcon.device(for: television) == .symbol("tv"))
+        #expect(AudioOutputIcon.device(for: airPlay) == .symbol("airplayaudio"))
+        #expect(AudioOutputIcon.device(for: unknownUSB) == .symbol("hifispeaker"))
+        #expect(AudioOutputIcon.device(for: nil) == .symbol("hifispeaker"))
+    }
+
+    @Test
     func iconFollowsLevelBluetoothAndTransport() {
         let builtIn    = device(uid: "built-in", transport: kAudioDeviceTransportTypeBuiltIn)
         let airPods    = device(uid: "pods", transport: kAudioDeviceTransportTypeBluetooth, bluetooth: airPodsIdentity)

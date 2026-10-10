@@ -20,7 +20,8 @@ nonisolated enum AudioOutputSymbol {
 
     private static let fallbacks: [String: String] = [
         "airpods.pro": "airpodspro",
-        "airpods.max": "airpodsmax"
+        "airpods.max": "airpodsmax",
+        "macbook"    : "laptopcomputer"
     ]
 
     private static let installedNames = Mutex<[String: String]>([:])

@@ -29,6 +29,7 @@ struct AudioOutputSymbolTests {
     func theNewerDottedNamesFallBackToTheOlderOnes() {
         #expect(AudioOutputSymbol.fallback(for: "airpods.pro") == "airpodspro")
         #expect(AudioOutputSymbol.fallback(for: "airpods.max") == "airpodsmax")
+        #expect(AudioOutputSymbol.fallback(for: "macbook") == "laptopcomputer")
         #expect(AudioOutputSymbol.fallback(for: "airpods") == nil)
         #expect(AudioOutputSymbol.fallback(for: "headphones") == nil)
     }

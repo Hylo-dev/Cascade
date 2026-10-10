@@ -128,11 +128,7 @@ struct AudioMixerComponent: View {
 
     private func outputButton(system: SystemAudioState) -> some View {
         let output = system.outputs.first { $0.uid == system.selectedUIDs.first }
-        let icon   = AudioOutputIcon.resolve(
-            output : output,
-            level  : 1,
-            isMuted: false
-        )
+        let icon   = AudioOutputIcon.device(for: output)
 
         return Button {
             isPickerOpen.toggle()
