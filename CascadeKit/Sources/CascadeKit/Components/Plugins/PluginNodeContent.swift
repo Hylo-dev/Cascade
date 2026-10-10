@@ -199,6 +199,12 @@ struct PluginNodeContent: View {
                     }
                 )
 
+            case .sliderValue(let sliderID):
+                PluginSliderValueText(
+                    store   : store,
+                    sliderID: sliderID
+                )
+
             case .asset:
                 Color.clear
 

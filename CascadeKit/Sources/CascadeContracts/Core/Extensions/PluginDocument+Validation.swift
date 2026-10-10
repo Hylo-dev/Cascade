@@ -34,6 +34,12 @@ extension PluginDocument {
         } else {
             try ContractValidation.require(optionsAction == nil, "Options action needs options content")
         }
+
+        // The slider a value names may come after it in the walk, so the check waits for the end.
+        try ContractValidation.require(
+            budget.sliderValueReferences.isSubset(of: budget.sliderIDs),
+            "A slider value needs a slider with that ID in the same document"
+        )
     }
 
     /// componentReferences lists the tier-2 components the document shows, for the kernel to
@@ -90,7 +96,19 @@ extension PluginDocument {
         }
 
         try validate(kind: node.kind)
-        if case .button(let action) = node.kind { budget.buttons.insert(action) }
+        switch node.kind {
+            case .button(let action):
+                budget.buttons.insert(action)
+
+            case .slider:
+                if let id = node.id { budget.sliderIDs.insert(id) }
+
+            case .sliderValue(let id):
+                budget.sliderValueReferences.insert(id)
+
+            default:
+                break
+        }
         for modifier in node.modifiers {
             try validate(modifier: modifier)
         }
@@ -107,6 +125,9 @@ extension PluginDocument {
 
             case .zStack, .viewThatFits, .clock, .today, .regions:
                 break
+
+            case .sliderValue(let id):
+                try ContractValidation.require(ContractValidation.identifier(id), "Invalid slider ID")
 
             case .spacer(let minimumLength):
                 try length(minimumLength)
@@ -274,7 +295,9 @@ extension PluginDocument {
 /// ValidationBudget is what one validation walk has spent so far.
 private struct ValidationBudget {
 
-    var nodes       = 0
-    var explicitIDs = Set<String>()
-    var buttons     = Set<String>()
+    var nodes                 = 0
+    var explicitIDs           = Set<String>()
+    var buttons               = Set<String>()
+    var sliderIDs             = Set<String>()
+    var sliderValueReferences = Set<String>()
 }

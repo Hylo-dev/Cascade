@@ -15,7 +15,10 @@ import Foundation
 /// first of its children that fits the space it is given, which is how a widget that comes in
 /// several sizes, and cannot know which one it was given, offers a face for each. A slider's
 /// `style` is `standard` unless the document says otherwise, on the wire as in code: a slider
-/// written before styles existed has no `style` and decodes as `standard`.
+/// written before styles existed has no `style` and decodes as `standard`. A `sliderValue`
+/// shows the live value of the slider whose explicit `id` it names, in the same document: the
+/// kernel draws it from the control's own value, the one being dragged included, so a number
+/// that sits beside a ruler follows the ruler without a publication.
 public enum PluginNodeKind: Codable, Hashable, Sendable {
 
     case vStack(alignment: PluginHorizontalAlignment, spacing: Double?)
@@ -37,6 +40,7 @@ public enum PluginNodeKind: Codable, Hashable, Sendable {
     case button(action: String)
     case toggle(isOn: Bool, action: String)
     case slider(value: Double, minimum: Double, maximum: Double, step: Double?, style: PluginSliderStyle = .standard, action: String)
+    case sliderValue(id: String)
     case component(id: String, version: Int, parameters: [String: PluginValue])
     case regions
 
@@ -63,6 +67,7 @@ public enum PluginNodeKind: Codable, Hashable, Sendable {
             case .button       : "button"
             case .toggle       : "toggle"
             case .slider       : "slider"
+            case .sliderValue  : "sliderValue"
             case .component    : "component"
             case .regions      : "regions"
         }
@@ -115,6 +120,7 @@ extension PluginNodeKind {
         case button(action: String)
         case toggle(isOn: Bool, action: String)
         case slider(value: Double, minimum: Double, maximum: Double, step: Double?, style: PluginSliderStyle?, action: String)
+        case sliderValue(id: String)
         case component(id: String, version: Int, parameters: [String: PluginValue])
         case regions
 
@@ -140,6 +146,7 @@ extension PluginNodeKind {
                 case .toggle(let isOn, let action)                              : .toggle(isOn: isOn, action: action)
                 case .slider(let value, let minimum, let maximum, let step, let style, let action):
                     .slider(value: value, minimum: minimum, maximum: maximum, step: step, style: style ?? .standard, action: action)
+                case .sliderValue(let id)                                       : .sliderValue(id: id)
                 case .component(let id, let version, let parameters)            : .component(id: id, version: version, parameters: parameters)
                 case .regions                                                   : .regions
             }

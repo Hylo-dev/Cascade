@@ -118,7 +118,7 @@ public struct PluginNodeTable: Equatable, Sendable {
         at slot     : String
     ) -> PluginNodeID {
         if let explicit = node.id {
-            return PluginNodeID(rawValue: "#" + explicit + ":" + node.kind.name)
+            return .explicit(explicit, kindName: node.kind.name)
         }
 
         let prefix = parent.map { $0.rawValue + "/" } ?? ""

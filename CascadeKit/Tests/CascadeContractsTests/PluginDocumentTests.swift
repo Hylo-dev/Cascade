@@ -325,6 +325,7 @@ struct PluginDocumentTests {
         .button(action: "next"),
         .toggle(isOn: true, action: "play"),
         .slider(value: 0.5, minimum: 0, maximum: 1, step: 0.1, style: .ruler(labelEvery: 4, labels: .clockTime), action: "seek"),
+        .sliderValue(id: "ruler"),
         .component(id: "audio.spectrum", version: 1, parameters: ["bars": .number(12), "live": .bool(true)]),
         .regions,
     ]
@@ -353,12 +354,13 @@ struct PluginDocumentTests {
             case .button       : 16
             case .toggle       : 17
             case .slider       : 18
+            case .sliderValue  : 21
             case .component    : 19
             case .regions      : 20
         }
     }
 
-    private static let caseCount = 21
+    private static let caseCount = 22
 
     @Test
     func everyNodeKindRoundTripsThroughJSON() throws {
@@ -377,6 +379,60 @@ struct PluginDocumentTests {
         let document = try PluginDocument.decode(Data(json.utf8))
 
         #expect(document.root.kind == .slider(value: 0.5, minimum: 0, maximum: 1, step: nil, style: .standard, action: "volume"))
+    }
+
+    /// aSliderValueNamesASliderOfTheSameDocument: the node round-trips, takes no children, and
+    /// the id it names must be a slider's explicit id, before or after it, on either page.
+    @Test
+    func aSliderValueRoundTripsAndNamesASliderOfTheDocument() throws {
+        let slider = PluginNode(
+            .slider(value: 60, minimum: 15, maximum: 1_440, step: 15, style: .ruler(labelEvery: 4, labels: .duration), action: "set"),
+            id: "ruler"
+        )
+        let value  = PluginNode(.sliderValue(id: "ruler"))
+
+        for order in [[slider, value], [value, slider]] {
+            let document = try PluginDocument(root: PluginNode(.hStack(alignment: .center, spacing: nil), children: order))
+            let decoded  = try PluginDocument.decode(JSONEncoder().encode(document))
+
+            #expect(decoded == document)
+            #expect(decoded.root.children.contains { $0.kind == .sliderValue(id: "ruler") })
+        }
+
+        let split = try PluginDocument(root: slider, optionsRoot: value, optionsAction: nil)
+        #expect(split.optionsRoot?.kind == .sliderValue(id: "ruler"))
+
+        #expect(PluginNode(.sliderValue(id: "ruler")).kind.name == "sliderValue")
+        #expect(!PluginNodeKind.sliderValue(id: "ruler").takesChildren)
+        #expect(throws: AddonFailure.self) {
+            try PluginDocument(
+                root: PluginNode(
+                    .hStack(alignment: .center, spacing: nil),
+                    children: [slider, PluginNode(.sliderValue(id: "ruler"), children: [PluginNode(.text("x"))])]
+                )
+            )
+        }
+    }
+
+    @Test
+    func aSliderValueNeedsASliderOfTheSameDocument() {
+        let slider  = PluginNode(
+            .slider(value: 60, minimum: 15, maximum: 1_440, step: 15, style: .ruler(labelEvery: 4, labels: .duration), action: "set"),
+            id: "ruler"
+        )
+        let unnamed = PluginNode(.slider(value: 60, minimum: 15, maximum: 1_440, step: 15, action: "set"))
+        let button  = PluginNode(.button(action: "go"), id: "go", children: [PluginNode(.text("Go"))])
+        let stack   = { (children: [PluginNode]) in PluginNode(.vStack(alignment: .leading, spacing: nil), children: children) }
+
+        let unknown = stack([slider, PluginNode(.sliderValue(id: "missing"))])
+        let nothing = stack([PluginNode(.sliderValue(id: "ruler"))])
+        let notOne  = stack([slider, button, PluginNode(.sliderValue(id: "go"))])
+        let anon    = stack([unnamed, PluginNode(.sliderValue(id: "ruler"))])
+        let badID   = stack([slider, PluginNode(.sliderValue(id: "not valid!"))])
+
+        for root in [unknown, nothing, notOne, anon, badID] {
+            #expect(throws: AddonFailure.self) { try PluginDocument(root: root) }
+        }
     }
 
     @Test

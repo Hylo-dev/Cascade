@@ -61,6 +61,29 @@ final class PluginNodeStore {
         models[id]
     }
 
+    /// sliderReading is the value of the slider whose explicit id is `sliderID`, as the user sees
+    /// it now: the optimistic one, a drag's included, or else the published one. It reads the
+    /// slider's model, so a view that calls it is redrawn when that value changes and at no other
+    /// time. Nil when the document has no such slider, which validation prevents.
+    func sliderReading(_ sliderID: String) -> PluginSliderReading? {
+        guard let slider = models[.explicit(sliderID, kindName: "slider")],
+              case .slider(let published, let minimum, let maximum, let step, let style, _) = slider.kind
+        else { return nil }
+
+        let shown = slider.optimistic?.number ?? published
+
+        switch style {
+            case .standard:
+                return PluginSliderReading(value: shown, labels: nil)
+
+            case .ruler(_, let labels):
+                return PluginSliderReading(
+                    value : step.map { RulerGeometry.snapped(shown, minimum: minimum, maximum: maximum, step: $0) } ?? shown,
+                    labels: labels
+                )
+        }
+    }
+
     func isOptionsNode(_ id: PluginNodeID) -> Bool { optionsNodes.contains(id) }
 
     /// apply takes one change from the kernel. Removed nodes lose their models, inserted nodes

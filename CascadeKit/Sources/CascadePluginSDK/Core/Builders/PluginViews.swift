@@ -149,6 +149,15 @@ public func Text(
     PluginNode(.countdown(end: end, style: style))
 }
 
+/// Text(valueOf:) is the live value of the slider whose explicit `id` is `sliderID`, in the same
+/// document, drawn by the kernel. It follows the slider while the user drags it, with no
+/// publication: a duration ruler reads `1h 30m`, a clock-time ruler the instant's short local
+/// time, and a standard slider its number. Its font and colour are its own modifiers' like any
+/// text; the document is rejected if the id names nothing or a node that is not a slider.
+public func Text(valueOf sliderID: String) -> PluginNode {
+    PluginNode(.sliderValue(id: sliderID))
+}
+
 /// ProgressView(timerInterval:) is a bar that fills over the interval, drawn by the kernel.
 public func ProgressView(timerInterval: ClosedRange<Date>) -> PluginNode {
     PluginNode(.timerProgress(start: timerInterval.lowerBound, end: timerInterval.upperBound))
