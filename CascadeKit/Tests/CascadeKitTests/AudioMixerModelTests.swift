@@ -65,7 +65,7 @@ struct AudioMixerModelTests {
         let television = device(uid: "hdmi", transport: kAudioDeviceTransportTypeHDMI)
         let airPlay    = device(uid: "airplay", transport: kAudioDeviceTransportTypeAirPlay)
 
-        #expect(AudioOutputIcon.resolve(output: builtIn, level: 0.5, isMuted: false) == .symbol("laptopcomputer"))
+        #expect(AudioOutputIcon.resolve(output: builtIn, level: 0.5, isMuted: false) == .speaker(level: 50))
         #expect(AudioOutputIcon.resolve(output: airPods, level: 0.5, isMuted: false) == .symbol("airpods"))
         #expect(AudioOutputIcon.resolve(output: unknownUSB, level: 0.2, isMuted: false) == .speaker(level: 20))
         #expect(AudioOutputIcon.resolve(output: airPods, level: 0.5, isMuted: true) == .muted)

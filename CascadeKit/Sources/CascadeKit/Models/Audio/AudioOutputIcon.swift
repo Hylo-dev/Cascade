@@ -21,8 +21,10 @@ nonisolated public enum AudioOutputIcon: Equatable, Sendable {
 
     /// resolve picks the icon. Muted wins over everything, because it is the state the user most
     /// needs to see. A Bluetooth device with a verified identity gets the symbol of its model
-    /// (`symbolName`); one without falls back to headphones. Transports that say what the output physically is get their own
-    /// symbol, and anything else, or no output at all, shows the speaker for the level.
+    /// (`symbolName`); one without falls back to headphones. Transports that say what the output
+    /// physically is (a display, a television, AirPlay) get their own symbol. The built-in output
+    /// is the default one, and shows the speaker for the level like anything else, or no output
+    /// at all.
     public static func resolve(
         output : AudioOutputDevice?,
         level  : Double,
@@ -33,9 +35,6 @@ nonisolated public enum AudioOutputIcon: Equatable, Sendable {
         if let identity = output.bluetooth { return .symbol(symbolName(for: identity)) }
 
         switch output.transportType {
-            case kAudioDeviceTransportTypeBuiltIn:
-                return .symbol("laptopcomputer")
-
             case kAudioDeviceTransportTypeDisplayPort:
                 return .symbol("display")
 
