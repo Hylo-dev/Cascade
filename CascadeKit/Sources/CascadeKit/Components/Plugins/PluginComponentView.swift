@@ -59,6 +59,17 @@ struct PluginComponentView: View {
             case ("audio.volumeBar", 1):
                 AudioVolumeBarComponent()
 
+            case ("audio.mixer", 1):
+                AudioMixerComponent()
+
+            case ("audio.outputPicker", 1):
+                if let model = services?.audio {
+                    AudioOutputPicker(
+                        model  : model,
+                        onClose: {}
+                    )
+                }
+
             default:
                 Color.clear
         }

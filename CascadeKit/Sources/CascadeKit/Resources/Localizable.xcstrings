@@ -90,6 +90,28 @@
         }
       }
     },
+    "Apps appear here when they play audio": {
+      "comment": "Mixer: empty state of the area that will list the apps playing audio.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le app compaiono qui quando riproducono audio"
+          }
+        }
+      }
+    },
+    "Audio output": {
+      "comment": "Accessibility label of the audio output button and of its selector.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uscita audio"
+          }
+        }
+      }
+    },
     "Available": {
       "comment": "Shelf: availability of a file.",
       "localizations": {
@@ -248,6 +270,17 @@
         }
       }
     },
+    "Global volume": {
+      "comment": "Accessibility label of the mixer's system volume capsule.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volume globale"
+          }
+        }
+      }
+    },
     "Hidden Activity": {
       "comment": "Placeholder shown instead of a sensitive activity's content.",
       "localizations": {
@@ -300,6 +333,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Carica altri file"
+          }
+        }
+      }
+    },
+    "Mute": {
+      "comment": "Accessibility label of the button that mutes the system audio.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Silenzia"
           }
         }
       }
@@ -484,6 +528,17 @@
         }
       }
     },
+    "Several outputs": {
+      "comment": "Switch in the audio output selector: lets the user play to several outputs at once.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Più uscite"
+          }
+        }
+      }
+    },
     "Show in Finder": {
       "comment": "Shelf: context menu item.",
       "localizations": {
@@ -514,6 +569,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Non disponibile"
+          }
+        }
+      }
+    },
+    "Unmute": {
+      "comment": "Accessibility label of the button that unmutes the system audio.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riattiva audio"
           }
         }
       }
