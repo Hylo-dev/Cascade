@@ -82,7 +82,7 @@ struct AudioVolumeCapsule: View {
                         .foregroundStyle(
                             Self.iconInk(
                                 fillHeight: fillHeight,
-                                centre    : metrics.iconInset + metrics.iconSize / 2,
+                                centre    : metrics.iconCentre,
                                 isMuted   : isMuted
                             )
                         )

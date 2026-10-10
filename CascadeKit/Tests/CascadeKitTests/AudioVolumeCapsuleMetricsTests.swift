@@ -21,10 +21,11 @@ struct AudioVolumeCapsuleMetricsTests {
     func theIconAndTheTypeScaleWithTheCapsule() {
         let metrics = AudioVolumeCapsuleMetrics(availableWidth: 100, widthRatio: 0.6)
 
-        #expect(metrics.iconSize == 45)
-        #expect(metrics.symbolFontSize == 33.75)
-        #expect(metrics.iconInset == 30)
-        #expect(metrics.percentageFontSize == 33)
+        #expect(abs(metrics.iconSize - 29.4) < 0.001)
+        #expect(abs(metrics.symbolFontSize - 29.4) < 0.001)
+        #expect(abs(metrics.iconCentre - 30.6) < 0.001)
+        #expect(abs(metrics.iconInset - 15.9) < 0.001)
+        #expect(abs(metrics.percentageFontSize - 33) < 0.001)
     }
 
     @Test
@@ -49,7 +50,7 @@ struct AudioVolumeCapsuleMetricsTests {
 
         #expect(metrics.width == 80)
         #expect(metrics.cornerRadius == 40)
-        #expect(metrics.iconSize == 60)
+        #expect(abs(metrics.iconSize - 39.2) < 0.001)
     }
 
     @Test
