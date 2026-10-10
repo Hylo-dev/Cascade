@@ -31,6 +31,8 @@ struct AudioVolumeCapsule: View {
     let level          : Double
     let isMuted        : Bool
     let icon           : AudioOutputIcon?
+    /// iconOpacity dims the icon alone, for the unavailable look: the pill stays as it is.
+    let iconOpacity    : Double
     let showsPercentage: Bool
     let onLevel        : (Double) -> Void
     let onEnd          : () -> Void
@@ -74,6 +76,7 @@ struct AudioVolumeCapsule: View {
                                 fillHeight: fillHeight
                             )
                         )
+                        .opacity(iconOpacity)
                         .frame(width: metrics.iconSize, height: metrics.iconSize)
                         .padding(.bottom, metrics.iconInset)
                 }

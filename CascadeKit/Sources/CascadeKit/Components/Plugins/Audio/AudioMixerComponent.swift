@@ -6,10 +6,12 @@
 import SwiftUI
 
 /// AudioMixerComponent is the tier-2 component audio.mixer, the whole body of the audio widget's
-/// detail page. On the left is the global column: the level as a wide capsule under its
-/// percentage, with the output button and the mute button below it. A divider separates it from
-/// the apps area, which will hold one strip per app that plays audio and, until then, says where
-/// they will appear.
+/// detail page. The page is only as tall as the notch's ordinary expanded surface, so it is laid
+/// out around the hardware notch (`pluginPageObstruction`) instead of under a title bar. In the
+/// notch's left shoulder, beside the back button, sits one row: "Audio" and the level. Below the
+/// shoulder, the global column (the level as a capsule, with the output button and the mute
+/// button beside it), a divider, and the apps area, which will hold one strip per app that plays
+/// audio and, until then, says where they will appear.
 ///
 /// The output button opens the output selector in the apps area, beside the column. Whether it
 /// is open is local state of this view: nothing outside it cares, and nothing is kept once the
@@ -24,61 +26,103 @@ struct AudioMixerComponent: View {
     /// emptyAppsText is the apps area's empty state, which is also its localization key.
     static let emptyAppsText = "Apps appear here when they play audio"
 
-    private static let columnWidth: CGFloat = 46
-    private static let buttonSize : CGFloat = 20
+    /// titleLeadingInset leaves the back button's room: its 4 pt inset, its 24 pt and a gap.
+    static let titleLeadingInset: CGFloat = 30
+
+    /// bandHeightWithoutObstruction is the title row's height where no notch covers the top: the
+    /// back button and its insets.
+    static let bandHeightWithoutObstruction: CGFloat = 32
+
+    private static let capsuleWidth: CGFloat = 28
+    private static let buttonSize  : CGFloat = 20
 
     @Environment(\.pluginComponentServices)
     private var services
+
+    @Environment(\.pluginPageObstruction)
+    private var obstruction
 
     @State
     private var isPickerOpen = false
 
     var body: some View {
         if let model = services?.audio, let system = model.system {
-            HStack(spacing: 0) {
-                column(model: model, system: system)
+            let band = Self.bandHeight(obstruction: obstruction)
 
-                Rectangle()
-                    .fill(Color(white: 0.2))
-                    .frame(width: 1)
-                    .padding(.vertical, 4)
+            VStack(alignment: .leading, spacing: 0) {
+                titleRow(
+                    level: system.level,
+                    band : band
+                )
 
-                appsArea(model: model)
+                HStack(spacing: 10) {
+                    AudioGlobalVolumeControl(
+                        widthRatio     : 1,
+                        model          : model,
+                        system         : system,
+                        showsPercentage: false,
+                        onClick        : {
+                            isPickerOpen = false
+                        }
+                    )
+                    .frame(width: Self.capsuleWidth)
+
+                    VStack(spacing: 10) {
+                        outputButton(system: system)
+                        muteButton(model: model, system: system)
+                    }
+                    .frame(maxHeight: .infinity)
+
+                    Rectangle()
+                        .fill(Color(white: 0.2))
+                        .frame(width: 1)
+                        .padding(.vertical, 4)
+
+                    appsArea(model: model)
+                }
+                .padding(.top, 4)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 8)
             }
-            .padding(.horizontal, 12)
-            .padding(.bottom, 12)
         } else {
             Color.clear
         }
     }
 
-    private func column(
-        model : AudioMixerModel,
-        system: SystemAudioState
+    /// bandHeight is how tall the title row is: the notch's obstruction where there is one, so
+    /// the row sits in the shoulder beside it, else the back button's row at the top.
+    static func bandHeight(obstruction: CGRect) -> CGFloat {
+        obstruction.height > 0 ? obstruction.maxY : bandHeightWithoutObstruction
+    }
+
+    /// titleWidth is how far the title row may reach: up to the notch where there is one, else
+    /// as far as the page goes, so "Audio" never slides under the hardware.
+    static func titleWidth(obstruction: CGRect) -> CGFloat? {
+        obstruction.width > 0 ? Swift.max(0, obstruction.minX - titleLeadingInset) : nil
+    }
+
+    private func titleRow(
+        level: Double,
+        band : CGFloat
     ) -> some View {
-        VStack(spacing: 8) {
-            Text("\(Int((system.level * 100).rounded()))%")
-                .font(.system(size: 12, weight: .semibold))
-                .monospacedDigit()
+        HStack(spacing: 4) {
+            Text(String(localized: "Audio", bundle: .module))
                 .foregroundStyle(.white)
 
-            AudioGlobalVolumeControl(
-                widthRatio     : 1,
-                model          : model,
-                system         : system,
-                showsPercentage: false,
-                onClick        : {
-                    isPickerOpen = false
-                }
-            )
-
-            HStack(spacing: 6) {
-                outputButton(system: system)
-                muteButton(model: model, system: system)
-            }
+            Text("· \(Int((level * 100).rounded()))%")
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
         }
-        .frame(width: Self.columnWidth)
-        .padding(.trailing, 12)
+        .font(.system(size: 12, weight: .semibold))
+        .lineLimit(1)
+        .padding(.leading, Self.titleLeadingInset)
+        .frame(
+            width    : Self.titleWidth(obstruction: obstruction).map { $0 + Self.titleLeadingInset },
+            height   : band,
+            alignment: .leading
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .allowsHitTesting(false)
     }
 
     private func outputButton(system: SystemAudioState) -> some View {
@@ -156,9 +200,7 @@ struct AudioMixerComponent: View {
                         isPickerOpen = false
                     }
                 )
-                .padding(.leading, 12)
-                .frame(maxWidth: 260, maxHeight: .infinity)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxHeight: .infinity)
             } else {
                 Text(String(localized: "Apps appear here when they play audio", bundle: .module))
                     .font(.system(size: 12))

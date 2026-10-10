@@ -12,9 +12,12 @@ import SwiftUI
 /// In single mode a choice makes that output the system output and closes the picker. In several
 /// mode a choice joins or leaves the multi-output and the picker stays open, so the user can
 /// build the set in one visit. Closing is the owner's business: the picker only says when.
+///
+/// It fills the mixer's apps area, which is short: rows are 22 pt, and they sit in a vertical
+/// scroll view, so more than four outputs scroll instead of growing the page.
 struct AudioOutputPicker: View {
 
-    private static let rowHeight: CGFloat = 30
+    private static let rowHeight: CGFloat = 22
 
     let model  : AudioMixerModel
     let onClose: () -> Void
@@ -33,11 +36,11 @@ struct AudioOutputPicker: View {
             allowsSeveralOutputs : model.allowsSeveralOutputs
         )
 
-        return VStack(spacing: 4) {
+        return VStack(spacing: 2) {
             header
 
-            ScrollView {
-                VStack(spacing: 2) {
+            ScrollView(.vertical) {
+                VStack(spacing: 0) {
                     ForEach(rows) { row in
                         rowView(row)
                     }
@@ -45,7 +48,7 @@ struct AudioOutputPicker: View {
             }
             .scrollIndicators(.hidden)
         }
-        .padding(8)
+        .padding(4)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(white: 0.12))
@@ -88,8 +91,8 @@ struct AudioOutputPicker: View {
         } label: {
             HStack(spacing: 8) {
                 AudioOutputIconView(icon: row.icon)
-                    .font(.system(size: 13))
-                    .frame(width: 22, height: 22)
+                    .font(.system(size: 12))
+                    .frame(width: 18, height: 18)
 
                 Text(row.name)
                     .font(.system(size: 12, weight: row.isSelected ? .semibold : .regular))

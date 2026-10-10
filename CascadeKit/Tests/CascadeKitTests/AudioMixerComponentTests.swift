@@ -194,4 +194,18 @@ struct AudioMixerComponentTests {
             ) > 0
         )
     }
+
+    @Test
+    func theTitleRowFollowsTheNotchObstruction() {
+        let notch = CGRect(x: 110, y: 0, width: 180, height: 28)
+
+        #expect(AudioMixerComponent.bandHeight(obstruction: notch) == 28)
+        #expect(AudioMixerComponent.titleWidth(obstruction: notch) == 80)
+    }
+
+    @Test
+    func withoutAnObstructionTheTitleRowSitsAtTheTop() {
+        #expect(AudioMixerComponent.bandHeight(obstruction: .zero) == 32)
+        #expect(AudioMixerComponent.titleWidth(obstruction: .zero) == nil)
+    }
 }

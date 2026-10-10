@@ -38,6 +38,7 @@ struct AudioGlobalVolumeControl: View {
             level          : system.level,
             isMuted        : system.isMuted,
             icon           : icon,
+            iconOpacity    : 1,
             showsPercentage: showsPercentage,
             onLevel        : { level in
                 guard system.supportsVolume else { return }

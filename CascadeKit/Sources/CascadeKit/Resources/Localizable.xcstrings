@@ -101,6 +101,17 @@
         }
       }
     },
+    "Audio": {
+      "comment": "Title of the audio mixer page, beside the level.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio"
+          }
+        }
+      }
+    },
     "Audio output": {
       "comment": "Accessibility label of the audio output button and of its selector.",
       "localizations": {

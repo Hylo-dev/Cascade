@@ -44,6 +44,7 @@ struct AudioVolumeBarComponent: View {
             level          : 0,
             isMuted        : false,
             icon           : .symbol("speaker.slash"),
+            iconOpacity    : 0.5,
             showsPercentage: false,
             onLevel        : { _ in },
             onEnd          : {},
