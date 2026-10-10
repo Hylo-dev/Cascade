@@ -33,10 +33,13 @@ final class FakeSystemAudioHardware: SystemAudioHardware, Sendable {
         var setMutedCalls   : [(isMuted: Bool, deviceID: UInt32)] = []
         var setDefaultCalls : [String] = []
         var listenCount     = 0
+        var enumerationCount = 0
+        var refusesWrites   = false
         var stopCount       = 0
         var callCount       = 0
         var mainThreadCalls = 0
-        var onChange        : (@Sendable () -> Void)?
+        var onDevicesChange : (@Sendable () -> Void)?
+        var onVolumeChange  : (@Sendable () -> Void)?
     }
 
     private let state = Mutex(State())
@@ -49,16 +52,22 @@ final class FakeSystemAudioHardware: SystemAudioHardware, Sendable {
         state.withLock { read($0) }
     }
 
-    /// fireChange plays a listener callback. The test calls it on the service's queue, where the
-    /// real listener blocks run.
-    func fireChange() {
-        let onChange = state.withLock { $0.onChange }
+    /// fireDevicesChange and fireVolumeChange play the listeners. The test calls them on the
+    /// service's queue, where the real listener blocks run.
+    func fireDevicesChange() {
+        let onChange = state.withLock { $0.onDevicesChange }
+        onChange?()
+    }
+
+    func fireVolumeChange() {
+        let onChange = state.withLock { $0.onVolumeChange }
         onChange?()
     }
 
     func outputDevices() -> [AudioOutputDevice] {
         state.withLock {
             $0.note()
+            $0.enumerationCount += 1
             return $0.devices
         }
     }
@@ -86,7 +95,7 @@ final class FakeSystemAudioHardware: SystemAudioHardware, Sendable {
         state.withLock {
             $0.note()
             $0.setVolumeCalls.append((level, deviceID))
-            return true
+            return !$0.refusesWrites
         }
     }
 
@@ -97,7 +106,7 @@ final class FakeSystemAudioHardware: SystemAudioHardware, Sendable {
         state.withLock {
             $0.note()
             $0.setMutedCalls.append((isMuted, deviceID))
-            return true
+            return !$0.refusesWrites
         }
     }
 
@@ -116,11 +125,15 @@ final class FakeSystemAudioHardware: SystemAudioHardware, Sendable {
         }
     }
 
-    func listen(_ onChange: @escaping @Sendable () -> Void) {
+    func listen(
+        onDevicesChange: @escaping @Sendable () -> Void,
+        onVolumeChange : @escaping @Sendable () -> Void
+    ) {
         state.withLock {
             $0.note()
             $0.listenCount += 1
-            $0.onChange = onChange
+            $0.onDevicesChange = onDevicesChange
+            $0.onVolumeChange  = onVolumeChange
         }
     }
 
@@ -128,7 +141,8 @@ final class FakeSystemAudioHardware: SystemAudioHardware, Sendable {
         state.withLock {
             $0.note()
             $0.stopCount += 1
-            $0.onChange = nil
+            $0.onDevicesChange = nil
+            $0.onVolumeChange  = nil
         }
     }
 }

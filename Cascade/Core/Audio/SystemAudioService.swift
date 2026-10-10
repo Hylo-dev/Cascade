@@ -16,6 +16,12 @@ import Dispatch
 /// one main-queue hop. Nothing runs between events: no timer, no polling, the hardware's
 /// listeners are the only thing that wake the queue.
 ///
+/// Reading is split by cost. The device list (every device, its streams, name and transport) and
+/// the members of a multi-output are read when the devices change, at start and after choosing
+/// an output, and kept on the queue. A change of level or mute, which a drag fires dozens of
+/// times a second, re-reads only the default output and its level. A reading equal to the last
+/// one delivered is not delivered again.
+///
 /// A command carries the HAL id of the device it was meant for. The queue compares it with the
 /// default output read at that moment and drops the command on a mismatch, because a level meant
 /// for the headphones must never land on the speakers the user switched to a moment ago.
@@ -31,10 +37,11 @@ final class SystemAudioService: SystemAudioControlling {
 
     /// multiOutputUIDPrefix marks the aggregates Cascade builds for several outputs; they are an
     /// implementation of the selection, never an output the user picks.
-    nonisolated private static let multiOutputUIDPrefix = CoreAudioSystemVolume.multiOutputUIDPrefix
+    nonisolated fileprivate static let multiOutputUIDPrefix = CoreAudioSystemVolume.multiOutputUIDPrefix
 
     nonisolated private let hardware: any SystemAudioHardware
     nonisolated private let queue   : DispatchQueue
+    nonisolated private let reader  : SystemAudioQueueReader
 
     /// model is lazy because it takes the service as its controller, and a stored `let` cannot be
     /// given `self` before the service is fully built. It is created on first use, on the main
@@ -51,6 +58,7 @@ final class SystemAudioService: SystemAudioControlling {
     ) {
         self.hardware = hardware
         self.queue    = queue
+        self.reader   = SystemAudioQueueReader(hardware: hardware)
     }
 
     /// start listens to the hardware and publishes the first snapshot. Calling it again does
@@ -60,10 +68,12 @@ final class SystemAudioService: SystemAudioControlling {
 
         isStarted = true
         queue.async { [self] in
-            hardware.listen { [weak self] in
-                self?.publishSnapshot()
-            }
-            publishSnapshot()
+            reader.forgetLastDelivery()
+            hardware.listen(
+                onDevicesChange: { [weak self] in self?.devicesDidChange() },
+                onVolumeChange : { [weak self] in self?.publishSnapshot() }
+            )
+            devicesDidChange()
         }
     }
 
@@ -120,16 +130,18 @@ final class SystemAudioService: SystemAudioControlling {
         guard uids.count == 1, let uid = uids.first else { return }
 
         queue.async { [self] in
-            if !hardware.setDefaultOutput(uid: uid) { publishSnapshot() }
+            let didSelect = hardware.setDefaultOutput(uid: uid)
+            reader.refreshDevices()
+            publishSnapshot(forced: !didSelect)
         }
     }
 
     // MARK: - Queue
 
     /// run does a hardware write on the queue if the default output is still the device the
-    /// command was made for. A write that fails publishes a fresh snapshot: a success is
-    /// announced by the hardware's own listener, but a refusal is silent, and the model's
-    /// optimistic state would otherwise stay.
+    /// command was made for. A write that fails publishes a fresh snapshot even if it equals the
+    /// last one: a success is announced by the hardware's own listener, but a refusal is silent,
+    /// and the model's optimistic state would otherwise stay.
     private func run(
         onlyIfDefaultIs deviceID: UInt32,
         _ write                 : @escaping @Sendable (any SystemAudioHardware) -> Bool
@@ -137,44 +149,28 @@ final class SystemAudioService: SystemAudioControlling {
         queue.async { [self] in
             guard hardware.defaultOutput()?.deviceID == deviceID else { return }
 
-            if !write(hardware) { publishSnapshot() }
+            if !write(hardware) { publishSnapshot(forced: true) }
         }
     }
 
-    /// publishSnapshot reads the system output and hands it to the main actor. It runs on the
-    /// queue, from a listener or from a command.
-    nonisolated private func publishSnapshot() {
-        guard let reading = Self.read(hardware) else { return }
+    /// devicesDidChange re-reads the device list and the multi-output members, then publishes.
+    /// It runs on the queue, from the hardware's devices listener or from start.
+    nonisolated private func devicesDidChange() {
+        reader.refreshDevices()
+        publishSnapshot()
+    }
+
+    /// publishSnapshot reads the default output and its level, with the cached device list, and
+    /// hands the result to the main actor unless it is the one already delivered. `forced` skips
+    /// that comparison. It runs on the queue, from a listener or from a command.
+    nonisolated private func publishSnapshot(forced: Bool = false) {
+        guard let reading = reader.reading(forced: forced) else { return }
 
         DispatchQueue.main.async { [weak self] in
             MainActor.assumeIsolated {
                 self?.deliver(reading)
             }
         }
-    }
-
-    /// read builds one reading. The outputs carry no Bluetooth identity yet; the main actor
-    /// attaches it on delivery.
-    nonisolated private static func read(_ hardware: any SystemAudioHardware) -> SystemAudioState? {
-        guard let output = hardware.defaultOutput() else { return nil }
-
-        let volume  = hardware.volume(of: output.deviceID)
-        let outputs = hardware.outputDevices().filter { !$0.uid.hasPrefix(multiOutputUIDPrefix) }
-
-        var selectedUIDs = [output.uid]
-        if output.uid.hasPrefix(multiOutputUIDPrefix),
-           let members = hardware.subDeviceUIDs(ofAggregate: output.uid) {
-            selectedUIDs = members
-        }
-
-        return SystemAudioState(
-            level          : volume?.level ?? 0,
-            isMuted        : volume?.isMuted ?? false,
-            supportsVolume : volume?.supportsVolume ?? false,
-            outputs        : outputs,
-            selectedUIDs   : selectedUIDs,
-            defaultDeviceID: output.deviceID
-        )
     }
 
     // MARK: - Main actor
@@ -207,5 +203,70 @@ final class SystemAudioService: SystemAudioControlling {
                 defaultDeviceID: reading.defaultDeviceID
             )
         )
+    }
+}
+
+/// SystemAudioQueueReader is the service's queue-side memory: the device list, the members of the
+/// default output when it is a multi-output, and the last reading handed to the main actor.
+///
+/// All of it is touched only on the service's serial queue, which is what makes the unchecked
+/// `Sendable` honest: the service owns it from `nonisolated` code that runs there and from
+/// nowhere else.
+nonisolated private final class SystemAudioQueueReader: @unchecked Sendable {
+
+    private let hardware: any SystemAudioHardware
+
+    private var outputs       : [AudioOutputDevice] = []
+    private var members       : (uid: String, uids: [String])?
+    private var lastDelivered : SystemAudioState?
+
+    init(hardware: any SystemAudioHardware) {
+        self.hardware = hardware
+    }
+
+    /// forgetLastDelivery makes the next reading go out whatever it is, after a start.
+    func forgetLastDelivery() {
+        lastDelivered = nil
+    }
+
+    /// refreshDevices re-reads what only a change of devices can alter: the outputs, which hide
+    /// Cascade's own aggregates, and the members of the default output if it is one.
+    func refreshDevices() {
+        outputs = hardware.outputDevices().filter { !$0.uid.hasPrefix(SystemAudioService.multiOutputUIDPrefix) }
+        members = nil
+        if let output = hardware.defaultOutput() { _ = memberUIDs(of: output.uid) }
+    }
+
+    /// reading builds the state from the cached devices and the default output's level, or nil
+    /// when there is no default output or the state is the one delivered last.
+    func reading(forced: Bool) -> SystemAudioState? {
+        guard let output = hardware.defaultOutput() else { return nil }
+
+        let volume = hardware.volume(of: output.deviceID)
+        let state  = SystemAudioState(
+            level          : volume?.level ?? 0,
+            isMuted        : volume?.isMuted ?? false,
+            supportsVolume : volume?.supportsVolume ?? false,
+            outputs        : outputs,
+            selectedUIDs   : memberUIDs(of: output.uid) ?? [output.uid],
+            defaultDeviceID: output.deviceID
+        )
+        guard forced || state != lastDelivered else { return nil }
+
+        lastDelivered = state
+        return state
+    }
+
+    /// memberUIDs gives the members of a multi-output default, read once and kept until the
+    /// devices change; nil for any other output.
+    private func memberUIDs(of uid: String) -> [String]? {
+        guard uid.hasPrefix(SystemAudioService.multiOutputUIDPrefix) else { return nil }
+
+        if let members, members.uid == uid { return members.uids }
+
+        guard let uids = hardware.subDeviceUIDs(ofAggregate: uid) else { return nil }
+
+        members = (uid, uids)
+        return uids
     }
 }

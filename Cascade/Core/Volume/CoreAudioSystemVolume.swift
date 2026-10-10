@@ -63,14 +63,22 @@ nonisolated final class CoreAudioSystemVolume: SystemVolumeControlling {
 
     /// start registers the default-output listener before its silent baseline
     /// so a device switch cannot fall between enumeration and registration.
-    func start(onChange: @escaping @Sendable () -> Void) -> Bool {
+    ///
+    /// `onChange` hears every change by default. A caller that wants to tell a switch of
+    /// output from a change of level passes `onOutputChange`: the default-output listener then
+    /// calls that one, and `onChange` is left to the volume and mute listeners.
+    func start(
+        onChange      : @escaping @Sendable () -> Void,
+        onOutputChange: (@Sendable () -> Void)? = nil
+    ) -> Bool {
         stop()
         changeHandler = onChange
 
+        let outputHandler = onOutputChange ?? onChange
         let registered = addListener(
             objectID: AudioObjectID(kAudioObjectSystemObject),
             address : Self.defaultOutputAddress,
-            block   : { _, _ in onChange() }
+            block   : { _, _ in outputHandler() }
         )
         refreshOutput()
         return registered
@@ -176,20 +184,21 @@ nonisolated final class CoreAudioSystemVolume: SystemVolumeControlling {
         return true
     }
 
-    /// setScalar sets every volume control of the default output to one level, so the level read
-    /// back is the level asked for. It is as transactional as `perform`: if one write fails, the
-    /// ones already made are restored and the answer is false. Mute is not touched; whoever
-    /// wants sound back unmutes explicitly.
+    /// setScalar moves the default output to one level, the way `perform` moves it: the mean of
+    /// its controls becomes the target, and every control shifts by the same distance, so a
+    /// left/right balance made of separate channel scalars survives. It is as transactional as
+    /// `perform`: if one write fails, the ones already made are restored and the answer is
+    /// false. Mute is not touched; whoever wants sound back unmutes explicitly.
     ///
-    /// The cost of an absolute level is a stereo balance set through separate channel scalars,
-    /// which it levels out; the outputs that have one are rare, and the bar shows a single level.
+    /// A control that hits 0 or 1 on the way keeps the mean short of the target; that is the
+    /// price of keeping the balance, and the same one a volume key pays at the ends.
     func setScalar(_ value: Double) -> Bool {
         refreshOutput()
         guard snapshot() != nil, !controls.isEmpty else { return false }
 
-        let level = Float32(min(1, max(0, value)))
+        let values  = Self.rebalanced(controls.map(\.value), to: value)
         var written: [ScalarControl] = []
-        for control in controls {
+        for (control, level) in zip(controls, values) {
             let address = Self.address(
                 selector: kAudioDevicePropertyVolumeScalar,
                 element : control.element
@@ -203,6 +212,20 @@ nonisolated final class CoreAudioSystemVolume: SystemVolumeControlling {
         }
 
         return true
+    }
+
+    /// rebalanced shifts every value by the distance from their mean to the target, clamped to
+    /// 0...1. It is pure, so the balance rule is checked without any hardware.
+    static func rebalanced(
+        _ values: [Float32],
+        to target: Double
+    ) -> [Float32] {
+        guard !values.isEmpty else { return [] }
+
+        let mean  = values.reduce(0.0) { $0 + Double($1) } / Double(values.count)
+        let delta = min(1, max(0, target)) - mean
+
+        return values.map { Float32(min(1, max(0, Double($0) + delta))) }
     }
 
     /// setMuted mutes or unmutes every mute control of the default output, restoring on failure.

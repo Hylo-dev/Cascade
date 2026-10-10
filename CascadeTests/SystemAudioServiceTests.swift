@@ -48,11 +48,16 @@ struct SystemAudioServiceTests {
         }
     }
 
-    /// fireChangeOnTheQueue plays a hardware listener, which runs on the service's queue. It
-    /// posts with `async`: `sync` from the main thread may run its block on the main thread.
-    private func fireChangeOnTheQueue() {
+    /// The fire helpers play a hardware listener, which runs on the service's queue. They post
+    /// with `async`: `sync` from the main thread may run its block on the main thread.
+    private func fireDevicesChangeOnTheQueue() {
         let hardware = hardware
-        queue.async { hardware.fireChange() }
+        queue.async { hardware.fireDevicesChange() }
+    }
+
+    private func fireVolumeChangeOnTheQueue() {
+        let hardware = hardware
+        queue.async { hardware.fireVolumeChange() }
     }
 
     private func playBuiltInAsDefault() {
@@ -125,7 +130,8 @@ struct SystemAudioServiceTests {
         service.stop()
         await settle()
         hardware.edit { $0.volumes[7] = .init(level: 0.9, isMuted: false) }
-        hardware.fireChange()
+        hardware.fireDevicesChange()
+        hardware.fireVolumeChange()
         await settle()
 
         #expect(hardware.read { $0.stopCount } == 1)
@@ -149,7 +155,7 @@ struct SystemAudioServiceTests {
             $0.defaultOutput = (7, "BuiltInSpeakerDevice")
             $0.volumes[7]    = .init(level: 0.4, isMuted: false)
         }
-        fireChangeOnTheQueue()
+        fireDevicesChangeOnTheQueue()
         await settle()
 
         let system = service.model.system
@@ -292,12 +298,76 @@ struct SystemAudioServiceTests {
         service.setMuted(true, forDevice: 7)
         service.selectOutputs([Self.airPodsUID])
         service.receive(bluetoothState(deviceID: "A0-1B-2C-3D-4E-F5", model: .airPods))
-        fireChangeOnTheQueue()
+        fireDevicesChangeOnTheQueue()
+        fireVolumeChangeOnTheQueue()
         await settle()
         service.stop()
         await settle()
 
         #expect(hardware.read { $0.callCount } > 0)
         #expect(hardware.read { $0.mainThreadCalls } == 0)
+    }
+
+    @Test
+    func volumeChangeDoesNotReenumerateDevices() async {
+        playBuiltInAsDefault()
+        let service = makeService()
+        service.start()
+        await settle()
+        let enumerationsAtStart = hardware.read { $0.enumerationCount }
+
+        hardware.edit { $0.volumes[7] = .init(level: 0.8, isMuted: false) }
+        fireVolumeChangeOnTheQueue()
+        await settle()
+
+        #expect(service.model.system?.level == 0.8)
+        #expect(hardware.read { $0.enumerationCount } == enumerationsAtStart)
+
+        hardware.edit { $0.devices = [Self.builtIn] }
+        fireDevicesChangeOnTheQueue()
+        await settle()
+
+        #expect(hardware.read { $0.enumerationCount } == enumerationsAtStart + 1)
+        #expect(service.model.system?.outputs == [Self.builtIn])
+    }
+
+    /// The model's `system` is Equatable, so setting an equal reading is invisible to observation.
+    /// These two tests tell a delivery from a skipped one by what the model shows instead: an
+    /// optimistic mute the hardware has not confirmed is wiped by any reading that reaches it.
+    @Test
+    func identicalReadingIsNotRedelivered() async {
+        playBuiltInAsDefault()
+        let service = makeService()
+        service.start()
+        await settle()
+        service.model.toggleMute()
+        await settle()
+        #expect(service.model.system?.isMuted == true)
+
+        fireVolumeChangeOnTheQueue()
+        fireDevicesChangeOnTheQueue()
+        await settle()
+        #expect(service.model.system?.isMuted == true)
+
+        hardware.edit { $0.volumes[7] = .init(level: 0.5, isMuted: false) }
+        fireVolumeChangeOnTheQueue()
+        await settle()
+        #expect(service.model.system?.isMuted == false)
+        #expect(service.model.system?.level == 0.5)
+    }
+
+    @Test
+    func aRefusedWriteRepublishesTheReadingEvenIfNothingChanged() async {
+        playBuiltInAsDefault()
+        let service = makeService()
+        service.start()
+        await settle()
+        hardware.edit { $0.refusesWrites = true }
+
+        service.model.toggleMute()
+        await settle()
+
+        #expect(hardware.read { $0.setMutedCalls.count } == 1)
+        #expect(service.model.system?.isMuted == false)
     }
 }

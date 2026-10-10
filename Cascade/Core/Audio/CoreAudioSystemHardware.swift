@@ -95,17 +95,24 @@ nonisolated final class CoreAudioSystemHardware: SystemAudioHardware, @unchecked
         return AudioOutputHAL.subDeviceUIDs(ofAggregate: device)
     }
 
-    /// listen watches the default output and the controls of the device behind it (through the
-    /// volume object, which rebuilds its device listeners when the default moves) and the device
-    /// list. Before `onChange` runs, the volume object is told to look at the default again, so a
-    /// switch of output is followed by listeners on the new device before the service reads it.
-    func listen(_ onChange: @escaping @Sendable () -> Void) {
+    /// listen watches the default output and the device list (`onDevicesChange`) and the
+    /// controls of the device behind the default output (`onVolumeChange`, through the volume
+    /// object, which rebuilds its device listeners when the default moves). Before a switch of
+    /// output is reported, the volume object looks at the new default, so its listeners are on
+    /// the new device before the service reads it.
+    func listen(
+        onDevicesChange: @escaping @Sendable () -> Void,
+        onVolumeChange : @escaping @Sendable () -> Void
+    ) {
         stopListening()
 
-        let didStart = volume.start(onChange: { [weak self] in
-            self?.volume.refreshOutput()
-            onChange()
-        })
+        let didStart = volume.start(
+            onChange      : onVolumeChange,
+            onOutputChange: { [weak self] in
+                self?.volume.refreshOutput()
+                onDevicesChange()
+            }
+        )
         if !didStart { logger.error("Default output listener was not registered") }
 
         var address = AudioObjectPropertyAddress(
@@ -113,7 +120,7 @@ nonisolated final class CoreAudioSystemHardware: SystemAudioHardware, @unchecked
             mScope   : kAudioObjectPropertyScopeGlobal,
             mElement : kAudioObjectPropertyElementMain
         )
-        let block: AudioObjectPropertyListenerBlock = { _, _ in onChange() }
+        let block: AudioObjectPropertyListenerBlock = { _, _ in onDevicesChange() }
         let status = AudioObjectAddPropertyListenerBlock(
             AudioObjectID(kAudioObjectSystemObject),
             &address,

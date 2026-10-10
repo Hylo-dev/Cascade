@@ -40,9 +40,15 @@ nonisolated protocol SystemAudioHardware: AnyObject, Sendable {
     /// not an aggregate.
     func subDeviceUIDs(ofAggregate uid: String) -> [String]?
 
-    /// listen calls `onChange` on the service's queue when the devices, the default output, or
-    /// the level or mute of the default output change. A second call replaces the first.
-    func listen(_ onChange: @escaping @Sendable () -> Void)
+    /// listen starts the two kinds of change the service cares about, on the service's queue.
+    /// `onDevicesChange` is the device list or the default output changing; it costs the service
+    /// a full enumeration. `onVolumeChange` is the level or mute of the default output, which
+    /// can fire dozens of times a second during a drag, and costs the service two small reads.
+    /// A second call replaces the first.
+    func listen(
+        onDevicesChange: @escaping @Sendable () -> Void,
+        onVolumeChange : @escaping @Sendable () -> Void
+    )
 
     func stopListening()
 }
