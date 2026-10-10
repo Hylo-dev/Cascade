@@ -18,8 +18,8 @@ import SwiftUI
 /// editing, and a hold neither clicks nor moves the level.
 ///
 /// A level change redraws only the fill's height and the ink; the capsule is not rebuilt. No
-/// timers and no animation loop: the only animation is the `.snappy` swell while the percentage
-/// shows, driven by that flag alone, so dragging the level never animates frame by frame.
+/// timers and no animation loop: the only animation is the `.snappy` swell while the user adjusts,
+/// driven by `isAdjusting` alone, so dragging the level never animates frame by frame.
 struct AudioVolumeCapsule: View {
 
     private static let percentageInset: CGFloat = 10
@@ -33,6 +33,7 @@ struct AudioVolumeCapsule: View {
     let icon           : AudioOutputIcon?
     /// iconOpacity dims the icon alone, for the unavailable look: the pill stays as it is.
     let iconOpacity    : Double
+    let isAdjusting    : Bool
     let showsPercentage: Bool
     let onLevel        : (Double) -> Void
     let onEnd          : () -> Void
@@ -94,8 +95,8 @@ struct AudioVolumeCapsule: View {
                 RoundedRectangle(cornerRadius: metrics.cornerRadius)
                     .strokeBorder(.white.opacity(0.12), lineWidth: 1)
             }
-            .scaleEffect(showsPercentage ? 1.05 : 1)
-            .animation(.snappy, value: showsPercentage)
+            .scaleEffect(isAdjusting ? 1.05 : 1)
+            .animation(.snappy, value: isAdjusting)
             .frame(width: metrics.width, height: height)
             .frame(width: geometry.size.width, height: height)
             .contentShape(Rectangle())

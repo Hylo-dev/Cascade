@@ -60,6 +60,7 @@ struct AudioMixerComponent: View {
                         widthRatio     : 1,
                         model          : model,
                         system         : system,
+                        isAdjusting    : false,
                         showsPercentage: false,
                         onClick        : {
                             isPickerOpen = false

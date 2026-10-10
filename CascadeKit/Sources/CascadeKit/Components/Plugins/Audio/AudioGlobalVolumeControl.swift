@@ -12,8 +12,9 @@ import SwiftUI
 /// scroll or an accessibility step behaves the same in both places and is fixed in one.
 ///
 /// It is handed the reading to draw, so its owner decides what to do when there is none. What
-/// differs between its uses comes in as two values: whether the capsule shows the percentage and
-/// what a click does.
+/// differs between its uses comes in as three values: whether the capsule swells while the user
+/// adjusts (`isAdjusting`), whether it writes the percentage (`showsPercentage`; only the mixer
+/// shows the level, in its title row) and what a click does.
 struct AudioGlobalVolumeControl: View {
 
     /// accessibilityStep is how far the VoiceOver increment and decrement move the level.
@@ -22,6 +23,7 @@ struct AudioGlobalVolumeControl: View {
     let widthRatio     : CGFloat
     let model          : AudioMixerModel
     let system         : SystemAudioState
+    let isAdjusting    : Bool
     let showsPercentage: Bool
     let onClick        : (() -> Void)?
 
@@ -39,6 +41,7 @@ struct AudioGlobalVolumeControl: View {
             isMuted        : system.isMuted,
             icon           : icon,
             iconOpacity    : 1,
+            isAdjusting    : isAdjusting,
             showsPercentage: showsPercentage,
             onLevel        : { level in
                 guard system.supportsVolume else { return }
