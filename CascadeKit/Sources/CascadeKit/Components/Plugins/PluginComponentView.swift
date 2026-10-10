@@ -12,7 +12,15 @@ import SwiftUI
 /// unavailable.
 struct PluginComponentView: View {
 
-    static let identifiers: Set<String> = ["power.battery", "volume.level", "bluetooth.device", "bluetooth.battery"]
+    static let identifiers: Set<String> = [
+        "power.battery",
+        "volume.level",
+        "bluetooth.device",
+        "bluetooth.battery",
+        "audio.volumeBar",
+        "audio.mixer",
+        "audio.outputPicker",
+    ]
 
     @Environment(\.pluginComponentServices)
     private var services
@@ -47,6 +55,9 @@ struct PluginComponentView: View {
                     level      : parameters["level"]?.number.map(Self.percent),
                     isConnected: parameters["isConnected"]?.bool ?? false
                 )
+
+            case ("audio.volumeBar", 1):
+                AudioVolumeBarComponent()
 
             default:
                 Color.clear
