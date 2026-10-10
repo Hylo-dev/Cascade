@@ -16,6 +16,7 @@ fi
 mkdir -p "$module_cache"
 
 source_files=(
+    "$project_directory/Cascade/Core/Audio/AudioOutputHAL.swift"
     "$project_directory/Cascade/Core/Volume/CoreAudioSystemVolume.swift"
     "$project_directory/Cascade/Core/Volume/VolumeMonitorWorker.swift"
     "$project_directory/Cascade/Core/Volume/CoreAudioVolumeMonitor.swift"
