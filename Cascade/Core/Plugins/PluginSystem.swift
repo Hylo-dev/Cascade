@@ -20,24 +20,30 @@ import Foundation
 /// reach the engine, as the native Bluetooth banner's suppressor does.
 final class PluginSystem {
 
-    private let host         : any PluginSurfaceHosting
-    private let kernelSources: [String: any PluginEventSource]
-    private var engine       : PluginEngine?
-    private var surfaces     : PluginSurfaceRouter?
-    private var isStarting   = false
-    private var disabled     = Set<PluginID>()
-    private var observers    : [String: @Sendable (PluginSourceEvent) -> Void] = [:]
+    private let host             : any PluginSurfaceHosting
+    private let kernelSources    : [String: any PluginEventSource]
+    private let services         : Set<String>
+    private let componentServices: PluginComponentServices?
+    private var engine           : PluginEngine?
+    private var surfaces         : PluginSurfaceRouter?
+    private var isStarting       = false
+    private var disabled         = Set<PluginID>()
+    private var observers        : [String: @Sendable (PluginSourceEvent) -> Void] = [:]
 
     /// statusHandler receives the engine's status on the main thread whenever it changes: each
     /// plugin's state and PluginHost's, for settings.
     var statusHandler: (PluginEngineStatus) -> Void = { _ in }
 
     init(
-        host   : any PluginSurfaceHosting,
-        sources: [String: any PluginEventSource] = [:]
+        host             : any PluginSurfaceHosting,
+        sources          : [String: any PluginEventSource] = [:],
+        services         : Set<String> = [],
+        componentServices: PluginComponentServices? = nil
     ) {
-        self.host          = host
-        self.kernelSources = sources
+        self.host              = host
+        self.kernelSources     = sources
+        self.services          = services
+        self.componentServices = componentServices
     }
 
     /// start reads the bundled manifests and the app's signing team off the main thread, since
@@ -114,6 +120,7 @@ final class PluginSystem {
         let surfaces = PluginSurfaceRouter(
             host      : host,
             manifests : manifests,
+            services  : componentServices,
             submit    : { [weak self] request in self?.engine?.submit(request) },
             visibility: { [weak self] isVisible, key in self?.engine?.setVisible(isVisible, for: key) }
         )
@@ -132,6 +139,7 @@ final class PluginSystem {
         let engine = PluginEngine(
             executor  : executor,
             sources   : sources,
+            services  : services,
             components: PluginSurfaceRouter.components,
             sink      : surfaces.makeSink()
         )

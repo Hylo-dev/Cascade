@@ -98,6 +98,18 @@ final class CascadeServices {
         }
     }
 
+    var audioEnabled: Bool {
+        didSet {
+            preferences.set(audioEnabled, forKey: "audioEnabled")
+            plugins.setEnabled(audioEnabled, for: AudioPlugin.id)
+            if audioEnabled && isRunning {
+                systemAudio.start()
+            } else {
+                systemAudio.stop()
+            }
+        }
+    }
+
     var chargingEnabled: Bool {
         didSet {
             preferences.set(chargingEnabled, forKey: "chargingEnabled")
@@ -171,6 +183,8 @@ final class CascadeServices {
     @ObservationIgnored
     private let suppressor    = AccessibilityBluetoothNoticeSuppressor()
     @ObservationIgnored
+    private let systemAudio  : SystemAudioService
+    @ObservationIgnored
     private let volumeSource = VolumePluginSource(monitor: CoreAudioVolumeMonitor())
     @ObservationIgnored
     private let network      : any NetworkMonitoring = NetworkConnectionMonitor()
@@ -218,7 +232,18 @@ final class CascadeServices {
             displayPreferences: displayPreferencesStore.preferences
         )
         self.notch                   = notch
-        plugins                      = PluginSystem(host: notch, sources: [PluginVolumeState.source: volumeSource])
+        let audioQueue  = DispatchQueue(label: "cascade.system-audio", qos: .utility)
+        let systemAudio = SystemAudioService(
+            hardware: CoreAudioSystemHardware(queue: audioQueue),
+            queue   : audioQueue
+        )
+        self.systemAudio             = systemAudio
+        plugins                      = PluginSystem(
+            host             : notch,
+            sources          : [PluginVolumeState.source: volumeSource],
+            services         : ["audio.system"],
+            componentServices: PluginComponentServices(audio: systemAudio.model)
+        )
         self.displayPreferencesStore = displayPreferencesStore
 
         let fileShelfGovernor = ResourceGovernor()
@@ -268,6 +293,7 @@ final class CascadeServices {
         bluetoothEnabled         = preferences.object(forKey: "bluetoothEnabled") as? Bool ?? true
         nativeReplacementEnabled = preferences.object(forKey: "nativeReplacementEnabled") as? Bool ?? true
         volumeEnabled            = preferences.object(forKey: "volumeEnabled") as? Bool ?? true
+        audioEnabled             = preferences.object(forKey: "audioEnabled") as? Bool ?? true
         chargingEnabled          = preferences.object(forKey: "chargingEnabled") as? Bool ?? true
         musicEnabled             = preferences.object(forKey: "musicEnabled") as? Bool ?? true
         audioVisualizerEnabled   = preferences.object(forKey: "audioVisualizerEnabled") as? Bool ?? true
@@ -296,7 +322,10 @@ final class CascadeServices {
             guard let state = PluginBluetoothState(event) else { return }
 
             DispatchQueue.main.async { [weak self] in
-                MainActor.assumeIsolated { self?.receiveBluetooth(state) }
+                MainActor.assumeIsolated {
+                    self?.receiveBluetooth(state)
+                    self?.systemAudio.receive(state)
+                }
             }
         }
 
@@ -386,6 +415,8 @@ final class CascadeServices {
         plugins.setEnabled(bluetoothEnabled, for: BluetoothPlugin.id)
         plugins.setEnabled(chargingEnabled, for: ChargingPlugin.id)
         plugins.setEnabled(volumeEnabled, for: VolumePlugin.id)
+        plugins.setEnabled(audioEnabled, for: AudioPlugin.id)
+        if audioEnabled { systemAudio.start() }
         plugins.start()
         notch.setHapticsEnabled(hapticsEnabled)
         notch.setSensitiveContentVisible(sensitiveContentVisible)
@@ -469,6 +500,8 @@ final class CascadeServices {
         network.stop()
 
         notch.setBorderAppearance(.neutral)
+
+        systemAudio.stop()
 
         bluetoothStatus = .stopped
         suppressor.stop()

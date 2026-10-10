@@ -55,6 +55,17 @@
           }
         }
       }
+    },
+    "Volume widget": {
+      "comment": "Settings name of the volume widget plugin.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Widget volume"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

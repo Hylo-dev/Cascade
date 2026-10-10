@@ -29,8 +29,17 @@ struct FirstPartyPluginsTests {
     func everyManifestHasAProvider() {
         let manifests = FirstPartyPlugins.manifests()
 
-        #expect(manifests.map(\.id.rawValue) == ["com.cascade.battery", "com.cascade.bluetooth", "com.cascade.clock", "com.cascade.power", "com.cascade.volume"])
+        #expect(manifests.map(\.id.rawValue) == ["com.cascade.audio", "com.cascade.battery", "com.cascade.bluetooth", "com.cascade.clock", "com.cascade.power", "com.cascade.volume"])
         #expect(manifests.allSatisfy { FirstPartyPlugins.providers[$0.execution.entryPoint] != nil })
+    }
+
+    @Test
+    func bundledManifestsIncludeAudio() throws {
+        let manifest = try #require(FirstPartyPlugins.manifests().first { $0.id == AudioPlugin.id })
+
+        #expect(FirstPartyPlugins.providers[manifest.execution.entryPoint] != nil)
+        #expect(manifest.features.first?.services == ["audio.system"])
+        #expect(manifest.features.first?.surfaces.detail != nil)
     }
 
     @Test
