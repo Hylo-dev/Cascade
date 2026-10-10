@@ -1,6 +1,12 @@
 # Services, storage and assets
 
-**Planned, not built.** Nothing on this page exists in the plugin engine yet. `PluginContext` names only the plugin, `PluginEngine` is composed with no services, and a feature that declares a service is unavailable. This page keeps the rules the plugin engine spec fixed, and the ones carried over from the v1 addon runtime, so that the services and Music sub-project, which brings the first services, starts from them.
+**Mostly planned.** One service exists, `audio.system`, described below. The rest of this page is not built: `PluginContext` names only the plugin, the engine offers no client calls, and a feature that declares any service other than `audio.system` is unavailable. This page keeps the rules the plugin engine spec fixed, and the ones carried over from the v1 addon runtime, so that the services and Music sub-project, which brings the next services, starts from them.
+
+## What exists: `audio.system`
+
+`audio.system` is a kernel service: the app's `SystemAudioService` owns the system audio on its own queue, and the components `audio.volumeBar`, `audio.mixer` and `audio.outputPicker` read and command it directly, never through the plugin. It covers the global volume, mute, the system output device, and a multi-output: the system output played on several devices at once, through an aggregate device the service creates and removes. The Audio plugin (`com.cascade.audio`) declares the service and the three components, and publishes the same two documents, one per surface, whatever the volume does. It has no client call: the plugin never reads the service, so the synchronous client calls below are not needed for it.
+
+Per-app volume and the audio of each app (`AudioHost`, `audio.apps`, `audio.capture`) are planned, not built.
 
 ## Services
 
@@ -11,7 +17,7 @@ A service is a call a plugin makes, declared per feature in the manifest's `serv
 | Kernel | Touches frames, input or the notch window, or updates the UI more than about ten times a second | Spectrum capture (Core Audio tap), the spacebar and Spotlight input taps, the file shelf, Spotlight |
 | PluginHost | Talks to other apps or parses system data at human frequency | Now playing and Music commands (AppleEvents), Bluetooth, power, network |
 
-The planned service-fed components, `audio.spectrum`, `media.scrubber` and `audio.outputPicker`, will bind only to kernel services and get their data from them directly, never through the plugin; the four components drawn today take the parameters their plugin passes (see [Content](content.md)). Data born in PluginHost reaches the kernel as publication data: artwork, for example, will travel through the asset pipeline. Volume, which spec §6 placed in PluginHost, is a kernel source today, beside the volume key tap it shares a subsystem with.
+The service-fed components, `audio.volumeBar`, `audio.mixer` and `audio.outputPicker` today and `audio.spectrum` and `media.scrubber` later, bind only to kernel services and get their data from them directly, never through the plugin; the other four components drawn today take the parameters their plugin passes (see [Content](content.md)). Data born in PluginHost reaches the kernel as publication data: artwork, for example, will travel through the asset pipeline. Volume, which spec §6 placed in PluginHost, is a kernel source today, beside the volume key tap it shares a subsystem with.
 
 The SDK's client calls will be synchronous: each blocks the plugin's own thread with a timeout, and returning past the kernel's 250 ms deadline still counts as a hang. A plugin cannot make two client calls in parallel, which is acceptable for thin, event-driven plugins.
 

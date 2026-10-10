@@ -76,9 +76,9 @@ The morph is one interpolation between two geometries, driven by a normalized pr
 ### Plugin layer (the modular surface)
 
 - A plugin conforms to **`PluginProvider`** (`CascadePluginSDK`): one synchronous `handle(_:context:)` that answers a `PluginEvent` with a `PluginOutput` of publications. It knows *nothing* about Cascade's internals and, of Cascade's modules, imports only `CascadePluginSDK` and `CascadeContracts`.
-- Every plugin is declared by a **manifest v2** (`PluginManifest`): its features, the surfaces each one fills (widget, activity, notice), the catalog sources that wake it, the tier-2 components it shows, its permissions and its actions. The first-party plugins are listed in `FirstPartyPlugins` (`CascadePlugins`), their manifests bundled beside them as JSON: Battery and Clock (widgets), and the Bluetooth, Charging and Volume alerts (notices).
+- Every plugin is declared by a **manifest v2** (`PluginManifest`): its features, the surfaces each one fills (widget, activity, notice, and a detail page a widget's click opens), the catalog sources that wake it, the tier-2 components it shows, its permissions and its actions. The first-party plugins are listed in `FirstPartyPlugins` (`CascadePlugins`), their manifests bundled beside them as JSON: Battery and Clock (widgets), Audio (the volume widget, whose click opens a detail page with the mixer), and the Bluetooth, Charging and Volume alerts (notices).
 - `NotchWidget`, `NotchLiveActivity`, `NotchTransientNotice` and `NotchContextualPage` are CascadeKit's internal host seams, not the plugin contract. Only kernel adapters (`PluginWidget`, `PluginNotice`) and system surfaces implement them.
-- Still pending: Music as a plugin with its media and spectrum services (the services and Music sub-project), slot pages and arbitration (the layout sub-project), external plugins, and the storage, assets and services pipelines.
+- Still pending: Music as a plugin with its media and spectrum services (the services and Music sub-project), per-app audio (`AudioHost`, the `audio.apps` and `audio.capture` services), slot pages and arbitration (the layout sub-project), external plugins, and the storage, assets and services pipelines.
 - The contract is **severe about resources**: see *Plugin contract* below and the Plugin SDK section of `CODE_STYLE.md`.
 
 ### Layout & memory (the fast path)
