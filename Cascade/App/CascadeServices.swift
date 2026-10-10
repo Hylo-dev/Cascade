@@ -502,6 +502,7 @@ final class CascadeServices {
         notch.setBorderAppearance(.neutral)
 
         systemAudio.stop()
+        systemAudio.restoreBeforeQuit()
 
         bluetoothStatus = .stopped
         suppressor.stop()

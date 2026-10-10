@@ -370,4 +370,259 @@ struct SystemAudioServiceTests {
         #expect(hardware.read { $0.setMutedCalls.count } == 1)
         #expect(service.model.system?.isMuted == false)
     }
+
+    // MARK: - Multi-output
+
+    private static let usbUID = "AppleUSBAudioEngine:usb"
+
+    private static let usb = AudioOutputDevice(
+        uid          : usbUID,
+        name         : "USB DAC",
+        transportType: kAudioDeviceTransportTypeUSB,
+        bluetooth    : nil
+    )
+
+    private static let leftoverUID = "cascade.multi-output.old"
+
+    private static let leftover = AudioOutputDevice(
+        uid          : leftoverUID,
+        name         : "Cascade Multi-Output",
+        transportType: kAudioDeviceTransportTypeAggregate,
+        bluetooth    : nil
+    )
+
+    /// playThreeOutputs gives the fake three real devices with HAL ids, the built-in one playing.
+    private func playThreeOutputs() {
+        hardware.edit {
+            $0.devices       = [Self.builtIn, Self.airPods, Self.usb]
+            $0.deviceIDs     = [Self.builtIn.uid: 7, Self.airPodsUID: 9, Self.usbUID: 11]
+            $0.defaultOutput = (7, Self.builtIn.uid)
+            $0.volumes[7]    = .init(level: 0.4, isMuted: false)
+        }
+    }
+
+    private func removeDevice(_ uid: String) {
+        hardware.edit { $0.devices.removeAll { $0.uid == uid } }
+    }
+
+    @Test
+    func severalOutputsCreateOneAggregateAndMakeItDefault() async {
+        playThreeOutputs()
+        let service = makeService()
+        service.start()
+        await settle()
+
+        service.selectOutputs([Self.builtIn.uid, Self.airPodsUID])
+        await settle()
+
+        let aggregate = "cascade.multi-output.created-0"
+        #expect(hardware.read { $0.createdAggregates } == [[Self.builtIn.uid, Self.airPodsUID]])
+        #expect(hardware.read { $0.defaultOutput?.uid } == aggregate)
+        #expect(hardware.read { $0.operations } == ["create:\(aggregate)", "default:\(aggregate)"])
+        #expect(service.model.system?.selectedUIDs == [Self.builtIn.uid, Self.airPodsUID])
+        #expect(service.model.system?.outputs == [Self.builtIn, Self.airPods, Self.usb])
+    }
+
+    @Test
+    func turningSeveralOffLeavesARealDeviceAndDestroysTheAggregate() async {
+        playThreeOutputs()
+        let service = makeService()
+        service.start()
+        await settle()
+        service.selectOutputs([Self.builtIn.uid, Self.airPodsUID])
+        await settle()
+
+        service.selectOutputs([Self.airPodsUID])
+        await settle()
+
+        let aggregate = "cascade.multi-output.created-0"
+        #expect(hardware.read { $0.defaultOutput?.uid } == Self.airPodsUID)
+        #expect(hardware.read { $0.destroyedAggregates } == [aggregate])
+        #expect(hardware.read { Array($0.operations.suffix(2)) } == ["default:\(Self.airPodsUID)", "destroy:\(aggregate)"])
+        #expect(service.model.system?.selectedUIDs == [Self.airPodsUID])
+    }
+
+    @Test
+    func changingTheSetReplacesTheAggregate() async {
+        playThreeOutputs()
+        let service = makeService()
+        service.start()
+        await settle()
+        service.selectOutputs([Self.builtIn.uid, Self.airPodsUID])
+        await settle()
+
+        service.selectOutputs([Self.builtIn.uid, Self.airPodsUID, Self.usbUID])
+        await settle()
+
+        let first  = "cascade.multi-output.created-0"
+        let second = "cascade.multi-output.created-1"
+        #expect(hardware.read { $0.createdAggregates.count } == 2)
+        #expect(hardware.read { $0.destroyedAggregates } == [first])
+        #expect(hardware.read { $0.defaultOutput?.uid } == second)
+        #expect(hardware.read { Array($0.operations.suffix(3)) } == ["create:\(second)", "default:\(second)", "destroy:\(first)"])
+    }
+
+    @Test
+    func aRefusedAggregateLeavesTheCurrentOutputAlone() async {
+        playThreeOutputs()
+        hardware.edit { $0.refusesCreate = true }
+        let service = makeService()
+        service.start()
+        await settle()
+
+        service.selectOutputs([Self.builtIn.uid, Self.airPodsUID])
+        await settle()
+
+        #expect(hardware.read { $0.setDefaultCalls.isEmpty })
+        #expect(hardware.read { $0.defaultOutput?.uid } == Self.builtIn.uid)
+    }
+
+    @Test
+    func launchDestroysLeftoverCascadeAggregates() async {
+        playThreeOutputs()
+        hardware.edit {
+            $0.devices.append(Self.leftover)
+            $0.aggregateSubDevices[Self.leftoverUID] = [Self.airPodsUID, Self.builtIn.uid]
+            $0.deviceIDs[Self.leftoverUID]           = 20
+        }
+        let service = makeService()
+
+        service.start()
+        await settle()
+
+        #expect(hardware.read { $0.destroyedAggregates } == [Self.leftoverUID])
+        #expect(hardware.read { $0.setDefaultCalls.isEmpty })
+        #expect(service.model.system?.outputs == [Self.builtIn, Self.airPods, Self.usb])
+        #expect(service.model.system?.selectedUIDs == [Self.builtIn.uid])
+    }
+
+    @Test
+    func leftoverThatIsTheDefaultIsReplacedBeforeItIsDestroyed() async {
+        playThreeOutputs()
+        hardware.edit {
+            $0.devices.append(Self.leftover)
+            $0.aggregateSubDevices[Self.leftoverUID] = [Self.airPodsUID, Self.builtIn.uid]
+            $0.deviceIDs[Self.leftoverUID]           = 20
+            $0.defaultOutput                         = (20, Self.leftoverUID)
+        }
+        let service = makeService()
+
+        service.start()
+        await settle()
+
+        #expect(hardware.read { $0.operations } == ["default:\(Self.airPodsUID)", "destroy:\(Self.leftoverUID)"])
+        #expect(hardware.read { $0.defaultOutput?.uid } == Self.airPodsUID)
+        #expect(service.model.system?.selectedUIDs == [Self.airPodsUID])
+    }
+
+    @Test
+    func startingAgainDoesNotTreatTheLiveAggregateAsALeftover() async {
+        playThreeOutputs()
+        let service = makeService()
+        service.start()
+        await settle()
+        service.selectOutputs([Self.builtIn.uid, Self.airPodsUID])
+        await settle()
+
+        service.stop()
+        await settle()
+        service.start()
+        await settle()
+
+        #expect(hardware.read { $0.destroyedAggregates.isEmpty })
+        #expect(hardware.read { $0.defaultOutput?.uid } == "cascade.multi-output.created-0")
+    }
+
+    @Test
+    func quitRestoresTheClockDevice() async {
+        playThreeOutputs()
+        let service = makeService()
+        service.start()
+        await settle()
+        service.selectOutputs([Self.airPodsUID, Self.builtIn.uid])
+        await settle()
+
+        service.restoreBeforeQuit()
+
+        let aggregate = "cascade.multi-output.created-0"
+        #expect(hardware.read { $0.defaultOutput?.uid } == Self.airPodsUID)
+        #expect(hardware.read { $0.destroyedAggregates } == [aggregate])
+        #expect(hardware.read { Array($0.operations.suffix(2)) } == ["default:\(Self.airPodsUID)", "destroy:\(aggregate)"])
+    }
+
+    @Test
+    func quitWithoutAnAggregateTouchesNothing() async {
+        playThreeOutputs()
+        let service = makeService()
+        service.start()
+        await settle()
+
+        service.restoreBeforeQuit()
+
+        #expect(hardware.read { $0.setDefaultCalls.isEmpty })
+        #expect(hardware.read { $0.destroyedAggregates.isEmpty })
+    }
+
+    @Test
+    func losingAllButOneSubDeviceFallsBackToIt() async {
+        playThreeOutputs()
+        let service = makeService()
+        service.start()
+        await settle()
+        service.selectOutputs([Self.builtIn.uid, Self.airPodsUID, Self.usbUID])
+        await settle()
+        let aggregate = "cascade.multi-output.created-0"
+
+        removeDevice(Self.usbUID)
+        fireDevicesChangeOnTheQueue()
+        await settle()
+
+        #expect(hardware.read { $0.destroyedAggregates.isEmpty })
+        #expect(hardware.read { $0.defaultOutput?.uid } == aggregate)
+
+        removeDevice(Self.airPodsUID)
+        fireDevicesChangeOnTheQueue()
+        await settle()
+
+        #expect(hardware.read { $0.defaultOutput?.uid } == Self.builtIn.uid)
+        #expect(hardware.read { $0.destroyedAggregates } == [aggregate])
+        #expect(hardware.read { Array($0.operations.suffix(2)) } == ["default:\(Self.builtIn.uid)", "destroy:\(aggregate)"])
+        #expect(service.model.system?.selectedUIDs == [Self.builtIn.uid])
+    }
+
+    @Test
+    func losingEverySubDeviceFallsBackToTheBuiltInOutput() async {
+        playThreeOutputs()
+        let service = makeService()
+        service.start()
+        await settle()
+        service.selectOutputs([Self.airPodsUID, Self.usbUID])
+        await settle()
+        let aggregate = "cascade.multi-output.created-0"
+
+        removeDevice(Self.airPodsUID)
+        removeDevice(Self.usbUID)
+        fireDevicesChangeOnTheQueue()
+        await settle()
+
+        #expect(hardware.read { $0.defaultOutput?.uid } == Self.builtIn.uid)
+        #expect(hardware.read { $0.destroyedAggregates } == [aggregate])
+    }
+
+    @Test
+    func anAggregateThatIsNoLongerTheDefaultIsDestroyed() async {
+        playThreeOutputs()
+        let service = makeService()
+        service.start()
+        await settle()
+        service.selectOutputs([Self.builtIn.uid, Self.airPodsUID])
+        await settle()
+
+        hardware.edit { $0.defaultOutput = (11, Self.usbUID) }
+        fireDevicesChangeOnTheQueue()
+        await settle()
+
+        #expect(hardware.read { $0.destroyedAggregates } == ["cascade.multi-output.created-0"])
+        #expect(hardware.read { $0.defaultOutput?.uid } == Self.usbUID)
+    }
 }

@@ -43,6 +43,8 @@ final class SystemAudioService: SystemAudioControlling {
     nonisolated private let queue   : DispatchQueue
     nonisolated private let reader  : SystemAudioQueueReader
 
+    nonisolated private let multiOutput: SystemAudioMultiOutput
+
     /// model is lazy because it takes the service as its controller, and a stored `let` cannot be
     /// given `self` before the service is fully built. It is created on first use, on the main
     /// actor, where the service lives.
@@ -59,6 +61,8 @@ final class SystemAudioService: SystemAudioControlling {
         self.hardware = hardware
         self.queue    = queue
         self.reader   = SystemAudioQueueReader(hardware: hardware)
+
+        self.multiOutput = SystemAudioMultiOutput(hardware: hardware)
     }
 
     /// start listens to the hardware and publishes the first snapshot. Calling it again does
@@ -69,6 +73,7 @@ final class SystemAudioService: SystemAudioControlling {
         isStarted = true
         queue.async { [self] in
             reader.forgetLastDelivery()
+            multiOutput.cleanUpLeftovers()
             hardware.listen(
                 onDevicesChange: { [weak self] in self?.devicesDidChange() },
                 onVolumeChange : { [weak self] in self?.publishSnapshot() }
@@ -123,17 +128,30 @@ final class SystemAudioService: SystemAudioControlling {
         }
     }
 
-    /// selectOutputs makes one output the system output. Several at once is the multi-output,
-    /// which is not built yet (Task 10 adds it), so that case does nothing for now rather than
-    /// pretending.
+    /// selectOutputs makes the given outputs the system output: one device directly, several as
+    /// Cascade's multi-output aggregate (`SystemAudioMultiOutput`). A selection the hardware
+    /// refuses publishes the reading anyway, so the selector snaps back to what is really playing.
     func selectOutputs(_ uids: [String]) {
-        guard uids.count == 1, let uid = uids.first else { return }
-
         queue.async { [self] in
-            let didSelect = hardware.setDefaultOutput(uid: uid)
+            let didSelect = multiOutput.select(uids)
             reader.refreshDevices()
             publishSnapshot(forced: !didSelect)
         }
+    }
+
+    /// restoreBeforeQuit gives the system a real default output back before Cascade exits, and
+    /// destroys the multi-output if one is active. It is the one place that waits on the main
+    /// thread, because a quitting process has no later moment: it is bounded to two seconds, so
+    /// a stuck HAL cannot hold the quit, and it is a no-op when no aggregate is active.
+    ///
+    /// It is `nonisolated` on purpose: a work item built inside a main-actor method inherits the
+    /// main actor, and running it on the service's queue would trap.
+    nonisolated func restoreBeforeQuit() {
+        let work = DispatchWorkItem { [multiOutput] in
+            multiOutput.restoreBeforeQuit()
+        }
+        queue.async(execute: work)
+        _ = work.wait(timeout: .now() + 2)
     }
 
     // MARK: - Queue
@@ -153,10 +171,13 @@ final class SystemAudioService: SystemAudioControlling {
         }
     }
 
-    /// devicesDidChange re-reads the device list and the multi-output members, then publishes.
+    /// devicesDidChange re-reads the device list and the multi-output members, lets the
+    /// multi-output follow a member that came or went (re-reading if it moved the default), then
+    /// publishes.
     /// It runs on the queue, from the hardware's devices listener or from start.
     nonisolated private func devicesDidChange() {
         reader.refreshDevices()
+        if multiOutput.reconcile(outputs: reader.outputs) { reader.refreshDevices() }
         publishSnapshot()
     }
 
@@ -216,9 +237,9 @@ nonisolated private final class SystemAudioQueueReader: @unchecked Sendable {
 
     private let hardware: any SystemAudioHardware
 
-    private var outputs       : [AudioOutputDevice] = []
-    private var members       : (uid: String, uids: [String])?
-    private var lastDelivered : SystemAudioState?
+    private(set) var outputs : [AudioOutputDevice] = []
+    private var members      : (uid: String, uids: [String])?
+    private var lastDelivered: SystemAudioState?
 
     init(hardware: any SystemAudioHardware) {
         self.hardware = hardware

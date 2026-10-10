@@ -95,6 +95,22 @@ nonisolated final class CoreAudioSystemHardware: SystemAudioHardware, @unchecked
         return AudioOutputHAL.subDeviceUIDs(ofAggregate: device)
     }
 
+    func createMultiOutput(subDeviceUIDs: [String]) -> String? {
+        AudioOutputHAL.createStackedAggregate(
+            named         : "Cascade Multi-Output",
+            uid           : CoreAudioSystemVolume.multiOutputUIDPrefix + UUID().uuidString,
+            subDeviceUIDs : subDeviceUIDs
+        )
+    }
+
+    func destroyAggregate(uid: String) -> Bool {
+        AudioOutputHAL.destroyAggregate(uid: uid)
+    }
+
+    func aggregateUIDs(withPrefix prefix: String) -> [String] {
+        AudioOutputHAL.aggregateUIDs(withPrefix: prefix)
+    }
+
     /// listen watches the default output and the device list (`onDevicesChange`) and the
     /// controls of the device behind the default output (`onVolumeChange`, through the volume
     /// object, which rebuilds its device listeners when the default moves). Before a switch of

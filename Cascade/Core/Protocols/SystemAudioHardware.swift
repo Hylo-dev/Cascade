@@ -40,6 +40,20 @@ nonisolated protocol SystemAudioHardware: AnyObject, Sendable {
     /// not an aggregate.
     func subDeviceUIDs(ofAggregate uid: String) -> [String]?
 
+    /// createMultiOutput builds a public, stacked aggregate over the given outputs, in order, and
+    /// returns its uid (`cascade.multi-output.<uuid>`), or nil when the HAL refuses. The first
+    /// member is the aggregate's main and clock device. It does not make the aggregate the
+    /// default output: that is a separate step, so the caller decides the order.
+    func createMultiOutput(subDeviceUIDs: [String]) -> String?
+
+    /// destroyAggregate removes an aggregate for good. The answer is whether the HAL did.
+    func destroyAggregate(uid: String) -> Bool
+
+    /// aggregateUIDs lists the uid of every aggregate device whose uid starts with the prefix,
+    /// output streams or not. A public aggregate outlives a killed Cascade, so this is how the
+    /// next launch finds what was left behind.
+    func aggregateUIDs(withPrefix prefix: String) -> [String]
+
     /// listen starts the two kinds of change the service cares about, on the service's queue.
     /// `onDevicesChange` is the device list or the default output changing; it costs the service
     /// a full enumeration. `onVolumeChange` is the level or mute of the default output, which

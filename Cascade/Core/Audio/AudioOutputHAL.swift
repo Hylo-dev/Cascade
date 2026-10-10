@@ -42,6 +42,24 @@ nonisolated enum AudioOutputHAL {
     /// outputDevices lists every device with output streams, by name. Aggregates are included:
     /// hiding Cascade's own is a decision of the service, not of the HAL reader.
     static func outputDevices() -> [(id: AudioDeviceID, name: String)] {
+        allDevices().compactMap { device in
+            var streams = AudioObjectPropertyAddress(
+                mSelector: kAudioDevicePropertyStreams,
+                mScope   : kAudioDevicePropertyScopeOutput,
+                mElement : kAudioObjectPropertyElementMain
+            )
+            var streamSize: UInt32 = 0
+            guard AudioObjectGetPropertyDataSize(device, &streams, 0, nil, &streamSize) == noErr,
+                  streamSize > 0,
+                  let name = string(kAudioObjectPropertyName, of: device)
+            else { return nil }
+
+            return (device, name)
+        }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
+    /// allDevices lists every audio device the HAL knows, outputs or not.
+    private static func allDevices() -> [AudioDeviceID] {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDevices,
             mScope   : kAudioObjectPropertyScopeGlobal,
@@ -62,20 +80,7 @@ nonisolated enum AudioOutputHAL {
             &devices
         ) == noErr else { return [] }
 
-        return devices.compactMap { device in
-            var streams = AudioObjectPropertyAddress(
-                mSelector: kAudioDevicePropertyStreams,
-                mScope   : kAudioDevicePropertyScopeOutput,
-                mElement : kAudioObjectPropertyElementMain
-            )
-            var streamSize: UInt32 = 0
-            guard AudioObjectGetPropertyDataSize(device, &streams, 0, nil, &streamSize) == noErr,
-                  streamSize > 0,
-                  let name = string(kAudioObjectPropertyName, of: device)
-            else { return nil }
-
-            return (device, name)
-        }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        return devices
     }
 
     static func uid(of device: AudioDeviceID) -> String? {
@@ -127,16 +132,7 @@ nonisolated enum AudioOutputHAL {
     /// subDeviceUIDs lists the members of an aggregate device in the order it was built, or nil
     /// when the device is not an aggregate (or cannot be read).
     static func subDeviceUIDs(ofAggregate device: AudioDeviceID) -> [String]? {
-        var classAddress = AudioObjectPropertyAddress(
-            mSelector: kAudioObjectPropertyClass,
-            mScope   : kAudioObjectPropertyScopeGlobal,
-            mElement : kAudioObjectPropertyElementMain
-        )
-        var deviceClass: AudioClassID = 0
-        var classSize = UInt32(MemoryLayout<AudioClassID>.size)
-        guard AudioObjectGetPropertyData(device, &classAddress, 0, nil, &classSize, &deviceClass) == noErr,
-              deviceClass == kAudioAggregateDeviceClassID
-        else { return nil }
+        guard isAggregate(device) else { return nil }
 
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioAggregateDevicePropertyFullSubDeviceList,
@@ -151,6 +147,80 @@ nonisolated enum AudioOutputHAL {
         guard status == noErr, let list else { return nil }
 
         return (list.takeRetainedValue() as? [String]) ?? []
+    }
+
+    /// isAggregate says whether a device is an aggregate, by its class.
+    static func isAggregate(_ device: AudioDeviceID) -> Bool {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioObjectPropertyClass,
+            mScope   : kAudioObjectPropertyScopeGlobal,
+            mElement : kAudioObjectPropertyElementMain
+        )
+        var deviceClass: AudioClassID = 0
+        var size = UInt32(MemoryLayout<AudioClassID>.size)
+
+        return AudioObjectGetPropertyData(device, &address, 0, nil, &size, &deviceClass) == noErr
+            && deviceClass == kAudioAggregateDeviceClassID
+    }
+
+    /// aggregateUIDs lists the uid of every aggregate whose uid starts with the prefix. It looks
+    /// at the class before it reads the uid, so a long device list costs one small read per
+    /// device that is not an aggregate.
+    static func aggregateUIDs(withPrefix prefix: String) -> [String] {
+        allDevices().compactMap { device in
+            guard isAggregate(device),
+                  let uid = uid(of: device),
+                  uid.hasPrefix(prefix)
+            else { return nil }
+
+            return uid
+        }
+    }
+
+    /// createStackedAggregate builds a public, stacked aggregate named `name` with the given uid
+    /// over the members, in order, and returns its uid, or nil when the HAL refuses.
+    ///
+    /// Public, because a private aggregate is invisible to the system and cannot be the default
+    /// output. Stacked, so every member plays the same stream instead of the members being
+    /// concatenated into one multichannel device. The first member is the main sub-device and the
+    /// clock; every other member follows it with drift compensation, or the devices slowly part.
+    /// The numeric flags are `Int`, not `Bool`: the keys are documented as CFNumber, and a Swift
+    /// `Bool` crosses into a dictionary as a CFBoolean.
+    static func createStackedAggregate(
+        named name           : String,
+        uid                  : String,
+        subDeviceUIDs members: [String]
+    ) -> String? {
+        guard let clock = members.first else { return nil }
+
+        let subDevices: [[String: Any]] = members.enumerated().map { index, member in
+            var entry: [String: Any] = [kAudioSubDeviceUIDKey: member]
+            if index > 0 { entry[kAudioSubDeviceDriftCompensationKey] = 1 }
+            return entry
+        }
+        let description: [String: Any] = [
+            kAudioAggregateDeviceNameKey         : name,
+            kAudioAggregateDeviceUIDKey          : uid,
+            kAudioAggregateDeviceMainSubDeviceKey: clock,
+            kAudioAggregateDeviceClockDeviceKey  : clock,
+            kAudioAggregateDeviceIsPrivateKey    : 0,
+            kAudioAggregateDeviceIsStackedKey    : 1,
+            kAudioAggregateDeviceSubDeviceListKey: subDevices,
+        ]
+        var created = AudioObjectID(kAudioObjectUnknown)
+
+        guard AudioHardwareCreateAggregateDevice(description as CFDictionary, &created) == noErr
+        else { return nil }
+
+        return uid
+    }
+
+    /// destroyAggregate removes the aggregate that owns the uid; false when there is none or the
+    /// HAL refuses.
+    static func destroyAggregate(uid: String) -> Bool {
+        guard let device = device(forUID: uid) else { return false }
+
+        return AudioHardwareDestroyAggregateDevice(device) == noErr
     }
 
     private static var defaultOutputAddress: AudioObjectPropertyAddress {
