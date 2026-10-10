@@ -48,13 +48,22 @@ struct AudioMixerComponentTests {
         return (model, controller)
     }
 
-    /// pixels counts what a view draws at more than half opacity; a view that draws nothing has
-    /// no image at all, which counts as zero.
+    /// pixels counts what a view draws at more than half opacity; a view that draws nothing
+    /// counts zero. Each call hosts the view and caches its display into a bitmap of its own:
+    /// `ImageRenderer` hands an empty view the backing store of a previous render, so a view that
+    /// draws nothing could read back another test's pixels.
     private func pixels<Content: View>(of view: Content) -> Int {
-        let renderer = ImageRenderer(content: view.frame(width: 440, height: 200).environment(\.colorScheme, .dark))
-        guard let image = renderer.cgImage else { return 0 }
+        let host = NSHostingView(
+            rootView: view
+                .frame(width: 440, height: 200)
+                .environment(\.colorScheme, .dark)
+        )
+        host.frame = CGRect(x: 0, y: 0, width: 440, height: 200)
+        host.layoutSubtreeIfNeeded()
 
-        let bitmap = NSBitmapImageRep(cgImage: image)
+        guard let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { return 0 }
+
+        host.cacheDisplay(in: host.bounds, to: bitmap)
 
         return (0..<bitmap.pixelsWide).reduce(0) { count, x in
             count + (0..<bitmap.pixelsHigh).count { y in (bitmap.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.5 }
