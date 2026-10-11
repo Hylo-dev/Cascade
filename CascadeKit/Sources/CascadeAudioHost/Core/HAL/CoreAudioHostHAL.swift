@@ -166,6 +166,7 @@ final class CoreAudioHostHAL: AudioHostHAL, @unchecked Sendable {
             kAudioAggregateDeviceNameKey          : aggregateUID,
             kAudioAggregateDeviceUIDKey           : aggregateUID,
             kAudioAggregateDeviceMainSubDeviceKey : mainOutputUID,
+            kAudioAggregateDeviceClockDeviceKey   : mainOutputUID,
             kAudioAggregateDeviceIsPrivateKey     : true,
             kAudioAggregateDeviceIsStackedKey     : outputUIDs.count > 1,
             kAudioAggregateDeviceTapAutoStartKey  : true,

@@ -22,8 +22,12 @@ import CascadeContracts
 /// realtime thread shares with it is the C kernel, which is designed for exactly that.
 final class AppAudioPipeline: @unchecked Sendable {
 
-    let identity : AudioAppIdentity
-    let token    : UInt64
+    let identity   : AudioAppIdentity
+    let token      : UInt64
+
+    /// sampleRate is the rate of the output the kernel renders to, which is what a crossfade
+    /// needs to turn its 50 ms into a frame count.
+    let sampleRate : Double
 
     private let hal         : any AudioHostHAL
     private let tapID       : UInt32
@@ -90,6 +94,7 @@ final class AppAudioPipeline: @unchecked Sendable {
 
         self.identity    = identity
         self.token       = token
+        self.sampleRate  = outputFormat.sampleRate
         self.hal         = hal
         self.tapID       = tap.tapID
         self.aggregateID = aggregate

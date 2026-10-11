@@ -53,19 +53,43 @@ final class FakeAudioHostHAL: AudioHostHAL, @unchecked Sendable {
     /// Runs inside `destroy(tap:)`, which is where the pipeline must still own its render context.
     var onDestroyTap: (() -> Void)?
 
+    /// What discovery reports. A test sets them, then fires the matching listener below.
+    var processRecords : [AudioProcessRecord] = []
+    var outputs        : Set<String>          = []
+    var systemOutput   : String?              = nil
+
+    /// The listeners the service registered, so a test can deliver a change by hand.
+    private(set) var onProcesses      : (@Sendable () -> Void)?
+    private(set) var onDevices        : (@Sendable () -> Void)?
+    private(set) var onServiceRestart : (@Sendable () -> Void)?
+
+    /// When set, every HAL call asks it whether it runs where it should; a call that does not
+    /// is counted in `offQueueCallCount` instead of crashing the test.
+    var isOnExpectedQueue: (@Sendable () -> Bool)?
+
+    private(set) var offQueueCallCount = 0
+
     func processes() -> [AudioProcessRecord] {
-        []
+        checkQueue()
+        return processRecords
     }
 
     func outputUIDs() -> Set<String> {
-        []
+        checkQueue()
+        return outputs
     }
 
     func systemOutputUID() -> String? {
-        nil
+        checkQueue()
+        return systemOutput
+    }
+
+    private func checkQueue() {
+        if let isOnExpectedQueue, !isOnExpectedQueue() { offQueueCallCount += 1 }
     }
 
     func streamFormat(ofOutput uid: String) -> CascadeAudioRenderFormat? {
+        checkQueue()
         calls.append(.streamFormat(ofOutput: uid))
         return outputFormat
     }
@@ -74,6 +98,7 @@ final class FakeAudioHostHAL: AudioHostHAL, @unchecked Sendable {
         processObjectIDs : [UInt32],
         streamOfOutput   : String?
     ) -> (tapID: UInt32, uuid: String, format: CascadeAudioRenderFormat)? {
+        checkQueue()
         calls.append(.createTap(processObjectIDs: processObjectIDs, streamOfOutput: streamOfOutput))
 
         guard !tapShouldFail, let tapFormat else { return nil }
@@ -85,6 +110,7 @@ final class FakeAudioHostHAL: AudioHostHAL, @unchecked Sendable {
         tapUUID    : String,
         outputUIDs : [String]
     ) -> UInt32? {
+        checkQueue()
         calls.append(.createAggregate(tapUUID: tapUUID, outputUIDs: outputUIDs))
 
         return aggregateShouldFail ? nil : Self.aggregateID
@@ -94,6 +120,7 @@ final class FakeAudioHostHAL: AudioHostHAL, @unchecked Sendable {
         aggregate : UInt32,
         render    : OpaquePointer
     ) -> Bool {
+        checkQueue()
         calls.append(.start(aggregate: aggregate))
 
         guard !startShouldFail else { return false }
@@ -103,14 +130,17 @@ final class FakeAudioHostHAL: AudioHostHAL, @unchecked Sendable {
     }
 
     func stop(aggregate: UInt32) {
+        checkQueue()
         calls.append(.stop(aggregate: aggregate))
     }
 
     func destroy(aggregate: UInt32) {
+        checkQueue()
         calls.append(.destroyAggregate(aggregate))
     }
 
     func destroy(tap: UInt32) {
+        checkQueue()
         calls.append(.destroyTap(tap))
         onDestroyTap?()
     }
@@ -119,5 +149,11 @@ final class FakeAudioHostHAL: AudioHostHAL, @unchecked Sendable {
         onProcesses      : @escaping @Sendable () -> Void,
         onDevices        : @escaping @Sendable () -> Void,
         onServiceRestart : @escaping @Sendable () -> Void
-    ) {}
+    ) {
+        checkQueue()
+
+        self.onProcesses      = onProcesses
+        self.onDevices        = onDevices
+        self.onServiceRestart = onServiceRestart
+    }
 }
