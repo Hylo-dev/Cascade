@@ -47,6 +47,7 @@ struct AudioHostServiceTests {
         init(
             processes         : [AudioProcessRecord],
             lookup            : (@Sendable (String) -> AudioBundleInfo?)? = nil,
+            responsiblePath   : (@Sendable (Int32) -> String?)?       = nil,
             ownProcessID      : Int32                                     = 0,
             excludedBundleIDs : Set<String>                               = []
         ) {
@@ -62,15 +63,16 @@ struct AudioHostServiceTests {
             let recorder = self.recorder
 
             service = AudioHostService(
-                hal                : hal,
-                queue              : queue,
-                clock              : time.clock,
-                schedule           : time.schedule,
-                publish            : { snapshot in recorder.record(snapshot) },
-                bundleInfo         : lookup ?? { _ in nil },
-                notificationCenter : center,
-                ownProcessID       : ownProcessID,
-                excludedBundleIDs  : excludedBundleIDs
+                hal                       : hal,
+                queue                     : queue,
+                clock                     : time.clock,
+                schedule                  : time.schedule,
+                publish                   : { snapshot in recorder.record(snapshot) },
+                bundleInfo                : lookup ?? { _ in nil },
+                responsibleExecutablePath : responsiblePath ?? { _ in nil },
+                notificationCenter        : center,
+                ownProcessID              : ownProcessID,
+                excludedBundleIDs         : excludedBundleIDs
             )
 
             flush()
@@ -384,6 +386,27 @@ struct AudioHostServiceTests {
         #expect(apps.count == 1)
         #expect(apps[0].displayName == "Google Chrome")
         #expect(apps[0].enforcement == .applied)
+    }
+
+    @Test
+    func aProcessOutsideAnyAppIsListedUnderTheAppItIsResponsibleTo() throws {
+        let safari     = try AudioAppIdentity(bundleID: "com.apple.Safari")
+        let safariInfo = AudioBundleInfo(bundleID: "com.apple.Safari", displayName: "Safari")
+        let webKitPath = "/System/Volumes/Preboot/Cryptexes/OS/System/Library/Frameworks/WebKit.framework/"
+            + "Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU"
+
+        let harness = Harness(
+            processes       : [record(10, "com.apple.WebKit.GPU", path: webKitPath)],
+            lookup          : { path in path == "/Applications/Safari.app" ? safariInfo : nil },
+            responsiblePath : { pid in pid == 10 ? "/Applications/Safari.app/Contents/MacOS/Safari" : nil }
+        )
+
+        let apps = try #require(harness.latest).apps
+        #expect(apps.map(\.identity) == [safari])
+        #expect(apps.map(\.displayName) == ["Safari"])
+
+        #expect(try harness.send(.setIntent(safari, try intent())))
+        #expect(harness.hal.calls.contains(.createTap(processObjectIDs: [10], streamOfOutput: Self.builtIn)))
     }
 
     @Test

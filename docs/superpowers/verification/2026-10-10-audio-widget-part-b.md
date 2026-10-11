@@ -44,6 +44,11 @@ widget placed on the grid and System Audio Recording allowed for Cascade.
 - [ ] Muting an app silences it at once and un-muting restores it at its gain, with no click. pending: run with the user
 - [ ] An app returned to 100 %, unmuted and following the system leaves no tap behind (it plays on the native path). pending: run with the user
 
+### Findings on real browsers
+
+- Safari plays through `com.apple.WebKit.GPU`, whose executable lives in a system cryptex with no `.app` in its path. The path rule alone listed it as a column named `com.apple.WebKit.GPU` with no icon. It is now resolved through the responsible process (`responsibility_get_pid_responsible_for_pid`, a private libsystem SPI resolved dynamically; when absent the process keeps its own bundle ID): measured, that process is responsible to `Safari.app`, Brave's helpers to `Brave Browser.app`, and a WebKit GPU process serving `WebThumbnailExtension.appex` falls through to its own bundle ID.
+- Chromium browsers (Brave, Chrome) and their installed web apps (for example a "YouTube" PWA from Brave) play all audio through ONE utility process (`--utility-sub-type=audio.mojom.AudioService`), responsible to the browser. A PWA therefore cannot be separated from the browser's tabs at the Core Audio level: it appears as the browser's column. That is a platform limit, not a bug.
+
 ### Outputs
 
 - [ ] An app sent to AirPods only plays on the AirPods and not on the speakers. pending: run with the user

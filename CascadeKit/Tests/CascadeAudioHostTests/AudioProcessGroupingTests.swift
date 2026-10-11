@@ -93,6 +93,28 @@ struct AudioProcessGroupingTests {
     }
 
     @Test
+    func aBraveHelperKeepsThePathRuleWhenItsResponsibleAppIsElsewhere() throws {
+        let braveApp = "/Applications/Brave Browser.app"
+        let helper   = Self.record(
+            objectID : 9,
+            pid      : 900,
+            bundleID : "com.brave.Browser.helper",
+            path     : "\(braveApp)/Contents/Frameworks/Brave Browser Framework.framework/Versions/130/"
+                + "Helpers/Brave Browser Helper.app/Contents/MacOS/Brave Browser Helper"
+        )
+
+        let groups = AudioProcessGrouping.group(
+            [helper],
+            bundleIDOfApp      : { $0 == braveApp ? "com.brave.Browser" : Self.bundleID(ofApp: $0) },
+            responsibleAppPath : { _ in "/Applications/Safari.app/Contents/MacOS/Safari" }
+        )
+
+        let brave = try AudioAppIdentity(bundleID: "com.brave.Browser")
+        #expect(groups.keys.map(\.bundleID) == [brave.bundleID])
+        #expect(groups[brave]?.map(\.pid) == [900])
+    }
+
+    @Test
     func responsibleAppHookGroupsAProcessOutsideItsApp() throws {
         let webKitGPU = Self.record(
             objectID : 4,

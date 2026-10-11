@@ -208,8 +208,13 @@ plugin engine. Cascade's main thread never calls the HAL for the mixer.
 
 **Discovery, no polling.** Listeners on `kAudioHardwarePropertyProcessObjectList` and on each
 process object's `kAudioProcessPropertyIsRunningOutput`. Processes are grouped by their
-responsible app (bundle ID plus responsible process), so browser and helper processes land
-under their app. PIDs and HAL object IDs are transient bindings and are never persisted; a
+responsible app, so browser and helper processes land under their app. The identity is, in
+order: the outermost `.app` of the process's own executable path; else the app of the process
+it is *responsible* to (launchd's record, read through the private libsystem SPI
+`responsibility_get_pid_responsible_for_pid`, resolved dynamically so a macOS without it falls
+back to the next rule instead of crashing); else the process's own bundle ID. This is what names
+Safari's audio, which `com.apple.WebKit.GPU` plays from a system cryptex with no `.app` in its
+path. PIDs and HAL object IDs are transient bindings and are never persisted; a
 reused PID never inherits another app's settings.
 
 **Intents.** `{ gain, isMuted, outputs: [deviceUID] or followSystem, allowsSeveral }` by bundle

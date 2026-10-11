@@ -69,6 +69,7 @@ public final class AudioHostService: NSObject, AudioHostProtocol, @unchecked Sen
     private let schedule           : @Sendable (Duration, @escaping @Sendable () -> Void) -> Void
     private let publish            : @Sendable (AudioHostSnapshot) -> Void
     private let bundleInfo         : @Sendable (String) -> AudioBundleInfo?
+    private let responsibleAppPath : @Sendable (Int32) -> String?
     private let notificationCenter : NotificationCenter
     private let ownProcessID       : Int32
     private let excludedBundleIDs  : Set<String>
@@ -99,16 +100,21 @@ public final class AudioHostService: NSObject, AudioHostProtocol, @unchecked Sen
     ///
     /// `ownProcessID` is this process; `excludedBundleIDs` defaults to the app AudioHost is
     /// bundled in (resolved through `bundleInfo`) and AudioHost's own identifier.
+    ///
+    /// `responsibleExecutablePath` names the executable a process is responsible to, which is how
+    /// Safari's WebKit audio process (no `.app` in its path) lands under Safari; nil uses the
+    /// system's answer, and tests inject their own.
     public init(
-        hal                : any AudioHostHAL,
-        queue              : DispatchQueue,
-        clock              : @escaping @Sendable () -> Duration,
-        schedule           : @escaping @Sendable (Duration, @escaping @Sendable () -> Void) -> Void,
-        publish            : @escaping @Sendable (AudioHostSnapshot) -> Void,
-        bundleInfo         : (@Sendable (String) -> AudioBundleInfo?)? = nil,
-        notificationCenter : NotificationCenter?                       = nil,
-        ownProcessID       : Int32                                     = getpid(),
-        excludedBundleIDs  : Set<String>?                              = nil
+        hal                       : any AudioHostHAL,
+        queue                     : DispatchQueue,
+        clock                     : @escaping @Sendable () -> Duration,
+        schedule                  : @escaping @Sendable (Duration, @escaping @Sendable () -> Void) -> Void,
+        publish                   : @escaping @Sendable (AudioHostSnapshot) -> Void,
+        bundleInfo                : (@Sendable (String) -> AudioBundleInfo?)? = nil,
+        responsibleExecutablePath : (@Sendable (Int32) -> String?)?           = nil,
+        notificationCenter        : NotificationCenter?                       = nil,
+        ownProcessID              : Int32                                     = getpid(),
+        excludedBundleIDs         : Set<String>?                              = nil
     ) {
         let bundleInfo = bundleInfo ?? { AudioHostService.bundleInfoOnDisk(at: $0) }
 
@@ -118,6 +124,9 @@ public final class AudioHostService: NSObject, AudioHostProtocol, @unchecked Sen
         self.schedule           = schedule
         self.publish            = publish
         self.bundleInfo         = bundleInfo
+        self.responsibleAppPath = responsibleExecutablePath ?? {
+            AudioProcessResponsibility.responsibleExecutablePath(ofPID: $0)
+        }
         self.notificationCenter = notificationCenter ?? NSWorkspace.shared.notificationCenter
         self.ownProcessID       = ownProcessID
         self.excludedBundleIDs  = excludedBundleIDs ?? AudioHostService.ownBundleIDs(
@@ -275,9 +284,10 @@ public final class AudioHostService: NSObject, AudioHostProtocol, @unchecked Sen
         // the app it is bundled in; the excluded bundles are dropped after, once they are named.
         let grouped = AudioProcessGrouping.group(
             hal.processes().filter { $0.pid != ownProcessID },
-            bundleIDOfApp: { [self] appPath in
+            bundleIDOfApp      : { [self] appPath in
                 resolvedBundleInfo(at: appPath)?.bundleID
-            }
+            },
+            responsibleAppPath : responsibleAppPath
         )
         .filter { !isExcluded($0.key) }
 
