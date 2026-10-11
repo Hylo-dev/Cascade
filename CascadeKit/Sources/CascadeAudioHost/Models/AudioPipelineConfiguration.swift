@@ -4,8 +4,8 @@
 //
 
 /// AudioPipelineConfiguration is everything that decides what one app's pipeline looks like: which
-/// Core Audio processes it taps, which devices it renders to, and whether one device allows the
-/// cheaper stream tap. Two equal configurations describe the same pipeline, which is how the
+/// Core Audio processes it taps, which devices it renders to, and whether the cheaper stream tap
+/// applies (only when the one output is the system output, the device the app plays to). Two equal configurations describe the same pipeline, which is how the
 /// reconciler knows a change is real and a repeated call is not.
 ///
 /// `processObjectIDs` is kept sorted ascending by whoever builds it, so the same set of helpers

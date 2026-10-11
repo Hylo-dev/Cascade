@@ -436,7 +436,9 @@ struct AudioHostServiceTests {
 
         // The new pipeline is up beside the old one, which has not been touched yet.
         #expect(harness.tapCount == 2)
-        #expect(harness.hal.calls.contains(.createTap(processObjectIDs: [10], streamOfOutput: Self.usb)))
+        // The system output is still the built-in one, so the app does not play to the USB
+        // device and its pipeline taps a stereo mixdown.
+        #expect(harness.hal.calls.contains(.createTap(processObjectIDs: [10], streamOfOutput: nil)))
         #expect(harness.stopCount == 0)
         #expect(harness.teardownCount == 0)
         #expect(harness.time.pendingDelays.contains(.milliseconds(100)))

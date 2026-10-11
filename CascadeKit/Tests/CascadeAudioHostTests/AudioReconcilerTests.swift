@@ -30,6 +30,8 @@ struct AudioReconcilerTests {
         try AudioAppIntent(gain: gain, isMuted: muted, outputUIDs: outputs)
     }
 
+    /// Unless a test says otherwise the system output is the built-in one (the default of
+    /// `reconcile`), and a stream tap is right only for the one output the app plays to.
     private func configuration(
         _ objectIDs : [UInt32],
         _ outputs   : [String],
@@ -38,7 +40,7 @@ struct AudioReconcilerTests {
         AudioPipelineConfiguration(
             processObjectIDs : objectIDs,
             outputUIDs       : outputs,
-            streamTap        : streamTap ?? (outputs.count == 1)
+            streamTap        : streamTap ?? (outputs == [Self.builtIn])
         )
     }
 
@@ -353,6 +355,58 @@ struct AudioReconcilerTests {
         #expect(actions == [
             .build(chrome, token: 1, configuration([10], [Self.usb, Self.builtIn], streamTap: false), both),
         ])
+    }
+
+    @Test
+    func anAppSentToAnotherDeviceThanTheSystemOutputIsMixedDownNotStreamTapped() throws {
+        var reconciler = AudioReconciler()
+        let toUSB      = try intent(outputs: [Self.usb])
+
+        // The app plays to the speakers, so a tap on the USB device's stream would hear nothing.
+        let actions = reconcile(&reconciler, intent: toUSB, system: Self.builtIn)
+
+        #expect(actions == [
+            .build(chrome, token: 1, configuration([10], [Self.usb], streamTap: false), toUSB),
+        ])
+    }
+
+    @Test
+    func anAppFollowingTheSystemOutputUsesAStreamTap() throws {
+        var reconciler = AudioReconciler()
+        let quarter    = try intent()
+
+        let actions = reconcile(&reconciler, intent: quarter, system: Self.usb)
+
+        #expect(actions == [
+            .build(chrome, token: 1, configuration([10], [Self.usb], streamTap: true), quarter),
+        ])
+    }
+
+    @Test
+    func anAppPinnedToTheSystemOutputUsesAStreamTap() throws {
+        var reconciler = AudioReconciler()
+        let pinned     = try intent(outputs: [Self.builtIn])
+
+        let actions = reconcile(&reconciler, intent: pinned, system: Self.builtIn)
+
+        #expect(actions == [
+            .build(chrome, token: 1, configuration([10], [Self.builtIn], streamTap: true), pinned),
+        ])
+    }
+
+    @Test
+    func theSystemOutputMovingAwayFromThePinnedDeviceCrossfadesToAMixdown() throws {
+        let pinned     = try intent(outputs: [Self.builtIn])
+        var reconciler = runningReconciler(intent: pinned)
+
+        let actions = reconcile(&reconciler, intent: pinned, system: Self.usb)
+
+        // Same output, but the app now plays elsewhere: only the tap kind changes, and that is
+        // reason enough for a seamless handover.
+        let target = configuration([10], [Self.builtIn], streamTap: false)
+
+        #expect(actions == [.crossfade(chrome, from: 1, to: 2, target, pinned)])
+        #expect(reconciler.state(of: chrome) == .crossfading(from: 1, to: 2, target))
     }
 
     @Test

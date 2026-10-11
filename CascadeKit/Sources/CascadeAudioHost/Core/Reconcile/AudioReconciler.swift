@@ -331,11 +331,18 @@ public struct AudioReconciler: Sendable {
 
         guard !effectiveOutputs.isEmpty else { return .blocked }
 
+        // A stream tap hears what the processes play TO one device, and an app plays to the
+        // system output. Tapping the stream of any other device would capture nothing: the app
+        // would go silent, or keep playing on the speakers. So a stream tap is right only when
+        // the one output IS the system output; every other case is the stereo mixdown, which
+        // hears the app wherever it plays.
+        let followsSystemOutput = effectiveOutputs.count == 1 && effectiveOutputs.first == systemOutputUID
+
         return .pipeline(
             AudioPipelineConfiguration(
                 processObjectIDs : processObjectIDs,
                 outputUIDs       : effectiveOutputs,
-                streamTap        : effectiveOutputs.count == 1
+                streamTap        : followsSystemOutput
             )
         )
     }

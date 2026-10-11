@@ -220,8 +220,9 @@ preference; the *effective* output (the fallback) is shown separately.
 **Per-app pipeline, only when needed.** An app at 100 %, unmuted and following the system gets
 no tap at all: native path, zero cost. Otherwise:
 
-1. A process tap with `muteBehavior = .mutedWhenTapped`: a stream-specific tap when there is
-   one output (keeps multichannel), a stereo mixdown otherwise.
+1. A process tap with `muteBehavior = .mutedWhenTapped`: a stream-specific tap when the
+   one output is the system output, which is the device the app is playing to (keeps
+   multichannel), a stereo mixdown otherwise.
 2. A private aggregate device holding the tap and the outputs, `TapAutoStart` on. With N
    outputs it is *stacked*: the first selected output is the clock and main sub-device, the
    others get drift compensation, and the same audio plays on all of them (FineTune's
