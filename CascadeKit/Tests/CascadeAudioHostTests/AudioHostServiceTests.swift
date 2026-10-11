@@ -42,9 +42,13 @@ struct AudioHostServiceTests {
 
         nonisolated(unsafe) var service: AudioHostService?
 
+        /// `ownProcessID` is 0 by default, a pid no record carries, so only the tests about the
+        /// service's own process say otherwise; likewise `excludedBundleIDs` starts empty.
         init(
-            processes : [AudioProcessRecord],
-            lookup    : (@Sendable (String) -> AudioBundleInfo?)? = nil
+            processes         : [AudioProcessRecord],
+            lookup            : (@Sendable (String) -> AudioBundleInfo?)? = nil,
+            ownProcessID      : Int32                                     = 0,
+            excludedBundleIDs : Set<String>                               = []
         ) {
             queue.setSpecific(key: Self.queueKey.key, value: ())
 
@@ -64,7 +68,9 @@ struct AudioHostServiceTests {
                 schedule           : time.schedule,
                 publish            : { snapshot in recorder.record(snapshot) },
                 bundleInfo         : lookup ?? { _ in nil },
-                notificationCenter : center
+                notificationCenter : center,
+                ownProcessID       : ownProcessID,
+                excludedBundleIDs  : excludedBundleIDs
             )
 
             flush()
@@ -400,6 +406,63 @@ struct AudioHostServiceTests {
         )
 
         #expect(harness.latest?.apps.map(\.displayName) == ["apple", "Zebra"])
+    }
+
+    // MARK: - AudioHost itself
+
+    @Test
+    func theServicesOwnProcessNeverAppears() throws {
+        let harness = Harness(
+            processes    : [
+                record(10, "com.google.Chrome"),
+                record(77, "com.example.audiohost"),
+            ],
+            ownProcessID : 77
+        )
+
+        #expect(harness.latest?.apps.map(\.identity) == [chrome])
+    }
+
+    @Test
+    func anAppGroupedUnderAnExcludedBundleNeverAppearsAndIsNeverTapped() throws {
+        let cascadePath = "/Applications/Cascade.app"
+        let helperPath  = "\(cascadePath)/Contents/XPCServices/AudioHost.xpc/Contents/MacOS/AudioHost"
+        let cascadeInfo = AudioBundleInfo(bundleID: "hylo.Cascade", displayName: "Cascade")
+        let cascade     = try AudioAppIdentity(bundleID: "hylo.Cascade")
+
+        let harness = Harness(
+            processes         : [
+                record(10, "com.google.Chrome"),
+                record(20, "hylo.Cascade.AudioHost", path: helperPath),
+            ],
+            lookup            : { path in path == cascadePath ? cascadeInfo : nil },
+            excludedBundleIDs : ["hylo.Cascade"]
+        )
+
+        #expect(harness.latest?.apps.map(\.identity) == [chrome])
+
+        #expect(try harness.send(.setIntent(cascade, try intent(gain: 0.5))))
+        #expect(harness.tapCount == 0)
+        #expect(harness.latest?.apps.map(\.identity) == [chrome])
+
+        #expect(try harness.send(.replaceIntents([cascade: try intent(gain: 0.5)])))
+        #expect(harness.tapCount == 0)
+    }
+
+    @Test
+    func theServiceExcludesTheAppItIsBundledIn() {
+        let cascadeInfo = AudioBundleInfo(bundleID: "hylo.Cascade", displayName: "Cascade")
+
+        let excluded = AudioHostService.ownBundleIDs(
+            bundlePath       : "/Applications/Cascade.app/Contents/XPCServices/AudioHost.xpc",
+            bundleIdentifier : "hylo.Cascade.AudioHost",
+            bundleInfo       : { path in path == "/Applications/Cascade.app" ? cascadeInfo : nil }
+        )
+
+        #expect(excluded == ["hylo.Cascade", "hylo.Cascade.AudioHost"])
+        #expect(
+            AudioHostService.ownBundleIDs(bundlePath: "/usr/bin/tool", bundleIdentifier: nil, bundleInfo: { _ in nil }).isEmpty
+        )
     }
 
     // MARK: - Environment

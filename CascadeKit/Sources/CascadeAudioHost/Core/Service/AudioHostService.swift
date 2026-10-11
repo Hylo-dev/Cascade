@@ -29,6 +29,12 @@ import os
 /// - a 1 s re-check while an app is `recovering`, because that state turns into `notApplied` with
 ///   the passing of time alone and the mixer must be told.
 ///
+/// AudioHost never lists or controls itself. It lives inside `Cascade.app/Contents/XPCServices/`
+/// and, while a pipeline runs, its own process produces output, which grouping would fold under
+/// Cascade's bundle ID: a "Cascade" column in the mixer, and a slider that would tap the very
+/// output the pipelines render. So the service drops its own process from every scan
+/// (`ownProcessID`) and any group under `excludedBundleIDs`, and ignores intents for them.
+///
 /// What the HAL listeners cost: a process or device change rescans the world (processes, outputs,
 /// system output) once. A gain or mute change does not, because the slider can fire at display
 /// rate and the world has not changed; it reconciles against the world last seen.
@@ -64,6 +70,8 @@ public final class AudioHostService: NSObject, AudioHostProtocol, @unchecked Sen
     private let publish            : @Sendable (AudioHostSnapshot) -> Void
     private let bundleInfo         : @Sendable (String) -> AudioBundleInfo?
     private let notificationCenter : NotificationCenter
+    private let ownProcessID       : Int32
+    private let excludedBundleIDs  : Set<String>
     private let logger             = Logger(subsystem: "hylo.Cascade", category: "AudioHost")
 
     private var wakeObserver: (any NSObjectProtocol)?
@@ -88,6 +96,9 @@ public final class AudioHostService: NSObject, AudioHostProtocol, @unchecked Sen
     /// init starts the service: the HAL listeners and the first scan happen on `queue`, and the
     /// wake observer is registered on `notificationCenter`, the workspace's by default, which
     /// tests replace with one of their own.
+    ///
+    /// `ownProcessID` is this process; `excludedBundleIDs` defaults to the app AudioHost is
+    /// bundled in (resolved through `bundleInfo`) and AudioHost's own identifier.
     public init(
         hal                : any AudioHostHAL,
         queue              : DispatchQueue,
@@ -95,15 +106,25 @@ public final class AudioHostService: NSObject, AudioHostProtocol, @unchecked Sen
         schedule           : @escaping @Sendable (Duration, @escaping @Sendable () -> Void) -> Void,
         publish            : @escaping @Sendable (AudioHostSnapshot) -> Void,
         bundleInfo         : (@Sendable (String) -> AudioBundleInfo?)? = nil,
-        notificationCenter : NotificationCenter?                       = nil
+        notificationCenter : NotificationCenter?                       = nil,
+        ownProcessID       : Int32                                     = getpid(),
+        excludedBundleIDs  : Set<String>?                              = nil
     ) {
+        let bundleInfo = bundleInfo ?? { AudioHostService.bundleInfoOnDisk(at: $0) }
+
         self.hal                = hal
         self.queue              = queue
         self.clock              = clock
         self.schedule           = schedule
         self.publish            = publish
-        self.bundleInfo         = bundleInfo ?? { AudioHostService.bundleInfoOnDisk(at: $0) }
+        self.bundleInfo         = bundleInfo
         self.notificationCenter = notificationCenter ?? NSWorkspace.shared.notificationCenter
+        self.ownProcessID       = ownProcessID
+        self.excludedBundleIDs  = excludedBundleIDs ?? AudioHostService.ownBundleIDs(
+            bundlePath       : Bundle.main.bundlePath,
+            bundleIdentifier : Bundle.main.bundleIdentifier,
+            bundleInfo       : bundleInfo
+        )
 
         super.init()
 
@@ -183,10 +204,10 @@ public final class AudioHostService: NSObject, AudioHostProtocol, @unchecked Sen
     private func apply(_ command: AudioHostCommand) {
         switch command {
             case .replaceIntents(let replacement):
-                intents = replacement.filter { !$0.value.isNeutral }
+                intents = replacement.filter { !$0.value.isNeutral && !isExcluded($0.key) }
 
             case .setIntent(let identity, let intent):
-                intents[identity] = intent.isNeutral ? nil : intent
+                intents[identity] = intent.isNeutral || isExcluded(identity) ? nil : intent
 
             case .returnToNative(let identity):
                 // The neutral intent is what clears a native fallback: the reducer tears the
@@ -250,18 +271,50 @@ public final class AudioHostService: NSObject, AudioHostProtocol, @unchecked Sen
     }
 
     private func scanWorld() -> World {
+        // Our own process goes before grouping, so it can neither show up nor join the group of
+        // the app it is bundled in; the excluded bundles are dropped after, once they are named.
         let grouped = AudioProcessGrouping.group(
-            hal.processes(),
+            hal.processes().filter { $0.pid != ownProcessID },
             bundleIDOfApp: { [self] appPath in
                 resolvedBundleInfo(at: appPath)?.bundleID
             }
         )
+        .filter { !isExcluded($0.key) }
 
         return World(
             apps            : grouped,
             outputs         : hal.outputUIDs(),
             systemOutputUID : hal.systemOutputUID()
         )
+    }
+
+    private func isExcluded(_ identity: AudioAppIdentity) -> Bool {
+        excludedBundleIDs.contains(identity.bundleID)
+    }
+
+    /// ownBundleIDs names what AudioHost must never list: the bundle ID of the outermost `.app`
+    /// that contains `bundlePath` (`Cascade.app` for `Cascade.app/Contents/XPCServices/AudioHost.xpc`,
+    /// the identity grouping gives AudioHost's own process) and the `bundleIdentifier` of AudioHost
+    /// itself. Empty when neither resolves, as in a bare command-line tool.
+    static func ownBundleIDs(
+        bundlePath       : String,
+        bundleIdentifier : String?,
+        bundleInfo       : (String) -> AudioBundleInfo?
+    ) -> Set<String> {
+        var bundleIDs = Set<String>()
+
+        if
+            let appPath = AudioProcessGrouping.outermostApp(of: bundlePath),
+            let info    = bundleInfo(appPath)
+        {
+            bundleIDs.insert(info.bundleID)
+        }
+
+        if let bundleIdentifier, !bundleIdentifier.isEmpty {
+            bundleIDs.insert(bundleIdentifier)
+        }
+
+        return bundleIDs
     }
 
     /// resolvedBundleInfo reads an app bundle once per path: the disk read is the expensive part
