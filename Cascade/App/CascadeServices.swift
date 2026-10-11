@@ -107,6 +107,7 @@ final class CascadeServices {
             } else {
                 systemAudio.stop()
             }
+            appAudio.setEnabled(audioEnabled && isRunning)
         }
     }
 
@@ -118,6 +119,10 @@ final class CascadeServices {
     }
 
     private(set) var volumeStatus: VolumeMonitoringStatus = .stopped
+
+    /// audioHostStatus is the health of AudioHost, the process that steers each app's volume, for
+    /// settings.
+    private(set) var audioHostStatus: AudioHostStatus = .idle
 
     /// pluginStatus is each plugin's state and PluginHost's, for settings; nil until the engine
     /// has been composed.
@@ -185,6 +190,8 @@ final class CascadeServices {
     @ObservationIgnored
     private let systemAudio  : SystemAudioService
     @ObservationIgnored
+    private let appAudio     : AppAudioService
+    @ObservationIgnored
     private let volumeSource = VolumePluginSource(monitor: CoreAudioVolumeMonitor())
     @ObservationIgnored
     private let network      : any NetworkMonitoring = NetworkConnectionMonitor()
@@ -233,15 +240,25 @@ final class CascadeServices {
         )
         self.notch                   = notch
         let audioQueue  = DispatchQueue(label: "cascade.system-audio", qos: .utility)
+        let audioOrigin = ContinuousClock.now
+        let appAudio    = AppAudioService(
+            connection: AudioHostClient(),
+            store     : AudioIntentStore(defaults: preferences),
+            queue     : DispatchQueue(label: "cascade.app-audio", qos: .utility),
+            clock     : { audioOrigin.duration(to: .now) },
+            isEnabled : false
+        )
         let systemAudio = SystemAudioService(
             hardware: CoreAudioSystemHardware(queue: audioQueue),
-            queue   : audioQueue
+            queue   : audioQueue,
+            apps    : appAudio
         )
+        self.appAudio                = appAudio
         self.systemAudio             = systemAudio
         plugins                      = PluginSystem(
             host             : notch,
             sources          : [PluginVolumeState.source: volumeSource],
-            services         : ["audio.system"],
+            services         : ["audio.system", "audio.apps"],
             componentServices: PluginComponentServices(audio: systemAudio.model)
         )
         self.displayPreferencesStore = displayPreferencesStore
@@ -314,6 +331,17 @@ final class CascadeServices {
 
         volumeSource.statusHandler = { [weak self] status in
             self?.volumeStatus = status
+        }
+
+        // The mixer's model draws what AudioHost reports and what became of AudioHost itself.
+        // Both arrive on the main actor, from the service's single hop per delivery.
+        let mixerModel = systemAudio.model
+        appAudio.onSnapshot = { [weak mixerModel] snapshot in
+            mixerModel?.receive(snapshot)
+        }
+        appAudio.onStatus = { [weak self, weak mixerModel] status in
+            self?.audioHostStatus = status
+            mixerModel?.receive(health: status.health)
         }
 
         // Every Bluetooth state reaches the suppressor as it reaches the engine, before the
@@ -417,6 +445,7 @@ final class CascadeServices {
         plugins.setEnabled(volumeEnabled, for: VolumePlugin.id)
         plugins.setEnabled(audioEnabled, for: AudioPlugin.id)
         if audioEnabled { systemAudio.start() }
+        appAudio.setEnabled(audioEnabled)
         plugins.start()
         notch.setHapticsEnabled(hapticsEnabled)
         notch.setSensitiveContentVisible(sensitiveContentVisible)
@@ -501,6 +530,7 @@ final class CascadeServices {
 
         notch.setBorderAppearance(.neutral)
 
+        appAudio.setEnabled(false)
         systemAudio.stop()
         systemAudio.restoreBeforeQuit()
 
@@ -647,6 +677,11 @@ final class CascadeServices {
     /// restartPluginHost tries PluginHost again after repeated crashes.
     func restartPluginHost() {
         plugins.restartHost()
+    }
+
+    /// restartAudioHost tries AudioHost again after repeated failures.
+    func restartAudioHost() {
+        appAudio.restart()
     }
 
     /// previewVolume never adjusts hardware or installs an input tap. The volume plugin draws the

@@ -146,6 +146,33 @@ struct AppAudioServiceTests {
     }
 
     @Test
+    func switchingAudioOffStopsAudioHostAndKeepsTheIntents() async throws {
+        let music   = try Self.identity("com.apple.Music")
+        let stored  = [music: try Self.intent(gain: 0.3)]
+        let fixture = Fixture(storedIntents: stored)
+        defer { fixture.tearDown() }
+
+        let service = fixture.start()
+        await fixture.settle()
+
+        #expect(fixture.connection.read { $0.connectCount } == 1)
+
+        service.setEnabled(false)
+        service.setMixerVisible(true)
+        await fixture.settle()
+
+        #expect(fixture.connection.read { $0.disconnectCount } == 1)
+        #expect(fixture.statuses == [.running, .idle])
+        #expect(fixture.store.load() == stored)
+
+        service.setEnabled(true)
+        await fixture.settle()
+
+        #expect(fixture.connection.read { $0.connectCount } == 2)
+        #expect(fixture.connection.read { $0.sent.last } == .replaceIntents(stored))
+    }
+
+    @Test
     func aVisibleMixerKeepsAudioHostEvenWhenEveryIntentIsNeutral() async throws {
         let music   = try Self.identity("com.apple.Music")
         let fixture = Fixture(storedIntents: [music: try Self.intent(gain: 0.4)])

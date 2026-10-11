@@ -48,7 +48,10 @@ final class SystemAudioService: SystemAudioControlling {
     /// model is lazy because it takes the service as its controller, and a stored `let` cannot be
     /// given `self` before the service is fully built. It is created on first use, on the main
     /// actor, where the service lives.
-    private(set) lazy var model = AudioMixerModel(controller: self)
+    private(set) lazy var model = AudioMixerModel(controller: self, apps: apps)
+
+    /// apps is the per-app audio service the model sends its app commands to, if there is one.
+    private let apps: (any AudioAppsControlling)?
 
     private var isStarted   = false
     private var lastReading : SystemAudioState?
@@ -56,10 +59,12 @@ final class SystemAudioService: SystemAudioControlling {
 
     init(
         hardware: any SystemAudioHardware,
-        queue   : DispatchQueue
+        queue   : DispatchQueue,
+        apps    : (any AudioAppsControlling)? = nil
     ) {
         self.hardware = hardware
         self.queue    = queue
+        self.apps     = apps
         self.reader   = SystemAudioQueueReader(hardware: hardware)
 
         self.multiOutput = SystemAudioMultiOutput(hardware: hardware)

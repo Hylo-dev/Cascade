@@ -38,7 +38,7 @@ struct FirstPartyPluginsTests {
         let manifest = try #require(FirstPartyPlugins.manifests().first { $0.id == AudioPlugin.id })
 
         #expect(FirstPartyPlugins.providers[manifest.execution.entryPoint] != nil)
-        #expect(manifest.features.first?.services == ["audio.system"])
+        #expect(manifest.features.first?.services == ["audio.system", "audio.apps"])
         #expect(manifest.features.first?.surfaces.detail != nil)
     }
 

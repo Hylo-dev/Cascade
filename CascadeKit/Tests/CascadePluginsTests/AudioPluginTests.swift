@@ -25,6 +25,15 @@ struct AudioPluginTests {
     }
 
     @Test
+    func manifestDeclaresAudioAppsAndCapture() throws {
+        let manifest = try #require(FirstPartyPlugins.manifests().first { $0.id == AudioPlugin.id })
+        let feature  = try #require(manifest.features.first { $0.id == AudioPlugin.feature })
+
+        #expect(feature.services == ["audio.system", "audio.apps"])
+        #expect(feature.permissions == ["audio.capture"])
+    }
+
+    @Test
     func otherEventsPublishNothing() throws {
         let plugin = AudioPlugin()
 

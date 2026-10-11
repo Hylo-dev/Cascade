@@ -3,6 +3,8 @@
 //  Cascade
 //
 
+import CascadeKit
+
 /// AudioHostStatus is how the per-app audio service reports AudioHost's health, for Settings.
 nonisolated enum AudioHostStatus: Equatable, Sendable {
 
@@ -17,4 +19,14 @@ nonisolated enum AudioHostStatus: Equatable, Sendable {
 
     /// givenUp means AudioHost kept failing; the apps play natively until the user restarts it.
     case givenUp
+
+    /// health is what the mixer's model needs to know of it.
+    var health: AudioAppsHostHealth {
+        switch self {
+            case .idle      : .idle
+            case .running   : .running
+            case .recovering: .recovering
+            case .givenUp   : .givenUp
+        }
+    }
 }

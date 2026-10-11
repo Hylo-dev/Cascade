@@ -56,6 +56,7 @@ nonisolated final class AudioHostSession: @unchecked Sendable {
     private var supervision       = AudioHostSupervision()
     private var intents           : [AudioAppIdentity: AudioAppIntent] = [:]
     private var isMixerVisible    = false
+    private var isEnabled         : Bool
     private var phase             = Phase.stopped
     private var status            = AudioHostStatus.idle
     private var epoch             : UInt64 = 0
@@ -70,8 +71,10 @@ nonisolated final class AudioHostSession: @unchecked Sendable {
         clock          : @escaping @Sendable () -> Duration,
         schedule       : @escaping @Sendable (Duration, @escaping @Sendable () -> Void) -> Void,
         deliverSnapshot: @escaping @Sendable (AudioHostSnapshot) -> Void,
-        deliverStatus  : @escaping @Sendable (AudioHostStatus) -> Void
+        deliverStatus  : @escaping @Sendable (AudioHostStatus) -> Void,
+        isEnabled      : Bool = true
     ) {
+        self.isEnabled       = isEnabled
         self.connection      = connection
         self.store           = store
         self.queue           = queue
@@ -94,6 +97,16 @@ nonisolated final class AudioHostSession: @unchecked Sendable {
     func setMixerVisible(_ isVisible: Bool) {
         queue.async { [self] in
             isMixerVisible = isVisible
+            reconcile()
+        }
+    }
+
+    /// setEnabled switches per-app audio on or off as a whole, with the audio feature. While it is
+    /// off AudioHost is not wanted whatever the intents say, so the apps play natively; the
+    /// intents stay stored and are enforced again the moment it is back on.
+    func setEnabled(_ isEnabled: Bool) {
+        queue.async { [self] in
+            self.isEnabled = isEnabled
             reconcile()
         }
     }
@@ -152,7 +165,7 @@ nonisolated final class AudioHostSession: @unchecked Sendable {
     }
 
     private var isWanted: Bool {
-        isMixerVisible || !intents.isEmpty
+        isEnabled && (isMixerVisible || !intents.isEmpty)
     }
 
     /// reconcile starts AudioHost when it is wanted and stopped, and stops it when it is not.

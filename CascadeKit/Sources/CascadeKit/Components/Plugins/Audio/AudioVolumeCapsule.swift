@@ -41,6 +41,9 @@ struct AudioVolumeCapsule: View {
     let icon           : AudioOutputIcon?
     /// iconOpacity dims the icon alone, for the unavailable look: the pill stays as it is.
     let iconOpacity    : Double
+    /// isDashed draws the rim as a dashed line, for a level the user asked for and nothing
+    /// enforces: the pill says so instead of promising a control.
+    var isDashed       : Bool = false
     let isAdjusting    : Bool
     let showsPercentage: Bool
     let onLevel        : (Double) -> Void
@@ -102,7 +105,13 @@ struct AudioVolumeCapsule: View {
             }
             .overlay {
                 RoundedRectangle(cornerRadius: metrics.cornerRadius)
-                    .strokeBorder(.white.opacity(0.12), lineWidth: 1)
+                    .strokeBorder(
+                        .white.opacity(isDashed ? 0.55 : 0.12),
+                        style: StrokeStyle(
+                            lineWidth: 1,
+                            dash     : isDashed ? [3, 2] : []
+                        )
+                    )
             }
             .scaleEffect(isAdjusting ? 1.05 : 1)
             .animation(.snappy, value: isAdjusting)

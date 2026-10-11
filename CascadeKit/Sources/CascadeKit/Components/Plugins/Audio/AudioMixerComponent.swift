@@ -3,6 +3,8 @@
 //  CascadeKit
 //
 
+import AppKit
+import CascadeContracts
 import SwiftUI
 
 /// AudioMixerComponent is the tier-2 component audio.mixer, the whole body of the audio widget's
@@ -10,21 +12,44 @@ import SwiftUI
 /// out around the hardware notch (`pluginPageObstruction`) instead of under a title bar. In the
 /// notch's left shoulder, beside the back button, sits one row: "Audio" and the level. Below the
 /// shoulder, the global column (the level as a capsule, with the output button and the mute
-/// button beside it), a divider, and the apps area, which will hold one strip per app that plays
-/// audio and, until then, says where they will appear.
+/// button beside it), a divider, and the apps area: a horizontal row of `AudioAppColumn`s, one
+/// per app that plays audio, or, until one does, a line saying where they will appear. When the
+/// system has refused audio capture the line becomes a button to System Settings, above the
+/// columns if there are any, which are then read-only.
 ///
-/// The output button opens the output selector in the apps area, beside the column. Whether it
-/// is open is local state of this view: nothing outside it cares, and nothing is kept once the
-/// page closes. A press on the capsule or on the empty apps area closes it; Escape is not
-/// handled here, since the detail page already takes it to close the whole page.
+/// The output buttons, the system's and each app's, open the output selector in the apps area,
+/// beside the global column. Which selector is open is local state of this view: nothing outside
+/// it cares, and nothing is kept once the page closes. A press on a capsule or on the empty apps
+/// area closes it; Escape is not handled here, since the detail page already takes it to close
+/// the whole page.
+///
+/// The page tells the model whether it is on screen, because AudioHost runs while the mixer is
+/// visible, even if every app is untouched, and rests otherwise.
 ///
 /// It draws the same live system state the volume bar does, through the same capsule, so a drag
 /// or a scroll feels identical in both places. With no model, or before the first reading, it
 /// draws nothing, as the page behind it has nothing to offer yet.
 struct AudioMixerComponent: View {
 
+    /// PickerTarget is whose output selector the apps area shows.
+    enum PickerTarget: Equatable {
+
+        case system
+        case app(AudioAppIdentity)
+
+        /// app is the app a selector belongs to, nil for the system's own.
+        var app: AudioAppIdentity? {
+            guard case .app(let identity) = self else { return nil }
+
+            return identity
+        }
+    }
+
     /// emptyAppsText is the apps area's empty state, which is also its localization key.
     static let emptyAppsText = "Apps appear here when they play audio"
+
+    /// captureSettingsAddress opens the pane where the user can allow audio capture.
+    static let captureSettingsAddress = "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
 
     /// titleLeadingInset leaves the back button's room: its 4 pt inset, its 24 pt and a gap.
     static let titleLeadingInset: CGFloat = 30
@@ -43,50 +68,71 @@ struct AudioMixerComponent: View {
     private var obstruction
 
     @State
-    private var isPickerOpen = false
+    private var picker: PickerTarget?
+
+    @State
+    private var icons = AudioAppIconCache()
 
     var body: some View {
-        if let model = services?.audio, let system = model.system {
-            let band = Self.bandHeight(obstruction: obstruction)
-
-            VStack(alignment: .leading, spacing: 0) {
-                titleRow(
-                    level: system.level,
-                    band : band
-                )
-
-                HStack(spacing: 10) {
-                    AudioGlobalVolumeControl(
-                        widthRatio     : 1,
-                        model          : model,
-                        system         : system,
-                        isAdjusting    : false,
-                        showsPercentage: false,
-                        onClick        : {
-                            isPickerOpen = false
-                        }
-                    )
-                    .frame(width: Self.capsuleWidth)
-
-                    VStack(spacing: 10) {
-                        outputButton(system: system)
-                        muteButton(model: model, system: system)
-                    }
-                    .frame(maxHeight: .infinity)
-
-                    Rectangle()
-                        .fill(Color(white: 0.2))
-                        .frame(width: 1)
-                        .padding(.vertical, 4)
-
-                    appsArea(model: model)
-                }
-                .padding(.top, 4)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 8)
+        Group {
+            if let model = services?.audio, let system = model.system {
+                mixer(model: model, system: system)
+            } else {
+                Color.clear
             }
-        } else {
-            Color.clear
+        }
+        .onAppear {
+            services?.audio?.setMixerVisible(true)
+        }
+        .onDisappear {
+            services?.audio?.setMixerVisible(false)
+        }
+        .onChange(of: services?.audio?.apps) {
+            closePickerOfAbsentApp()
+        }
+    }
+
+    private func mixer(
+        model : AudioMixerModel,
+        system: SystemAudioState
+    ) -> some View {
+        let band = Self.bandHeight(obstruction: obstruction)
+
+        return VStack(alignment: .leading, spacing: 0) {
+            titleRow(
+                level: system.level,
+                band : band
+            )
+
+            HStack(spacing: 10) {
+                AudioGlobalVolumeControl(
+                    widthRatio     : 1,
+                    model          : model,
+                    system         : system,
+                    isAdjusting    : false,
+                    showsPercentage: false,
+                    onClick        : {
+                        picker = nil
+                    }
+                )
+                .frame(width: Self.capsuleWidth)
+
+                VStack(spacing: 10) {
+                    outputButton(system: system)
+                    muteButton(model: model, system: system)
+                }
+                .frame(maxHeight: .infinity)
+
+                Rectangle()
+                    .fill(Color(white: 0.2))
+                    .frame(width: 1)
+                    .padding(.vertical, 4)
+
+                appsArea(model: model, system: system)
+            }
+            .padding(.top, 4)
+            .padding(.horizontal, 12)
+            .padding(.bottom, 8)
         }
     }
 
@@ -131,7 +177,7 @@ struct AudioMixerComponent: View {
         let icon   = AudioOutputIcon.device(for: output)
 
         return Button {
-            isPickerOpen.toggle()
+            picker = picker == .system ? nil : .system
         } label: {
             AudioOutputIconView(icon: icon)
                 .font(.system(size: 11))
@@ -139,7 +185,7 @@ struct AudioMixerComponent: View {
                 .frame(width: Self.buttonSize, height: Self.buttonSize)
                 .background(
                     Circle()
-                        .fill(isPickerOpen ? Color.white.opacity(0.28) : Color.white.opacity(0.14))
+                        .fill(picker == .system ? Color.white.opacity(0.28) : Color.white.opacity(0.14))
                 )
                 .overlay(alignment: .topTrailing) {
                     if let badge = Self.badge(selectedCount: system.selectedUIDs.count) {
@@ -182,31 +228,120 @@ struct AudioMixerComponent: View {
         )
     }
 
-    private func appsArea(model: AudioMixerModel) -> some View {
+    private func appsArea(
+        model : AudioMixerModel,
+        system: SystemAudioState
+    ) -> some View {
         ZStack {
             Color.clear
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    isPickerOpen = false
+                    picker = nil
                 }
 
-            if isPickerOpen {
-                AudioOutputPicker(
-                    model  : model,
-                    onClose: {
-                        isPickerOpen = false
-                    }
-                )
-                .frame(maxHeight: .infinity)
-            } else {
-                Text(String(localized: "Apps appear here when they play audio", bundle: .module))
-                    .font(.system(size: 12))
-                    .foregroundStyle(.white.opacity(0.5))
-                    .multilineTextAlignment(.center)
-                    .allowsHitTesting(false)
-            }
+            appsContent(model: model, system: system)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// appsContent is what the apps area shows: an open selector over everything, else the
+    /// capture banner when the system refused capture, and the columns, or the empty line when
+    /// there are none and nothing to say instead.
+    @ViewBuilder
+    private func appsContent(
+        model : AudioMixerModel,
+        system: SystemAudioState
+    ) -> some View {
+        if let picker {
+            AudioOutputPicker(
+                model  : model,
+                app    : picker.app,
+                onClose: {
+                    self.picker = nil
+                }
+            )
+            .frame(maxHeight: .infinity)
+        } else {
+            let isDenied = model.areAppsReadOnly
+
+            VStack(spacing: 6) {
+                if isDenied {
+                    captureBanner
+                }
+
+                if !model.apps.isEmpty {
+                    columns(model: model, system: system)
+                } else if !isDenied {
+                    Text(String(localized: "Apps appear here when they play audio", bundle: .module))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.white.opacity(0.5))
+                        .multilineTextAlignment(.center)
+                        .allowsHitTesting(false)
+                }
+            }
+        }
+    }
+
+    private func columns(
+        model : AudioMixerModel,
+        system: SystemAudioState
+    ) -> some View {
+        ScrollView(.horizontal) {
+            LazyHStack(spacing: 6) {
+                ForEach(model.apps, id: \.identity) { app in
+                    AudioAppColumn(
+                        app         : app,
+                        system      : system,
+                        model       : model,
+                        icons       : icons,
+                        isPickerOpen: picker == .app(app.identity),
+                        onClick     : {
+                            picker = nil
+                        },
+                        onOutputTap : {
+                            picker = picker == .app(app.identity) ? nil : .app(app.identity)
+                        }
+                    )
+                }
+            }
+            .padding(.horizontal, 2)
+        }
+        .scrollIndicators(.hidden)
+        .frame(maxHeight: .infinity)
+    }
+
+    /// captureBanner is the one line that replaces the empty state when the system refused audio
+    /// capture: it says what to allow, and the line itself opens the pane where to allow it.
+    private var captureBanner: some View {
+        Button {
+            if let address = URL(string: Self.captureSettingsAddress) {
+                NSWorkspace.shared.open(address)
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "exclamationmark.triangle.fill")
+
+                Text(String(localized: "Allow audio capture in System Settings", bundle: .module))
+                    .underline()
+            }
+            .font(.system(size: 11))
+            .foregroundStyle(.orange)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// closePickerOfAbsentApp closes an app's selector when the app stops playing: there is
+    /// nothing left to choose for, and it must not reopen when the app comes back.
+    private func closePickerOfAbsentApp() {
+        guard
+            case .app(let identity) = picker,
+            let apps = services?.audio?.apps,
+            !apps.contains(where: { $0.identity == identity })
+        else { return }
+
+        picker = nil
     }
 
     /// badge is the "+N" on the output button while the system plays to several outputs: how many

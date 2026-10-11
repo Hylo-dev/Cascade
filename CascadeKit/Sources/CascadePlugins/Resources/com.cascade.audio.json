@@ -8,7 +8,8 @@
     {
       "id": "audio",
       "surfaces": { "widget": { "sizes": ["1x2"] }, "detail": {} },
-      "services": ["audio.system"],
+      "services": ["audio.system", "audio.apps"],
+      "permissions": ["audio.capture"],
       "components": [
         { "id": "audio.volumeBar", "version": 1 },
         { "id": "audio.mixer", "version": 1 },

@@ -456,6 +456,17 @@
         }
       }
     },
+    "Audio host": {
+      "comment": "Settings: the row for the process that steers each app's volume.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Processo dell'audio per app"
+          }
+        }
+      }
+    },
     "Audio isn’t available to the visualizer": {
       "comment": "Menu bar menu, status line (disabled item)",
       "localizations": {
@@ -956,6 +967,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verso casa"
+          }
+        }
+      }
+    },
+    "Idle": {
+      "comment": "Settings: the audio host is not running because nothing needs it.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inattivo"
           }
         }
       }
@@ -1570,6 +1592,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Riavvia"
+          }
+        }
+      }
+    },
+    "Restart the audio host": {
+      "comment": "Settings: accessibility label of the Restart button of the audio host.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riavvia il processo dell'audio per app"
           }
         }
       }

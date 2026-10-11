@@ -80,6 +80,41 @@ struct AudioMixerComponentTests {
     }
 
     @Test
+    func mixerDrawsTheAppColumnsTheBannerAndAnAppsPicker() throws {
+        let (model, _) = model()
+        let services   = PluginComponentServices(audio: model)
+        let music      = try AudioAppFixture.app("com.apple.Music", name: "Music", intent: try AudioAppFixture.intent(gain: 0.4), enforcement: .notApplied)
+        let safari     = try AudioAppFixture.app("com.apple.Safari", name: "Safari", enforcement: .recovering)
+
+        let empty = pixels(of: AudioMixerComponent().environment(\.pluginComponentServices, services))
+        model.receive(try AudioAppFixture.snapshot([music, safari]))
+        let withApps = pixels(of: AudioMixerComponent().environment(\.pluginComponentServices, services))
+        model.receive(try AudioAppFixture.snapshot([music, safari], captureAllowed: false))
+        let denied = pixels(of: AudioMixerComponent().environment(\.pluginComponentServices, services))
+
+        #expect(withApps > empty)
+        #expect(denied > 0)
+        #expect(
+            pixels(
+                of: AudioOutputPicker(
+                    model  : model,
+                    app    : music.identity,
+                    onClose: {}
+                )
+            ) > 0
+        )
+        #expect(
+            pixels(
+                of: AudioOutputPicker(
+                    model  : model,
+                    app    : try AudioAppFixture.identity("com.gone.App"),
+                    onClose: {}
+                )
+            ) == 0
+        )
+    }
+
+    @Test
     func mixerWithoutAModelDrawsNothingButKeepsRendering() {
         #expect(pixels(of: AudioMixerComponent()) == 0)
     }

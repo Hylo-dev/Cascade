@@ -31,6 +31,7 @@ final class AppAudioService: AudioAppsControlling {
     private let queue     : DispatchQueue
     private let clock     : @Sendable () -> Duration
     private let schedule  : @Sendable (Duration, @escaping @Sendable () -> Void) -> Void
+    private let isEnabled : Bool
 
     /// session is lazy because it delivers back to the service, and a stored `let` cannot capture
     /// `self` before the service is fully built.
@@ -49,22 +50,28 @@ final class AppAudioService: AudioAppsControlling {
             DispatchQueue.main.async {
                 MainActor.assumeIsolated { self?.onStatus?(status) }
             }
-        }
+        },
+        isEnabled      : isEnabled
     )
 
     /// init reads the stored intents on the queue and starts AudioHost if one needs enforcing.
     /// `schedule` defaults to a one-shot `asyncAfter` on `queue`; tests pass a manual one.
+    /// `isEnabled` is whether per-app audio is on from the start; the app builds the service
+    /// switched off and turns it on with the audio feature, so a stored intent never starts
+    /// AudioHost for a feature the user switched off.
     init(
         connection: any AudioHostConnecting,
         store     : AudioIntentStore,
         queue     : DispatchQueue,
         clock     : @escaping @Sendable () -> Duration,
-        schedule  : (@Sendable (Duration, @escaping @Sendable () -> Void) -> Void)? = nil
+        schedule  : (@Sendable (Duration, @escaping @Sendable () -> Void) -> Void)? = nil,
+        isEnabled : Bool = true
     ) {
         self.connection = connection
         self.store      = store
         self.queue      = queue
         self.clock      = clock
+        self.isEnabled  = isEnabled
         self.schedule   = schedule ?? { delay, work in
             let components = delay.components
             let seconds    = Double(components.seconds) + Double(components.attoseconds) / 1e18
@@ -90,6 +97,12 @@ final class AppAudioService: AudioAppsControlling {
     /// neutral, and stops it when neither holds.
     func setMixerVisible(_ isVisible: Bool) {
         session.setMixerVisible(isVisible)
+    }
+
+    /// setEnabled follows the audio feature: switched off, AudioHost is stopped and every app
+    /// plays natively, whatever the stored intents say; switched on, they are enforced again.
+    func setEnabled(_ isEnabled: Bool) {
+        session.setEnabled(isEnabled)
     }
 
     /// restart forgives AudioHost's faults and connects again.
