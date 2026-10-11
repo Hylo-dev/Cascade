@@ -28,6 +28,11 @@ public protocol AudioHostHAL: AnyObject, Sendable {
     /// device is gone or has no output stream.
     func streamFormat(ofOutput uid: String) -> CascadeAudioRenderFormat?
 
+    /// outputStreamCount is how many output streams the device `uid` has, nil when the device is
+    /// gone. A stacked aggregate lists the streams of every sub-device in sub-device order, so
+    /// these counts are what tells the render kernel where each device's streams begin.
+    func outputStreamCount(ofOutput uid: String) -> Int?
+
     /// createTap taps `processObjectIDs`, muting them while the tap is read.
     ///
     /// With a `streamOfOutput` UID the tap follows what those processes play to that device only

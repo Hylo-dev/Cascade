@@ -119,21 +119,28 @@ private struct SideLayout {
     }
 }
 
+/// `destinations` are the output buffers that begin a sub-device; empty means the kernel's
+/// default of one destination at buffer 0, which is how it is created with a NULL list.
 private func makeRenderer(
-    rate   : Double     = 48_000,
-    input  : SideLayout = .stereo(),
-    output : SideLayout = .stereo(),
-    gain   : Double     = 1,
-    muted  : Bool       = false
+    rate         : Double     = 48_000,
+    input        : SideLayout = .stereo(),
+    output       : SideLayout = .stereo(),
+    gain         : Double     = 1,
+    muted        : Bool       = false,
+    destinations : [UInt32]   = []
 ) throws -> OpaquePointer {
-    try #require(
-        CascadeAudioRenderCreate(
-            input.format(rate: rate, maxFrames: 4096),
-            output.format(rate: rate, maxFrames: 4096),
-            gain,
-            muted
+    try destinations.withUnsafeBufferPointer { list in
+        try #require(
+            CascadeAudioRenderCreate(
+                input.format(rate: rate, maxFrames: 4096),
+                output.format(rate: rate, maxFrames: 4096),
+                gain,
+                muted,
+                destinations.isEmpty ? nil : list.baseAddress,
+                UInt32(destinations.count)
+            )
         )
-    )
+    }
 }
 
 private func process(
@@ -590,9 +597,229 @@ struct AudioRenderKernelTests {
         var tooWide = good
         tooWide.channels = 33
 
-        #expect(CascadeAudioRenderCreate(badRate, good, 1, false) == nil)
-        #expect(CascadeAudioRenderCreate(good, noChannels, 1, false) == nil)
-        #expect(CascadeAudioRenderCreate(tooWide, good, 1, false) == nil)
+        #expect(CascadeAudioRenderCreate(badRate, good, 1, false, nil, 0) == nil)
+        #expect(CascadeAudioRenderCreate(good, noChannels, 1, false, nil, 0) == nil)
+        #expect(CascadeAudioRenderCreate(tooWide, good, 1, false, nil, 0) == nil)
+    }
+
+    // MARK: - Stacked aggregates (one destination per sub-device)
+
+    @Test
+    func everyInterleavedDestinationReceivesTheSameScaledSignal() throws {
+        let layout   = SideLayout.stereo(float64: true)
+        let renderer = try makeRenderer(input: layout, output: layout, gain: 0.5, destinations: [0, 1])
+        defer { CascadeAudioRenderDestroy(renderer) }
+
+        let frames = 100
+        let values = signal(frames: frames, channels: 2)
+        let input  = SyntheticBufferList(buffers: [2], frames: frames, float64: true)
+        input.write(buffer: 0, values)
+        let output = SyntheticBufferList(buffers: [2, 2], frames: frames, float64: true, poison: 0xAB)
+
+        process(renderer, input, output, frames: frames)
+
+        #expect(output.read(buffer: 0) == values.map { $0 * 0.5 })
+        #expect(output.read(buffer: 1) == values.map { $0 * 0.5 })
+    }
+
+    @Test
+    func eachDestinationMapsToItsOwnChannelCount() throws {
+        let layout   = SideLayout.stereo(float64: true)
+        let renderer = try makeRenderer(input: layout, output: layout, gain: 1, destinations: [0, 1, 2])
+        defer { CascadeAudioRenderDestroy(renderer) }
+
+        let frames = 32
+        let values = signal(frames: frames, channels: 2)
+        let input  = SyntheticBufferList(buffers: [2], frames: frames, float64: true)
+        input.write(buffer: 0, values)
+
+        // A stereo device, a mono one and a quad one, in sub-device order.
+        let output = SyntheticBufferList(buffers: [2, 1, 4], frames: frames, float64: true, poison: 0xAB)
+
+        process(renderer, input, output, frames: frames)
+
+        let stereo = output.read(buffer: 0)
+        let mono   = output.read(buffer: 1)
+        let quad   = output.read(buffer: 2)
+        for frame in 0 ..< frames {
+            let left  = values[frame * 2]
+            let right = values[frame * 2 + 1]
+
+            #expect(stereo[frame * 2]     == left)
+            #expect(stereo[frame * 2 + 1] == right)
+            #expect(mono[frame]           == (left + right) * 0.5)
+            #expect(quad[frame * 4]       == left)
+            #expect(quad[frame * 4 + 1]   == right)
+            #expect(quad[frame * 4 + 2].bitPattern == 0)
+            #expect(quad[frame * 4 + 3].bitPattern == 0)
+        }
+    }
+
+    @Test
+    func buffersThatAreNotDestinationsStayZero() throws {
+        let layout   = SideLayout.stereo(float64: true)
+        let renderer = try makeRenderer(input: layout, output: layout, gain: 1, destinations: [0, 2])
+        defer { CascadeAudioRenderDestroy(renderer) }
+
+        let frames = 16
+        let values = signal(frames: frames, channels: 2)
+        let input  = SyntheticBufferList(buffers: [2], frames: frames, float64: true)
+        input.write(buffer: 0, values)
+
+        // The first device has two streams, so the second one starts at buffer 2; buffer 3 is
+        // that device's extra stream.
+        let output = SyntheticBufferList(buffers: [2, 2, 2, 2], frames: frames, float64: true, poison: 0xAB)
+
+        process(renderer, input, output, frames: frames)
+
+        #expect(output.read(buffer: 0) == values)
+        #expect(output.read(buffer: 2) == values)
+        #expect(output.bytes(buffer: 1).allSatisfy { $0 == 0 })
+        #expect(output.bytes(buffer: 3).allSatisfy { $0 == 0 })
+    }
+
+    @Test
+    func theGainRampAdvancesOncePerFrameNotOncePerDestination() throws {
+        let layout   = SideLayout.stereo(float64: true)
+        let renderer = try makeRenderer(input: layout, output: layout, gain: 1, destinations: [0, 1])
+        defer { CascadeAudioRenderDestroy(renderer) }
+
+        let length = rampLength(rate: 48_000)
+        let frames = length + 60
+        let input  = SyntheticBufferList(buffers: [2], frames: frames, float64: true)
+        input.write(buffer: 0, Array(repeating: 1, count: frames * 2))
+        let output = SyntheticBufferList(buffers: [2, 2], frames: frames, float64: true)
+
+        CascadeAudioRenderSetCommand(renderer, 0.25, false)
+        process(renderer, input, output, frames: frames)
+
+        let first  = output.read(buffer: 0)
+        let second = output.read(buffer: 1)
+        #expect(first == second)
+        for frame in 0 ..< frames {
+            let expected = frame < length ? 1 + (0.25 - 1) * Double(frame + 1) / Double(length) : 0.25
+            #expect(abs(first[frame * 2] - expected) < 1e-12)
+        }
+    }
+
+    @Test
+    func theCrossfadeAdvancesOncePerFrameAcrossDestinations() throws {
+        let layout  = SideLayout(channels: 1, float64: true)
+        let single  = try makeRenderer(input: layout, output: layout, gain: 1)
+        let stacked = try makeRenderer(input: layout, output: layout, gain: 1, destinations: [0, 1])
+        defer {
+            CascadeAudioRenderDestroy(single)
+            CascadeAudioRenderDestroy(stacked)
+        }
+
+        let frames = 600
+        CascadeAudioRenderSetCrossfade(single,  0, 1, 480)
+        CascadeAudioRenderSetCrossfade(stacked, 0, 1, 480)
+
+        let input = SyntheticBufferList(buffers: [1], frames: frames, float64: true)
+        input.write(buffer: 0, Array(repeating: 1, count: frames))
+        let singleOutput  = SyntheticBufferList(buffers: [1], frames: frames, float64: true)
+        let stackedOutput = SyntheticBufferList(buffers: [1, 1], frames: frames, float64: true)
+
+        process(single,  input, singleOutput,  frames: frames)
+        process(stacked, input, stackedOutput, frames: frames)
+
+        #expect(stackedOutput.read(buffer: 0) == singleOutput.read(buffer: 0))
+        #expect(stackedOutput.read(buffer: 1) == singleOutput.read(buffer: 0))
+    }
+
+    @Test
+    func planarDestinationsStartAtTheirOwnBuffer() throws {
+        let layout   = SideLayout.stereo(float64: true, interleaved: false)
+        let renderer = try makeRenderer(input: layout, output: layout, gain: 1, destinations: [0, 2])
+        defer { CascadeAudioRenderDestroy(renderer) }
+
+        let length = rampLength(rate: 48_000)
+        let frames = length + 20
+        let values = signal(frames: frames, channels: 2)
+        let input  = SyntheticBufferList(buffers: layout.bufferShape, frames: frames, float64: true)
+        fill(input, layout: layout, interleavedValues: values)
+
+        // Two planar devices of two channel buffers each, then a stray fifth buffer.
+        let output = SyntheticBufferList(buffers: [1, 1, 1, 1, 1], frames: frames, float64: true, poison: 0xAB)
+
+        CascadeAudioRenderSetCommand(renderer, 0.5, false)
+        process(renderer, input, output, frames: frames)
+
+        let left  = output.read(buffer: 0)
+        let right = output.read(buffer: 1)
+        #expect(output.read(buffer: 2) == left)
+        #expect(output.read(buffer: 3) == right)
+        #expect(output.bytes(buffer: 4).allSatisfy { $0 == 0 })
+
+        // One advance per frame: the tail is settled at 0.5 exactly, and the ramp is linear.
+        for frame in 0 ..< frames {
+            let scale = frame < length ? 1 + (0.5 - 1) * Double(frame + 1) / Double(length) : 0.5
+            #expect(abs(left[frame] - values[frame * 2] * scale) < 1e-12)
+        }
+    }
+
+    @Test
+    func noDestinationListMeansOneDestinationAtBufferZero() throws {
+        let layout   = SideLayout.stereo(float64: true)
+        let renderer = try makeRenderer(input: layout, output: layout, gain: 1)
+        defer { CascadeAudioRenderDestroy(renderer) }
+
+        let frames = 16
+        let values = signal(frames: frames, channels: 2)
+        let input  = SyntheticBufferList(buffers: [2], frames: frames, float64: true)
+        input.write(buffer: 0, values)
+        let output = SyntheticBufferList(buffers: [2, 2], frames: frames, float64: true, poison: 0xAB)
+
+        process(renderer, input, output, frames: frames)
+
+        #expect(output.read(buffer: 0) == values)
+        #expect(output.bytes(buffer: 1).allSatisfy { $0 == 0 })
+    }
+
+    @Test
+    func destinationsBeyondTheRealBufferCountAreSkipped() throws {
+        let layout   = SideLayout.stereo(float64: true)
+        let renderer = try makeRenderer(input: layout, output: layout, gain: 1, destinations: [0, 7, 1])
+        defer { CascadeAudioRenderDestroy(renderer) }
+
+        let frames = 16
+        let values = signal(frames: frames, channels: 2)
+        let input  = SyntheticBufferList(buffers: [2], frames: frames, float64: true)
+        input.write(buffer: 0, values)
+        let output = SyntheticBufferList(buffers: [2, 2], frames: frames, float64: true, poison: 0xAB)
+
+        process(renderer, input, output, frames: frames)
+
+        #expect(output.read(buffer: 0) == values)
+        #expect(output.read(buffer: 1) == values)
+    }
+
+    @Test
+    func moreThanSixteenDestinationsAreCapped() throws {
+        let layout   = SideLayout.stereo(float64: true)
+        let renderer = try makeRenderer(
+            input        : layout,
+            output       : layout,
+            gain         : 1,
+            destinations : (0 ..< 20).map { UInt32($0) }
+        )
+        defer { CascadeAudioRenderDestroy(renderer) }
+
+        let frames = 8
+        let values = signal(frames: frames, channels: 2)
+        let input  = SyntheticBufferList(buffers: [2], frames: frames, float64: true)
+        input.write(buffer: 0, values)
+        let output = SyntheticBufferList(buffers: Array(repeating: 2, count: 20), frames: frames, float64: true, poison: 0xAB)
+
+        process(renderer, input, output, frames: frames)
+
+        for index in 0 ..< 16 {
+            #expect(output.read(buffer: index) == values)
+        }
+        for index in 16 ..< 20 {
+            #expect(output.bytes(buffer: index).allSatisfy { $0 == 0 })
+        }
     }
 
     // MARK: - IOProc trampoline

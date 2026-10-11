@@ -42,6 +42,9 @@ struct CascadeAudioRender {
     CascadeAudioRenderFormat outputFormat;
     uint32_t                 rampFrames;
 
+    uint32_t                 destinationBuffers[CASCADE_RENDER_MAX_DESTINATIONS];
+    uint32_t                 destinationCount;
+
     uint64_t                 seenCommand;
     double                   currentGain;
     double                   targetGain;
@@ -299,26 +302,52 @@ void CascadeAudioRenderProcess(
 
     const bool inputIsFloat64  = renderer->inputFormat.float64;
     const bool outputIsFloat64 = renderer->outputFormat.float64;
+    const bool outputInterleaved = renderer->outputFormat.interleaved;
     const uint32_t outputBufferCount = output->mNumberBuffers;
     const AudioBuffer *outputBuffers = output->mBuffers;
+    const uint32_t destinationCount  = renderer->destinationCount;
 
     Plane inputPlane;
-    Plane outputPlane;
     inputPlane.channelCount  = 0;
     inputPlane.frameCapacity = 0;
 
     if (input != NULL) {
         buildPlane(&inputPlane, input->mBuffers, input->mNumberBuffers, &renderer->inputFormat, true);
     }
-    buildPlane(&outputPlane, outputBuffers, outputBufferCount, &renderer->outputFormat, false);
 
-    uint32_t frameCount = frames < outputPlane.frameCapacity ? frames : outputPlane.frameCapacity;
+    // One plane per destination, each looking at the output list from its own first buffer. A
+    // destination whose first buffer is past the end stays empty (channelCount 0, capacity 0),
+    // and the render loop skips it by its capacity.
+    Plane    destinations[CASCADE_RENDER_MAX_DESTINATIONS];
+    uint32_t longestCapacity = 0;
+    for (uint32_t index = 0; index < destinationCount; index++) {
+        destinations[index].channelCount  = 0;
+        destinations[index].frameCapacity = 0;
+
+        uint32_t firstBuffer = renderer->destinationBuffers[index];
+        if (firstBuffer >= outputBufferCount) {
+            continue;
+        }
+        buildPlane(
+            &destinations[index],
+            outputBuffers + firstBuffer,
+            outputBufferCount - firstBuffer,
+            &renderer->outputFormat,
+            false
+        );
+        if (destinations[index].frameCapacity > longestCapacity) {
+            longestCapacity = destinations[index].frameCapacity;
+        }
+    }
+
+    uint32_t frameCount = frames < longestCapacity ? frames : longestCapacity;
     uint32_t inputChannels  = inputPlane.channelCount;
-    uint32_t outputChannels = outputPlane.channelCount;
     uint64_t invalidSamples = 0;
     double   inputFrame[CASCADE_RENDER_MAX_CHANNELS];
 
     for (uint32_t frame = 0; frame < frameCount; frame++) {
+        // Once per frame, whatever the number of destinations: the gain ramp and the
+        // crossfade are time, and the same instant must sound the same on every device.
         double scale = advanceScale(renderer);
 
         if (frame < inputPlane.frameCapacity) {
@@ -339,23 +368,33 @@ void CascadeAudioRenderProcess(
             }
         }
 
-        for (uint32_t channel = 0; channel < outputChannels; channel++) {
-            double sample;
-            if (outputChannels == 1 && inputChannels == 2) {
-                sample = (inputFrame[0] + inputFrame[1]) * 0.5;
-            } else if (outputChannels == 2 && inputChannels == 1) {
-                sample = inputFrame[0];
-            } else {
-                sample = channel < inputChannels ? inputFrame[channel] : 0.0;
+        for (uint32_t index = 0; index < destinationCount; index++) {
+            const Plane *destination = &destinations[index];
+            if (frame >= destination->frameCapacity) {
+                continue; // Absent, or a shorter buffer than its siblings.
             }
 
-            // A settled mute must be a positive zero, not -0.0 from a negative sample.
-            double scaled = scale == 0.0 ? 0.0 : sample * scale;
-            storeSample(
-                outputPlane.bases[channel] + (size_t)frame * outputPlane.strides[channel],
-                outputIsFloat64,
-                scaled
-            );
+            // Each device maps the same frame to ITS channel count: a mono speaker next to a
+            // stereo headset gets the mix, not the left channel.
+            uint32_t outputChannels = destination->channelCount;
+            for (uint32_t channel = 0; channel < outputChannels; channel++) {
+                double sample;
+                if (outputChannels == 1 && inputChannels == 2) {
+                    sample = (inputFrame[0] + inputFrame[1]) * 0.5;
+                } else if (outputChannels == 2 && inputChannels == 1) {
+                    sample = inputFrame[0];
+                } else {
+                    sample = channel < inputChannels ? inputFrame[channel] : 0.0;
+                }
+
+                // A settled mute must be a positive zero, not -0.0 from a negative sample.
+                double scaled = scale == 0.0 ? 0.0 : sample * scale;
+                storeSample(
+                    destination->bases[channel] + (size_t)frame * destination->strides[channel],
+                    outputIsFloat64,
+                    scaled
+                );
+            }
         }
     }
 
@@ -363,8 +402,10 @@ void CascadeAudioRenderProcess(
         atomic_fetch_add_explicit(&renderer->invalidSampleCount, invalidSamples, memory_order_relaxed);
     }
 
-    // Every output byte is ours to write: the tail of a used buffer and every
-    // buffer the mapping did not touch (a device's extra streams) become zeros.
+    // Every output byte is ours to write: the tail of a used buffer and every buffer no
+    // destination owns (a device's extra streams) become zeros. A buffer is used by the
+    // destination that starts there (interleaved) or covers it (planar), for as many frames
+    // as that destination really got.
     uint32_t bytesPerSample = outputIsFloat64 ? 8u : 4u;
     for (uint32_t index = 0; index < outputBufferCount; index++) {
         const AudioBuffer *buffer = &outputBuffers[index];
@@ -373,13 +414,24 @@ void CascadeAudioRenderProcess(
         }
 
         size_t usedBytes = 0;
-        if (outputPlane.channelCount != 0) {
-            if (renderer->outputFormat.interleaved) {
-                if (index == 0) {
-                    usedBytes = (size_t)frameCount * outputPlane.strides[0];
+        for (uint32_t owner = 0; owner < destinationCount; owner++) {
+            const Plane *destination = &destinations[owner];
+            if (destination->channelCount == 0) {
+                continue;
+            }
+
+            uint32_t firstBuffer = renderer->destinationBuffers[owner];
+            uint32_t written     = frameCount < destination->frameCapacity ? frameCount : destination->frameCapacity;
+            size_t   ownedBytes  = 0;
+            if (outputInterleaved) {
+                if (index == firstBuffer) {
+                    ownedBytes = (size_t)written * destination->strides[0];
                 }
-            } else if (index < outputPlane.channelCount) {
-                usedBytes = (size_t)frameCount * bytesPerSample;
+            } else if (index >= firstBuffer && index - firstBuffer < destination->channelCount) {
+                ownedBytes = (size_t)written * bytesPerSample;
+            }
+            if (ownedBytes > usedBytes) {
+                usedBytes = ownedBytes;
             }
         }
         if (buffer->mDataByteSize > usedBytes) {
@@ -390,8 +442,8 @@ void CascadeAudioRenderProcess(
 
 /// How many frames a slice holds, as the IOProc knows it: the output's, else the tap's.
 ///
-/// Core Audio hands an IOProc buffers, not a frame count, so the count is the capacity of
-/// the first output buffer in the output format. A device that gave no usable output buffer
+/// Core Audio hands an IOProc buffers, not a frame count, so the count is the largest capacity
+/// among the destinations, in the output format. A device that gave no usable output buffer
 /// falls back to the tap's capacity; `Process` still clamps to the real buffers either way.
 static uint32_t ioProcFrameCount(
     const CascadeAudioRender *renderer,
@@ -404,9 +456,25 @@ static uint32_t ioProcFrameCount(
     plane.frameCapacity = 0;
 
     if (output != NULL) {
-        buildPlane(&plane, output->mBuffers, output->mNumberBuffers, &renderer->outputFormat, false);
-        if (plane.frameCapacity != 0) {
-            return plane.frameCapacity;
+        uint32_t longestCapacity = 0;
+        for (uint32_t index = 0; index < renderer->destinationCount; index++) {
+            uint32_t firstBuffer = renderer->destinationBuffers[index];
+            if (firstBuffer >= output->mNumberBuffers) {
+                continue;
+            }
+            buildPlane(
+                &plane,
+                output->mBuffers + firstBuffer,
+                output->mNumberBuffers - firstBuffer,
+                &renderer->outputFormat,
+                false
+            );
+            if (plane.frameCapacity > longestCapacity) {
+                longestCapacity = plane.frameCapacity;
+            }
+        }
+        if (longestCapacity != 0) {
+            return longestCapacity;
         }
     }
     if (input != NULL) {
@@ -455,7 +523,9 @@ CascadeAudioRender *CascadeAudioRenderCreate(
     CascadeAudioRenderFormat input,
     CascadeAudioRenderFormat output,
     double                   gain,
-    bool                     muted
+    bool                     muted,
+    const uint32_t          *destinationBuffers,
+    uint32_t                 destinationCount
 )
 {
     if (!isValidFormat(input) || !isValidFormat(output)) {
@@ -489,6 +559,20 @@ CascadeAudioRender *CascadeAudioRenderCreate(
     renderer->crossfadeWeight = 1.0;
     renderer->crossfadeFrom   = 1.0;
     renderer->crossfadeTo     = 1.0;
+
+    // No list means the single device at buffer 0, which is what a plain output looks like.
+    if (destinationBuffers == NULL || destinationCount == 0) {
+        renderer->destinationCount = 1;
+    } else {
+        renderer->destinationCount = destinationCount < CASCADE_RENDER_MAX_DESTINATIONS
+            ? destinationCount
+            : CASCADE_RENDER_MAX_DESTINATIONS;
+        memcpy(
+            renderer->destinationBuffers,
+            destinationBuffers,
+            (size_t)renderer->destinationCount * sizeof renderer->destinationBuffers[0]
+        );
+    }
     atomic_init(&renderer->command, command);
     atomic_init(&renderer->crossfadeWeights, 0);
     atomic_init(&renderer->crossfadeRequest, 0);

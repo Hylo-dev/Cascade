@@ -56,6 +56,10 @@ final class AppAudioPipeline: @unchecked Sendable {
     ) {
         guard let mainOutputUID = configuration.outputUIDs.first else { return nil }
 
+        // Asked before the tap exists: it is a read-only query, and a device that cannot say
+        // how many streams it has is not worth a tap and an aggregate that would be undone.
+        guard let destinations = Self.destinationBuffers(of: configuration.outputUIDs, hal: hal) else { return nil }
+
         guard let tap = hal.createTap(
             processObjectIDs : configuration.processObjectIDs,
             streamOfOutput   : configuration.streamTap ? mainOutputUID : nil
@@ -69,16 +73,23 @@ final class AppAudioPipeline: @unchecked Sendable {
             return nil
         }
 
-        // The aggregate presents the main output's streams, so that device's format is the
-        // format the IOProc will be handed on the output side.
+        // The aggregate presents the main output's streams first, so that device's format is the
+        // format the IOProc will be handed on the output side. The kernel renders every device
+        // with that one format, so another device must agree on the sample type, or its bytes
+        // would be written in the wrong width.
         guard
             let outputFormat = hal.streamFormat(ofOutput: mainOutputUID),
-            let render       = CascadeAudioRenderCreate(
-                tap.format,
-                outputFormat,
-                intent.gain,
-                intent.isMuted
-            )
+            Self.share(sampleTypeOf: outputFormat, withOutputs: configuration.outputUIDs, hal: hal),
+            let render = destinations.withUnsafeBufferPointer({ list in
+                CascadeAudioRenderCreate(
+                    tap.format,
+                    outputFormat,
+                    intent.gain,
+                    intent.isMuted,
+                    list.baseAddress,
+                    UInt32(list.count)
+                )
+            })
         else {
             hal.destroy(aggregate: aggregate)
             hal.destroy(tap: tap.tapID)
@@ -103,6 +114,43 @@ final class AppAudioPipeline: @unchecked Sendable {
 
     deinit {
         teardown()
+    }
+
+    /// destinationBuffers returns, for each output in order, the index of the output buffer
+    /// where its streams begin: the sum of the stream counts of the outputs before it.
+    ///
+    /// A stacked aggregate hands the IOProc the streams of its sub-devices one after the
+    /// other, in sub-device order, and the kernel can only render into a device whose first
+    /// buffer it knows. A device that cannot say, or has no output stream at all, makes the
+    /// whole list unusable (nil): better to give the app back to its native output than to
+    /// guess an offset and play on the wrong device.
+    private static func destinationBuffers(
+        of outputUIDs : [String],
+        hal           : any AudioHostHAL
+    ) -> [UInt32]? {
+        var destinations = [UInt32]()
+        var nextBuffer   = 0
+
+        for uid in outputUIDs {
+            guard let streamCount = hal.outputStreamCount(ofOutput: uid), streamCount > 0 else { return nil }
+
+            destinations.append(UInt32(clamping: nextBuffer))
+            nextBuffer += streamCount
+        }
+
+        return destinations
+    }
+
+    /// share tells whether every output other than the main one reports the main output's
+    /// sample width, so the one `CascadeAudioRenderFormat` the kernel was given is true for all.
+    private static func share(
+        sampleTypeOf mainFormat : CascadeAudioRenderFormat,
+        withOutputs outputUIDs  : [String],
+        hal                     : any AudioHostHAL
+    ) -> Bool {
+        outputUIDs.dropFirst().allSatisfy { uid in
+            hal.streamFormat(ofOutput: uid)?.float64 == mainFormat.float64
+        }
     }
 
     /// update publishes the intent's gain and mute to the kernel, which ramps to them over 5 ms.

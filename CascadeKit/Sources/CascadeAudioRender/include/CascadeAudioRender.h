@@ -49,13 +49,26 @@ typedef struct {
     uint32_t maxFrames;
 } CascadeAudioRenderFormat;
 
+/// The most sub-devices (destinations) one kernel renders to; a longer list is cut here.
+#define CASCADE_RENDER_MAX_DESTINATIONS 16
+
 /// Creates a kernel settled on `gain` (0...1, clamped; NaN reads as 0) and `muted`.
 /// Allocates, so call it off the realtime thread. Returns NULL on an invalid format.
+///
+/// In a stacked aggregate the IOProc's output list holds the output streams of every
+/// sub-device, one `AudioBuffer` per stream, in sub-device order. `destinationBuffers` lists
+/// the index of the buffer that BEGINS each sub-device (its first stream), `destinationCount`
+/// of them, copied here (at most CASCADE_RENDER_MAX_DESTINATIONS). The kernel renders the app
+/// into the first stream of every destination, so every device plays. NULL or a count of 0
+/// means one destination at buffer 0; an index past the real buffer count is skipped at render
+/// time, so a device that hands over fewer streams than expected costs silence, never a crash.
 CascadeAudioRender *_Nullable CascadeAudioRenderCreate(
     CascadeAudioRenderFormat input,
     CascadeAudioRenderFormat output,
     double                   gain,
-    bool                     muted
+    bool                     muted,
+    const uint32_t *_Nullable destinationBuffers,
+    uint32_t                 destinationCount
 );
 
 /// Publishes a new (gain, muted) command. Any thread; one atomic store, lock-free.
@@ -84,6 +97,12 @@ void CascadeAudioRenderSetCrossfade(
 /// inputs zero and extra outputs zeroed. NaN and infinite input samples are
 /// written as 0 and counted. Unity gain settled is bit-exact; there is no
 /// boost, limiter, EQ or gate.
+///
+/// Every destination (see Create) gets the same scaled frame. An interleaved destination is
+/// the one buffer at its index, mapped to THAT buffer's own channel count; a planar one is the
+/// `output.channels` buffers from its index. The gain ramp and the crossfade advance once per
+/// frame, never once per destination. Every other output byte, the non-destination buffers
+/// and the tails included, is written as zero.
 void CascadeAudioRenderProcess(
     CascadeAudioRender *renderer,
     const AudioBufferList *_Nullable input,
@@ -96,9 +115,9 @@ void CascadeAudioRenderProcess(
 /// Core Audio calls it on its realtime thread, so it must not run Swift (no runtime,
 /// no allocation, no retain). It has exactly the shape of `AudioDeviceIOProc`, with
 /// `client` being the `CascadeAudioRender *` given to `AudioDeviceCreateIOProcID`.
-/// The frame count is not passed by Core Audio: it is how many frames the first
-/// output buffer holds in the output format, or the tap's own frames when the device
-/// handed over no output buffer. Always returns `noErr`; the callback never fails
+/// The frame count is not passed by Core Audio: it is how many frames the largest
+/// destination buffer holds in the output format, or the tap's own frames when the
+/// device handed over no output buffer. Always returns `noErr`; the callback never fails
 /// the device, an unusable slice just renders silence. REALTIME-SAFE.
 OSStatus CascadeAudioRenderIOProc(
     AudioObjectID          device,

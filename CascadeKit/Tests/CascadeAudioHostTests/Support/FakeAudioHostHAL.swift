@@ -50,6 +50,15 @@ final class FakeAudioHostHAL: AudioHostHAL, @unchecked Sendable {
     var aggregateShouldFail: Bool                      = false
     var startShouldFail    : Bool                      = false
 
+    /// How many output streams each device reports. A UID absent from `streamCounts` answers
+    /// `defaultStreamCount`, which a test sets to nil to make the query fail for every device.
+    var streamCounts       : [String: Int]             = [:]
+    var defaultStreamCount : Int?                      = 1
+
+    /// A device that answers another format than `outputFormat`, or none at all.
+    var formatOverrides      : [String: CascadeAudioRenderFormat] = [:]
+    var outputsWithoutFormat : Set<String>                        = []
+
     /// Runs inside `destroy(tap:)`, which is where the pipeline must still own its render context.
     var onDestroyTap: (() -> Void)?
 
@@ -91,7 +100,15 @@ final class FakeAudioHostHAL: AudioHostHAL, @unchecked Sendable {
     func streamFormat(ofOutput uid: String) -> CascadeAudioRenderFormat? {
         checkQueue()
         calls.append(.streamFormat(ofOutput: uid))
-        return outputFormat
+
+        guard !outputsWithoutFormat.contains(uid) else { return nil }
+
+        return formatOverrides[uid] ?? outputFormat
+    }
+
+    func outputStreamCount(ofOutput uid: String) -> Int? {
+        checkQueue()
+        return streamCounts[uid] ?? defaultStreamCount
     }
 
     func createTap(

@@ -107,6 +107,12 @@ final class CoreAudioHostHAL: AudioHostHAL, @unchecked Sendable {
         return Self.renderFormat(of: description)
     }
 
+    func outputStreamCount(ofOutput uid: String) -> Int? {
+        guard let device = Self.deviceID(forUID: uid) else { return nil }
+
+        return HALProperty.objectIDs(kAudioDevicePropertyStreams, scope: kAudioObjectPropertyScopeOutput, of: device).count
+    }
+
     // MARK: - Taps and aggregates
 
     func createTap(

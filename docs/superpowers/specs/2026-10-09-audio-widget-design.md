@@ -176,7 +176,7 @@ shoulder of the notch, beside the hardware notch. Under it comes the global caps
 output button and the mute button beside it, then a divider, then the apps area. The output
 button shows the icon of the device (built-in: a MacBook, with `laptopcomputer` as fallback;
 unknown: `hifispeaker`).
- Each column takes the same scroll and drag as the bar. Past
+Each column takes the same scroll and drag as the bar. Past
 about six apps the strip scrolls horizontally. An app appears when it starts producing audio
 and leaves about 3 s after it stops, so a gap between tracks does not make it flicker.
 
