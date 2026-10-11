@@ -3,6 +3,7 @@
 //  CascadeKit
 //
 
+import CascadeContracts
 import Foundation
 
 /// AudioHostListener accepts the connections to AudioHost. A service bundled in an app answers
