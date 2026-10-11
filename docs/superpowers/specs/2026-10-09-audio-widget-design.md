@@ -1,9 +1,11 @@
 # Audio widget and per-app mixer
 
 Date: 9 October 2026. Branch: `cava/audio-mixer`, from `main` at `c0074fa`.
-Status: design approved section by section in the conversation of 8 and 9 October;
-implementation plan not written yet. The numeric gates are targets to measure, not
-results. Nothing here is implemented.
+Status: design approved section by section in the conversation of 8 and 9 October.
+Part A (the bar, the detail surface and the global mixer) and Part B (per-app audio
+through `AudioHost`) are implemented. §2 and §3 carry amendments of 10 and 11 October,
+marked where they apply. The numeric gates are targets to measure, not results; the
+manual measurements are listed in `docs/superpowers/verification/2026-10-10-audio-widget-part-b.md`.
 
 This spec replaces the 3 October audio mixer design on `cava/audio`, which was built on
 the deleted addon SDK (`CascadeAddonSDK`, `ServiceBroker`). Its research is carried over
@@ -115,11 +117,13 @@ while not visible.
 
 A new shared capability, not an Audio-only path. A feature may declare
 `"surfaces": { "widget": { ... }, "detail": {} }`. Clicking a widget whose feature has a detail
-opens it as a page that uses the notch's extended height (up to `maximumActivityExpandedHeight`,
-240 pt) with a back control at the top left. Back, Escape, a click outside the notch, the notch
+opens it as a page in the notch's normal expanded size, with a back control at the top left. Back, Escape, a click outside the notch, the notch
 closing, the display changing and the plugin being disabled close it and restore the grid.
 One detail is open at a time: opening another replaces it. Its document is an ordinary
 publication with the usual limits and `staleAfter` rule; opening it does not wake the plugin.
+
+*Amendment of 10 October.* The detail page does not extend the notch: it keeps the notch's
+normal size and the mixer is laid out inside it. The 240 pt extended height is not used.
 
 ### Components
 
@@ -138,12 +142,23 @@ A capsule, dark glass above and white fill below. The icon sits low, inside the 
 
 | State | Look |
 | --- | --- |
-| Unrecognised output | `speaker.wave.1/2/3` by level |
-| Recognised Bluetooth device | `bluetooth.device` drawing, exact model and colour |
-| Built-in, display, HDMI, AirPlay | `laptopcomputer`, `display`, `tv`, `airplayaudio` |
+| Built-in or unrecognised output | The level speaker: `speaker.fill`, `speaker.wave.1.fill`, `speaker.wave.2.fill` or `speaker.wave.3.fill` |
+| Identified Bluetooth device | The AirPods SF Symbol of its model |
+| Other Bluetooth device | `headphones` |
 | Muted | Grey fill, level kept, `speaker.slash` |
-| Scrolling or dragging | Percentage at the top, capsule scaled up slightly |
+| Scrolling or dragging | Capsule scaled up slightly |
 | Global multi-output | Icon of the clock device with a `+N` badge |
+
+*Amendment of 10 and 11 October.* Every icon is an SF Symbol: the `bluetooth.device` drawing
+is not used for the audio output. The pill shows the level speaker for the built-in and the
+unknown outputs, AirPods symbols for identified Bluetooth devices and headphones for generic
+Bluetooth; the device icons of the table above (`laptopcomputer`, `display`, `tv`,
+`airplayaudio`) belong to the output picker and the output button, not to the pill. The
+percentage is shown only in the mixer, never on the bar. The icon is white over the glass and
+light blue (`#00C6EA`) over the white level fill, sized 0.49 of the pill's width and centred
+0.51 of the width above its bottom. On the grid the pill is 60 % of the cell width; in the
+mixer it takes the full width of its column. Scrolling follows the fingers (up raises the
+level) whatever the natural-scrolling setting.
 
 Gestures: vertical scroll (trackpad continuous, wheel in steps of 1/16 like macOS), vertical
 drag like a slider, click (no movement beyond 4 pt) opens the mixer. Long press stays with the
@@ -154,7 +169,14 @@ grid's rearranging. Volume 0 is not mute; mute is set from the mixer.
 Global capsule on the left, wider, with its percentage above and its output button below;
 a divider; then one narrower capsule column per playing app: app icon above, capsule, and
 under it a mute button and an output button whose icon is the app's current output (`²`-style
-count when it plays to several). Each column takes the same scroll and drag as the bar. Past
+count when it plays to several).
+
+*Amendment of 10 and 11 October (layout "A").* The title "Audio · NN %" sits in the left
+shoulder of the notch, beside the hardware notch. Under it comes the global capsule, with the
+output button and the mute button beside it, then a divider, then the apps area. The output
+button shows the icon of the device (built-in: a MacBook, with `laptopcomputer` as fallback;
+unknown: `hifispeaker`).
+ Each column takes the same scroll and drag as the bar. Past
 about six apps the strip scrolls horizontally. An app appears when it starts producing audio
 and leaves about 3 s after it stops, so a gap between tracks does not make it flicker.
 
@@ -229,12 +251,36 @@ atomic render counter, never amplitude, so silence and pauses are not failures.
 
 **Orphans.** `AudioHost` destroys leftover `Cascade-*` aggregates when it starts; when it dies,
 Cascade does the same cleanup before restarting it. FineTune documents that taps orphaned by
-a `kill -9` silently mute apps, which is the failure this guards against.
+a `kill -9` silently mute apps, which is the failure this guards against. (Amended: the phase 0
+spike found that private taps and aggregates die with their process and leave nothing to sweep,
+see the end of this section.)
 
 **Spikes before the plan's engine phases.** The documentation does not settle these, so
 phase 0 measures them: whether private aggregates and taps really vanish when their process
 dies; whether the public multi-output aggregate survives a Cascade crash and must be cleaned
 up; and that TCC attributes `AudioHost`'s capture request to Cascade.
+
+*Amendment of 10 and 11 October: the answers.* They are recorded in
+`docs/superpowers/verification/2026-10-09-audio-lifecycle-spike.md` and
+`docs/superpowers/verification/2026-10-10-audio-tap-permission-spike.md`.
+
+- *A, yes.* A private aggregate and its process tap die with their creator on `kill -9`, so
+  `AudioHost` has no private object to sweep. The *Orphans* paragraph above is amended
+  accordingly: the startup sweep applies to the public `cascade.multi-output.*` aggregate only,
+  which is Cascade's, not `AudioHost`'s.
+- *B, no.* After the kill the tapped app is audible again at once: a crashed `AudioHost` does
+  not leave an app muted. The recovery stays as written, because the fault is still felt for
+  as long as it takes to restart.
+- *C, yes.* The public multi-output aggregate survives its creator's `kill -9` and needs the
+  startup sweep of its prefix.
+- *Permission.* What a denied "System Audio Recording" permission does to a muting tap (whether
+  creation fails, whether the app is silenced or stays audible, and what signal tells denial
+  from silence) is **not yet measured**: the probe's runs P1 to P4 wait for a person to toggle
+  the permission and listen. Until they are done `captureAllowed` in `AudioHostSnapshot` stays
+  unknown (`nil`), which the model treats as allowed, and §4's read-only columns and banner
+  are built but never triggered by a measured denial. How helper processes group under their
+  app (P4) is settled for Brave by the probe's smoke run: the bundle ID is the helper's, so
+  the grouping uses the outermost `.app` of the executable.
 
 ## 4. Permissions, failures and budgets
 
@@ -292,7 +338,8 @@ Each phase ends with its tests green and a commit.
 
 0. **Spikes**: process-death behaviour of private aggregates and taps, persistence of the
    public multi-output aggregate, TCC attribution for `AudioHost.xpc`. Their results may
-   change phases 3 and 4.
+   change phases 3 and 4. The answers on process death and persistence are recorded (§3);
+   the denied-permission behaviour is still pending.
 1. **Engine**: the `detail` surface and the infrastructure for service-fed tier-2 components.
 2. **The bar**: `SystemAudioService`, `audio.volumeBar`, `com.cascade.audio` with its widget.
    Shippable on its own.
