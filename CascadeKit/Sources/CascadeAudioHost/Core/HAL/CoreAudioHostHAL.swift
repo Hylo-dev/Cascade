@@ -437,3 +437,10 @@ private enum HALProperty {
         return value?.takeRetainedValue() as String?
     }
 }
+
+/// makeCoreAudioHostHAL is the composition root's way to the real HAL. The class stays internal,
+/// so its HAL calls are not part of this target's public surface; only the protocol it
+/// implements is.
+public func makeCoreAudioHostHAL(queue: DispatchQueue) -> any AudioHostHAL {
+    CoreAudioHostHAL(queue: queue)
+}
