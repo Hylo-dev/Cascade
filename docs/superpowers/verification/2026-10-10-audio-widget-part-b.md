@@ -12,12 +12,12 @@ on are `2026-10-09-audio-lifecycle-spike.md` (answered) and
 
 ## 1. Automated results
 
-Run on branch `cava/audio-mixer`, Xcode (`/Applications/Xcode.app`) at HEAD `bcb8bae` plus the
-documentation changes of this task.
+Run on branch `cava/audio-mixer`, Xcode (`/Applications/Xcode.app`) at HEAD `82bdff1` (the
+three final review fixes) plus the documentation changes of this task.
 
 | Command | Result |
 | --- | --- |
-| `swift test --package-path CascadeKit` | One failure, the known one listed below. Per target, Swift Testing: CascadeRuntimeTests 66 tests passed; CascadePluginsTests 52 tests, 1 issue; CascadePluginToolTests 7 passed; CascadePluginEngineTests 163 passed; CascadeKitTests 508 passed; CascadeContractsTests 110 passed; CascadeAudioHostTests 89 passed (including `AudioRenderKernelTests`, `AudioReconcilerTests` and `AudioProcessGroupingTests`). |
+| `swift test --package-path CascadeKit` | One failure, the known one listed below. Per target, Swift Testing: CascadeRuntimeTests 66 tests passed; CascadePluginsTests 52 tests, 1 issue; CascadePluginToolTests 7 passed; CascadePluginEngineTests 163 passed; CascadeKitTests 508 passed; CascadeContractsTests 110 passed; CascadeAudioHostTests 111 passed (including `AudioRenderKernelTests`, `AudioReconcilerTests` and `AudioProcessGroupingTests`). |
 | `CASCADE_APPLICATIONS_DIRECTORY=/private/tmp/cascade-audio-apps xcodebuild -project Cascade.xcodeproj -scheme Cascade -configuration Debug -derivedDataPath /private/tmp/cascade-audio-dd -only-testing:CascadeTests test` | `** TEST SUCCEEDED **`, Swift Testing: 105 tests in 9 suites passed. |
 
 The full `xcodebuild ... test` (without `-only-testing`) also runs `CascadeUITests`, which
@@ -47,7 +47,10 @@ widget placed on the grid and System Audio Recording allowed for Cascade.
 ### Outputs
 
 - [ ] An app sent to AirPods only plays on the AirPods and not on the speakers. pending: run with the user
-- [ ] The same app sent to the AirPods and the speakers plays on both. pending: run with the user
+- [ ] The same app sent to the AirPods and the speakers plays on both, in either order of selection (the first one chosen is the clock). pending: run with the user
+- [ ] An app sent to the AirPods while the speakers are the system output (a mixdown tap) plays on the AirPods only and stays audible; an app following the system output uses the cheaper stream tap. pending: run with the user
+- [ ] Moving the system output away from the device an app is pinned to hands the app over with a crossfade and no gap, because its tap changes from the device's stream to the mixdown. pending: run with the user
+- [ ] "Cascade" never appears as an app column, with an app controlled and playing (AudioHost's own output is not listed). pending: run with the user
 - [ ] Switching an app's output crossfades with no audible click or gap. pending: run with the user
 - [ ] "Follow system" makes the app follow the system output again, including when that output changes. pending: run with the user
 
@@ -75,10 +78,17 @@ widget placed on the grid and System Audio Recording allowed for Cascade.
 Recorded while building; the code assumes one answer to each, and a run on real devices may
 disagree.
 
-1. **A stacked aggregate's output buffer list.** Whether the output buffer list of an
-   aggregate stacked over several outputs carries one stream or one per sub-device is not
-   known. The render kernel writes the first output stream only, so if the aggregate exposes
-   one stream per sub-device the others would not get audio.
+1. **A stacked aggregate's output buffer list.** The aggregate lists the output streams of
+   every sub-device, one `AudioBuffer` per stream, and the render kernel now writes the same
+   frame into the first stream of every sub-device. It learns where each one begins from the
+   stream counts the pipeline asks the HAL for (`outputStreamCount`), as the prefix sums of
+   the outputs in order: the first device at buffer 0, the second after the streams of the
+   first, and so on. Each destination is mapped to its own channel count, and the gain ramp
+   advances once per frame. What remains to verify on hardware is that the aggregate's buffer
+   order really matches the sub-device order (main first, then the others as listed): if it
+   does not, the audio would reach a device other than the one chosen, or none. Also to see
+   is that an output whose stream count is zero or unknown fails the build and the app
+   returns to native audio, as does one whose sample width differs from the main output's.
 2. **Non-float device formats.** The pipeline build fails today for a device whose stream
    format is not 32-bit float, so such an output is not controllable and the app returns to
    native audio. How common that is on real devices is not known.
