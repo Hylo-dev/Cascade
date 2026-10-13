@@ -1,0 +1,21 @@
+{
+  "manifestVersion": 2,
+  "id": "com.cascade.audio",
+  "version": "1.0.0",
+  "compatibility": { "macOS": "15.0", "cascadeProtocol": { "major": 2, "minimumMinor": 0 } },
+  "execution": { "entryPoint": "AudioPlugin" },
+  "features": [
+    {
+      "id": "audio",
+      "surfaces": { "widget": { "sizes": ["1x2"] }, "detail": {} },
+      "services": ["audio.system", "audio.apps"],
+      "permissions": ["audio.capture"],
+      "components": [
+        { "id": "audio.volumeBar", "version": 1 },
+        { "id": "audio.mixer", "version": 1 },
+        { "id": "audio.outputPicker", "version": 1 }
+      ]
+    }
+  ],
+  "resources": { "profile": "eventDriven" }
+}

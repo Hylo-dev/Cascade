@@ -19,6 +19,11 @@ struct DisplayPresentation {
     let showsWidgets            : Bool
     let contextualPage          : (any NotchContextualPage)?
     let contextualPageIsSelected: Bool
+
+    /// detailPage is the page a plugin widget's click opened on this display. It is a
+    /// slot of its own, not a selection: while it is set it draws over the grid and
+    /// over the selected contextual page, and both come back untouched when it goes.
+    let detailPage              : (any NotchContextualPage)?
     let widgetContentRevision   : UInt64
     let style                   : ExternalNotchStyle
 
@@ -31,6 +36,7 @@ struct DisplayPresentation {
         showsWidgets            : Bool,
         contextualPage          : (any NotchContextualPage)? = nil,
         contextualPageIsSelected: Bool = false,
+        detailPage              : (any NotchContextualPage)? = nil,
         widgetContentRevision   : UInt64,
         style                   : ExternalNotchStyle
     ) {
@@ -42,12 +48,13 @@ struct DisplayPresentation {
         self.showsWidgets             = showsWidgets
         self.contextualPage           = contextualPage
         self.contextualPageIsSelected = contextualPageIsSelected
+        self.detailPage               = detailPage
         self.widgetContentRevision    = widgetContentRevision
         self.style                    = style
     }
 
     var isExpanded: Bool {
-        expanded != nil || showsWidgets || contextualPageIsSelected
+        expanded != nil || showsWidgets || contextualPageIsSelected || detailPage != nil
     }
 
     /// visibleActivityRoots mirrors the renderer's real mounted roots. An owner
@@ -58,7 +65,7 @@ struct DisplayPresentation {
             return [expanded]
         }
 
-        if showsWidgets || contextualPageIsSelected {
+        if showsWidgets || contextualPageIsSelected || detailPage != nil {
             return []
         }
 
@@ -104,6 +111,7 @@ struct DisplayPresentation {
             showsWidgets            : showsWidgets,
             contextualPage          : contextualPage,
             contextualPageIsSelected: contextualPageIsSelected,
+            detailPage              : detailPage,
             widgetContentRevision   : widgetContentRevision,
             style                   : style
         )

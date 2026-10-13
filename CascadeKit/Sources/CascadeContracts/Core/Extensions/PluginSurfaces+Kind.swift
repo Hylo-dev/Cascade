@@ -11,6 +11,7 @@ extension PluginSurfaces {
             case .widget  : widget != nil
             case .activity: activity != nil
             case .notice  : notice != nil
+            case .detail  : detail != nil
         }
     }
 }

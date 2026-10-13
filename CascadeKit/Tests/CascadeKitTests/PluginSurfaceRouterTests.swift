@@ -26,6 +26,18 @@ struct PluginSurfaceRouterTests {
         PluginPublicationKey(plugin: clock, feature: "alarm", surface: .widget)
     }
 
+    private var mixerKey: PluginPublicationKey {
+        PluginPublicationKey(plugin: clock, feature: "mixer", surface: .widget)
+    }
+
+    private var detailKey: PluginPublicationKey {
+        PluginPublicationKey(plugin: clock, feature: "mixer", surface: .detail)
+    }
+
+    private var detailID: String {
+        "plugin-detail:com.cascade.clock/mixer"
+    }
+
     /// Rig is a router over a recording host, with what they submitted and reported.
     @MainActor
     final class Rig {
@@ -49,6 +61,13 @@ struct PluginSurfaceRouterTests {
             features       : [
                 PluginFeature(id: "time", surfaces: PluginSurfaces(widget: PluginWidgetSurface(sizes: [PluginWidgetSize(columns: 3, rows: 1)]))),
                 PluginFeature(id: "alarm", surfaces: PluginSurfaces(widget: PluginWidgetSurface(sizes: [PluginWidgetSize(columns: 1, rows: 1), PluginWidgetSize(columns: 2, rows: 2)]))),
+                PluginFeature(
+                    id      : "mixer",
+                    surfaces: PluginSurfaces(
+                        widget: PluginWidgetSurface(sizes: [PluginWidgetSize(columns: 2, rows: 1)]),
+                        detail: PluginPlainSurface()
+                    )
+                ),
             ],
             resources      : PluginResources(profile: .eventDriven)
         )
@@ -163,6 +182,164 @@ struct PluginSurfaceRouterTests {
 
         #expect(timeToggle.optimistic == .bool(false))
         #expect(alarmToggle.optimistic == nil)
+    }
+
+    /// openedDetailRig routes the mixer's widget and detail publications, the way an engine
+    /// delivers them, and returns the widget that opens the detail.
+    private func openedDetailRig() throws -> (rig: Rig, widget: PluginWidget) {
+        let rig       = try rig()
+        var publisher = PluginPublicationStore()
+        let document  = try PluginDocument(root: PluginNode(.text("Mixer")))
+
+        rig.surfaces.apply(
+            [
+                publish(document, in: &publisher, for: mixerKey),
+                publish(document, in: &publisher, for: detailKey),
+            ],
+            rejected: []
+        )
+        let widget = try #require(rig.host.widgets[WidgetIdentifier("plugin:com.cascade.clock/mixer")] as? PluginWidget)
+        return (rig, widget)
+    }
+
+    @Test
+    func detailPublicationIsKeptButNotShown() throws {
+        let (rig, _) = try openedDetailRig()
+
+        #expect(rig.host.shownDetails.isEmpty)
+        #expect(rig.host.registrations == 1)
+    }
+
+    @Test
+    func openingTheWidgetsDetailShowsItAndReportsVisibility() throws {
+        let (rig, widget) = try openedDetailRig()
+        let open          = try #require(widget.openDetail)
+
+        open()
+
+        #expect(rig.host.shownDetails.count == 1)
+        #expect(rig.host.shownDetails.first?.page.id == detailID)
+        #expect(rig.host.shownDetails.first?.displayID == nil)
+        #expect(rig.visibility.map(\.0) == [true])
+        #expect(rig.visibility.map(\.1) == [detailKey])
+    }
+
+    @Test
+    func dismissingTheDetailReportsItHidden() throws {
+        let (rig, widget) = try openedDetailRig()
+        widget.openDetail?()
+
+        rig.host.shownDetails[0].onDismiss()
+
+        #expect(rig.visibility.map(\.0) == [true, false])
+        #expect(rig.visibility.map(\.1) == [detailKey, detailKey])
+    }
+
+    @Test
+    func withdrawingAnOpenDetailDismissesIt() throws {
+        let rig       = try rig()
+        var publisher = PluginPublicationStore()
+        let document  = try PluginDocument(root: PluginNode(.text("Mixer")))
+        rig.surfaces.apply(
+            [
+                publish(document, in: &publisher, for: mixerKey),
+                publish(document, in: &publisher, for: detailKey),
+            ],
+            rejected: []
+        )
+        let widget     = try #require(rig.host.widgets[WidgetIdentifier("plugin:com.cascade.clock/mixer")] as? PluginWidget)
+        let withdrawn  = publisher.withdraw(detailKey)
+        let withdrawal = try #require(withdrawn)
+        widget.openDetail?()
+
+        rig.surfaces.apply([withdrawal], rejected: [])
+
+        #expect(rig.host.dismissedDetailIDs == [detailID])
+    }
+
+    @Test
+    func withdrawingAClosedDetailDismissesNothing() throws {
+        let rig       = try rig()
+        var publisher = PluginPublicationStore()
+        let document  = try PluginDocument(root: PluginNode(.text("Mixer")))
+        rig.surfaces.apply([publish(document, in: &publisher, for: detailKey)], rejected: [])
+        let withdrawn  = publisher.withdraw(detailKey)
+        let withdrawal = try #require(withdrawn)
+
+        rig.surfaces.apply([withdrawal], rejected: [])
+
+        #expect(rig.host.dismissedDetailIDs.isEmpty)
+    }
+
+    @Test
+    func theDetailsBackButtonDismissesItThroughTheHost() throws {
+        let (rig, widget) = try openedDetailRig()
+        widget.openDetail?()
+
+        let detail = try #require(rig.host.shownDetails.first?.page as? PluginDetail)
+        detail.back()
+
+        #expect(rig.host.dismissedDetailIDs == [detailID])
+    }
+
+    @Test
+    func theDetailReadsTheNotchObstructionFromItsContext() throws {
+        let (rig, widget) = try openedDetailRig()
+        widget.openDetail?()
+        let detail  = try #require(rig.host.shownDetails.first?.page as? PluginDetail)
+        let notch   = CGRect(x: 110, y: 0, width: 180, height: 28)
+        let context = NotchContextualPageContext(
+            availableSize         : CGSize(width: 400, height: 124),
+            centerObstructionFrame: notch
+        )
+
+        #expect(detail.detailView(in: context).obstruction == notch)
+        #expect(detail.contentHeight == 144)
+    }
+
+    @Test
+    func theBackButtonSitsInTheLeftShoulderBesideTheNotch() {
+        let covered = PluginDetailView.backButtonOrigin(obstruction: CGRect(x: 110, y: 0, width: 180, height: 32))
+        let free    = PluginDetailView.backButtonOrigin(obstruction: .zero)
+
+        #expect(covered == CGPoint(x: 4, y: 4))
+        #expect(free == CGPoint(x: 4, y: 4))
+        #expect(PluginDetailView.backButtonOrigin(obstruction: CGRect(x: 110, y: 0, width: 180, height: 40)).y == 8)
+    }
+
+    @Test
+    func refusedDetailIsNeitherOpenNorVisible() throws {
+        let (rig, widget) = try openedDetailRig()
+        rig.host.refusesDetails = true
+
+        widget.openDetail?()
+
+        #expect(rig.host.shownDetails.isEmpty)
+        #expect(rig.visibility.isEmpty)
+    }
+
+    @Test
+    func widgetWithoutDetailHasNoOpenAction() throws {
+        let rig       = try rig()
+        var publisher = PluginPublicationStore()
+        rig.surfaces.apply([publish(try PluginDocument(root: PluginNode(.clock)), in: &publisher)], rejected: [])
+
+        let widget = try #require(rig.host.widgets[widgetID] as? PluginWidget)
+
+        #expect(widget.openDetail == nil)
+    }
+
+    @Test
+    func openingBeforeTheDetailHasContentShowsNothing() throws {
+        let rig       = try rig()
+        var publisher = PluginPublicationStore()
+        rig.surfaces.apply([publish(try PluginDocument(root: PluginNode(.clock)), in: &publisher, for: mixerKey)], rejected: [])
+        let widget = try #require(rig.host.widgets[WidgetIdentifier("plugin:com.cascade.clock/mixer")] as? PluginWidget)
+
+        widget.openDetail?()
+
+        #expect(rig.host.shownDetails.isEmpty)
+        #expect(rig.visibility.isEmpty)
     }
 
     @Test

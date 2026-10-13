@@ -237,4 +237,83 @@ struct PluginNodeViewTests {
 
         #expect(try opaque(showsPercentage: true) < (try opaque(showsPercentage: false)))
     }
+
+    @Test
+    func volumeBarIsOfferedByTheKernel() {
+        #expect(PluginComponentView.identifiers.isSuperset(of: ["audio.volumeBar", "audio.mixer", "audio.outputPicker"]))
+    }
+
+    private func volumeModel(level: Double) -> AudioMixerModel {
+        let model = AudioMixerModel(controller: RecordingSystemAudioController())
+        model.receive(
+            SystemAudioState(
+                level          : level,
+                isMuted        : false,
+                supportsVolume : true,
+                outputs        : [],
+                selectedUIDs   : [],
+                defaultDeviceID: 7
+            )
+        )
+        return model
+    }
+
+    /// volumeBar hosts the component the kernel draws for audio.volumeBar, with the model's
+    /// services in its environment, or none.
+    private func volumeBar(model: AudioMixerModel?) -> some View {
+        PluginComponentView(id: "audio.volumeBar", version: 1, parameters: [:])
+            .environment(\.pluginComponentServices, model.map { PluginComponentServices(audio: $0) })
+            .frame(width: 60, height: 120)
+    }
+
+    /// opaquePixels counts what a view draws at more than half opacity.
+    private func opaquePixels(of view: some View) throws -> Int {
+        let renderer = ImageRenderer(content: view)
+        renderer.scale = 2
+        let bitmap = NSBitmapImageRep(cgImage: try #require(renderer.cgImage))
+
+        return (0..<bitmap.pixelsWide).reduce(0) { count, x in
+            count + (0..<bitmap.pixelsHigh).count { y in (bitmap.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.5 }
+        }
+    }
+
+    @Test
+    func volumeBarWithoutServicesDrawsTheUnavailableState() throws {
+        let host = NSHostingView(rootView: volumeBar(model: nil))
+
+        host.layoutSubtreeIfNeeded()
+
+        #expect(host.fittingSize == CGSize(width: 60, height: 120))
+        #expect(try opaquePixels(of: volumeBar(model: nil)) > 0)
+        #expect(AudioGlobalVolumeControl.accessibilityValue(of: nil) == "\u{2014}")
+    }
+
+    @Test
+    func volumeBarExposesAnAdjustableElement() {
+        let model = volumeModel(level: 0.5)
+
+        #expect(AudioGlobalVolumeControl.accessibilityLabel == "Global volume")
+        #expect(AudioGlobalVolumeControl.accessibilityValue(of: model.system) == "50%")
+        #expect(AudioGlobalVolumeControl.accessibilityValue(of: volumeModel(level: 0.999).system) == "100%")
+    }
+
+    @Test
+    func volumeBarFillsFromTheBottomWithTheLevel() throws {
+        /// whitePixels counts the near-white pixels of a bar, which only its fill draws.
+        func whitePixels(level: Double) throws -> Int {
+            let renderer = ImageRenderer(content: volumeBar(model: volumeModel(level: level)))
+            let bitmap   = NSBitmapImageRep(cgImage: try #require(renderer.cgImage))
+
+            return (0..<bitmap.pixelsWide).reduce(0) { count, x in
+                count + (0..<bitmap.pixelsHigh).count { y in
+                    guard let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.sRGB) else { return false }
+
+                    return color.alphaComponent > 0.9 && color.redComponent > 0.9
+                }
+            }
+        }
+
+        #expect(try whitePixels(level: 0.25) < (try whitePixels(level: 0.75)))
+        #expect(try whitePixels(level: 0.75) < (try whitePixels(level: 1)))
+    }
 }

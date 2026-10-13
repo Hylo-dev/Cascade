@@ -90,6 +90,50 @@
         }
       }
     },
+    "Allow audio capture in System Settings": {
+      "comment": "Audio mixer: one-line banner, also a button, shown when the system refused audio capture.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti la registrazione audio nelle Impostazioni di Sistema"
+          }
+        }
+      }
+    },
+    "Apps appear here when they play audio": {
+      "comment": "Mixer: empty state of the area that will list the apps playing audio.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le app compaiono qui quando riproducono audio"
+          }
+        }
+      }
+    },
+    "Audio": {
+      "comment": "Title of the audio mixer page, beside the level.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio"
+          }
+        }
+      }
+    },
+    "Audio output": {
+      "comment": "Accessibility label of the audio output button and of its selector.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uscita audio"
+          }
+        }
+      }
+    },
     "Available": {
       "comment": "Shelf: availability of a file.",
       "localizations": {
@@ -97,6 +141,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Disponibile"
+          }
+        }
+      }
+    },
+    "Back": {
+      "comment": "Accessibility label of the button that closes a plugin's detail page.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indietro"
           }
         }
       }
@@ -237,6 +292,28 @@
         }
       }
     },
+    "Follow system": {
+      "comment": "Audio mixer: first row of an app's output selector; the app plays to whatever the system output is.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segui sistema"
+          }
+        }
+      }
+    },
+    "Global volume": {
+      "comment": "Accessibility label of the mixer's system volume capsule.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volume globale"
+          }
+        }
+      }
+    },
     "Hidden Activity": {
       "comment": "Placeholder shown instead of a sensitive activity's content.",
       "localizations": {
@@ -293,7 +370,29 @@
         }
       }
     },
+    "Mute": {
+      "comment": "Accessibility label of the button that mutes the system audio.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Silenzia"
+          }
+        }
+      }
+    },
     "No formats": {},
+    "Not applied": {
+      "comment": "Accessibility value of an app column whose volume request cannot be enforced.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non applicato"
+          }
+        }
+      }
+    },
     "Open": {
       "comment": "Button that opens the app behind an activity.",
       "localizations": {
@@ -336,6 +435,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "In ricezione"
+          }
+        }
+      }
+    },
+    "Recovering": {
+      "comment": "Accessibility value of an app column whose audio is being rebuilt.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripristino in corso"
           }
         }
       }
@@ -418,6 +528,17 @@
       }
     },
     "Results": {},
+    "Return to native audio": {
+      "comment": "Audio mixer: context menu item that forgets the volume set for an app.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Torna all'audio nativo"
+          }
+        }
+      }
+    },
     "Save Size": {
       "comment": "Accessibility label of the calibration save button.",
       "localizations": {
@@ -473,6 +594,17 @@
         }
       }
     },
+    "Several outputs": {
+      "comment": "Switch in the audio output selector: lets the user play to several outputs at once.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Più uscite"
+          }
+        }
+      }
+    },
     "Show in Finder": {
       "comment": "Shelf: context menu item.",
       "localizations": {
@@ -503,6 +635,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Non disponibile"
+          }
+        }
+      }
+    },
+    "Unmute": {
+      "comment": "Accessibility label of the button that unmutes the system audio.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riattiva audio"
           }
         }
       }

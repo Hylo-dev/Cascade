@@ -19,26 +19,40 @@ final class PluginWidget: NotchWidget {
     let sizes: [GridSpan]
     let store: PluginNodeStore
 
+    /// openDetail opens the detail page of this widget's feature, and is nil when the feature
+    /// declares none.
+    let openDetail: (@MainActor () -> Void)?
+
     var size: GridSpan { sizes[0] }
 
+    private let services  : PluginComponentServices?
     private let visibility: (Bool) -> Void
 
-    /// init(id:sizes:store:visibility:) takes the sizes the manifest declares, in its order;
-    /// an empty list, which a valid manifest cannot produce, falls back to the clock's 4×1.
+    /// init(id:sizes:store:services:openDetail:visibility:) takes the sizes the manifest declares,
+    /// in its order; an empty list, which a valid manifest cannot produce, falls back to the
+    /// clock's 4×1. The services and `openDetail` reach the components through the environment.
     init(
         id        : WidgetIdentifier,
         sizes     : [GridSpan],
         store     : PluginNodeStore,
+        services  : PluginComponentServices? = nil,
+        openDetail: (@MainActor () -> Void)? = nil,
         visibility: @escaping (Bool) -> Void
     ) {
         self.id         = id
         self.sizes      = sizes.isEmpty ? [GridSpan(columns: 4, rows: 1)] : sizes
         self.store      = store
+        self.services   = services
+        self.openDetail = openDetail
         self.visibility = visibility
     }
 
     func makeContentView() -> AnyView {
-        AnyView(PluginDocumentView(store: store))
+        AnyView(
+            PluginDocumentView(store: store)
+                .environment(\.pluginComponentServices, services)
+                .environment(\.pluginOpenDetail, openDetail)
+        )
     }
 
     func activate(in context: WidgetContext) {

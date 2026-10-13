@@ -26,6 +26,8 @@ struct PluginStatusSection: View {
 
     var body: some View {
         Section {
+            audioHostRow(services.audioHostStatus)
+
             if let status = services.pluginStatus {
                 hostRow(status.host)
 
@@ -85,6 +87,24 @@ struct PluginStatusSection: View {
         .accessibilityElement(children: .combine)
     }
 
+    private func audioHostRow(_ status: AudioHostStatus) -> some View {
+        HStack(spacing: 12) {
+
+            Text("Audio host")
+
+            Spacer(minLength: 12)
+
+            Text(label(of: status))
+                .foregroundStyle(status == .givenUp ? .orange : .secondary)
+
+            if status == .givenUp {
+                Button(String(localized: "Restart")) { services.restartAudioHost() }
+                    .accessibilityLabel(String(localized: "Restart the audio host"))
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
     private func label(of state: PluginState) -> String {
         switch state {
             case .active           : String(localized: "On")
@@ -99,6 +119,15 @@ struct PluginStatusSection: View {
             case .connecting: String(localized: "Starting")
             case .running   : String(localized: "Running")
             case .stopped   : String(localized: "Stopped after repeated crashes")
+        }
+    }
+
+    private func label(of status: AudioHostStatus) -> String {
+        switch status {
+            case .idle      : String(localized: "Idle")
+            case .running   : String(localized: "Running")
+            case .recovering: String(localized: "Starting")
+            case .givenUp   : String(localized: "Stopped after repeated crashes")
         }
     }
 }

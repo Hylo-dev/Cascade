@@ -101,6 +101,15 @@ final class NotchDisplayCoordinator {
         selection: ExpandedPageSelection
     )?
 
+    /// detail is the one page a plugin widget's click opened over the expanded surface. It sits
+    /// beside `contextualPage` and never touches `expandedPageSelection`, so closing it leaves
+    /// the grid or the file shelf exactly as it was selected.
+    private var detail: (
+        page     : any NotchContextualPage,
+        displayID: CGDirectDisplayID,
+        onDismiss: @MainActor () -> Void
+    )?
+
     private var fileDropPreview                        : FileDropPreview?
     private var recognizedFileDragDisplayID            : CGDirectDisplayID?
     private var nativeFileDragHoverDisplayID           : CGDirectDisplayID?
@@ -313,6 +322,7 @@ final class NotchDisplayCoordinator {
         expandedPageSelection             = .automatic
         openedForPersistentContextualPage = false
         pendingExplicitPageSelection      = nil
+        endDetail(reconcile: false)
 
         fileDropPreview                         = nil
         recognizedFileDragDisplayID             = nil
@@ -429,6 +439,50 @@ final class NotchDisplayCoordinator {
                 trigger   : .click
             )
         }
+    }
+
+    /// showDetail opens a detail only on a display that is expanded and not closing: it is born
+    /// from a click on that display's grid, and a closed notch has nothing to draw it over. A
+    /// refused detail is never shown, so its `onDismiss` is never called. A shown one replaces
+    /// the previous detail, which is told after the new one is already on screen, so a
+    /// dismissal handler that reaches back in sees a settled coordinator. It returns whether the
+    /// detail was shown.
+    @discardableResult
+    func showDetail(
+        _ page      : any NotchContextualPage,
+        on displayID: CGDirectDisplayID?,
+        onDismiss   : @escaping @MainActor () -> Void
+    ) -> Bool {
+        guard isStarted,
+              let displayID = displayID ?? expandedDisplayID,
+              expandedDisplayID == displayID,
+              closingDisplayID == nil,
+              surfaces[displayID] != nil
+        else { return false }
+
+        let replaced = detail
+        detail = (page, displayID, onDismiss)
+        reconcilePresentations()
+        replaced?.onDismiss()
+        return true
+    }
+
+    func dismissDetail(id: String) {
+        guard detail?.page.id == id else { return }
+
+        endDetail(reconcile: true)
+    }
+
+    /// endDetail is the single exit of the detail slot, so `onDismiss` runs exactly once: the
+    /// slot is emptied before the handler runs, and a second end finds nothing to call. A
+    /// caller that is about to reconcile anyway, or that is collapsing the surface and wants
+    /// the page to stay drawn until the morph ends, passes `reconcile: false`.
+    private func endDetail(reconcile: Bool) {
+        guard let ended = detail else { return }
+
+        detail = nil
+        if reconcile { reconcilePresentations() }
+        ended.onDismiss()
     }
 
     func showOrdinaryPage(on requestedDisplayID: CGDirectDisplayID? = nil) {
@@ -748,6 +802,8 @@ final class NotchDisplayCoordinator {
         latestRequests.removeValue(forKey: displayID)
         removePendingRequest(on: displayID)
 
+        endDetail(reconcile: false)
+
         nextClosingGeneration &+= 1
         closingDisplayID  = displayID
         closingGeneration = nextClosingGeneration
@@ -771,6 +827,7 @@ final class NotchDisplayCoordinator {
         expandedPageSelection             = .automatic
         openedForPersistentContextualPage = false
         fileDropPreview                   = nil
+        endDetail(reconcile: false)
         activityHost.setExpansion(.none)
 
         if let pendingPreferences {
@@ -992,6 +1049,7 @@ final class NotchDisplayCoordinator {
             openedForPersistentContextualPage = false
             pendingExplicitPageSelection      = nil
             fileDropPreview                   = nil
+            endDetail(reconcile: false)
             activityHost.setExpansion(.none)
         } else if closingDisplayID.map(removed.contains) == true {
             closingDisplayID  = nil
@@ -1083,6 +1141,14 @@ final class NotchDisplayCoordinator {
         surface.onUnsupportedFileDrop = { [weak self] in
             self?.handleUnsupportedFileDrop(on: displayID)
         }
+        surface.onDetailDismissRequested = { [weak self] in
+            guard let self,
+                  let shown = self.detail,
+                  shown.displayID == displayID
+            else { return }
+
+            self.dismissDetail(id: shown.page.id)
+        }
         surface.setFileDropEnabled(contextualPage != nil && fileDropOnDrop != nil)
     }
 
@@ -1099,6 +1165,7 @@ final class NotchDisplayCoordinator {
         surface.onFileDragHoverChanged         = nil
         surface.onFileDrop                     = nil
         surface.onUnsupportedFileDrop          = nil
+        surface.onDetailDismissRequested       = nil
         surface.setFileDropEnabled(false)
     }
 
@@ -1297,8 +1364,10 @@ final class NotchDisplayCoordinator {
                     contextualIsSelected = false
                 }
 
+                let detailPage = isOwner && detail?.displayID == displayID ? detail?.page : nil
+
                 let expandedIsLiveActivity: Bool
-                if !contextualIsSelected, case .activity = activityHost.expansionSelection {
+                if !contextualIsSelected, detailPage == nil, case .activity = activityHost.expansionSelection {
                     expandedIsLiveActivity = isOwner && selection.expanded != nil
                 } else {
                     expandedIsLiveActivity = false
@@ -1308,11 +1377,15 @@ final class NotchDisplayCoordinator {
                     primary                 : receivesActivities ? selection.primary : nil,
                     secondary               : receivesActivities ? selection.secondary : nil,
                     notice                  : focusedDisplayID == displayID ? selection.notice : nil,
-                    expanded                : isOwner && !contextualIsSelected ? selection.expanded : nil,
+                    expanded                : isOwner && !contextualIsSelected && detailPage == nil
+                        ? selection.expanded
+                        : nil,
                     expandedIsLiveActivity  : expandedIsLiveActivity,
-                    showsWidgets            : isOwner && !contextualIsSelected && selection.expanded == nil,
+                    showsWidgets            : isOwner && !contextualIsSelected && detailPage == nil
+                        && selection.expanded == nil,
                     contextualPage          : contextualPage,
                     contextualPageIsSelected: contextualIsSelected,
+                    detailPage              : detailPage,
                     widgetContentRevision   : widgetContentRevision,
                     style                   : style(for: displayID, preferences: preferences)
                 )
@@ -1551,6 +1624,7 @@ final class NotchDisplayCoordinator {
             openedForPersistentContextualPage = false
             pendingExplicitPageSelection      = nil
             fileDropPreview                   = nil
+            endDetail(reconcile: false)
 
             for record in surfaces.values {
                 record.surface.setVisible(false)

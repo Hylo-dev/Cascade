@@ -60,14 +60,14 @@ A feature (`PluginFeature`) is one thing a plugin does. Each declares, with uniq
 | Field | Meaning |
 | --- | --- |
 | `id` | The feature's identifier, named by every publication and action. |
-| `surfaces` | At least one of `activity: {}`, `notice: {}` and `widget: { "sizes": [...] }`. A widget lists one to eight distinct sizes as `"columnsxrows"`, each from 1 to 4 (`"2x1"`, `"2x2"`); the user picks the size and the position, a plugin never places itself. |
+| `surfaces` | At least one of `activity: {}`, `notice: {}` and `widget: { "sizes": [...] }`, plus an optional `detail: {}`, which needs the widget of the same feature: it is the page the widget's click opens, and the plugin publishes into it like into any surface. A widget lists one to eight distinct sizes as `"columnsxrows"`, each from 1 to 4 (`"2x1"`, `"2x2"`); the user picks the size and the position, a plugin never places itself. |
 | `sources` | The catalog sources that wake the plugin: `media.nowPlaying`, `bluetooth`, `power`, `volume`, `network`, `net.webSocket`, `net.sse` (`PluginCatalog.sources`). Plugins cannot write sources. |
-| `services` | The services the plugin calls. None exists yet, so a feature that declares one is unavailable. |
+| `services` | The services the plugin calls. The host provides `audio.system` and `audio.apps`; a feature that declares any other is unavailable. |
 | `components` | The tier-2 components its documents show, each `{ "id", "version" }` from `PluginCatalog.components` at that version or older. |
 | `permissions` | What the feature needs granted. Bundled plugins signed by us receive every permission they declare; external plugins will need the user's approval for the sensitive ones. |
 | `actions` | The action names its controls and Cascade's menu may send, such as `preview`. |
 
-**Declared means required.** The kernel keeps a feature available only while the host provides every source, service and component it declares and every permission it declares is granted. An unavailable feature leases no source, its publications are dropped quietly and its actions are refused. Today the host provides the `power`, `bluetooth` and `volume` sources, no service, and the components `power.battery`, `volume.level`, `bluetooth.device` and `bluetooth.battery`. The catalog lists more, so a manifest that names them validates, but its feature stays unavailable until the host implements them.
+**Declared means required.** The kernel keeps a feature available only while the host provides every source, service and component it declares and every permission it declares is granted. An unavailable feature leases no source, its publications are dropped quietly and its actions are refused. Today the host provides the `power`, `bluetooth` and `volume` sources, the `audio.system` and `audio.apps` services, and the components `power.battery`, `volume.level`, `bluetooth.device`, `bluetooth.battery`, `audio.volumeBar`, `audio.mixer` and `audio.outputPicker`. The catalog lists more, so a manifest that names them validates, but its feature stays unavailable until the host implements them.
 
 ## Validation
 

@@ -39,6 +39,7 @@ First-party plugins run in **PluginHost**, an XPC service bundled in Cascade, ea
 | `com.cascade.bluetooth` | `BluetoothPlugin` | Notice | `bluetooth` | `bluetooth.device`, `bluetooth.battery` |
 | `com.cascade.power` | `ChargingPlugin` | Notice | `power` | `power.battery` |
 | `com.cascade.volume` | `VolumePlugin` | Notice | `volume` | `volume.level` |
+| `com.cascade.audio` | `AudioPlugin` | Widget (1x2), detail | none (services `audio.system`, `audio.apps`) | `audio.volumeBar`, `audio.mixer`, `audio.outputPicker` |
 
 PluginHost implements the `power` and `bluetooth` sources. The `volume` source runs in the kernel, beside the volume key tap it shares a subsystem with (`Cascade/Core/Volume/VolumePluginSource.swift`); that placement amends the spec's §6, which put volume in PluginHost.
 
@@ -46,7 +47,7 @@ The user places widgets on the notch grid: a long press starts editing, where a 
 
 ## Still pending
 
-- **Music as a plugin**, with the media and spectrum services and the `audio.spectrum`, `media.scrubber` and `audio.outputPicker` components (the services and Music sub-project). Until then Music is native (`MediaLiveActivity` and the expanded fallback), and plugin activities are accepted but not shown.
+- **Music as a plugin**, with the media and spectrum services and the `audio.spectrum` and `media.scrubber` components (the services and Music sub-project). Until then Music is native (`MediaLiveActivity` and the expanded fallback), and plugin activities are accepted but not shown.
 - **The layout sub-project**: slot pages and the arbitration of compact and expanded space. Plugin widgets meanwhile use today's grid and its editing.
 - **External plugins**: discovery, installation, a process per plugin behind the same `PluginExecutor` protocol, and user approval of permissions.
 - **Services, storage and assets**: see [the planned page](services.md).

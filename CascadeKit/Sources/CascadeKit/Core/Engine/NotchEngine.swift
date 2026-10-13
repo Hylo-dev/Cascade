@@ -101,6 +101,21 @@ public final class NotchEngine {
         coordinator.showContextualPage(on: displayID)
     }
 
+    @discardableResult
+    public func showDetail(
+        _ page      : any NotchContextualPage,
+        on displayID: CGDirectDisplayID?,
+        onDismiss   : @escaping @MainActor () -> Void
+    ) -> Bool {
+        coordinator.showDetail(
+            page,
+            on       : displayID,
+            onDismiss: onDismiss
+        )
+    }
+
+    public func dismissDetail(id: String) { coordinator.dismissDetail(id: id) }
+
     public func showOrdinaryPage(on displayID: CGDirectDisplayID? = nil) {
         coordinator.showOrdinaryPage(on: displayID)
     }

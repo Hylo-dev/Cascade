@@ -22,6 +22,9 @@
 		CA5CADE20000000000000003 /* Config/FFmpeg/Notices/FFmpeg-LICENSE.md in Copy FFmpeg Notices */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000013 /* Config/FFmpeg/Notices/FFmpeg-LICENSE.md */; };
 		CA5CADE20000000000000004 /* Config/FFmpeg/Notices/COPYING.LGPLv2.1 in Copy FFmpeg Notices */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000014 /* Config/FFmpeg/Notices/COPYING.LGPLv2.1 */; };
 		CA5CADE20000000000000005 /* Config/FFmpeg/Notices/NOTICE.txt in Copy FFmpeg Notices */ = {isa = PBXBuildFile; fileRef = CA5CADE20000000000000015 /* Config/FFmpeg/Notices/NOTICE.txt */; };
+		CA5CADE7000000000000000B /* CascadeAudioHost in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE7000000000000000A /* CascadeAudioHost */; };
+		CA5CADE7000000000000000F /* AudioHost.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = CA5CADE70000000000000001 /* AudioHost.xpc */; };
+		CA5CADE70000000000000010 /* CascadePluginHost in Frameworks */ = {isa = PBXBuildFile; productRef = CA5CADE70000000000000011 /* CascadePluginHost */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -31,6 +34,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = CA5CADE40000000000000003;
 			remoteInfo = PluginHost;
+		};
+		CA5CADE7000000000000000C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0403125F2FE4355A00BA9823 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CA5CADE70000000000000003;
+			remoteInfo = AudioHost;
 		};
 		040312752FE4355A00BA9823 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -70,6 +80,7 @@
 			dstSubfolderSpec = 16;
 			files = (
 				CA5CADE4000000000000000F /* PluginHost.xpc in Embed XPC Services */,
+				CA5CADE7000000000000000F /* AudioHost.xpc in Embed XPC Services */,
 			);
 			name = "Embed XPC Services";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -106,6 +117,7 @@
 		CA5CADE60000000000000012 /* LICENSING.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = LICENSING.md; sourceTree = SOURCE_ROOT; };
 		CA5CADE60000000000000013 /* LICENSES/MIT.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSES/MIT.txt; sourceTree = SOURCE_ROOT; };
 		CA5CADE60000000000000014 /* LICENSES/Cascade-Plugin-Exception.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSES/Cascade-Plugin-Exception.txt; sourceTree = SOURCE_ROOT; };
+		CA5CADE70000000000000001 /* AudioHost.xpc */ = {isa = PBXFileReference; explicitFileType = "wrapper.xpc-service"; includeInIndex = 0; path = AudioHost.xpc; sourceTree = BUILT_PRODUCTS_DIR; };
 		CA5CADE40000000000000001 /* PluginHost.xpc */ = {isa = PBXFileReference; explicitFileType = "wrapper.xpc-service"; includeInIndex = 0; path = PluginHost.xpc; sourceTree = BUILT_PRODUCTS_DIR; };
 		040312672FE4355A00BA9823 /* Cascade.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Cascade.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		040312742FE4355A00BA9823 /* CascadeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CascadeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -119,6 +131,11 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		CA5CADE70000000000000002 /* AudioHost */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AudioHost;
+			sourceTree = "<group>";
+		};
 		CA5CADE40000000000000002 /* PluginHost */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = PluginHost;
@@ -142,6 +159,15 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		CA5CADE70000000000000005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CA5CADE7000000000000000B /* CascadeAudioHost in Frameworks */,
+				CA5CADE70000000000000010 /* CascadePluginHost in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		CA5CADE40000000000000005 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -186,6 +212,7 @@
 				040312692FE4355A00BA9823 /* Cascade */,
 				CA5CADE20000000000000031 /* FFmpeg Bundle Inputs */,
 				CA5CADE40000000000000002 /* PluginHost */,
+				CA5CADE70000000000000002 /* AudioHost */,
 				040312772FE4355A00BA9823 /* CascadeTests */,
 				040312812FE4355A00BA9823 /* CascadeUITests */,
 				040312682FE4355A00BA9823 /* Products */,
@@ -199,6 +226,7 @@
 				040312742FE4355A00BA9823 /* CascadeTests.xctest */,
 				0403127E2FE4355A00BA9823 /* CascadeUITests.xctest */,
 				CA5CADE40000000000000001 /* PluginHost.xpc */,
+				CA5CADE70000000000000001 /* AudioHost.xpc */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -229,6 +257,30 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		CA5CADE70000000000000003 /* AudioHost */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CA5CADE70000000000000007 /* Build configuration list for PBXNativeTarget "AudioHost" */;
+			buildPhases = (
+				CA5CADE70000000000000004 /* Sources */,
+				CA5CADE70000000000000005 /* Frameworks */,
+				CA5CADE70000000000000006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				CA5CADE70000000000000002 /* AudioHost */,
+			);
+			name = AudioHost;
+			packageProductDependencies = (
+				CA5CADE7000000000000000A /* CascadeAudioHost */,
+				CA5CADE70000000000000011 /* CascadePluginHost */,
+			);
+			productName = AudioHost;
+			productReference = CA5CADE70000000000000001 /* AudioHost.xpc */;
+			productType = "com.apple.product-type.xpc-service";
+		};
 		CA5CADE40000000000000003 /* PluginHost */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = CA5CADE40000000000000007 /* Build configuration list for PBXNativeTarget "PluginHost" */;
@@ -270,6 +322,7 @@
 			);
 			dependencies = (
 				CA5CADE4000000000000000D /* PBXTargetDependency */,
+				CA5CADE7000000000000000D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				040312692FE4355A00BA9823 /* Cascade */,
@@ -378,11 +431,19 @@
 				040312732FE4355A00BA9823 /* CascadeTests */,
 				0403127D2FE4355A00BA9823 /* CascadeUITests */,
 				CA5CADE40000000000000003 /* PluginHost */,
+				CA5CADE70000000000000003 /* AudioHost */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		CA5CADE70000000000000006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		CA5CADE40000000000000006 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -443,6 +504,13 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		CA5CADE70000000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		CA5CADE40000000000000004 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -474,6 +542,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		CA5CADE7000000000000000D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CA5CADE70000000000000003 /* AudioHost */;
+			targetProxy = CA5CADE7000000000000000C /* PBXContainerItemProxy */;
+		};
 		CA5CADE4000000000000000D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = CA5CADE40000000000000003 /* PluginHost */;
@@ -530,6 +603,52 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = hylo.Cascade.PluginHost;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		CA5CADE70000000000000008 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/AudioHost-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = hylo.Cascade.AudioHost;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		CA5CADE70000000000000009 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/AudioHost-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = hylo.Cascade.AudioHost;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -815,6 +934,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		CA5CADE70000000000000007 /* Build configuration list for PBXNativeTarget "AudioHost" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CA5CADE70000000000000008 /* Debug */,
+				CA5CADE70000000000000009 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		CA5CADE40000000000000007 /* Build configuration list for PBXNativeTarget "PluginHost" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -870,6 +998,14 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		CA5CADE7000000000000000A /* CascadeAudioHost */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CascadeAudioHost;
+		};
+		CA5CADE70000000000000011 /* CascadePluginHost */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CascadePluginHost;
+		};
 		CA5CADE50000000000000004 /* CascadePlugins */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = CascadePlugins;

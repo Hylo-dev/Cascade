@@ -31,7 +31,7 @@ public struct PluginHostIncarnation: Equatable, Sendable {
     }
 
     /// init(pid:) records the live process at `pid`, or fails when there is none.
-    init?(pid: pid_t) {
+    public init?(pid: pid_t) {
         guard pid > 0, let start = Self.start(of: pid), let path = Self.path(of: pid) else { return nil }
 
         self.init(pid: pid, startSeconds: start.seconds, startMicroseconds: start.microseconds, path: path)
@@ -55,13 +55,13 @@ public struct PluginHostIncarnation: Equatable, Sendable {
 
     /// kill sends SIGKILL to this incarnation and returns true, or refuses when the PID is gone,
     /// now names another process, or is this one.
-    func kill() -> Bool {
+    public func kill() -> Bool {
         isKillable && Darwin.kill(pid, SIGKILL) == 0
     }
 
     /// footprint is this incarnation's physical footprint in bytes, the figure Activity Monitor
     /// shows as memory, or nil when the PID is gone or now names another process.
-    func footprint() -> UInt64? {
+    public func footprint() -> UInt64? {
         guard isLive else { return nil }
 
         var info   = rusage_info_v4()

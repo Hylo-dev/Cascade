@@ -14,6 +14,7 @@ import Foundation
 public enum FirstPartyPlugins {
 
     public static let providers: [String: any PluginProvider] = [
+        "AudioPlugin"    : AudioPlugin(),
         "BatteryPlugin"  : BatteryPlugin(),
         "BluetoothPlugin": BluetoothPlugin(),
         "ChargingPlugin" : ChargingPlugin(),
@@ -26,6 +27,7 @@ public enum FirstPartyPlugins {
     /// reads as itself.
     public static func name(of plugin: PluginID) -> String {
         switch plugin.rawValue {
+            case "com.cascade.audio"    : String(localized: "Volume widget", table: "Plugins", bundle: .module)
             case "com.cascade.battery"  : String(localized: "Battery", table: "Plugins", bundle: .module)
             case "com.cascade.bluetooth": String(localized: "Bluetooth alerts", table: "Plugins", bundle: .module)
             case "com.cascade.clock"    : String(localized: "Clock", table: "Plugins", bundle: .module)

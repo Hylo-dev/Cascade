@@ -1471,6 +1471,103 @@ struct NotchControllerTests {
         #expect(page.contexts[0].availableSize.height < NotchConfiguration.default.expandedHeight)
     }
 
+    private func detailPresentation(_ page: ControllerContextualPage) -> DisplayPresentation {
+        DisplayPresentation(
+            primary                 : nil,
+            secondary               : nil,
+            notice                  : nil,
+            expanded                : nil,
+            expandedIsLiveActivity  : false,
+            showsWidgets            : false,
+            detailPage              : page,
+            widgetContentRevision   : 0,
+            style                   : .notch
+        )
+    }
+
+    @Test
+    func detailPageKeepsTheNotchAtItsNormalHeight() throws {
+        let fixture = ControllerFixture(reducesMotion: true)
+        let page    = ControllerContextualPage(contentHeight: 144)
+        fixture.controller.start()
+        defer { fixture.controller.stop() }
+
+        fixture.controller.surface.applyPresentation(detailPresentation(page))
+
+        let shape  = try #require(fixture.hostView.layer?.sublayers?.first as? CAShapeLayer)
+        let bounds = try #require(shape.path?.boundingBoxOfPath)
+        #expect(bounds.height == NotchConfiguration.default.expandedHeight)
+        #expect(page.contexts.count == 1)
+    }
+
+    @Test
+    func detailPageWinsOverASelectedContextualPage() {
+        let fixture = ControllerFixture(reducesMotion: true)
+        let shelf   = ControllerContextualPage(contentHeight: 100)
+        let detail  = ControllerContextualPage(contentHeight: 196)
+        fixture.controller.start()
+        defer { fixture.controller.stop() }
+
+        fixture.controller.surface.applyPresentation(DisplayPresentation(
+            primary                 : nil,
+            secondary               : nil,
+            notice                  : nil,
+            expanded                : nil,
+            expandedIsLiveActivity  : false,
+            showsWidgets            : false,
+            contextualPage          : shelf,
+            contextualPageIsSelected: true,
+            detailPage              : detail,
+            widgetContentRevision   : 0,
+            style                   : .notch
+        ))
+
+        #expect(detail.contexts.count == 1)
+        #expect(shelf.contexts.isEmpty)
+    }
+
+    @Test
+    func escapeOnTheDetailPageAsksForItsDismissal() throws {
+        let fixture   = ControllerFixture(reducesMotion: true)
+        let page      = ControllerContextualPage(contentHeight: 196)
+        var requested = 0
+        fixture.controller.start()
+        defer { fixture.controller.stop() }
+        fixture.controller.surface.onDetailDismissRequested = { requested += 1 }
+
+        fixture.controller.surface.applyPresentation(detailPresentation(page))
+        fixture.panel.orderFrontRegardless()
+        defer { fixture.panel.orderOut(nil) }
+        fixture.hostView.layoutSubtreeIfNeeded()
+
+        let keyView = try #require(Self.firstKeyView(in: fixture.hostView))
+        let escape  = try #require(NSEvent.keyEvent(
+            with                    : .keyDown,
+            location                : .zero,
+            modifierFlags           : [],
+            timestamp               : 0,
+            windowNumber            : fixture.panel.windowNumber,
+            context                 : nil,
+            characters              : "\u{1B}",
+            charactersIgnoringModifiers: "\u{1B}",
+            isARepeat               : false,
+            keyCode                 : 53
+        ))
+        keyView.keyDown(with: escape)
+
+        #expect(requested == 1)
+    }
+
+    private static func firstKeyView(in view: NSView) -> WidgetEditingKeyboardTarget.KeyView? {
+        if let keyView = view as? WidgetEditingKeyboardTarget.KeyView { return keyView }
+
+        for subview in view.subviews {
+            if let found = firstKeyView(in: subview) { return found }
+        }
+
+        return nil
+    }
+
     @Test
     func contextualPageReceivesTheHardwareNotchAsALocalCenterObstruction() throws {
         let fixture = ControllerFixture(reducesMotion: true)

@@ -1583,4 +1583,205 @@ struct NotchDisplayCoordinatorTests {
         #expect(fixture.coordinator.expandedDisplayID == 30)
         #expect(fixture.surfaces[30]?.presentations.last?.isExpanded == true)
     }
+
+    // MARK: - Detail page
+
+    private func expandedDetailFixture(displayIDs: [CGDirectDisplayID] = [10]) -> DisplayCoordinatorFixture {
+        let fixture = DisplayCoordinatorFixture(displayIDs: displayIDs)
+        fixture.coordinator.start()
+        fixture.surfaces[displayIDs[0]]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
+
+        return fixture
+    }
+
+    @Test
+    func detailReplacesTheGridAndRestoresItOnDismiss() {
+        let fixture   = expandedDetailFixture()
+        let detail    = CoordinatorContextualPage(id: "detail", contentRevision: 1)
+        var dismissed = 0
+        #expect(fixture.surfaces[10]?.presentations.last?.showsWidgets == true)
+
+        fixture.coordinator.showDetail(
+            detail,
+            on       : 10,
+            onDismiss: { dismissed += 1 }
+        )
+
+        #expect(fixture.surfaces[10]?.presentations.last?.detailPage === detail)
+        #expect(fixture.surfaces[10]?.presentations.last?.showsWidgets == false)
+        #expect(fixture.surfaces[10]?.presentations.last?.isExpanded == true)
+        #expect(dismissed == 0)
+
+        fixture.coordinator.dismissDetail(id: "other")
+        #expect(fixture.surfaces[10]?.presentations.last?.detailPage === detail)
+
+        fixture.coordinator.dismissDetail(id: "detail")
+        fixture.coordinator.dismissDetail(id: "detail")
+
+        #expect(fixture.surfaces[10]?.presentations.last?.detailPage == nil)
+        #expect(fixture.surfaces[10]?.presentations.last?.showsWidgets == true)
+        #expect(dismissed == 1)
+    }
+
+    @Test
+    func secondDetailDismissesTheFirstOnce() {
+        let fixture         = expandedDetailFixture()
+        let first           = CoordinatorContextualPage(id: "first", contentRevision: 1)
+        let second          = CoordinatorContextualPage(id: "second", contentRevision: 1)
+        var firstDismissed  = 0
+        var secondDismissed = 0
+
+        fixture.coordinator.showDetail(
+            first,
+            on       : 10,
+            onDismiss: { firstDismissed += 1 }
+        )
+        fixture.coordinator.showDetail(
+            second,
+            on       : 10,
+            onDismiss: { secondDismissed += 1 }
+        )
+
+        #expect(firstDismissed == 1)
+        #expect(secondDismissed == 0)
+        #expect(fixture.surfaces[10]?.presentations.last?.detailPage === second)
+
+        fixture.coordinator.dismissDetail(id: "first")
+        #expect(firstDismissed == 1)
+        #expect(fixture.surfaces[10]?.presentations.last?.detailPage === second)
+    }
+
+    @Test
+    func collapsingTheNotchDismissesTheDetail() throws {
+        let fixture   = expandedDetailFixture()
+        let detail    = CoordinatorContextualPage(id: "detail", contentRevision: 1)
+        var dismissed = 0
+        fixture.coordinator.showDetail(
+            detail,
+            on       : 10,
+            onDismiss: { dismissed += 1 }
+        )
+
+        fixture.surfaces[10]?.requestCollapse()
+        #expect(dismissed == 1)
+
+        let generation = try #require(fixture.surfaces[10]?.closeRequests.last)
+        fixture.surfaces[10]?.finishCollapse(generation: generation)
+
+        #expect(dismissed == 1)
+        #expect(fixture.surfaces[10]?.presentations.last?.detailPage == nil)
+
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 2
+        )
+        #expect(fixture.surfaces[10]?.presentations.last?.detailPage == nil)
+        #expect(fixture.surfaces[10]?.presentations.last?.showsWidgets == true)
+    }
+
+    @Test
+    func removingTheDisplayDismissesTheDetail() {
+        let fixture   = expandedDetailFixture(displayIDs: [10, 20])
+        let detail    = CoordinatorContextualPage(id: "detail", contentRevision: 1)
+        var dismissed = 0
+        fixture.coordinator.showDetail(
+            detail,
+            on       : 10,
+            onDismiss: { dismissed += 1 }
+        )
+
+        fixture.inventory.entries = [fixture.entry(displayID: 20)]
+        fixture.inventory.sendChange()
+
+        #expect(dismissed == 1)
+        #expect(fixture.surfaces[20]?.presentations.last?.detailPage == nil)
+    }
+
+    @Test
+    func escapeDismissesTheDetail() {
+        let fixture   = expandedDetailFixture()
+        let detail    = CoordinatorContextualPage(id: "detail", contentRevision: 1)
+        var dismissed = 0
+        fixture.coordinator.showDetail(
+            detail,
+            on       : 10,
+            onDismiss: { dismissed += 1 }
+        )
+
+        fixture.surfaces[10]?.requestDetailDismissal()
+
+        #expect(dismissed == 1)
+        #expect(fixture.surfaces[10]?.presentations.last?.detailPage == nil)
+        #expect(fixture.surfaces[10]?.presentations.last?.showsWidgets == true)
+    }
+
+    @Test
+    func detailDoesNotDeselectTheFileShelfPage() {
+        let fixture   = DisplayCoordinatorFixture(displayIDs: [10])
+        let shelf     = CoordinatorContextualPage(id: "shelf", contentRevision: 1)
+        let detail    = CoordinatorContextualPage(id: "detail", contentRevision: 1)
+        var dismissed = 0
+        fixture.coordinator.setContextualPage(shelf, prefersDefault: true)
+        fixture.coordinator.start()
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 1
+        )
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == true)
+
+        fixture.coordinator.showDetail(
+            detail,
+            on       : 10,
+            onDismiss: { dismissed += 1 }
+        )
+        #expect(fixture.surfaces[10]?.presentations.last?.detailPage === detail)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPage === shelf)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == true)
+
+        fixture.coordinator.dismissDetail(id: "detail")
+        #expect(fixture.surfaces[10]?.presentations.last?.detailPage == nil)
+        #expect(fixture.surfaces[10]?.presentations.last?.contextualPageIsSelected == true)
+        #expect(dismissed == 1)
+    }
+
+    @Test
+    func detailOnADisplayThatIsNotExpandedIsNeverShownNorDismissed() {
+        let fixture   = expandedDetailFixture(displayIDs: [10, 20])
+        let detail    = CoordinatorContextualPage(id: "detail", contentRevision: 1)
+        var dismissed = 0
+
+        let isShown = fixture.coordinator.showDetail(
+            detail,
+            on       : 20,
+            onDismiss: { dismissed += 1 }
+        )
+        fixture.coordinator.dismissDetail(id: "detail")
+
+        #expect(isShown == false)
+        #expect(fixture.surfaces[10]?.presentations.last?.detailPage == nil)
+        #expect(fixture.surfaces[20]?.presentations.last?.detailPage == nil)
+        #expect(dismissed == 0)
+    }
+
+    @Test
+    func detailWithoutADisplayIDLandsOnTheExpandedDisplay() {
+        let fixture = expandedDetailFixture(displayIDs: [10, 20])
+        let detail  = CoordinatorContextualPage(id: "detail", contentRevision: 1)
+
+        let isShown = fixture.coordinator.showDetail(
+            detail,
+            on       : nil,
+            onDismiss: {}
+        )
+
+        #expect(isShown == true)
+        #expect(fixture.surfaces[10]?.presentations.last?.detailPage === detail)
+        #expect(fixture.surfaces[20]?.presentations.last?.detailPage == nil)
+    }
 }

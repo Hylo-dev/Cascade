@@ -13,13 +13,14 @@ enum VolumeBehaviorChecks {
     static func main() async throws {
         try checkVolumeChanges()
         try checkMediaKeys()
+        try checkLevelKeepsChannelBalance()
         try checkMuteRepeat()
         try checkTapRecovery()
         try await checkPermissionObservation()
         try checkFailOpenRouting()
         try await checkBackgroundEventDecoding()
 
-        print("Volume behavior tests: 42 passed")
+        print("Volume behavior tests: 43 passed")
     }
 
     /// checkVolumeChanges exercises startup, native fallback, duplicates and
@@ -98,6 +99,24 @@ enum VolumeBehaviorChecks {
             reducer.receive(initial, sessionID: 2, allowsNotice: true) == nil,
             "Boundary feedback must not duplicate its observer callback"
         )
+    }
+
+    /// checkLevelKeepsChannelBalance covers the pure rule behind setScalar: an unbalanced pair
+    /// keeps its distance when the level moves, and clamps at the ends. The checks cannot fake
+    /// CoreAudio controls, so the rule is tested apart from the writes.
+    private static func checkLevelKeepsChannelBalance() throws {
+        let moved = CoreAudioSystemVolume.rebalanced([0.4, 0.6], to: 0.7)
+        try expect(
+            moved.count == 2 && abs(moved[0] - 0.6) < 0.0001 && abs(moved[1] - 0.8) < 0.0001,
+            "An unbalanced pair must keep its balance: \(moved)"
+        )
+
+        let top = CoreAudioSystemVolume.rebalanced([0.4, 0.6], to: 1)
+        try expect(abs(top[0] - 0.9) < 0.0001 && top[1] == 1, "Raising must clamp at 1: \(top)")
+
+        let single = CoreAudioSystemVolume.rebalanced([0.3], to: 0.8)
+        try expect(abs(single[0] - 0.8) < 0.0001, "One control must reach the target")
+        try expect(CoreAudioSystemVolume.rebalanced([], to: 0.5).isEmpty, "No controls, no writes")
     }
 
     private static func checkMediaKeys() throws {

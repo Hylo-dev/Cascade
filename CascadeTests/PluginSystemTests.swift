@@ -7,6 +7,7 @@ import CascadeContracts
 import CascadeKit
 import CascadePluginEngine
 import CascadePlugins
+import CoreGraphics
 import Foundation
 import Synchronization
 import Testing
@@ -41,6 +42,14 @@ extension PluginHostTests {
             func updateNotice(_ notice: any NotchTransientNotice) {}
 
             func dismissActivity(id: String) {}
+
+            func showDetail(
+                _ page      : any NotchContextualPage,
+                on displayID: CGDirectDisplayID?,
+                onDismiss   : @escaping @MainActor () -> Void
+            ) -> Bool { false }
+
+            func dismissDetail(id: String) {}
         }
 
         @Test
