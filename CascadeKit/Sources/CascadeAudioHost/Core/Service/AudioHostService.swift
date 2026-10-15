@@ -200,11 +200,17 @@ public final class AudioHostService: NSObject, AudioHostProtocol, @unchecked Sen
     /// republish sends the current state to the mixer whether or not it changed. The listener
     /// calls it when a connection starts, because a snapshot is otherwise published only on a
     /// change and a mixer that connects to a quiet AudioHost would never get one.
+    ///
+    /// It looks at the world again first. While no mixer is connected AudioHost can miss the
+    /// HAL's notifications: the system may hold an idle service, and an app paused and resumed
+    /// in between leaves nothing to report. Publishing the picture taken last would open the
+    /// mixer without an app that is playing. One scan per connection, which is per opening of
+    /// the mixer, costs nothing while it is closed.
     public func republish() {
         queue.async { [self] in
             lastPublishedApps = nil
 
-            publishIfChanged()
+            worldDidChange()
         }
     }
 

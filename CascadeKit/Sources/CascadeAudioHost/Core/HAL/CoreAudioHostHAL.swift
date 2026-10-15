@@ -26,6 +26,15 @@ final class CoreAudioHostHAL: AudioHostHAL, @unchecked Sendable {
     /// buffers it is really handed, so a device with a larger IO buffer is still rendered whole.
     private static let expectedMaximumFrames: UInt32 = 4096
 
+    /// processActivitySelector is what each process is listened on. The value read is
+    /// `kAudioProcessPropertyIsRunningOutput`, but the HAL never notifies a change of it on
+    /// another process's object, measured on Music: it stopped producing output and no
+    /// notification came, so an app that fell silent stayed listed until something else made
+    /// AudioHost look again. `kAudioProcessPropertyIsRunning` does notify, on the same object,
+    /// when the process's IO starts and stops, and the rescan it triggers reads the output
+    /// state fresh. It also fires for input alone, which costs one rescan that changes nothing.
+    private static let processActivitySelector = kAudioProcessPropertyIsRunning
+
     private let queue: DispatchQueue
 
     private var procIDs                : [AudioObjectID: AudioDeviceIOProcID]                 = [:]
@@ -257,7 +266,7 @@ final class CoreAudioHostHAL: AudioHostHAL, @unchecked Sendable {
         syncProcessListeners()
     }
 
-    /// processListChanged follows the process list: a new process needs its own running-output
+    /// processListChanged follows the process list: a new process needs its own activity
     /// listener, a vanished one gives its listener up, and the caller learns about the change.
     private func processListChanged() {
         syncProcessListeners()
@@ -268,7 +277,7 @@ final class CoreAudioHostHAL: AudioHostHAL, @unchecked Sendable {
         let present = Set(HALProperty.objectIDs(kAudioHardwarePropertyProcessObjectList))
 
         for (objectID, block) in processRegistrations where !present.contains(objectID) {
-            var address = HALProperty.address(kAudioProcessPropertyIsRunningOutput)
+            var address = HALProperty.address(Self.processActivitySelector)
             AudioObjectRemovePropertyListenerBlock(objectID, &address, queue, block)
             processRegistrations[objectID] = nil
         }
@@ -277,7 +286,7 @@ final class CoreAudioHostHAL: AudioHostHAL, @unchecked Sendable {
             let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
                 self?.onProcessesChanged?()
             }
-            var address = HALProperty.address(kAudioProcessPropertyIsRunningOutput)
+            var address = HALProperty.address(Self.processActivitySelector)
 
             if AudioObjectAddPropertyListenerBlock(objectID, &address, queue, block) == noErr {
                 processRegistrations[objectID] = block
@@ -309,7 +318,7 @@ final class CoreAudioHostHAL: AudioHostHAL, @unchecked Sendable {
         systemRegistrations = []
 
         for (objectID, block) in processRegistrations {
-            var address = HALProperty.address(kAudioProcessPropertyIsRunningOutput)
+            var address = HALProperty.address(Self.processActivitySelector)
             AudioObjectRemovePropertyListenerBlock(objectID, &address, queue, block)
         }
         processRegistrations = [:]

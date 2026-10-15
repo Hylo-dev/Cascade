@@ -357,6 +357,25 @@ struct AudioHostServiceTests {
         #expect(harness.latest?.apps.count == 1)
     }
 
+    /// A mixer that connects must see the world as it is now. While no mixer is connected
+    /// AudioHost can miss the HAL's notifications (the system may hold an idle service, and a
+    /// pause and resume in between leave nothing to report), so the picture it last took can be
+    /// stale: Music started again while the mixer was closed, and the mixer opened without it.
+    @Test
+    func aNewConnectionIsSentTheWorldAsItIsNow() throws {
+        let harness = Harness(processes: [record(10, "com.google.Chrome")])
+        #expect(harness.latest?.apps.map(\.identity) == [chrome])
+
+        harness.hal.processRecords = [
+            record(10, "com.google.Chrome"),
+            record(20, "com.spotify.client"),
+        ]
+        try #require(harness.service).republish()
+        harness.flush()
+
+        #expect(harness.latest?.apps.map(\.identity) == [chrome, spotify])
+    }
+
     @Test
     func lateHelperJoinsTheAppsTap() throws {
         let appPath    = "/Applications/Chrome.app"
