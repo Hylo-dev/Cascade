@@ -8,7 +8,7 @@ The renderer keeps a control's local value in its `PluginNodeModel`, apart from 
 
 - A `Button` is stateless: SwiftUI shows the press, the action is sent, and whatever it changes arrives as the next publication.
 - A `Toggle` flips at once, animated, and sends its action with the new state.
-- A `Slider` sends its value when it is released. While it is dragged, incoming publications do not move its thumb.
+- A `Slider` sends its value when it is released, a ruler style one at the step it settles on. While it is dragged, incoming publications do not move its thumb.
 - The next publication always wins, even when it contradicts the optimistic value.
 - With no publication within 1.5 seconds (`PluginNodeStore.confirmationTimeout`), or when the kernel refuses the action, the value reverts, animated.
 
@@ -21,6 +21,8 @@ The renderer reports a `PluginActionRequest`: the publication and the revision i
 - the feature is available and declares the control's action.
 
 Anything else is refused, and the refusal reaches the renderer, which reverts at once. An accepted action becomes a `PluginActionEvent` with the feature, the action and the value, and queues ahead of every other pending event. Grants are checked again when its turn comes, and an action that waited past 1.5 seconds (`PluginKernel.actionTimeout`), which the renderer has already reverted, is refused rather than run late. At most eight actions wait per plugin.
+
+A control whose effect belongs to a native owner, such as Caffeinate's power assertions, also reaches `PluginSystem.actionHandler` with the `PluginActionEvent` the broker resolved: the action name the manifest declared and the value of a toggle or slider, never the renderer's own claim. It runs on main only after the broker accepted the control, and a control on an options page also rechecks that its page is still the one shown. Widget, options-page and activity controls reach it alike.
 
 The plugin answers with a publication that shows the new state, which is the confirmation.
 

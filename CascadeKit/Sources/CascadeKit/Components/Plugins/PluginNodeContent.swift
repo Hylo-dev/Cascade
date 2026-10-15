@@ -3,20 +3,25 @@
 //  CascadeKit
 //
 
+import AppKit
 import CascadeContracts
 import SwiftUI
 
 /// PluginNodeContent draws a node without its modifiers: a `switch` over the tier-1 vocabulary,
-/// with children drawn as `PluginNodeView`s. Time is drawn by SwiftUI itself, so a timer or a
+/// with children drawn as `PluginNodeView`s. Time is drawn by the kernel, so a timer or a
 /// relative date costs the plugin nothing, and a clock redraws itself at every minute boundary,
-/// only while it is on screen. Controls read their optimistic value first and hand
+/// only while it is on screen. A timer and a countdown roll the digits that change with
+/// `RollingDigitsLabel`, in the font and color of the node's own modifiers, redrawn only when
+/// their text changes; the font and color are resolved once per body, outside the timeline's
+/// closure, so a tick builds no `NSFont`. Controls read their optimistic value first and hand
 /// every change to the store; a toggle with two children shows the first while off and the
 /// second while on. An asset reserves its frame and draws nothing until the asset pipeline
 /// exists; a tier-2 component draws through `PluginComponentView`.
 struct PluginNodeContent: View {
 
-    let model: PluginNodeModel
-    let store: PluginNodeStore
+    let model        : PluginNodeModel
+    let store        : PluginNodeStore
+    var optionsOrigin: PluginOptionsOrigin? = nil
 
     var body: some View {
         switch model.kind {
@@ -78,7 +83,48 @@ struct PluginNodeContent: View {
                 }
 
             case .timer(let start, let end, let countsDown):
-                Text(timerInterval: start...end, countsDown: countsDown)
+                let font  = timeFont
+                let color = timeColor
+
+                TimelineView(TimerTimelineSchedule(start: start, end: end)) { context in
+                    RollingDigitsLabel(
+                        text      : TimerText.text(
+                            start     : start,
+                            end       : end,
+                            countsDown: countsDown,
+                            at        : context.date
+                        ),
+                        font      : font,
+                        color     : color,
+                        countsDown: countsDown
+                    )
+                }
+
+            case .countdown(let end, .compact):
+                let font  = timeFont
+                let color = timeColor
+
+                TimelineView(CompactCountdownSchedule(end: end)) { context in
+                    RollingDigitsLabel(
+                        text      : CompactCountdown.text(remaining: end.timeIntervalSince(context.date)),
+                        font      : font,
+                        color     : color,
+                        countsDown: true
+                    )
+                }
+
+            case .countdown(let end, .hoursMinutes):
+                let font  = timeFont
+                let color = timeColor
+
+                TimelineView(HoursMinutesCountdownSchedule(end: end)) { context in
+                    RollingDigitsLabel(
+                        text      : HoursMinutesCountdown.text(remaining: end.timeIntervalSince(context.date)),
+                        font      : font,
+                        color     : color,
+                        countsDown: true
+                    )
+                }
 
             case .timerProgress(let start, let end):
                 ProgressView(timerInterval: start...end, countsDown: false)
@@ -92,27 +138,72 @@ struct PluginNodeContent: View {
                     .progressViewStyle(.circular)
 
             case .button:
-                Button {
-                    store.press(model)
+                Button { [optionsOrigin] in
+                    store.press(model, optionsOrigin: optionsOrigin)
                 } label: {
                     children
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
 
             case .toggle(let isOn, _):
                 let shown = model.optimistic?.bool ?? isOn
 
-                Toggle(isOn: Binding(get: { shown }, set: { store.set(.bool($0), on: model) })) {
+                Toggle(isOn: Binding(
+                    get: { shown },
+                    set: { [optionsOrigin] value in
+                        store.set(
+                            .bool(value),
+                            on           : model,
+                            optionsOrigin: optionsOrigin
+                        )
+                    }
+                )) {
                     toggleLabel(isOn: shown)
                 }
                 .toggleStyle(PluginToggleStyle())
 
-            case .slider(let value, let minimum, let maximum, let step, _):
-                if let step {
-                    Slider(value: thumb(value), in: minimum...maximum, step: step, onEditingChanged: released)
-                } else {
-                    Slider(value: thumb(value), in: minimum...maximum, onEditingChanged: released)
-                }
+            case .slider(let value, let minimum, let maximum, let step, .ruler(let labelEvery, let labels), _) where step != nil:
+                PluginRulerSlider(
+                    value     : thumb(value),
+                    minimum   : minimum,
+                    maximum   : maximum,
+                    step      : step ?? 1,
+                    labelEvery: labelEvery,
+                    labels    : labels,
+                    tint      : Color(nsColor: timeColor),
+                    released  : { [optionsOrigin] animation in
+                        store.release(
+                            model,
+                            optionsOrigin: optionsOrigin,
+                            animation    : animation
+                        )
+                    },
+                    cancelled : {
+                        store.cancelDrag(model)
+                    }
+                )
+
+            case .slider(let value, let minimum, let maximum, let step, _, _):
+                PluginStandardSlider(
+                    value   : thumb(value),
+                    minimum : minimum,
+                    maximum : maximum,
+                    step    : step,
+                    released: { [optionsOrigin] animation in
+                        store.release(
+                            model,
+                            optionsOrigin: optionsOrigin,
+                            animation    : animation
+                        )
+                    }
+                )
+
+            case .sliderValue(let sliderID):
+                PluginSliderValueText(
+                    store   : store,
+                    sliderID: sliderID
+                )
 
             case .asset:
                 Color.clear
@@ -122,11 +213,36 @@ struct PluginNodeContent: View {
         }
     }
 
+    /// timeFont is the font of the node's own `.font` modifier, the innermost one winning as in
+    /// SwiftUI, always with monospaced digits: a rolling label must not shift when a digit
+    /// changes. An ancestor's font does not reach an AppKit label, so a time node carries its own.
+    private var timeFont: NSFont {
+        let described = model.modifiers.lazy.compactMap { modifier -> PluginFont? in
+            if case .font(let font) = modifier { font } else { nil }
+        }.first
+
+        return (described?.nsFont ?? .monospacedDigitSystemFont(ofSize: 11, weight: .regular)).monospacingDigits
+    }
+
+    /// timeColor is the color of the node's own `.foregroundStyle(.color)` modifier, white
+    /// when it has none or a style that is not a plain color. A ruler slider is tinted by it too.
+    private var timeColor: NSColor {
+        let described = model.modifiers.lazy.compactMap { modifier -> PluginColor? in
+            if case .foregroundStyle(.color(let color)) = modifier { color } else { nil }
+        }.first
+
+        return described?.nsColor ?? .white
+    }
+
     @ViewBuilder
     private var children: some View {
         ForEach(model.children, id: \.self) { id in
             if let child = store.model(id) {
-                PluginNodeView(model: child, store: store)
+                PluginNodeView(
+                    model        : child,
+                    store        : store,
+                    optionsOrigin: optionsOrigin
+                )
             }
         }
     }
@@ -137,7 +253,11 @@ struct PluginNodeContent: View {
     @ViewBuilder
     private func toggleLabel(isOn: Bool) -> some View {
         if model.children.count == 2, let child = store.model(model.children[isOn ? 1 : 0]) {
-            PluginNodeView(model: child, store: store)
+            PluginNodeView(
+                model        : child,
+                store        : store,
+                optionsOrigin: optionsOrigin
+            )
         } else {
             children
                 .opacity(isOn ? 1 : 0.5)
@@ -147,12 +267,15 @@ struct PluginNodeContent: View {
     /// thumb is the slider's position: the optimistic one while dragged or awaiting
     /// confirmation, the published one otherwise.
     private func thumb(_ published: Double) -> Binding<Double> {
-        Binding(get: { model.optimistic?.number ?? published }, set: { store.drag($0, on: model) })
-    }
-
-    private func released(_ isEditing: Bool) {
-        if !isEditing {
-            store.release(model)
-        }
+        Binding(
+            get: { model.optimistic?.number ?? published },
+            set: { [optionsOrigin] value in
+                store.drag(
+                    value,
+                    on           : model,
+                    optionsOrigin: optionsOrigin
+                )
+            }
+        )
     }
 }

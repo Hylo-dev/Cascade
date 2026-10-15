@@ -6,7 +6,7 @@ A plugin is finite handlers plus the sources its manifest declares. Nothing runs
 
 1. **Work.** PluginHost starts with Cascade and stays alive while Cascade runs, idle when nothing changes. Launching it on demand would cost about 66 ms per wake, so it waits until measured RAM justifies it.
 2. **Presentation.** Publications live in the kernel's `PluginPublicationStore`, not in the plugin. The last valid content survives a throw and a PluginHost restart, and when PluginHost is killed for one plugin's hang, the others keep showing theirs. A plugin the kernel stops loses its content: one disabled after a hang, quarantined, switched off by the user, or whose feature loses a grant has its publications withdrawn. After a Cascade restart nothing is restored from disk: every plugin is asked for its content again.
-3. **Visibility.** It is decided per surface, not by `NotchState`. A widget is visible while its page is open on screen, a notice while it shows; the compact activity, once activities are routed, stays visible while the notch is closed.
+3. **Visibility.** It is decided per surface, not by `NotchState`. A widget is visible while its page is open on screen, a notice while it shows; an activity while the live-activity host presents it, so its compact regions stay visible while the notch is closed.
 
 ## What wakes a plugin
 

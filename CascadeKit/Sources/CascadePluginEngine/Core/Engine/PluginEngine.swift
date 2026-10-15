@@ -26,19 +26,25 @@ public final class PluginEngine: Sendable {
     )
 
     public init(
-        executor  : any PluginExecutor,
-        sources   : [String: any PluginEventSource],
-        services  : Set<String> = [],
-        components: Set<String> = [],
-        sink      : any PluginPublicationSink,
-        policy    : any PluginHealthPolicy = StandardHealthPolicy()
+        executor          : any PluginExecutor,
+        sources           : [String: any PluginEventSource],
+        services          : Set<String> = [],
+        components        : Set<String> = [],
+        sink              : any PluginPublicationSink,
+        policy            : any PluginHealthPolicy = StandardHealthPolicy(),
+        supportsFullscreen: Bool = false
     ) {
         self.executor = executor
         self.sources  = sources
         self.sink     = sink
         kernel        = Mutex(
             PluginKernel(
-                capabilities: PluginHostCapabilities(sources: Set(sources.keys), services: services, components: components),
+                capabilities: PluginHostCapabilities(
+                    sources           : Set(sources.keys),
+                    services          : services,
+                    components        : components,
+                    supportsFullscreen: supportsFullscreen
+                ),
                 policy      : policy
             )
         )
@@ -90,8 +96,25 @@ public final class PluginEngine: Sendable {
         run { kernel, now in kernel.setVisible(isVisible, for: key, at: now) }
     }
 
-    public func submit(_ request: PluginActionRequest) {
-        run { kernel, now in kernel.submit(request, at: now) }
+    /// submit calls onAccepted only after the broker accepted the current control and its
+    /// revision, outside the kernel lock, with the event the broker resolved from that control.
+    /// Native adapters use that same authority for actions whose resource stays in Cascade, such
+    /// as Caffeinate's power assertion, and act on the event, not on the request's own claim.
+    public func submit(
+        _ request : PluginActionRequest,
+        onAccepted: (@Sendable (PluginActionRequest, PluginActionEvent) -> Void)? = nil
+    ) {
+        queue.async { [self] in
+            var accepted: PluginActionEvent?
+            execute { kernel, now in
+                let submission = kernel.submit(request, at: now)
+                accepted = submission.event
+                return submission.effects
+            }
+            guard let accepted else { return }
+
+            onAccepted?(request, accepted)
+        }
     }
 
     public func revoke(
@@ -171,7 +194,8 @@ public final class PluginEngine: Sendable {
 
     /// execute runs one kernel operation under the lock, then performs its effects and rearms
     /// the timer with the lock released.
-    private func execute(_ operation: (inout PluginKernel, PluginInstant) -> [PluginEngineEffect]) {
+    @discardableResult
+    private func execute(_ operation: (inout PluginKernel, PluginInstant) -> [PluginEngineEffect]) -> [PluginEngineEffect] {
         let now                      = PluginInstant.now()
         let (effects, delay, isWake) = kernel.withLock { kernel in
             let effects = operation(&kernel, now)
@@ -184,6 +208,7 @@ public final class PluginEngine: Sendable {
         }
         rearm(after: delay, onWallClock: isWake)
         publishStatus()
+        return effects
     }
 
     /// publishStatus sends the status to its observer when it differs from the last one sent.

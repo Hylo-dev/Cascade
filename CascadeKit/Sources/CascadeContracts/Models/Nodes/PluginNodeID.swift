@@ -12,4 +12,14 @@ public struct PluginNodeID: RawRepresentable, Hashable, Sendable {
     public init(rawValue: String) {
         self.rawValue = rawValue
     }
+
+    /// explicit is the identity of the node of kind `kindName` that the plugin gave the explicit
+    /// `id`. It is the one place the form is written, for the table that builds identities and
+    /// for the kernel's views that look a node up by the id a plugin named.
+    public static func explicit(
+        _ id    : String,
+        kindName: String
+    ) -> PluginNodeID {
+        PluginNodeID(rawValue: "#" + id + ":" + kindName)
+    }
 }

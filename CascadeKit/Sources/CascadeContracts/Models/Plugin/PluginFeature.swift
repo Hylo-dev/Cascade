@@ -11,30 +11,33 @@ import Foundation
 /// host lacks any of them, the feature disables itself, and anything undeclared is denied.
 public struct PluginFeature: Codable, Equatable, Sendable {
 
-    public let id         : String
-    public let surfaces   : PluginSurfaces
-    public let sources    : [String]
-    public let services   : [String]
-    public let components : [PluginComponentReference]
-    public let permissions: [String]
-    public let actions    : [String]
+    public let id                : String
+    public let surfaces          : PluginSurfaces
+    public let sources           : [String]
+    public let services          : [String]
+    public let components        : [PluginComponentReference]
+    public let permissions       : [String]
+    public let actions           : [String]
+    public let supportsFullscreen: Bool
 
     public init(
-        id         : String,
-        surfaces   : PluginSurfaces,
-        sources    : [String] = [],
-        services   : [String] = [],
-        components : [PluginComponentReference] = [],
-        permissions: [String] = [],
-        actions    : [String] = []
+        id                : String,
+        surfaces          : PluginSurfaces,
+        sources           : [String] = [],
+        services          : [String] = [],
+        components        : [PluginComponentReference] = [],
+        permissions       : [String] = [],
+        actions           : [String] = [],
+        supportsFullscreen: Bool = false
     ) throws {
-        self.id          = id
-        self.surfaces    = surfaces
-        self.sources     = sources
-        self.services    = services
-        self.components  = components
-        self.permissions = permissions
-        self.actions     = actions
+        self.id                 = id
+        self.surfaces           = surfaces
+        self.sources            = sources
+        self.services           = services
+        self.components         = components
+        self.permissions        = permissions
+        self.actions            = actions
+        self.supportsFullscreen = supportsFullscreen
 
         try validate()
     }
@@ -43,18 +46,20 @@ public struct PluginFeature: Codable, Equatable, Sendable {
         try ContractValidation.knownFields(in: decoder, CodingKeys.self)
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id            = try container.decode(String.self, forKey: .id)
-        surfaces      = try container.decode(PluginSurfaces.self, forKey: .surfaces)
-        sources       = try container.decodeIfPresent([String].self, forKey: .sources) ?? []
-        services      = try container.decodeIfPresent([String].self, forKey: .services) ?? []
-        components    = try container.decodeIfPresent([PluginComponentReference].self, forKey: .components) ?? []
-        permissions   = try container.decodeIfPresent([String].self, forKey: .permissions) ?? []
-        actions       = try container.decodeIfPresent([String].self, forKey: .actions) ?? []
+        id                 = try container.decode(String.self, forKey: .id)
+        surfaces           = try container.decode(PluginSurfaces.self, forKey: .surfaces)
+        sources            = try container.decodeIfPresent([String].self, forKey: .sources) ?? []
+        services           = try container.decodeIfPresent([String].self, forKey: .services) ?? []
+        components         = try container.decodeIfPresent([PluginComponentReference].self, forKey: .components) ?? []
+        permissions        = try container.decodeIfPresent([String].self, forKey: .permissions) ?? []
+        actions            = try container.decodeIfPresent([String].self, forKey: .actions) ?? []
+        supportsFullscreen = try container.decodeIfPresent(Bool.self, forKey: .supportsFullscreen) ?? false
 
         try validate()
     }
 
     public func validate() throws {
+        try ContractValidation.require(!supportsFullscreen || surfaces.widget != nil, "Fullscreen requires a widget")
         try ContractValidation.require(ContractValidation.identifier(id), "Invalid feature ID")
 
         try ContractValidation.unique(sources, "Duplicate sources")
@@ -87,5 +92,20 @@ public struct PluginFeature: Codable, Equatable, Sendable {
         case components
         case permissions
         case actions
+        case supportsFullscreen
+    }
+
+    /// encode leaves `supportsFullscreen` out while it is false, so a feature without an options
+    /// page encodes exactly as before the field existed.
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(surfaces, forKey: .surfaces)
+        try container.encode(sources, forKey: .sources)
+        try container.encode(services, forKey: .services)
+        try container.encode(components, forKey: .components)
+        try container.encode(permissions, forKey: .permissions)
+        try container.encode(actions, forKey: .actions)
+        if supportsFullscreen { try container.encode(true, forKey: .supportsFullscreen) }
     }
 }

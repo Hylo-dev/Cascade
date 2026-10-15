@@ -46,10 +46,15 @@ extension PluginHostTests {
             func showDetail(
                 _ page      : any NotchContextualPage,
                 on displayID: CGDirectDisplayID?,
-                onDismiss   : @escaping @MainActor () -> Void
+                onDismiss   : @escaping @MainActor () -> Void,
+                onPresented : @escaping @MainActor (Bool) -> Void
             ) -> Bool { false }
 
             func dismissDetail(id: String) {}
+
+            func present(_ activity: any NotchLiveActivity) {}
+
+            func endActivity(id: String) {}
         }
 
         @Test

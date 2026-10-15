@@ -15,6 +15,9 @@ final class RecordingSurfaceHost: PluginSurfaceHosting {
     private(set) var shown        : [(notice: any NotchTransientNotice, revision: UInt64)] = []
     private(set) var dismissed    : [String] = []
     private(set) var updated      : [UInt64] = []
+    private(set) var presented    : [any NotchLiveActivity] = []
+    private(set) var ended        : [String] = []
+    private(set) var activityCalls: [String] = []
 
     private(set) var shownDetails: [(
         page       : any NotchContextualPage,
@@ -62,5 +65,15 @@ final class RecordingSurfaceHost: PluginSurfaceHosting {
 
     func dismissDetail(id: String) {
         dismissedDetailIDs.append(id)
+    }
+
+    func present(_ activity: any NotchLiveActivity) {
+        presented.append(activity)
+        activityCalls.append("present")
+    }
+
+    func endActivity(id: String) {
+        ended.append(id)
+        activityCalls.append("end")
     }
 }

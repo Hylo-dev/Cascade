@@ -41,6 +41,27 @@ final class NotchDisplayCoordinator {
         var entry  : DisplayInventoryEntry
     }
 
+    private struct OptionsOriginRecord {
+
+        let origin           : PluginOptionsOrigin
+        let displayID        : CGDirectDisplayID
+        let displayIdentity  : DisplayIdentity?
+        let previousSelection: ExpandedPageSelection
+
+        var widgetID: WidgetIdentifier { origin.widgetID }
+    }
+
+    private struct OptionsOverlay {
+
+        let leaseID : UUID
+        let page    : any NotchContextualPage
+        let record  : OptionsOriginRecord
+        let dismiss : @MainActor () -> Void
+    }
+
+    private var optionsOrigin : OptionsOriginRecord?
+    private var optionsOverlay: OptionsOverlay?
+
     private let inventory   : any DisplayInventoryProviding
     private let focusMonitor: any FocusedWindowMonitoring
     private let monitor     : any EventMonitoring
@@ -285,6 +306,7 @@ final class NotchDisplayCoordinator {
             return
         }
 
+        invalidateOptionsOrigins()
         isStarted = false
 
         inventory.onChange                    = nil
@@ -390,12 +412,18 @@ final class NotchDisplayCoordinator {
     }
 
     func register(_ widget: NotchWidget) {
+        if optionsOrigin?.widgetID == widget.id || optionsOverlay?.record.widgetID == widget.id {
+            invalidateOptionsOrigins()
+        }
         widgetHost.register(widget)
         widgetContentRevision &+= 1
         reconcilePresentations()
     }
 
     func unregisterWidget(id: WidgetIdentifier) {
+        if optionsOrigin?.widgetID == id || optionsOverlay?.record.widgetID == id {
+            invalidateOptionsOrigins()
+        }
         widgetHost.unregister(id: id)
         reconcilePresentations()
     }
@@ -430,6 +458,7 @@ final class NotchDisplayCoordinator {
 
     func showContextualPage(on requestedDisplayID: CGDirectDisplayID? = nil) {
         guard let contextualPage else { return }
+        invalidateOptionsOrigins()
 
         let displayID = requestedDisplayID ?? expandedDisplayID ?? auxiliaryDisplayID
         guard let displayID, surfaces[displayID] != nil else { return }
@@ -468,6 +497,9 @@ final class NotchDisplayCoordinator {
               closingDisplayID == nil,
               surfaces[displayID] != nil
         else { return false }
+
+        // A detail covers the grid, so an options click still in flight there loses its page.
+        invalidateOptionsOrigins()
 
         let replaced = detail
         detail = (page, displayID, false, onDismiss, onPresented)
@@ -522,6 +554,7 @@ final class NotchDisplayCoordinator {
 
     func showOrdinaryPage(on requestedDisplayID: CGDirectDisplayID? = nil) {
         guard !keepsContextualPageExpanded else { return }
+        invalidateOptionsOrigins()
         guard let displayID = requestedDisplayID ?? expandedDisplayID,
               surfaces[displayID] != nil
         else { return }
@@ -541,6 +574,81 @@ final class NotchDisplayCoordinator {
                 trigger   : .click
             )
         }
+    }
+
+    /// captureOptionsOrigin binds a click on a mounted widget's options opener to the current
+    /// display and selection. Hidden and suspended widgets, and widgets that offer no options,
+    /// cannot mint origins. The latest pending visible click revokes its predecessor: one
+    /// origin owns asynchronous navigation, so an earlier acceptance cannot steal the page.
+    func captureOptionsOrigin(
+        widgetID        : WidgetIdentifier,
+        observedRevision: UInt64
+    ) -> PluginOptionsOrigin? {
+        guard isStarted, isVisible,
+              let displayID = expandedDisplayID,
+              let display = surfaces[displayID],
+              closingDisplayID == nil,
+              optionsOverlay == nil,
+              widgetHost.canCaptureOptionsOrigin(widgetID, revision: observedRevision)
+        else { return nil }
+
+        optionsOrigin?.origin.revoke()
+        let origin = PluginOptionsOrigin(widgetID: widgetID, observedRevision: observedRevision)
+        optionsOrigin = OptionsOriginRecord(
+            origin           : origin,
+            displayID        : displayID,
+            displayIdentity  : display.entry.identity,
+            previousSelection: expandedPageSelection
+        )
+        return origin
+    }
+
+    /// presentOptions installs a dedicated overlay and never overwrites contextualPage.
+    func presentOptions(
+        page     : any NotchContextualPage,
+        leaseID  : UUID,
+        origin   : PluginOptionsOrigin,
+        onDismiss: @escaping @MainActor () -> Void
+    ) -> Bool {
+        guard isStarted, isVisible, origin.isValid,
+              let record = optionsOrigin,
+              record.origin === origin,
+              expandedDisplayID == record.displayID,
+              closingDisplayID == nil,
+              surfaces[record.displayID]?.entry.identity == record.displayIdentity,
+              optionsOverlay != nil || (
+                  expandedPageSelection == record.previousSelection
+                  && widgetHost.canCaptureOptionsOrigin(
+                      record.widgetID,
+                      revision            : record.origin.observedRevision,
+                      acceptsNewerRevision: true
+                  )
+              )
+        else { return false }
+        let old = optionsOverlay
+        optionsOverlay = OptionsOverlay(leaseID: leaseID, page: page, record: record, dismiss: onDismiss)
+        if let old, old.leaseID != leaseID { old.dismiss() }
+        reconcilePresentations()
+        return true
+    }
+
+    func dismissOptions(leaseID: UUID) {
+        guard let overlay = optionsOverlay, overlay.leaseID == leaseID else { return }
+        optionsOverlay = nil
+        optionsOrigin = nil
+        overlay.record.origin.revoke()
+        expandedPageSelection = overlay.record.previousSelection
+        if case .contextual(let id, _) = expandedPageSelection, contextualPage?.id != id {
+            selectOrdinaryPage()
+        }
+        overlay.dismiss()
+        reconcilePresentations()
+    }
+
+    private func invalidateOptionsOrigins() {
+        optionsOrigin?.origin.revoke()
+        optionsOrigin = nil
+        if let overlay = optionsOverlay { dismissOptions(leaseID: overlay.leaseID) }
     }
 
     func configureFileDrop(
@@ -834,6 +942,7 @@ final class NotchDisplayCoordinator {
             return
         }
 
+        invalidateOptionsOrigins()
         latestRequests.removeValue(forKey: displayID)
         removePendingRequest(on: displayID)
 
@@ -909,9 +1018,7 @@ final class NotchDisplayCoordinator {
                 applyOrdinarySelection(selection)
             }
         } else if let activityID = request.activityID {
-            let selection: ActivityExpansionSelection = routedDisplayIDs().contains(request.displayID)
-                ? .activity(activityID)
-                : .widgets
+            let selection = expansion(forActivityID: activityID, on: request.displayID)
             expandedPageSelection = .ordinary(selection)
             activityHost.setExpansion(selection)
         } else if !wasAlreadyOwner {
@@ -931,12 +1038,26 @@ final class NotchDisplayCoordinator {
     }
 
     private func resolvedOrdinarySelection(on displayID: CGDirectDisplayID) -> ActivityExpansionSelection {
-        let isRouted = routedDisplayIDs().contains(displayID)
-        if isRouted, let primary = activityHost.selection.primary {
-            return .activity(primary.id)
-        }
+        expansion(forActivityID: activityHost.selection.primary?.id, on: displayID)
+    }
 
-        return isRouted ? .fallback : .widgets
+    /// expansion is the one place that turns an activity into the opened notch's content. A
+    /// display that does not receive activities shows the widgets, and so does a routed one
+    /// when there is no activity, or when the activity has no expanded presentation: a status
+    /// is never allowed to take the notch over, whether the person opened it or clicked the
+    /// status itself. An identifier the host no longer knows is kept as it came, so a click
+    /// that raced the activity's end behaves as it always did.
+    private func expansion(
+        forActivityID activityID: String?,
+        on displayID            : CGDirectDisplayID
+    ) -> ActivityExpansionSelection {
+        guard routedDisplayIDs().contains(displayID) else { return .widgets }
+
+        guard let activityID,
+              activityHost.liveActivity(id: activityID)?.hasExpandedPresentation ?? true
+        else { return .fallback }
+
+        return .activity(activityID)
     }
 
     private func applyOrdinarySelection(_ selection: ActivityExpansionSelection) {
@@ -1055,6 +1176,11 @@ final class NotchDisplayCoordinator {
         })
         let removed                    = Set(surfaces.keys).subtracting(entries.keys)
         let ownerWasRemoved            = expandedDisplayID.map(removed.contains) == true
+        if optionsOrigin.map({
+            removed.contains($0.displayID) || entries[$0.displayID]?.identity != $0.displayIdentity
+        }) == true {
+            invalidateOptionsOrigins()
+        }
         let interactionOwnerWasRemoved = interactionOwnerDisplayID.map(removed.contains) == true
 
         for displayID in removed {
@@ -1125,6 +1251,10 @@ final class NotchDisplayCoordinator {
         on surface: any NotchDisplayPresenting,
         displayID : CGDirectDisplayID
     ) {
+        surface.setOptionsDismissHandler { [weak self] in
+            guard let leaseID = self?.optionsOverlay?.leaseID else { return }
+            self?.dismissOptions(leaseID: leaseID)
+        }
         surface.onExpansionRequested = { [weak self] request in
             self?.acceptExpansion(request)
         }
@@ -1189,6 +1319,7 @@ final class NotchDisplayCoordinator {
     }
 
     private func clearCallbacks(on surface: any NotchDisplayPresenting) {
+        surface.setOptionsDismissHandler(nil)
         surface.onExpansionRequested           = nil
         surface.onExpansionCancelled           = nil
         surface.onCollapseRequested            = nil
@@ -1376,11 +1507,9 @@ final class NotchDisplayCoordinator {
                routed.contains(owner),
                latestRequests[owner]?.activityID == nil,
                case .automatic = expandedPageSelection {
-                let expansion = activityHost.selection.primary.map {
-                    ActivityExpansionSelection.activity($0.id)
-                } ?? .fallback
-                if activityHost.expansionSelection != expansion {
-                    activityHost.setExpansion(expansion)
+                let automatic = expansion(forActivityID: activityHost.selection.primary?.id, on: owner)
+                if activityHost.expansionSelection != automatic {
+                    activityHost.setExpansion(automatic)
                     needsReconciliation = true
                     continue
                 }
@@ -1417,13 +1546,15 @@ final class NotchDisplayCoordinator {
                         ? selection.expanded
                         : nil,
                     expandedIsLiveActivity  : expandedIsLiveActivity,
-                    showsWidgets            : isOwner && !contextualIsSelected && detailPage == nil
-                        && selection.expanded == nil,
+                    showsWidgets            : isOwner && optionsOverlay == nil && !contextualIsSelected
+                        && detailPage == nil && selection.expanded == nil,
                     contextualPage          : contextualPage,
                     contextualPageIsSelected: contextualIsSelected,
                     detailPage              : detailPage,
                     widgetContentRevision   : widgetContentRevision,
-                    style                   : style(for: displayID, preferences: preferences)
+                    style                   : style(for: displayID, preferences: preferences),
+                    optionsPage             : isOwner ? optionsOverlay?.page : nil,
+                    optionsLeaseID          : isOwner ? optionsOverlay?.leaseID : nil
                 )
             }
 
@@ -1476,6 +1607,15 @@ final class NotchDisplayCoordinator {
 
             if !widgetsVisible {
                 widgetHost.update(state: .closed)
+            }
+            if optionsOverlay == nil, let record = optionsOrigin,
+               !widgetsVisible || !widgetHost.canCaptureOptionsOrigin(
+                   record.widgetID,
+                   revision            : record.origin.observedRevision,
+                   acceptsNewerRevision: true
+               ) {
+                record.origin.revoke()
+                optionsOrigin = nil
             }
         } while needsReconciliation
         isReconciling = false
@@ -1633,6 +1773,7 @@ final class NotchDisplayCoordinator {
     }
 
     private func setVisible(_ visible: Bool) {
+        if !visible { invalidateOptionsOrigins() }
         guard isVisible != visible else { return }
 
         isVisible = visible

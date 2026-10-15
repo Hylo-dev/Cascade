@@ -35,6 +35,7 @@ protocol NotchDisplayPresenting: AnyObject {
     var retainedActivityRoots: [any NotchActivity] { get }
 
     func start()
+    func setOptionsDismissHandler(_ handler: (@MainActor () -> Void)?)
     func updateDisplay(_ display: ActiveDisplay)
     func applyPresentation(_ presentation: DisplayPresentation)
     func discardRetainedActivityRoots(_ identities: Set<ObjectIdentifier>)
@@ -71,6 +72,8 @@ protocol NotchDisplayPresenting: AnyObject {
 }
 
 extension NotchDisplayPresenting {
+
+    func setOptionsDismissHandler(_ handler: (@MainActor () -> Void)?) {}
 
     func setRecognizedFileDragActive(
         _ isActive: Bool,

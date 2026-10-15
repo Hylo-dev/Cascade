@@ -29,6 +29,10 @@ enum CascadeSetting: String, CaseIterable, Identifiable {
     case charging
     case spotlight
 
+    case caffeinateGlyph
+    case caffeinateDisplay
+    case caffeinateShortcut
+
     var id: Self { self }
 
     var page: CascadeSettingsPage {
@@ -58,6 +62,10 @@ enum CascadeSetting: String, CaseIterable, Identifiable {
             case .volume          : "Volume"
             case .charging        : String(localized: "Charging")
             case .spotlight       : "Spotlight"
+
+            case .caffeinateGlyph   : String(localized: "Icon")
+            case .caffeinateDisplay : String(localized: "Keep display awake")
+            case .caffeinateShortcut: String(localized: "Shortcut")
         }
     }
 
@@ -80,6 +88,10 @@ enum CascadeSetting: String, CaseIterable, Identifiable {
             case .volume          : String(localized: "Show the level when you press the volume keys.")
             case .charging        : String(localized: "Show an alert when you connect power.")
             case .spotlight       : String(localized: "Open system search from the notch.")
+
+            case .caffeinateGlyph   : String(localized: "The symbol Caffeinate shows in the widget and the live activity.")
+            case .caffeinateDisplay : String(localized: "Also stop the screen from dimming and sleeping.")
+            case .caffeinateShortcut: String(localized: "Start or stop Caffeinate from anywhere with the shortcut.")
         }
     }
 
@@ -94,6 +106,9 @@ enum CascadeSetting: String, CaseIterable, Identifiable {
         switch self {
             case .displayStyle    : String(localized: "screen display notch Dynamic Island style")
             case .activityDisplays: String(localized: "activity screen display")
+
+            case .caffeinateGlyph, .caffeinateDisplay, .caffeinateShortcut:
+                String(localized: "Caffeinate coffee awake sleep screen keyboard hotkey")
             default               : ""
         }
     }

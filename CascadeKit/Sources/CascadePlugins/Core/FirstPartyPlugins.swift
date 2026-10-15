@@ -14,12 +14,13 @@ import Foundation
 public enum FirstPartyPlugins {
 
     public static let providers: [String: any PluginProvider] = [
-        "AudioPlugin"    : AudioPlugin(),
-        "BatteryPlugin"  : BatteryPlugin(),
-        "BluetoothPlugin": BluetoothPlugin(),
-        "ChargingPlugin" : ChargingPlugin(),
-        "ClockPlugin"    : ClockPlugin(),
-        "VolumePlugin"   : VolumePlugin(),
+        "AudioPlugin"     : AudioPlugin(),
+        "BatteryPlugin"   : BatteryPlugin(),
+        "BluetoothPlugin" : BluetoothPlugin(),
+        "CaffeinatePlugin": CaffeinatePlugin(),
+        "ChargingPlugin"  : ChargingPlugin(),
+        "ClockPlugin"     : ClockPlugin(),
+        "VolumePlugin"    : VolumePlugin(),
     ]
 
     /// name is how settings call a bundled plugin, in the user's language. Manifests carry no
@@ -27,13 +28,14 @@ public enum FirstPartyPlugins {
     /// reads as itself.
     public static func name(of plugin: PluginID) -> String {
         switch plugin.rawValue {
-            case "com.cascade.audio"    : String(localized: "Volume widget", table: "Plugins", bundle: .module)
-            case "com.cascade.battery"  : String(localized: "Battery", table: "Plugins", bundle: .module)
-            case "com.cascade.bluetooth": String(localized: "Bluetooth alerts", table: "Plugins", bundle: .module)
-            case "com.cascade.clock"    : String(localized: "Clock", table: "Plugins", bundle: .module)
-            case "com.cascade.power"    : String(localized: "Charging alerts", table: "Plugins", bundle: .module)
-            case "com.cascade.volume"   : String(localized: "Volume alerts", table: "Plugins", bundle: .module)
-            default                     : plugin.rawValue
+            case "com.cascade.audio"     : String(localized: "Volume widget", table: "Plugins", bundle: .module)
+            case "com.cascade.battery"   : String(localized: "Battery", table: "Plugins", bundle: .module)
+            case "com.cascade.bluetooth" : String(localized: "Bluetooth alerts", table: "Plugins", bundle: .module)
+            case "com.cascade.caffeinate": String(localized: "Caffeinate", table: "Plugins", bundle: .module)
+            case "com.cascade.clock"     : String(localized: "Clock", table: "Plugins", bundle: .module)
+            case "com.cascade.power"     : String(localized: "Charging alerts", table: "Plugins", bundle: .module)
+            case "com.cascade.volume"    : String(localized: "Volume alerts", table: "Plugins", bundle: .module)
+            default                      : plugin.rawValue
         }
     }
 

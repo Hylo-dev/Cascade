@@ -11,7 +11,9 @@ import Foundation
 /// from one counter, so a revision names exactly one stored document. A document equal to the
 /// stored one changes nothing, not even the revision, because nothing a viewer sees changed.
 /// A notice is an event, not a state, so a notice is stored again under a new revision even when
-/// it equals the last one, and the notch shows it again.
+/// it equals the last one, and the notch shows it again. An activity is a state, but its start is
+/// part of that state: the same document under a new `startedAt` is a renewed lifetime, so it is
+/// stored and delivered, and only an equal document with an equal start changes nothing.
 ///
 /// Content's age is measured on the wall clock, because content ages while the Mac sleeps and
 /// uptime does not; a clock change can make one refresh come early or late, and nothing worse.
@@ -26,6 +28,7 @@ struct PluginPublicationStore: Sendable {
         var publishedAt: Date
         let staleAfter : TimeInterval?
         let notice     : PluginNoticeAttributes?
+        let activity   : PluginActivityAttributes?
     }
 
     private var entries : [PluginPublicationKey: Entry] = [:]
@@ -42,10 +45,11 @@ struct PluginPublicationStore: Sendable {
         staleAfter: TimeInterval?,
         for key   : PluginPublicationKey,
         at instant: Date,
-        notice    : PluginNoticeAttributes? = nil
+        notice    : PluginNoticeAttributes? = nil,
+        activity  : PluginActivityAttributes? = nil
     ) -> PluginPublicationChange? {
         let previous = entries[key]
-        if let previous, previous.document == document, key.surface != .notice {
+        if let previous, previous.document == document, previous.activity == activity, key.surface != .notice {
             renew(key, at: instant)
             return nil
         }
@@ -59,13 +63,14 @@ struct PluginPublicationStore: Sendable {
             table      : table,
             publishedAt: instant,
             staleAfter : staleAfter,
-            notice     : notice
+            notice     : notice,
+            activity   : activity
         )
 
         return PluginPublicationChange(
             key     : key,
             revision: revision,
-            content : PluginPublicationChange.Content(document: document, table: table, diff: diff, notice: notice)
+            content : PluginPublicationChange.Content(document: document, table: table, diff: diff, notice: notice, activity: activity)
         )
     }
 

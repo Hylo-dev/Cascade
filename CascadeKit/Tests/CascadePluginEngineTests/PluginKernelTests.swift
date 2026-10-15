@@ -12,6 +12,49 @@ import Testing
 @Suite
 struct PluginKernelTests {
 
+    @Test
+    func aHostWithoutTheOptionsContainerDoesNotAcquireFullscreenSources() throws {
+        let feature = try PluginFeature(
+            id                : "test",
+            surfaces          : PluginSurfaces(widget: PluginWidgetSurface(sizes: [PluginWidgetSize(columns: 1, rows: 1)])),
+            sources           : ["caffeinate"],
+            actions           : ["open"],
+            supportsFullscreen: true
+        )
+        let manifest = try PluginEngineFixtures.manifest(PluginEngineFixtures.clockID, entryPoint: "Test", features: [feature])
+        var kernel = PluginKernel(
+            capabilities: PluginHostCapabilities(sources: ["caffeinate"], services: [], components: []),
+            policy      : StandardHealthPolicy()
+        )
+        let effects = kernel.register(manifest, grants: [], at: PluginEngineFixtures.start)
+        #expect(!effects.contains(.startSource("caffeinate")))
+    }
+
+    @Test(arguments: [false, true])
+    func optionsOutsideFullscreenOrActionDeclarationsAreRefused(fullscreen: Bool) throws {
+        let feature = try PluginFeature(
+            id                : "test",
+            surfaces          : PluginSurfaces(widget: PluginWidgetSurface(sizes: [PluginWidgetSize(columns: 1, rows: 1)])),
+            actions           : ["open"],
+            supportsFullscreen: fullscreen
+        )
+        let manifest = try PluginEngineFixtures.manifest(PluginEngineFixtures.clockID, entryPoint: "Test", features: [feature])
+        var kernel = PluginKernel(
+            capabilities: PluginHostCapabilities(sources: [], services: [], components: [], supportsFullscreen: true),
+            policy      : FixedHealthPolicy(answer: .quarantine)
+        )
+        _ = kernel.register(manifest, grants: [], at: PluginEngineFixtures.start)
+        let document = try PluginDocument(
+            root         : PluginNode(.button(action: "open"), id: "open"),
+            optionsRoot  : PluginNode(.button(action: fullscreen ? "undeclared" : "open"), id: "detail"),
+            optionsAction: "open"
+        )
+        let output = try PluginEngineFixtures.output("test", .widget, document)
+        let effects = kernel.complete(PluginEngineFixtures.clockID, token: 1, result: PluginEngineFixtures.result(output), at: PluginEngineFixtures.start)
+        #expect(kernel.state(of: PluginEngineFixtures.clockID) == .quarantined)
+        #expect(!effects.contains { if case .deliver = $0 { return true }; return false })
+    }
+
     private typealias Fixtures = PluginEngineFixtures
 
     private let clock    = PluginEngineFixtures.clockID
@@ -57,7 +100,7 @@ struct PluginKernelTests {
             return
         }
         #expect(changes.map(\.revision) == [1])
-        #expect(changes.first?.content?.diff.inserted == [PluginNodeID(rawValue: "root:text")])
+        #expect(changes.first?.content?.diff.inserted.contains(PluginNodeID(rawValue: "root:regions/0:text")) == true)
 
         _ = kernel.receive(try Fixtures.nowPlaying("Song"), at: start)
         let second = kernel.complete(music, token: 2, result: Fixtures.result(try Fixtures.output("now-playing", .activity, song)), at: start)
@@ -224,7 +267,7 @@ struct PluginKernelTests {
 
         let request = PluginActionRequest(key: activity, node: PluginNodeID(rawValue: "#next:button"), revision: 1)
 
-        #expect(kernel.submit(request, at: start) == [.reject(request)])
+        #expect(kernel.submit(request, at: start).effects == [.reject(request)])
     }
 
     @Test
@@ -237,7 +280,7 @@ struct PluginKernelTests {
         let request = PluginActionRequest(key: activity, node: PluginNodeID(rawValue: "#play:toggle"), revision: 1, value: .bool(false))
         let toggled = try PluginActionEvent(feature: "now-playing", action: "togglePlayback", value: .bool(false))
 
-        #expect(kernel.submit(request, at: start).isEmpty)
+        #expect(kernel.submit(request, at: start).effects.isEmpty)
         #expect(kernel.complete(music, token: 2, result: Fixtures.result(try PluginOutput()), at: start) == [.dispatch(music, .action(toggled), token: 3)])
     }
 
@@ -287,7 +330,7 @@ struct PluginKernelTests {
         _ = kernel.register(try Fixtures.clock(), grants: [], at: start)
         let output = try PluginOutput(
             publications: [
-                PluginPublication(feature: "time", surface: .activity, document: Fixtures.text("Wrong")),
+                Fixtures.publication("time", .activity, Fixtures.text("Wrong")),
                 PluginPublication(feature: "time", surface: .widget, document: Fixtures.text("12:00")),
             ]
         )

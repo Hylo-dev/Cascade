@@ -29,7 +29,7 @@ struct FirstPartyPluginsTests {
     func everyManifestHasAProvider() {
         let manifests = FirstPartyPlugins.manifests()
 
-        #expect(manifests.map(\.id.rawValue) == ["com.cascade.audio", "com.cascade.battery", "com.cascade.bluetooth", "com.cascade.clock", "com.cascade.power", "com.cascade.volume"])
+        #expect(manifests.map(\.id.rawValue) == ["com.cascade.audio", "com.cascade.battery", "com.cascade.bluetooth", "com.cascade.caffeinate", "com.cascade.clock", "com.cascade.power", "com.cascade.volume"])
         #expect(manifests.allSatisfy { FirstPartyPlugins.providers[$0.execution.entryPoint] != nil })
     }
 
@@ -72,6 +72,24 @@ struct FirstPartyPluginsTests {
         #expect(time.modifiers.contains(.contentTransition(.numericText(countsDown: false))))
         #expect(manifest.features.first?.surfaces.widget?.sizes == [try PluginWidgetSize(columns: 2, rows: 2), try PluginWidgetSize(columns: 2, rows: 1), try PluginWidgetSize(columns: 1, rows: 1)])
         #expect(face.componentReferences.isEmpty)
+    }
+
+    @Test
+    func caffeinateDeclaresItsWidgetItsActivityAndItsActions() throws {
+        let manifest = try #require(FirstPartyPlugins.manifests().first { $0.id.rawValue == "com.cascade.caffeinate" })
+        let feature  = try #require(manifest.features.first)
+
+        #expect(feature.id == "awake")
+        #expect(feature.surfaces.widget?.sizes == [try PluginWidgetSize(columns: 2, rows: 2), try PluginWidgetSize(columns: 2, rows: 1), try PluginWidgetSize(columns: 1, rows: 1)])
+        #expect(feature.surfaces.activity != nil)
+        #expect(feature.supportsFullscreen)
+        #expect(
+            Set(feature.actions) == [
+                "caffeinate.start", "caffeinate.stop", "caffeinate.display", "caffeinate.options",
+                "caffeinate.mode.indefinite", "caffeinate.mode.duration", "caffeinate.mode.until",
+                "caffeinate.duration.set", "caffeinate.until.set",
+            ]
+        )
     }
 
     @Test

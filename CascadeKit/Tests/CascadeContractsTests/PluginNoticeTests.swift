@@ -43,13 +43,15 @@ struct PluginNoticeTests {
     }
 
     @Test
-    func regionsHoldThreeRegions() {
+    func regionsHoldThreeRegionsOrFour() throws {
         #expect(throws: AddonFailure.self) {
             try PluginDocument(root: regions(2))
         }
         #expect(throws: AddonFailure.self) {
-            try PluginDocument(root: regions(4))
+            try PluginDocument(root: regions(5))
         }
+        _ = try PluginDocument(root: regions(3))
+        _ = try PluginDocument(root: regions(4))
     }
 
     @Test

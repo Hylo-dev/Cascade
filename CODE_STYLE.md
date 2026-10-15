@@ -201,7 +201,7 @@ HStack(spacing: 8) {
 }
 ```
 
-`FirstPartyPlugins` (`CascadePlugins`) lists the plugins Cascade ships: Battery and Clock as widgets, and the Bluetooth, Charging (`com.cascade.power`) and Volume alerts as notices. Music is still native (`MediaLiveActivity` and the expanded fallback) until the services and Music sub-project makes it a tier-2 plugin.
+`FirstPartyPlugins` (`CascadePlugins`) lists the plugins Cascade ships: Battery, Clock and Caffeinate as widgets (Caffeinate also publishes an activity), and the Bluetooth, Charging (`com.cascade.power`) and Volume alerts as notices. Music is still native (`MediaLiveActivity` and the expanded fallback) until the services and Music sub-project makes it a tier-2 plugin.
 
 `scripts/build-development.sh` runs `cascade-plugin validate` on every bundled manifest and `scripts/check-plugin-host-imports.sh` on `PluginHost/`, on `CascadePluginSDK` and on `CascadePlugins` (which is compiled into PluginHost) before Xcode compiles anything, so a broken manifest or a forbidden import stops the build. PluginHost may import only `CascadePlugins`, `CascadePluginHost`, `CascadePluginSDK`, `CascadeContracts` and system modules (Foundation, Darwin, Dispatch, Synchronization, Security): it runs data, never UI.
 
@@ -209,11 +209,11 @@ HStack(spacing: 8) {
 
 ## Host seams
 
-`NotchWidget`, `NotchLiveActivity`, `NotchTransientNotice` and `NotchContextualPage` are CascadeKit's internal host seams, not an API for plugins. Only kernel adapters and system surfaces implement them: `PluginWidget` and `PluginNotice` on the plugin side, `FileShelfController` and `FileShelfUnsupportedNotice` for the file shelf, and `MediaLiveActivity` until Music moves. Where a seam has `activate` and `suspend`, they bracket what the host keeps alive while a surface is on screen; for a plugin widget they only report visibility to the kernel, which uses it to decide on a refresh and never forwards it to the plugin.
+`NotchWidget`, `NotchLiveActivity`, `NotchTransientNotice` and `NotchContextualPage` are CascadeKit's internal host seams, not an API for plugins. Only kernel adapters and system surfaces implement them: `PluginWidget`, `PluginNotice` and `PluginActivity` on the plugin side, `FileShelfController` and `FileShelfUnsupportedNotice` for the file shelf, and `MediaLiveActivity` until Music moves. Where a seam has `activate` and `suspend`, they bracket what the host keeps alive while a surface is on screen; for a plugin widget they only report visibility to the kernel, which uses it to decide on a refresh and never forwards it to the plugin.
 
 ## Activity and notice contracts
 
-Preserve [the notch activity behavior](docs/architecture/live-activity-contracts.md) and its Apple HIG reference. A plugin publishes a notice as a value: its regions, plus `PluginNoticeAttributes` with a duration of at most ten seconds, the rim's tint, the compact width, the sentence VoiceOver reads and whether it shows a new event or updates the one on screen. `PluginSurfaceRouter` turns publications into `PluginWidget`s and `PluginNotice`s; plugin code never conforms to the host seams. The host owns presentation and deadlines. Sources are leased by the kernel (`PluginSourceLeases`), independently of what is visible. Activity publications are accepted but not shown until the Music sub-project routes them.
+Preserve [the notch activity behavior](docs/architecture/live-activity-contracts.md) and its Apple HIG reference. A plugin publishes a notice as a value: its regions, plus `PluginNoticeAttributes` with a duration of at most ten seconds, the rim's tint, the compact width, the sentence VoiceOver reads and whether it shows a new event or updates the one on screen. `PluginSurfaceRouter` turns publications into `PluginWidget`s and `PluginNotice`s; plugin code never conforms to the host seams. The host owns presentation and deadlines. Sources are leased by the kernel (`PluginSourceLeases`), independently of what is visible. An activity publication carries `PluginActivityAttributes` (`startedAt`, `relevance`, `accessibilityLabel`) and its three regions, or four with an expanded one; the router hands it to `LiveActivityHost`, which arbitrates it and caps it at eight hours.
 
 ## Extensions
 

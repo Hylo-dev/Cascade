@@ -4,6 +4,7 @@
 //
 
 import CascadeContracts
+import Foundation
 import Observation
 import Testing
 @testable import CascadeKit
@@ -162,6 +163,25 @@ struct PluginNodeStoreTests {
     }
 
     @Test
+    func aRemovedModelsTimeoutCannotCancelItsReplacementConfirmation() throws {
+        var publisher = Fixtures.Publisher()
+        let scheduler = ManualScheduler()
+        let store = store(scheduler: scheduler)
+        store.apply(publisher.publish(try Fixtures.face()))
+        let old = try #require(store.model(play))
+        store.set(.bool(false), on: old)
+        store.apply(publisher.publish(try PluginDocument(root: PluginNode(.text("Removed")))))
+        store.apply(publisher.publish(try Fixtures.face()))
+        let current = try #require(store.model(play))
+        store.set(.bool(false), on: current)
+
+        scheduler.run(0)
+        #expect(current.optimistic == .bool(false))
+        scheduler.run(1)
+        #expect(current.optimistic == nil)
+    }
+
+    @Test
     func aRefusedActionReverts() throws {
         var publisher = Fixtures.Publisher()
         let sent      = SentRequests()
@@ -242,6 +262,110 @@ struct PluginNodeStoreTests {
 
         #expect(sent.requests == [PluginActionRequest(key: Fixtures.key, node: next, revision: 1)])
         #expect(model.optimistic == nil)
+    }
+
+    // MARK: - A slider's live value
+
+    private func valueDocument(
+        _ style : PluginSliderStyle,
+        value   : Double,
+        minimum : Double,
+        maximum : Double,
+        step    : Double?,
+        caption : String = ""
+    ) throws -> PluginDocument {
+        try PluginDocument(
+            root: PluginNode(
+                .hStack(alignment: .center, spacing: nil),
+                children: [
+                    PluginNode(.text(caption), id: "caption"),
+                    PluginNode(.sliderValue(id: "ruler")),
+                    PluginNode(
+                        .slider(value: value, minimum: minimum, maximum: maximum, step: step, style: style, action: "set"),
+                        id: "ruler"
+                    ),
+                ]
+            )
+        )
+    }
+
+    /// aSliderValueFollowsItsRulerWithoutAPublication: a drag moves the number, snapped to the
+    /// ruler's step, with no publication and no action; the release sends one; the publication
+    /// that confirms it leaves the number where it is.
+    @Test
+    func aSliderValueFollowsItsRulersDragWithoutAPublication() throws {
+        var publisher = Fixtures.Publisher()
+        let sent      = SentRequests()
+        let store     = store(sent: sent)
+        let cache     = RulerLabelCache()
+        let ruler     = PluginNodeID(rawValue: "#ruler:slider")
+        store.apply(publisher.publish(try valueDocument(.ruler(labelEvery: 4, labels: .duration), value: 90, minimum: 15, maximum: 1_440, step: 15)))
+        let model = try #require(store.model(ruler))
+
+        #expect(store.sliderReading("ruler")?.text(cache: cache) == RulerLabel.text(value: 90, labels: .duration))
+
+        store.drag(128, on: model)
+
+        #expect(store.revision == 1)
+        #expect(store.sliderReading("ruler")?.value == 135)
+        #expect(store.sliderReading("ruler")?.text(cache: cache) == RulerLabel.text(value: 135, labels: .duration))
+        #expect(sent.requests.isEmpty)
+
+        store.drag(1_000_000, on: model)
+        #expect(store.sliderReading("ruler")?.value == 1_440)
+
+        store.drag(128, on: model)
+        store.release(model)
+        #expect(sent.requests.count == 1)
+        #expect(store.sliderReading("ruler")?.value == 135)
+
+        store.apply(publisher.publish(try valueDocument(.ruler(labelEvery: 4, labels: .duration), value: 135, minimum: 15, maximum: 1_440, step: 15)))
+        #expect(store.sliderReading("ruler")?.value == 135)
+        #expect(model.optimistic == nil)
+    }
+
+    @Test
+    func aSliderValueIsFormattedByItsSlidersStyle() throws {
+        var publisher = Fixtures.Publisher()
+        let store     = store()
+        let cache     = RulerLabelCache()
+        let instant   = 2_000_052_000.0
+
+        store.apply(publisher.publish(try valueDocument(.ruler(labelEvery: 4, labels: .clockTime), value: instant, minimum: instant - 900, maximum: instant + 86_400, step: 900)))
+        let clock = Date(timeIntervalSince1970: instant).formatted(Date.FormatStyle(date: .omitted, time: .shortened, locale: .current, timeZone: .current))
+        #expect(store.sliderReading("ruler")?.text(cache: cache) == clock)
+        #expect(store.sliderReading("ruler")?.labels == .clockTime)
+
+        store.apply(publisher.publish(try valueDocument(.standard, value: 0.5, minimum: 0, maximum: 1, step: nil)))
+        #expect(store.sliderReading("ruler")?.labels == nil)
+        #expect(store.sliderReading("ruler")?.text(cache: cache) == 0.5.formatted(.number.precision(.fractionLength(0...2))))
+
+        store.drag(0.3333, on: try #require(store.model(PluginNodeID(rawValue: "#ruler:slider"))))
+        #expect(store.sliderReading("ruler")?.text(cache: cache) == 0.33.formatted(.number.precision(.fractionLength(0...2))))
+        #expect(store.sliderReading("missing") == nil)
+    }
+
+    /// aSliderValueRedrawsOnlyWhenItsSlidersValueChanges: a view that reads the reading is
+    /// invalidated by a drag and by nothing else.
+    @Test
+    func aSliderValueIsInvalidatedByItsSlidersValueAndNothingElse() throws {
+        var publisher = Fixtures.Publisher()
+        let store     = store()
+        store.apply(publisher.publish(try valueDocument(.ruler(labelEvery: 4, labels: .duration), value: 90, minimum: 15, maximum: 1_440, step: 15)))
+        let model = try #require(store.model(PluginNodeID(rawValue: "#ruler:slider")))
+        let log   = NotificationLog()
+
+        withObservationTracking {
+            _ = store.sliderReading("ruler")
+        } onChange: {
+            log.record("reading")
+        }
+
+        store.apply(publisher.publish(try valueDocument(.ruler(labelEvery: 4, labels: .duration), value: 90, minimum: 15, maximum: 1_440, step: 15, caption: "Other")))
+        #expect(log.names.isEmpty)
+
+        store.drag(120, on: model)
+        #expect(log.names == ["reading"])
     }
 }
 

@@ -33,11 +33,27 @@ final class NotchHostView: NSView {
     let auxiliaryInteraction = NotchAuxiliaryInteraction()
 
     var onSettingsRequested   : (() -> Void)?
+    var onOptionsDismissed    : (@MainActor () -> Void)?
     var onFileDragHoverChanged: (([URL]?) -> Void)?
     var onFileDrop            : (([URL]) -> Bool)?
     var onUnsupportedFileDrop : (() -> Void)?
 
     private let settingsButton = NSButton()
+    private let backButton = OptionsBackButton()
+    private let optionsKeyboardTarget = OptionsKeyboardTarget()
+    private let optionsHost = NSHostingView(rootView: AnyView(EmptyView()))
+    private let outgoingOptionsHost = NSHostingView(rootView: AnyView(EmptyView()))
+    private let optionsHeaderDivider = CALayer()
+    private var optionsIdentity: UUID?
+    private var optionsTransitionTask: Task<Void, Never>?
+    private var optionsTransitionGeneration: UInt64 = 0
+    private var optionsTookKeyWindow = false
+    private weak var previousOptionsResponder: NSResponder?
+
+    /// visibleOptionsHostCount describes visibility; both native hosts remain reusable.
+    var visibleOptionsHostCount: Int {
+        (optionsHost.isHidden ? 0 : 1) + (outgoingOptionsHost.isHidden ? 0 : 1)
+    }
 
     private let shapeLayer       = CAShapeLayer()
     private let contentMaskLayer = CAShapeLayer()
@@ -126,14 +142,25 @@ final class NotchHostView: NSView {
             compactLeadingHost,
             compactTrailingHost,
             expandedActivityHost,
-            detachedActivityHost
+            detachedActivityHost,
+            outgoingOptionsHost,
+            optionsHost
         ] {
             // Decorative light may cross the content margins. The shared
             // contentMaskLayer, not each rectangular host, owns the final clip.
             hostingView.clipsToBounds = false
+            hostingView.wantsLayer    = true
             hostingView.isHidden      = true
             contentContainer.addSubview(hostingView)
         }
+
+        // Options have a mandatory body boundary below the cutout and navigation
+        // chrome. Provider overflow must not draw over that reserved top band.
+        optionsHost.clipsToBounds = true
+        outgoingOptionsHost.clipsToBounds = true
+        optionsHeaderDivider.name = "options.header.divider"
+        optionsHeaderDivider.isHidden = true
+        contentContainer.layer?.addSublayer(optionsHeaderDivider)
 
         settingsButton.image            = NSImage(
             systemSymbolName        : "gearshape",
@@ -141,6 +168,8 @@ final class NotchHostView: NSView {
         )
         settingsButton.imagePosition    = .imageOnly
         settingsButton.isBordered       = false
+        settingsButton.refusesFirstResponder = true
+        settingsButton.focusRingType    = .none
         settingsButton.contentTintColor = .lightGray
         settingsButton.toolTip          = String(localized: "Settings…", bundle: .module)
         settingsButton.setAccessibilityIdentifier("notch.settings")
@@ -148,6 +177,23 @@ final class NotchHostView: NSView {
         settingsButton.action   = #selector(openSettings)
         settingsButton.isHidden = true
         contentContainer.addSubview(settingsButton)
+
+        backButton.image = NSImage(
+            systemSymbolName        : "chevron.left",
+            accessibilityDescription: String(localized: "Back", bundle: .module)
+        )
+        backButton.imagePosition    = .imageOnly
+        backButton.isBordered       = false
+        backButton.refusesFirstResponder = true
+        backButton.focusRingType    = .none
+        backButton.contentTintColor = settingsButton.contentTintColor
+        backButton.toolTip          = String(localized: "Back", bundle: .module)
+        backButton.setAccessibilityLabel(String(localized: "Back", bundle: .module))
+        backButton.setAccessibilityIdentifier("notch.options.back")
+        backButton.target   = self
+        backButton.action   = #selector(dismissOptions)
+        backButton.isHidden = true
+        contentContainer.addSubview(backButton)
 
         addSubview(borderRenderer.view)
         setBorderAppearance(.neutral, animated: false)
@@ -172,6 +218,9 @@ final class NotchHostView: NSView {
         animated    : Bool
     ) {
         let workspace = NSWorkspace.shared
+        optionsHeaderDivider.backgroundColor = NSColor.white.withAlphaComponent(
+            workspace.accessibilityDisplayShouldIncreaseContrast ? 0.35 : 0.12
+        ).cgColor
         borderRenderer.setAppearance(
             appearance,
             animated           : animated && !workspace.accessibilityDisplayShouldReduceMotion,
@@ -193,6 +242,168 @@ final class NotchHostView: NSView {
 
     @objc
     private func openSettings() { onSettingsRequested?() }
+
+    @objc
+    private func dismissOptions() { onOptionsDismissed?() }
+
+    func setBackButton(
+        frame    : CGRect,
+        isVisible: Bool
+    ) {
+        backButton.frame    = frame
+        backButton.isHidden = !isVisible || onOptionsDismissed == nil
+    }
+
+    /// setOptionsContent retargets finite layer animations. SwiftUI is laid out once,
+    /// and an obsolete completion cannot discard the latest incoming host. The root is
+    /// replaced only when the page itself changes: a publication reaches the page through
+    /// its node store, which redraws only the changed nodes, so replacing the root on every
+    /// revision would rebuild the whole page for a one-node change.
+    func setOptionsContent(
+        _ content    : AnyView?,
+        identity     : UUID?,
+        frame        : CGRect,
+        reducesMotion: Bool
+    ) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        optionsHeaderDivider.frame = CGRect(
+            x     : frame.minX,
+            y     : frame.maxY + 1,
+            width : frame.width,
+            height: 1 / (window?.backingScaleFactor ?? 2)
+        )
+        optionsHeaderDivider.isHidden = identity == nil || content == nil
+        CATransaction.commit()
+        guard optionsIdentity != identity else {
+            optionsHost.frame = frame
+            return
+        }
+        let wasPresented = optionsIdentity != nil
+        let isPresented  = identity != nil && content != nil
+        let changesPage  = optionsIdentity != identity
+        optionsTransitionTask?.cancel()
+        optionsTransitionTask = nil
+        optionsTransitionGeneration &+= 1
+        let generation = optionsTransitionGeneration
+
+        let candidates = [optionsHost, contentHost, expandedActivityHost]
+        let outgoing = candidates.first { !$0.isHidden }
+        update(host: outgoingOptionsHost, view: nil, frame: .zero)
+        if changesPage, let outgoing {
+            update(
+                host : outgoingOptionsHost,
+                view : AnyView(outgoing.rootView.allowsHitTesting(false)),
+                frame: outgoing.frame
+            )
+        }
+        for host in candidates + [outgoingOptionsHost] {
+            host.layer?.removeAllAnimations()
+            host.layer?.opacity = 1
+            host.layer?.setAffineTransform(.identity)
+        }
+        optionsIdentity = identity
+        let body = content.map { content in
+            AnyView(ScrollView(.vertical) {
+                content.fixedSize(horizontal: false, vertical: true)
+            }.clipped())
+        }
+        update(host: optionsHost, view: isPresented ? body : nil, frame: frame)
+        if isPresented && !wasPresented {
+            beginOptionsKeyboard()
+        } else if !isPresented {
+            endOptionsKeyboard()
+        }
+        guard changesPage else { return }
+
+        let incoming = isPresented ? optionsHost : [contentHost, expandedActivityHost].first { !$0.isHidden }
+        let direction: CGFloat = isPresented ? 1 : -1
+        animateOptionsLayer(incoming?.layer, entering: true, direction: direction, reducesMotion: reducesMotion)
+        animateOptionsLayer(outgoingOptionsHost.layer, entering: false, direction: direction, reducesMotion: reducesMotion)
+        optionsTransitionTask = Task { [weak self] in
+            do { try await Task.sleep(for: .milliseconds(180)) } catch { return }
+            guard let self, self.optionsTransitionGeneration == generation else { return }
+            self.update(host: self.outgoingOptionsHost, view: nil, frame: .zero)
+            self.optionsTransitionTask = nil
+        }
+    }
+
+    private func animateOptionsLayer(
+        _ layer     : CALayer?,
+        entering    : Bool,
+        direction   : CGFloat,
+        reducesMotion: Bool
+    ) {
+        guard let layer else { return }
+        let opacity = CABasicAnimation(keyPath: "opacity")
+        opacity.fromValue = entering ? 0 : 1
+        opacity.toValue   = entering ? 1 : 0
+        opacity.duration  = 0.18
+        opacity.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        layer.opacity = entering ? 1 : 0
+        layer.add(opacity, forKey: "options.opacity")
+        if !reducesMotion {
+            let translation = CABasicAnimation(keyPath: "transform.translation.x")
+            translation.fromValue = entering ? direction * 28 : 0
+            translation.toValue   = entering ? 0 : -direction * 28
+            translation.duration  = 0.18
+            translation.timingFunction = opacity.timingFunction
+            layer.add(translation, forKey: "options.translation")
+        }
+    }
+
+    /// clearOptionsContent releases both roots and native key observation immediately
+    /// on close, hide and revocation. There is no idle or periodic options source.
+    func clearOptionsContent() {
+        let hadOptionsContent = optionsIdentity != nil || !outgoingOptionsHost.isHidden
+        optionsTransitionTask?.cancel()
+        optionsTransitionTask = nil
+        optionsTransitionGeneration &+= 1
+        optionsIdentity = nil
+        for host in [optionsHost, outgoingOptionsHost] {
+            host.layer?.removeAllAnimations()
+            host.layer?.opacity = 1
+            update(host: host, view: nil, frame: .zero)
+            // A mounted SwiftUI graph can retain its previous document after the
+            // root assignment. Settle teardown once, before the panel disappears.
+            if hadOptionsContent { host.layoutSubtreeIfNeeded() }
+        }
+        backButton.isHidden = true
+        optionsHeaderDivider.isHidden = true
+        endOptionsKeyboard()
+    }
+
+    /// beginOptionsKeyboard lets Escape go Back. The panel takes the keyboard only now, in
+    /// answer to the user's click, the way widget editing and the file shelf do: a
+    /// nonactivating panel becomes key without activating Cascade. Nothing observes keys
+    /// outside the panel, so Escape pressed in another app never closes the page.
+    private func beginOptionsKeyboard() {
+        guard let window else { return }
+
+        previousOptionsResponder            = window.firstResponder
+        optionsTookKeyWindow                = !window.isKeyWindow
+        optionsKeyboardTarget.onEscape      = { [weak self] in self?.onOptionsDismissed?() }
+        optionsKeyboardTarget.nextResponder = self
+        window.makeFirstResponder(optionsKeyboardTarget)
+        window.makeKey()
+    }
+
+    /// endOptionsKeyboard gives the keyboard back: the previous responder, and key status to
+    /// the app the user was typing in when the page took it. Without the resign the panel
+    /// would stay key after Back and swallow the user's next keystrokes.
+    private func endOptionsKeyboard() {
+        optionsKeyboardTarget.onEscape = {}
+        if let window {
+            if window.firstResponder === optionsKeyboardTarget {
+                window.makeFirstResponder(previousOptionsResponder)
+            }
+            if optionsTookKeyWindow, window.isKeyWindow {
+                window.resignKey()
+            }
+        }
+        previousOptionsResponder = nil
+        optionsTookKeyWindow     = false
+    }
 
     func setFileDropExclusionFrame(_ frame: CGRect) {
         fileDropExclusionFrame = frame
@@ -784,6 +995,7 @@ final class NotchHostView: NSView {
     }
 
     isolated deinit {
+        optionsTransitionTask?.cancel()
         if let accessibilityObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(accessibilityObserver)
         }

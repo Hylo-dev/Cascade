@@ -4,10 +4,12 @@
 //
 
 import CoreGraphics
+import Foundation
 
 /// PluginSurfaceHosting is the part of the notch plugin surfaces need: placing a widget on the
-/// grid and taking it off, showing a notice, enriching it and dismissing it, and opening one detail
-/// page over the expanded surface. The notch engine provides it; tests record it.
+/// grid and taking it off, showing a notice, enriching it and dismissing it, presenting a live
+/// activity and ending it, opening one detail page over the expanded surface, and opening a
+/// widget's options page over the grid. The notch engine provides it; tests record it.
 @MainActor
 public protocol PluginSurfaceHosting: AnyObject {
 
@@ -41,4 +43,47 @@ public protocol PluginSurfaceHosting: AnyObject {
 
     /// dismissDetail closes the shown detail whose page has this id; any other id is ignored.
     func dismissDetail(id: String)
+
+    func present(_ activity: any NotchLiveActivity)
+
+    func endActivity(id: String)
+
+    /// captureOptionsOrigin records a click on a visible widget's options opener, bound to the
+    /// display and page it happened on. A hidden widget, or one that offers no options, gets nil.
+    func captureOptionsOrigin(
+        widgetID        : WidgetIdentifier,
+        observedRevision: UInt64
+    ) -> PluginOptionsOrigin?
+
+    /// presentOptions shows the page for a still-valid origin and reports whether it did.
+    func presentOptions(
+        page     : any NotchContextualPage,
+        leaseID  : UUID,
+        origin   : PluginOptionsOrigin,
+        onDismiss: @escaping @MainActor () -> Void
+    ) -> Bool
+
+    func dismissOptions(leaseID: UUID)
+}
+
+/// The defaults leave a host without an options page: nothing can be captured or presented.
+public extension PluginSurfaceHosting {
+
+    func captureOptionsOrigin(
+        widgetID        : WidgetIdentifier,
+        observedRevision: UInt64
+    ) -> PluginOptionsOrigin? {
+        nil
+    }
+
+    func presentOptions(
+        page     : any NotchContextualPage,
+        leaseID  : UUID,
+        origin   : PluginOptionsOrigin,
+        onDismiss: @escaping @MainActor () -> Void
+    ) -> Bool {
+        false
+    }
+
+    func dismissOptions(leaseID: UUID) {}
 }

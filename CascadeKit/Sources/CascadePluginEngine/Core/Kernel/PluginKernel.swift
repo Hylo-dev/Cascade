@@ -125,23 +125,25 @@ struct PluginKernel: Sendable {
 
     /// submit checks a renderer's request with the broker and queues the resulting event ahead
     /// of everything else pending. A refused request comes back as `reject`, so the renderer
-    /// reverts its optimistic value at once.
+    /// reverts its optimistic value at once. An accepted one also returns the event the broker
+    /// resolved from the control, the same one the plugin will get, so a native owner acts on
+    /// the broker's reading of the control and never on the renderer's own claim.
     mutating func submit(
         _ request: PluginActionRequest,
         at now   : PluginInstant
-    ) -> [PluginEngineEffect] {
+    ) -> (effects: [PluginEngineEffect], event: PluginActionEvent?) {
         guard var record = records[request.key.plugin],
               record.isRunnable,
               let feature = availableFeature(request.key.feature, of: record),
               let event = PluginActionAuthorizer.event(for: request, entry: store[request.key], feature: feature),
               record.mailbox.queue(PluginMailbox.Action(event: event, request: request, postedAt: now.monotonic))
-        else { return [.reject(request)] }
+        else { return ([.reject(request)], nil) }
 
         records[request.key.plugin] = record
 
         var effects: [PluginEngineEffect] = []
         schedule(at: now, into: &effects)
-        return effects
+        return (effects, event)
     }
 
     /// complete takes a plugin's answer to the dispatch `token` named. An answer to anything but
@@ -518,13 +520,36 @@ struct PluginKernel: Sendable {
 
         let key = PluginPublicationKey(plugin: plugin, feature: feature.id, surface: publication.surface)
         guard let document = publication.document else { return store.withdraw(key) }
+        if let optionsRoot = document.optionsRoot {
+            guard publication.surface == .widget, feature.supportsFullscreen,
+                  document.optionsAction.map(feature.actions.contains) ?? true
+            else { throw AddonFailure(code: .invalidPayload, reason: "Options outside widget declarations") }
+
+            // Walk only the options subtree, in place: the store builds the document's node
+            // table once, and the widget's own controls are checked when they are used.
+            var pending = [optionsRoot]
+            while let node = pending.popLast() {
+                switch node.kind {
+                    case .button(let action), .toggle(_, let action), .slider(_, _, _, _, _, let action):
+                        guard feature.actions.contains(action) else {
+                            throw AddonFailure(code: .invalidPayload, reason: "Undeclared options control")
+                        }
+
+                    default:
+                        break
+                }
+                pending.append(contentsOf: node.children)
+                pending.append(contentsOf: node.layers)
+            }
+        }
 
         return store.apply(
             document,
             staleAfter: publication.staleAfter,
             for       : key,
             at        : now.wall,
-            notice    : publication.notice
+            notice    : publication.notice,
+            activity  : publication.activity
         )
     }
 
@@ -637,6 +662,7 @@ struct PluginKernel: Sendable {
         capabilities.sources.isSuperset(of: feature.sources)
             && capabilities.services.isSuperset(of: feature.services)
             && capabilities.components.isSuperset(of: feature.components.map(\.id))
+            && (!feature.supportsFullscreen || capabilities.supportsFullscreen)
             && record.grants.isSuperset(of: feature.permissions)
     }
 

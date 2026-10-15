@@ -17,17 +17,21 @@ final class CoordinatorContextualPage: NotchContextualPage {
     let accessibilityLabel        = "Shelf"
     var keepsExpandedPresentation: Bool
 
+    private let content: (@MainActor () -> AnyView)?
+
     init(
         id                       : String,
         contentRevision          : UInt64,
-        keepsExpandedPresentation: Bool = false
+        keepsExpandedPresentation: Bool = false,
+        content                  : (@MainActor () -> AnyView)? = nil
     ) {
         self.id                        = id
         self.contentRevision           = contentRevision
         self.keepsExpandedPresentation = keepsExpandedPresentation
+        self.content                   = content
     }
 
     func makeContentView(in context: NotchContextualPageContext) -> AnyView {
-        AnyView(Text(id))
+        content?() ?? AnyView(Text(id))
     }
 }

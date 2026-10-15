@@ -14,6 +14,7 @@ public enum PluginCatalog {
         "bluetooth",
         "power",
         "volume",
+        "caffeinate",
         "network",
         "net.webSocket",
         "net.sse",

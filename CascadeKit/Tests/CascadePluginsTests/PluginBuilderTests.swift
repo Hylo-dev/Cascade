@@ -189,4 +189,19 @@ struct PluginBuilderTests {
         #expect(text.id == "time")
         #expect(text.modifiers == [.font(PluginFont(style: .title))])
     }
+
+    @Test
+    func aSliderTakesAStyleAndDefaultsToStandard() {
+        let plain = Slider(value: 0.5, action: "volume")
+        let ruler = Slider(
+            value : 90,
+            in    : 15...1_440,
+            step  : 15,
+            style : .ruler(labelEvery: 4, labels: .duration),
+            action: "set"
+        )
+
+        #expect(plain == PluginNode(.slider(value: 0.5, minimum: 0, maximum: 1, step: nil, style: .standard, action: "volume")))
+        #expect(ruler.kind == .slider(value: 90, minimum: 15, maximum: 1_440, step: 15, style: .ruler(labelEvery: 4, labels: .duration), action: "set"))
+    }
 }

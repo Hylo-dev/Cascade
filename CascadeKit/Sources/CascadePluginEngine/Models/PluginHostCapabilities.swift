@@ -11,4 +11,17 @@ struct PluginHostCapabilities: Sendable {
     let sources   : Set<String>
     let services  : Set<String>
     let components: Set<String>
+    let supportsFullscreen: Bool
+
+    init(
+        sources           : Set<String>,
+        services          : Set<String>,
+        components        : Set<String>,
+        supportsFullscreen: Bool = false
+    ) {
+        self.sources            = sources
+        self.services           = services
+        self.components         = components
+        self.supportsFullscreen = supportsFullscreen
+    }
 }

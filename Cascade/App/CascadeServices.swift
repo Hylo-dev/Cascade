@@ -49,6 +49,73 @@ final class CascadeServices {
 
     var spotlightStatus: String { spotlight.status }
 
+    /// The Caffeinate settings forward to a mirror (see `CaffeinateSettingsMirror`): a write by
+    /// the user sends the service a command, and a state the service published updates the
+    /// mirror without sending one, so the options page and a refused display assertion show in
+    /// Settings too.
+    var caffeinateGlyph: CaffeinateGlyph {
+        get { caffeinateSettings.glyph }
+        set { caffeinateSettings.glyph = newValue }
+    }
+
+    var caffeinateKeepsDisplayAwake: Bool {
+        get { caffeinateSettings.keepsDisplayAwake }
+        set { caffeinateSettings.keepsDisplayAwake = newValue }
+    }
+
+    private(set) var caffeinateShortcut: CaffeinateShortcut?
+
+    /// True when the system refused the shortcut the user chose, because another app owns it.
+    /// The choice stays persisted so Settings shows what the user picked. It is only ever set by
+    /// a registration that was attempted: while Caffeinate is not active nothing is registered,
+    /// and nothing was refused.
+    private(set) var caffeinateShortcutUnavailable = false
+
+    /// setCaffeinateShortcutRecording frees the global combination while the recorder listens, so
+    /// pressing the current shortcut records it instead of toggling Caffeinate, and registers the
+    /// current one again when recording ends.
+    func setCaffeinateShortcutRecording(_ isRecording: Bool) {
+        isRecordingCaffeinateShortcut = isRecording
+
+        if isRecording {
+            caffeinateHotKey.register(nil)
+        } else {
+            registerCaffeinateShortcut()
+        }
+    }
+
+    /// setCaffeinateShortcut persists the shortcut and registers it, `nil` meaning off. The
+    /// preferences are written from the main actor: a single `UserDefaults` set, never on the
+    /// service's queue, which only touches the other keys.
+    func setCaffeinateShortcut(_ shortcut: CaffeinateShortcut?) {
+        caffeinatePreferences.shortcut = shortcut
+        caffeinateShortcut             = shortcut
+        registerCaffeinateShortcut()
+    }
+
+    /// registerCaffeinateShortcut holds the global hot key only while it can do something: while
+    /// Cascade runs and Caffeinate is active, and not while the recorder listens. Otherwise the
+    /// combination is given back, so ⌃⌥⌘C is not taken from other apps for a plugin that is off.
+    private func registerCaffeinateShortcut() {
+        guard !isRecordingCaffeinateShortcut else { return }
+
+        let wanted = isRunning && caffeinateSessionsAllowed ? caffeinateShortcut : nil
+
+        caffeinateShortcutUnavailable = !caffeinateHotKey.register(wanted)
+    }
+
+    /// updateCaffeinatePermission follows the engine's status: a session may run while Caffeinate
+    /// is active, whatever PluginHost does, and the service and the hot key hear only of a change.
+    private func updateCaffeinatePermission(from status: PluginEngineStatus) {
+        let allowed = CaffeinateCommand.sessionsAllowed(in: status.plugins)
+
+        guard allowed != caffeinateSessionsAllowed else { return }
+
+        caffeinateSessionsAllowed = allowed
+        caffeinateService.setSessionsAllowed(allowed)
+        registerCaffeinateShortcut()
+    }
+
     func previewSpotlightDroplet(from origin: AuxiliaryInvocationOrigin) {
         guard let anchor = spotlightAnchor(on: invocationDisplayID(for: origin)) else { return }
 
@@ -184,6 +251,18 @@ final class CascadeServices {
     private var settings           : (any CascadeSettingsPresenting)?
     @ObservationIgnored
     private let spotlight          : SpotlightCoordinator
+    @ObservationIgnored
+    private let caffeinateService    : CaffeinateService
+    @ObservationIgnored
+    private let caffeinatePreferences: UserDefaultsCaffeinatePreferences
+    @ObservationIgnored
+    private let caffeinateHotKey     : CaffeinateHotKey
+    @ObservationIgnored
+    private let caffeinateSettings   : CaffeinateSettingsMirror
+    @ObservationIgnored
+    private var caffeinateSessionsAllowed     = false
+    @ObservationIgnored
+    private var isRecordingCaffeinateShortcut = false
 
     @ObservationIgnored
     private let suppressor    = AccessibilityBluetoothNoticeSuppressor()
@@ -238,6 +317,29 @@ final class CascadeServices {
             configuration     : .default,
             displayPreferences: displayPreferencesStore.preferences
         )
+
+        // The service touches NSWorkspace when it is created, which is why it is built here on
+        // the main actor. It holds no assertion until the engine reports Caffeinate active and a
+        // command reaches it.
+        let caffeinatePreferences = UserDefaultsCaffeinatePreferences(defaults: preferences)
+        let caffeinateService     = CaffeinateService(
+            assertions : IOKitCaffeinateAssertions(),
+            preferences: caffeinatePreferences,
+            calendar   : { .autoupdatingCurrent }
+        )
+        self.caffeinatePreferences  = caffeinatePreferences
+        self.caffeinateService      = caffeinateService
+        caffeinateHotKey            = CaffeinateHotKey(
+            onPress: { [caffeinateService] in caffeinateService.perform(.toggle) }
+        )
+        let caffeinateSettings      = CaffeinateSettingsMirror(
+            glyph            : caffeinatePreferences.glyph,
+            keepsDisplayAwake: caffeinatePreferences.keepsDisplayAwake,
+            send             : { [caffeinateService] in caffeinateService.perform($0) }
+        )
+        self.caffeinateSettings     = caffeinateSettings
+        caffeinateShortcut          = caffeinatePreferences.shortcut
+
         self.notch                   = notch
         let audioQueue  = DispatchQueue(label: "cascade.system-audio", qos: .utility)
         let audioOrigin = ContinuousClock.now
@@ -257,7 +359,10 @@ final class CascadeServices {
         self.systemAudio             = systemAudio
         plugins                      = PluginSystem(
             host             : notch,
-            sources          : [PluginVolumeState.source: volumeSource],
+            sources          : [
+                PluginCaffeinateState.source: CaffeinatePluginSource(service: caffeinateService),
+                PluginVolumeState.source    : volumeSource,
+            ],
             services         : ["audio.system", "audio.apps"],
             componentServices: PluginComponentServices(audio: systemAudio.model)
         )
@@ -327,6 +432,19 @@ final class CascadeServices {
 
         plugins.statusHandler = { [weak self] status in
             self?.pluginStatus = status
+            self?.updateCaffeinatePermission(from: status)
+        }
+
+        // Caffeinate's power assertion stays in Cascade: its widget's controls reach the service
+        // only after the broker accepted them. The closure holds the service, not self, so there
+        // is no cycle through the plugin system.
+        plugins.actionHandler = { [caffeinateService] key, event in
+            guard
+                key.plugin == CaffeinateCommand.plugin,
+                let command = CaffeinateCommand(event)
+            else { return }
+
+            caffeinateService.perform(command)
         }
 
         volumeSource.statusHandler = { [weak self] status in
@@ -354,6 +472,16 @@ final class CascadeServices {
                     self?.receiveBluetooth(state)
                     self?.systemAudio.receive(state)
                 }
+            }
+        }
+
+        // Every state the service publishes reaches Settings' mirror, whoever caused it: the
+        // widget, the options page, the shortcut or a refused assertion.
+        plugins.observe(PluginCaffeinateState.source) { @Sendable [caffeinateSettings] event in
+            guard let state = PluginCaffeinateState(event) else { return }
+
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated { caffeinateSettings.apply(state) }
             }
         }
 
@@ -447,6 +575,7 @@ final class CascadeServices {
         if audioEnabled { systemAudio.start() }
         appAudio.setEnabled(audioEnabled)
         plugins.start()
+        registerCaffeinateShortcut()
         notch.setHapticsEnabled(hapticsEnabled)
         notch.setSensitiveContentVisible(sensitiveContentVisible)
         fileShelfStartTask = Task { [weak fileShelfController] in
@@ -542,6 +671,8 @@ final class CascadeServices {
         mediaProvider.stop()
         if let mediaActivity { notch.endActivity(id: mediaActivity.id) }
         mediaActivity = nil
+
+        caffeinateHotKey.register(nil)
 
         notch.stop()
     }

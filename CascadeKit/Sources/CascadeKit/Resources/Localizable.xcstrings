@@ -1,6 +1,14 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Back": {
+      "comment": "Button and tooltip that leave a widget's options page.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Indietro" } } }
+    },
+    "Options": {
+      "comment": "Context menu item that opens a widget's fullscreen options page.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Opzioni" } } }
+    },
     "%lld more files": {
       "comment": "Shelf: accessibility label of the count of files beyond the deck.",
       "localizations": {

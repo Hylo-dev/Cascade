@@ -423,6 +423,16 @@
         }
       }
     },
+    "Also stop the screen from dimming and sleeping.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evita anche che lo schermo si attenui e si spenga."
+          }
+        }
+      }
+    },
     "Animate the bars with the audio that’s playing.": {
       "comment": "Settings row description",
       "localizations": {
@@ -551,6 +561,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Monitor Bluetooth non disponibile su questo sistema."
+          }
+        }
+      }
+    },
+    "Caffeinate": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Caffeinate"
+          }
+        }
+      }
+    },
+    "Caffeinate coffee awake sleep screen keyboard hotkey": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Caffeinate caffè sveglio sospensione schermo tastiera scorciatoia"
           }
         }
       }
@@ -697,6 +727,16 @@
         }
       }
     },
+    "Clear": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancella"
+          }
+        }
+      }
+    },
     "Clearing…": {
       "comment": "Shelf status while all files are being removed from the shelf.",
       "localizations": {
@@ -770,6 +810,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impossibile preparare la richiesta al lettore."
+          }
+        }
+      }
+    },
+    "Cup": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tazza"
           }
         }
       }
@@ -971,6 +1021,16 @@
         }
       }
     },
+    "Icon": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icona"
+          }
+        }
+      }
+    },
     "Idle": {
       "comment": "Settings: the audio host is not running because nothing needs it.",
       "localizations": {
@@ -989,6 +1049,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Posizione di riproduzione non valida."
+          }
+        }
+      }
+    },
+    "Keep display awake": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schermo acceso"
           }
         }
       }
@@ -1088,6 +1158,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Luce del mattino"
+          }
+        }
+      }
+    },
+    "Mug": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boccale"
           }
         }
       }
@@ -1224,6 +1304,16 @@
         }
       }
     },
+    "None": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna"
+          }
+        }
+      }
+    },
     "Normal · Green": {
       "comment": "Menu bar menu: charging preview submenu item, normal charging shown in green",
       "localizations": {
@@ -1329,6 +1419,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pausa"
+          }
+        }
+      }
+    },
+    "Pill": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pillola"
           }
         }
       }
@@ -1783,6 +1883,26 @@
         }
       }
     },
+    "Shortcut": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scorciatoia"
+          }
+        }
+      }
+    },
+    "Shortcut unavailable": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scorciatoia non disponibile"
+          }
+        }
+      }
+    },
     "Show %@ in Finder": {
       "comment": "Shelf action on one file. %@ is the file name.",
       "localizations": {
@@ -1955,6 +2075,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Spotlight non risponde · riprova la scorciatoia"
+          }
+        }
+      }
+    },
+    "Start or stop Caffeinate from anywhere with the shortcut.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvia o ferma Caffeinate da qualsiasi app con la scorciatoia."
           }
         }
       }
@@ -2234,6 +2364,16 @@
         }
       }
     },
+    "The symbol Caffeinate shows in the widget and the live activity.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il simbolo che Caffeinate mostra nel widget e nella live activity."
+          }
+        }
+      }
+    },
     "The track changed. Try again on the current track.": {
       "comment": "Music error when the track changed before a command ran.",
       "localizations": {
@@ -2340,6 +2480,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Attivazione avvisi volume…"
+          }
+        }
+      }
+    },
+    "Type shortcut…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digita la scorciatoia…"
           }
         }
       }

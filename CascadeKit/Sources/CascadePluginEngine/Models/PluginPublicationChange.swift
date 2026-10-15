@@ -7,8 +7,8 @@ import CascadeContracts
 
 /// PluginPublicationChange is what the renderer receives when a publication changes: its new
 /// revision and, unless it was withdrawn, the document, its node table, the diff from the
-/// previous revision, so the renderer touches only the nodes in the diff, and, for a notice, its
-/// attributes.
+/// previous revision, so the renderer touches only the nodes in the diff, and, for a notice or an
+/// activity, its attributes.
 public struct PluginPublicationChange: Equatable, Sendable {
 
     /// Content is a publication that is on screen.
@@ -18,6 +18,7 @@ public struct PluginPublicationChange: Equatable, Sendable {
         public let table   : PluginNodeTable
         public let diff    : PluginNodeDiff
         public let notice  : PluginNoticeAttributes?
+        public let activity: PluginActivityAttributes?
     }
 
     public let key     : PluginPublicationKey

@@ -24,6 +24,22 @@ extension PluginDocument {
 
         var budget = ValidationBudget()
         try Self.visit(root, depth: 1, budget: &budget)
+        if let optionsRoot {
+            try ContractValidation.require(optionsRoot.kind != .regions, "An options page is not regions")
+            if let optionsAction {
+                try ContractValidation.require(ContractValidation.identifier(optionsAction), "Invalid options action")
+                try ContractValidation.require(budget.buttons.contains(optionsAction), "Options need an opening button in the widget")
+            }
+            try Self.visit(optionsRoot, depth: 1, budget: &budget)
+        } else {
+            try ContractValidation.require(optionsAction == nil, "Options action needs options content")
+        }
+
+        // The slider a value names may come after it in the walk, so the check waits for the end.
+        try ContractValidation.require(
+            budget.sliderValueReferences.isSubset(of: budget.sliderIDs),
+            "A slider value needs a slider with that ID in the same document"
+        )
     }
 
     /// componentReferences lists the tier-2 components the document shows, for the kernel to
@@ -31,6 +47,7 @@ extension PluginDocument {
     public var componentReferences: Set<PluginComponentReference> {
         var references = Set<PluginComponentReference>()
         var pending    = [root]
+        if let optionsRoot { pending.append(optionsRoot) }
 
         while let node = pending.popLast() {
             if case .component(let id, let version, _) = node.kind,
@@ -58,8 +75,8 @@ extension PluginDocument {
             "A \(node.kind.name) node takes no children"
         )
         try ContractValidation.require(
-            node.kind != .regions || depth == 1 && node.children.count == 3,
-            "Regions are a document's root, with three regions"
+            node.kind != .regions || depth == 1 && (3...4).contains(node.children.count),
+            "Regions are a document's root, with three regions or four"
         )
         if case .viewThatFits = node.kind {
             try ContractValidation.require(!node.children.isEmpty, "A view that fits needs an alternative")
@@ -79,6 +96,19 @@ extension PluginDocument {
         }
 
         try validate(kind: node.kind)
+        switch node.kind {
+            case .button(let action):
+                budget.buttons.insert(action)
+
+            case .slider:
+                if let id = node.id { budget.sliderIDs.insert(id) }
+
+            case .sliderValue(let id):
+                budget.sliderValueReferences.insert(id)
+
+            default:
+                break
+        }
         for modifier in node.modifiers {
             try validate(modifier: modifier)
         }
@@ -96,6 +126,9 @@ extension PluginDocument {
             case .zStack, .viewThatFits, .clock, .today, .regions:
                 break
 
+            case .sliderValue(let id):
+                try ContractValidation.require(ContractValidation.identifier(id), "Invalid slider ID")
+
             case .spacer(let minimumLength):
                 try length(minimumLength)
 
@@ -111,7 +144,7 @@ extension PluginDocument {
             case .shape(let shape):
                 try validate(shape: shape)
 
-            case .date(let date, _):
+            case .date(let date, _), .countdown(let date, _):
                 try ContractValidation.finite(date)
 
             case .timer(let start, let end, _), .timerProgress(let start, let end):
@@ -128,7 +161,7 @@ extension PluginDocument {
             case .button(let action), .toggle(_, let action):
                 try ContractValidation.require(ContractValidation.identifier(action), "Invalid action ID")
 
-            case .slider(let value, let minimum, let maximum, let step, let action):
+            case .slider(let value, let minimum, let maximum, let step, let style, let action):
                 try ContractValidation.require(ContractValidation.identifier(action), "Invalid action ID")
                 try ContractValidation.require(
                     minimum.isFinite && maximum.isFinite && minimum < maximum
@@ -139,6 +172,17 @@ extension PluginDocument {
                     step.map { $0.isFinite && $0 > 0 && $0 <= maximum - minimum } ?? true,
                     "Invalid slider step"
                 )
+
+                if case .ruler(let labelEvery, _) = style {
+                    try ContractValidation.require(
+                        (1...PluginSliderStyle.maximumLabelCadence).contains(labelEvery),
+                        "Invalid ruler label cadence"
+                    )
+                    try ContractValidation.require(
+                        step.map { (maximum - minimum) / $0 <= Double(PluginSliderStyle.maximumRulerTicks) } ?? false,
+                        "A ruler needs a step and at most \(PluginSliderStyle.maximumRulerTicks) ticks"
+                    )
+                }
 
             case .component(let id, let version, let parameters):
                 try ContractValidation.require(ContractValidation.identifier(id) && version >= 1, "Invalid component")
@@ -251,6 +295,9 @@ extension PluginDocument {
 /// ValidationBudget is what one validation walk has spent so far.
 private struct ValidationBudget {
 
-    var nodes       = 0
-    var explicitIDs = Set<String>()
+    var nodes                 = 0
+    var explicitIDs           = Set<String>()
+    var buttons               = Set<String>()
+    var sliderIDs             = Set<String>()
+    var sliderValueReferences = Set<String>()
 }

@@ -53,8 +53,10 @@ public func Spacer(minLength: Double? = nil) -> PluginNode {
     PluginNode(.spacer(minLength: minLength))
 }
 
-/// Regions is a notice's root: its children are the compact leading, the compact trailing and
-/// the minimal region, in that order.
+/// Regions is a notice's or an activity's root: its children are the compact leading, the
+/// compact trailing and the minimal region, in that order, and for an activity an optional
+/// fourth, the expanded one. A notice takes three, an activity three or four: an activity
+/// without the expanded region is a status that never takes over the opened notch.
 public func Regions(@PluginNodeBuilder content: () -> [PluginNode]) -> PluginNode {
     PluginNode(.regions, children: content())
 }
@@ -136,6 +138,26 @@ public func Text(
     )
 }
 
+/// Text(countdownTo:style:) is the time left until `end`, drawn by the kernel, which redraws it
+/// only when the text changes, so the plugin never wakes to tick it. `.compact` is the Dynamic
+/// Island's format (`2h`, `24m`, `4:59`); `.hoursMinutes` rounds up to whole minutes and shows
+/// both units (`1h 5m`, `45m`), as a stepper's value.
+public func Text(
+    countdownTo end: Date,
+    style          : PluginCountdownStyle = .compact
+) -> PluginNode {
+    PluginNode(.countdown(end: end, style: style))
+}
+
+/// Text(valueOf:) is the live value of the slider whose explicit `id` is `sliderID`, in the same
+/// document, drawn by the kernel. It follows the slider while the user drags it, with no
+/// publication: a duration ruler reads `1h 30m`, a clock-time ruler the instant's short local
+/// time, and a standard slider its number. Its font and colour are its own modifiers' like any
+/// text; the document is rejected if the id names nothing or a node that is not a slider.
+public func Text(valueOf sliderID: String) -> PluginNode {
+    PluginNode(.sliderValue(id: sliderID))
+}
+
 /// ProgressView(timerInterval:) is a bar that fills over the interval, drawn by the kernel.
 public func ProgressView(timerInterval: ClosedRange<Date>) -> PluginNode {
     PluginNode(.timerProgress(start: timerInterval.lowerBound, end: timerInterval.upperBound))
@@ -171,11 +193,13 @@ public func Toggle(
 }
 
 /// Slider shows `value` within `bounds`, moving by `step` when one is given, and sends `action`
-/// with the value it is released at.
+/// with the value it is released at. With the `ruler` style the kernel draws a row of ticks, one
+/// per `step`, that scrolls under a fixed indicator; a ruler needs a `step`.
 public func Slider(
     value    : Double,
     in bounds: ClosedRange<Double> = 0...1,
     step     : Double? = nil,
+    style    : PluginSliderStyle = .standard,
     action   : String
 ) -> PluginNode {
     PluginNode(
@@ -184,6 +208,7 @@ public func Slider(
             minimum: bounds.lowerBound,
             maximum: bounds.upperBound,
             step   : step,
+            style  : style,
             action : action
         )
     )

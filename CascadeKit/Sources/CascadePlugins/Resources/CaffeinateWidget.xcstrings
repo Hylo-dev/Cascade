@@ -1,0 +1,78 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Caffeinate": {
+      "comment": "Name of the keep-awake widget and the title of its options page and activity.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Caffeinate" } } }
+    },
+    "Caffeinate Options": {
+      "comment": "Accessibility label of the widget text that opens its options page.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Opzioni di Caffeinate" } } }
+    },
+    "Start Caffeinate": {
+      "comment": "Accessibility label of the switch that starts a keep-awake session.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Avvia Caffeinate" } } }
+    },
+    "Stop Caffeinate": {
+      "comment": "Accessibility label of the switch that stops the keep-awake session.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Ferma Caffeinate" } } }
+    },
+    "For": {
+      "comment": "Selector segment on the options page: the session lasts a length of time you choose on the ruler.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Per" } } }
+    },
+    "Until": {
+      "comment": "Selector segment on the options page: the session lasts until a time of day you choose on the ruler.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Fino a" } } }
+    },
+    "Until you stop it": {
+      "comment": "Accessibility label of the selector's infinity segment, and the text that replaces the ruler when the session has no time limit.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Finché non lo fermi" } } }
+    },
+    "%@, selected": {
+      "comment": "Accessibility label of the selector segment that is chosen. %@ is the segment's name: For, Until or Until you stop it.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "%@, selezionato" } } }
+    },
+    "Length": {
+      "comment": "Accessibility label of the options page's ruler when it sets how long the session lasts.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Durata" } } }
+    },
+    "Ends at": {
+      "comment": "Accessibility label of the options page's ruler when it sets the time of day the session ends.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Termina alle" } } }
+    },
+    "Keep display awake": {
+      "comment": "Switch that also keeps the display from sleeping.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Schermo acceso" } } }
+    },
+    "until": {
+      "comment": "Small label before the time a session ends: on the widget's second line for the next session, and under the countdown on the options page for a running one.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "fino alle ore" } } }
+    },
+    "Couldn't prevent sleep (error %@)": {
+      "comment": "Options page line when the system refused to keep the Mac awake. %@ is the system's error code, written without digit grouping.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Impossibile impedire lo stop (errore %@)" } } }
+    },
+    "Caffeinate, awake until %@": {
+      "comment": "Spoken sentence of the live activity of a timed session. %@ is the time the session ends.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Caffeinate, sveglio fino alle ore %@" } } }
+    },
+    "Caffeinate, awake until you stop it": {
+      "comment": "Spoken sentence of the live activity of a session without a time limit.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Caffeinate, sveglio finché non lo fermi" } } }
+    },
+    "Error": {
+      "comment": "Widget tile line when the system refused to keep the Mac awake; the options page has the sentence and the code.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Errore" } } }
+    },
+    "Couldn't change the length (error %@)": {
+      "comment": "Options page line when the system refused to change the length of a running session, by a move of the ruler while the selector shows For. %@ is the system's error code.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Impossibile cambiare la durata (errore %@)" } } }
+    },
+    "Couldn't change the end (error %@)": {
+      "comment": "Options page line when the system refused to change the end of a running session, by a move of the ruler while the selector shows Until. %@ is the system's error code.",
+      "localizations": { "it": { "stringUnit": { "state": "translated", "value": "Impossibile cambiare la fine (errore %@)" } } }
+    }
+  },
+  "version": "1.0"
+}

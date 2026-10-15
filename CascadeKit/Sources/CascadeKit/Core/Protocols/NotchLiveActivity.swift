@@ -21,9 +21,18 @@ public protocol NotchLiveActivity: NotchActivity {
     /// Relative relevance within 0...1. Prefer an aggregate per source to many
     /// separate activities. Relevance never adds sounds or haptics.
     var relevanceScore: Double { get }
+
+    /// Whether the activity has an expanded presentation at all. One that does not, a status
+    /// such as a running assertion, is never selected as the opened notch's content: neither
+    /// when the notch opens nor when the person clicks its compact presentation, which fall
+    /// back to the widgets as if there were no activity. Only the compact and minimal
+    /// presentations remain, so `makeExpandedView` is not asked for content.
+    var hasExpandedPresentation: Bool { get }
 }
 
 public extension NotchLiveActivity {
 
     var relevanceScore: Double { 0.5 }
+
+    var hasExpandedPresentation: Bool { true }
 }
