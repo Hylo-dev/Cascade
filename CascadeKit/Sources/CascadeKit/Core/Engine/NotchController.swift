@@ -2264,14 +2264,23 @@ final class NotchController: NotchDisplayPresenting {
         let gridHeight    = height - galleryHeight
 
         // Editing grows the surface downward; the grid keeps its place and the
-        // gallery takes the new strip under it.
-        let interior = CGRect(
+        // gallery takes the new strip under it. The sides and the bottom keep
+        // their inset, but the top has none: the band is exactly the hardware
+        // notch's height, so the first main row starts one gutter under the
+        // notch instead of floating a padding away from it.
+        let framedInterior = CGRect(
             x     : hostView.bounds.midX - width / 2,
             y     : contentTopY - gridHeight,
             width : width,
             height: gridHeight
         )
         .insetBy(dx: 20, dy: 16)
+        let interior = CGRect(
+            x     : framedInterior.minX,
+            y     : framedInterior.minY,
+            width : framedInterior.width,
+            height: framedInterior.height + 16
+        )
 
         let galleryBottom = contentTopY - height + expandedBottomInset
         let galleryFrame  = isEditingWidgets

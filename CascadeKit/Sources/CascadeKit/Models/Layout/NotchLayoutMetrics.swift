@@ -24,6 +24,6 @@ nonisolated struct NotchLayoutMetrics: Sendable {
     static let `default` = NotchLayoutMetrics(
         columns         : 14,
         cellGutter      : 6,
-        maxTrailingCells: 4
+        maxTrailingCells: 0
     )
 }

@@ -13,7 +13,9 @@ import CoreGraphics
 /// and a narrow notch degrades the trailing-cell count (the "does it fit" answer).
 struct NotchLayoutResolverTests {
 
-    private let resolver      = NotchLayoutResolver() // .default metrics: 14 cols, gutter 6, ≤4 trailing
+    private let resolver      = NotchLayoutResolver(
+        metrics: NotchLayoutMetrics(columns: 14, cellGutter: 6, maxTrailingCells: 4)
+    )
     private let interior      = CGRect(x: 0, y: 0, width: 640, height: 180)
     private let notchWidth   : CGFloat = 200
     private let topBandHeight: CGFloat = 36
@@ -127,7 +129,7 @@ struct NotchLayoutResolverTests {
 
     @Test
     func narrowNotchDegradesTrailingCells() {
-        let layout = NotchLayoutResolver().resolve(
+        let layout = resolver.resolve(
             interior     : CGRect(x: 0, y: 0, width: 300, height: 160),
             notchWidth   : 250,
             topBandHeight: 36,
