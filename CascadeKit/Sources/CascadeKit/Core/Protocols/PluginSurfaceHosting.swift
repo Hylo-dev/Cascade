@@ -26,11 +26,17 @@ public protocol PluginSurfaceHosting: AnyObject {
     /// that display is not expanded, so a caller that tracks the detail as visible can tell. Showing
     /// another detail ends this one first; `onDismiss` runs exactly once for every detail that was
     /// shown, however it ends.
+    ///
+    /// Closing the notch does not end the detail: it is kept and shown again by the next opening.
+    /// `onPresented` reports it leaving the screen as the notch closes (false) and coming back as
+    /// it reopens (true); the first showing is the `true` this function returns, and the end is
+    /// `onDismiss`.
     @discardableResult
     func showDetail(
         _ page      : any NotchContextualPage,
         on displayID: CGDirectDisplayID?,
-        onDismiss   : @escaping @MainActor () -> Void
+        onDismiss   : @escaping @MainActor () -> Void,
+        onPresented : @escaping @MainActor (Bool) -> Void
     ) -> Bool
 
     /// dismissDetail closes the shown detail whose page has this id; any other id is ignored.

@@ -104,10 +104,18 @@ final class NotchDisplayCoordinator {
     /// detail is the one page a plugin widget's click opened over the expanded surface. It sits
     /// beside `contextualPage` and never touches `expandedPageSelection`, so closing it leaves
     /// the grid or the file shelf exactly as it was selected.
+    ///
+    /// Closing the notch does not end it: it is kept (`isKept`), drawn by nobody while the notch
+    /// is shut, and shown again by the next opening, on whichever display that is, so a widget
+    /// put in full screen stays there. `onPresented` tells the owner when it leaves the screen
+    /// and comes back, so a plugin is not believed visible behind a closed notch. An opening for
+    /// an activity or for a file drag asks for something else, and ends a kept detail instead.
     private var detail: (
-        page     : any NotchContextualPage,
-        displayID: CGDirectDisplayID,
-        onDismiss: @MainActor () -> Void
+        page       : any NotchContextualPage,
+        displayID  : CGDirectDisplayID,
+        isKept     : Bool,
+        onDismiss  : @MainActor () -> Void,
+        onPresented: @MainActor (Bool) -> Void
     )?
 
     private var fileDropPreview                        : FileDropPreview?
@@ -451,7 +459,8 @@ final class NotchDisplayCoordinator {
     func showDetail(
         _ page      : any NotchContextualPage,
         on displayID: CGDirectDisplayID?,
-        onDismiss   : @escaping @MainActor () -> Void
+        onDismiss   : @escaping @MainActor () -> Void,
+        onPresented : @escaping @MainActor (Bool) -> Void = { _ in }
     ) -> Bool {
         guard isStarted,
               let displayID = displayID ?? expandedDisplayID,
@@ -461,7 +470,7 @@ final class NotchDisplayCoordinator {
         else { return false }
 
         let replaced = detail
-        detail = (page, displayID, onDismiss)
+        detail = (page, displayID, false, onDismiss, onPresented)
         reconcilePresentations()
         replaced?.onDismiss()
         return true
@@ -471,6 +480,32 @@ final class NotchDisplayCoordinator {
         guard detail?.page.id == id else { return }
 
         endDetail(reconcile: true)
+    }
+
+    /// keepDetail sets the shown detail aside as the notch closes: it stays drawn until the morph
+    /// ends, since the collapse reconciles only then, and its owner hears it left the screen.
+    private func keepDetail() {
+        guard let shown = detail, !shown.isKept else { return }
+
+        detail?.isKept = true
+        shown.onPresented(false)
+    }
+
+    /// resumeDetail brings a kept detail back with the opening granted on `displayID`, or ends
+    /// it when the opening is for an activity or a file drag, which ask for something else. The
+    /// owner is told after the presentation is settled, as with every detail callback.
+    private func resumeDetail(for request: DisplayExpansionRequest) {
+        guard let kept = detail, kept.isKept else { return }
+
+        if request.activityID != nil || request.trigger == .drag {
+            endDetail(reconcile: true)
+            return
+        }
+
+        detail?.displayID = request.displayID
+        detail?.isKept    = false
+        reconcilePresentations()
+        kept.onPresented(true)
     }
 
     /// endDetail is the single exit of the detail slot, so `onDismiss` runs exactly once: the
@@ -802,7 +837,7 @@ final class NotchDisplayCoordinator {
         latestRequests.removeValue(forKey: displayID)
         removePendingRequest(on: displayID)
 
-        endDetail(reconcile: false)
+        keepDetail()
 
         nextClosingGeneration &+= 1
         closingDisplayID  = displayID
@@ -827,7 +862,7 @@ final class NotchDisplayCoordinator {
         expandedPageSelection             = .automatic
         openedForPersistentContextualPage = false
         fileDropPreview                   = nil
-        endDetail(reconcile: false)
+        keepDetail()
         activityHost.setExpansion(.none)
 
         if let pendingPreferences {
@@ -892,6 +927,7 @@ final class NotchDisplayCoordinator {
         }
 
         reconcilePresentations()
+        resumeDetail(for: request)
     }
 
     private func resolvedOrdinarySelection(on displayID: CGDirectDisplayID) -> ActivityExpansionSelection {

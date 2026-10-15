@@ -236,6 +236,18 @@ struct PluginSurfaceRouterTests {
     }
 
     @Test
+    func closingAndReopeningTheNotchOverTheDetailReportsItHiddenAndVisible() throws {
+        let (rig, widget) = try openedDetailRig()
+        widget.openDetail?()
+
+        rig.host.shownDetails[0].onPresented(false)
+        rig.host.shownDetails[0].onPresented(true)
+
+        #expect(rig.visibility.map(\.0) == [true, false, true])
+        #expect(rig.visibility.map(\.1) == [detailKey, detailKey, detailKey])
+    }
+
+    @Test
     func withdrawingAnOpenDetailDismissesIt() throws {
         let rig       = try rig()
         var publisher = PluginPublicationStore()

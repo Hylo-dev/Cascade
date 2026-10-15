@@ -1655,8 +1655,76 @@ struct NotchDisplayCoordinatorTests {
         #expect(fixture.surfaces[10]?.presentations.last?.detailPage === second)
     }
 
+    /// collapse closes the notch the way the user does: the request, then the end of the morph.
+    private func collapse(
+        _ fixture  : DisplayCoordinatorFixture,
+        on displayID: CGDirectDisplayID
+    ) throws {
+        fixture.surfaces[displayID]?.requestCollapse()
+        let generation = try #require(fixture.surfaces[displayID]?.closeRequests.last)
+        fixture.surfaces[displayID]?.finishCollapse(generation: generation)
+    }
+
     @Test
-    func collapsingTheNotchDismissesTheDetail() throws {
+    func closingTheNotchKeepsTheDetailForTheNextOpening() throws {
+        let fixture   = expandedDetailFixture()
+        let detail    = CoordinatorContextualPage(id: "detail", contentRevision: 1)
+        var dismissed = 0
+        var presented: [Bool] = []
+        fixture.coordinator.showDetail(
+            detail,
+            on         : 10,
+            onDismiss  : { dismissed += 1 },
+            onPresented: { presented.append($0) }
+        )
+
+        fixture.surfaces[10]?.requestCollapse()
+        #expect(presented == [false])
+        #expect(fixture.surfaces[10]?.presentations.last?.detailPage === detail)
+
+        let generation = try #require(fixture.surfaces[10]?.closeRequests.last)
+        fixture.surfaces[10]?.finishCollapse(generation: generation)
+        #expect(fixture.surfaces[10]?.presentations.last?.detailPage == nil)
+        #expect(dismissed == 0)
+
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .hover,
+            generation: 2
+        )
+        #expect(fixture.surfaces[10]?.presentations.last?.detailPage === detail)
+        #expect(fixture.surfaces[10]?.presentations.last?.showsWidgets == false)
+        #expect(presented == [false, true])
+        #expect(dismissed == 0)
+
+        fixture.surfaces[10]?.requestDetailDismissal()
+        #expect(dismissed == 1)
+        #expect(fixture.surfaces[10]?.presentations.last?.showsWidgets == true)
+    }
+
+    @Test
+    func aKeptDetailFollowsTheNotchToTheDisplayItOpensOn() throws {
+        let fixture = expandedDetailFixture(displayIDs: [10, 20])
+        let detail  = CoordinatorContextualPage(id: "detail", contentRevision: 1)
+        fixture.coordinator.showDetail(
+            detail,
+            on       : 10,
+            onDismiss: {}
+        )
+        try collapse(fixture, on: 10)
+
+        fixture.surfaces[20]?.requestExpansion(
+            activityID: nil,
+            trigger   : .click,
+            generation: 2
+        )
+
+        #expect(fixture.surfaces[20]?.presentations.last?.detailPage === detail)
+        #expect(fixture.surfaces[10]?.presentations.last?.detailPage == nil)
+    }
+
+    @Test
+    func openingForAnActivityEndsTheKeptDetail() throws {
         let fixture   = expandedDetailFixture()
         let detail    = CoordinatorContextualPage(id: "detail", contentRevision: 1)
         var dismissed = 0
@@ -1665,23 +1733,38 @@ struct NotchDisplayCoordinatorTests {
             on       : 10,
             onDismiss: { dismissed += 1 }
         )
-
-        fixture.surfaces[10]?.requestCollapse()
-        #expect(dismissed == 1)
-
-        let generation = try #require(fixture.surfaces[10]?.closeRequests.last)
-        fixture.surfaces[10]?.finishCollapse(generation: generation)
-
-        #expect(dismissed == 1)
-        #expect(fixture.surfaces[10]?.presentations.last?.detailPage == nil)
+        try collapse(fixture, on: 10)
 
         fixture.surfaces[10]?.requestExpansion(
-            activityID: nil,
+            activityID: "music",
             trigger   : .click,
             generation: 2
         )
+
+        #expect(dismissed == 1)
         #expect(fixture.surfaces[10]?.presentations.last?.detailPage == nil)
-        #expect(fixture.surfaces[10]?.presentations.last?.showsWidgets == true)
+    }
+
+    @Test
+    func openingForAFileDragEndsTheKeptDetail() throws {
+        let fixture   = expandedDetailFixture()
+        let detail    = CoordinatorContextualPage(id: "detail", contentRevision: 1)
+        var dismissed = 0
+        fixture.coordinator.showDetail(
+            detail,
+            on       : 10,
+            onDismiss: { dismissed += 1 }
+        )
+        try collapse(fixture, on: 10)
+
+        fixture.surfaces[10]?.requestExpansion(
+            activityID: nil,
+            trigger   : .drag,
+            generation: 2
+        )
+
+        #expect(dismissed == 1)
+        #expect(fixture.surfaces[10]?.presentations.last?.detailPage == nil)
     }
 
     @Test

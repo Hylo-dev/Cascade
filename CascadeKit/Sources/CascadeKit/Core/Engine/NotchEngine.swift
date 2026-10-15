@@ -105,12 +105,14 @@ public final class NotchEngine {
     public func showDetail(
         _ page      : any NotchContextualPage,
         on displayID: CGDirectDisplayID?,
-        onDismiss   : @escaping @MainActor () -> Void
+        onDismiss   : @escaping @MainActor () -> Void,
+        onPresented : @escaping @MainActor (Bool) -> Void
     ) -> Bool {
         coordinator.showDetail(
             page,
-            on       : displayID,
-            onDismiss: onDismiss
+            on         : displayID,
+            onDismiss  : onDismiss,
+            onPresented: onPresented
         )
     }
 

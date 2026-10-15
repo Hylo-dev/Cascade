@@ -17,9 +17,10 @@ final class RecordingSurfaceHost: PluginSurfaceHosting {
     private(set) var updated      : [UInt64] = []
 
     private(set) var shownDetails: [(
-        page     : any NotchContextualPage,
-        displayID: CGDirectDisplayID?,
-        onDismiss: @MainActor () -> Void
+        page       : any NotchContextualPage,
+        displayID  : CGDirectDisplayID?,
+        onDismiss  : @MainActor () -> Void,
+        onPresented: @MainActor (Bool) -> Void
     )] = []
     private(set) var dismissedDetailIDs: [String] = []
 
@@ -50,11 +51,12 @@ final class RecordingSurfaceHost: PluginSurfaceHosting {
     func showDetail(
         _ page      : any NotchContextualPage,
         on displayID: CGDirectDisplayID?,
-        onDismiss   : @escaping @MainActor () -> Void
+        onDismiss   : @escaping @MainActor () -> Void,
+        onPresented : @escaping @MainActor (Bool) -> Void
     ) -> Bool {
         guard !refusesDetails else { return false }
 
-        shownDetails.append((page, displayID, onDismiss))
+        shownDetails.append((page, displayID, onDismiss, onPresented))
         return true
     }
 
