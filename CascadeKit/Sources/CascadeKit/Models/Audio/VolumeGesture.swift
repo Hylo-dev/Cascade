@@ -66,6 +66,16 @@ nonisolated public struct VolumeGesture: Equatable, Sendable {
         return elapsed < WidgetPress.holdDuration ? .click : .none
     }
 
+    /// overshoot is how many points the pointer has gone past the end of the range: positive past
+    /// the top (the level is full and the user keeps pulling up), negative past the bottom. It is
+    /// zero inside the range and before the press becomes a drag, so a click never stretches.
+    public func overshoot(at translation: CGSize) -> Double {
+        guard isDragging else { return 0 }
+
+        let unclamped = startLevel - translation.height / Swift.max(travel, 1)
+        return (unclamped - Self.clamp(unclamped)) * Swift.max(travel, 1)
+    }
+
     /// scrolled moves the level for one scroll event. A wheel steps by a sixteenth in the sign of
     /// `deltaY`, so every notch is the same; a trackpad is continuous and follows the finger.
     /// `deltaY` is the physical delta (`ScrollWheelReader.physicalDeltaY`): positive when the
@@ -80,6 +90,54 @@ nonisolated public struct VolumeGesture: Equatable, Sendable {
             ? deltaY / preciseDivisor
             : (deltaY > 0 ? wheelStep : (deltaY < 0 ? -wheelStep : 0))
         return clamp(level + change)
+    }
+
+    /// ScrollStep is one scroll event's answer: the new level and how far, in points, the scroll
+    /// has pushed past an end (positive past the top), which stretches the pill.
+    public struct ScrollStep: Equatable, Sendable {
+
+        public let level    : Double
+        public let overshoot: Double
+    }
+
+    /// wheelKick is how far one wheel notch against an end pushes the pill: a wheel has no finger
+    /// to follow, so it gets a fixed nudge that springs straight back.
+    public static let wheelKick = 14.0
+
+    /// scrolledPastEnds is `scrolled` with the rubber band. A trackpad pushing past an end piles
+    /// its points into the overshoot instead of the level; scrolling back first undoes the
+    /// overshoot, and only what is left moves the level. A wheel notch against an end answers
+    /// `wheelKick`, which the view springs back at once.
+    public static func scrolledPastEnds(
+        _ level  : Double,
+        overshoot: Double,
+        deltaY   : Double,
+        isPrecise: Bool
+    ) -> ScrollStep {
+        guard isPrecise else {
+            let step      = deltaY > 0 ? wheelStep : (deltaY < 0 ? -wheelStep : 0)
+            let unclamped = level + step
+            let excess    = unclamped - clamp(unclamped)
+            return ScrollStep(
+                level    : clamp(unclamped),
+                overshoot: excess > 0 ? wheelKick : (excess < 0 ? -wheelKick : 0)
+            )
+        }
+
+        var points = deltaY
+        if overshoot != 0 {
+            let next = overshoot + points
+            if next == 0 || (next > 0) == (overshoot > 0) {
+                return ScrollStep(level: level, overshoot: next)
+            }
+            points = next
+        }
+
+        let unclamped = level + points / preciseDivisor
+        return ScrollStep(
+            level    : clamp(unclamped),
+            overshoot: (unclamped - clamp(unclamped)) * preciseDivisor
+        )
     }
 
     private func level(at translation: CGSize) -> Double {

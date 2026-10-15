@@ -10,22 +10,22 @@ import Testing
 struct AudioVolumeCapsuleInkTests {
 
     @Test
-    func theIconIsBlueWhereTheWhiteFillReachesItsCentre() {
-        let ink = AudioVolumeCapsule.iconInk(fillHeight: 50, centre: 30, isMuted: false)
+    func theIconIsBlueAsSoonAsTheWhiteFillReachesItsBottomEdge() {
+        let ink = AudioVolumeCapsule.iconInk(fillHeight: 50, reach: 30, isMuted: false)
 
         #expect(ink == AudioVolumeCapsule.iconInkOnFill)
     }
 
     @Test
     func theIconIsWhiteOverTheGlass() {
-        let ink = AudioVolumeCapsule.iconInk(fillHeight: 20, centre: 30, isMuted: false)
+        let ink = AudioVolumeCapsule.iconInk(fillHeight: 20, reach: 30, isMuted: false)
 
         #expect(ink == .white)
     }
 
     @Test
     func theIconIsWhiteOverTheGreyMutedFill() {
-        let ink = AudioVolumeCapsule.iconInk(fillHeight: 50, centre: 30, isMuted: true)
+        let ink = AudioVolumeCapsule.iconInk(fillHeight: 50, reach: 30, isMuted: true)
 
         #expect(ink == .white)
     }

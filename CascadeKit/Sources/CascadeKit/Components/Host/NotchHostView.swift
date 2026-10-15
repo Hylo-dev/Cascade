@@ -491,11 +491,13 @@ final class NotchHostView: NSView {
             centerX : centerX,
             topY    : topY
         )
-        glassLightBounds = Self.outlineBounds(
+        let lightBounds        = Self.outlineBounds(
             of     : targetGeometry ?? geometry,
             centerX: centerX,
             topY   : topY
         )
+        let lightBoundsChanged = lightBounds != glassLightBounds
+        glassLightBounds       = lightBounds
 
         self.isChromeVisible  = isChromeVisible
         self.materialProgress = materialProgress.isFinite ? min(1, max(0, materialProgress)) : 0
@@ -513,6 +515,10 @@ final class NotchHostView: NSView {
         CATransaction.commit()
 
         hitPath = path
+
+        if lightBoundsChanged {
+            notifyGlassLightEmitters()
+        }
     }
 
     /// updateChromeMaterial also runs on accessibility changes while idle. The
@@ -824,5 +830,13 @@ extension NotchHostView: NotchGlassLightReceiving {
         guard glassLightSources.update(lights, for: entry.token) else { return }
 
         glassRenderer.setLights(glassLightSources.lights)
+    }
+
+    /// notifyGlassLightEmitters asks the emitters that speak only on their own events to place
+    /// their light on the new outline. The views are copied first: an emitter answers through
+    /// `setGlassLights`, which may forget it while the table is being walked.
+    private func notifyGlassLightEmitters() {
+        let emitters = glassLightEmitters.values.compactMap { $0.view as? any NotchGlassLightEmitting }
+        emitters.forEach { $0.glassLightBoundsDidChange() }
     }
 }

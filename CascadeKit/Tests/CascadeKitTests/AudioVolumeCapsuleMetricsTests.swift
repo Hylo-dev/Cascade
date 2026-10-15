@@ -10,16 +10,25 @@ import Testing
 struct AudioVolumeCapsuleMetricsTests {
 
     @Test
-    func theCapsuleIsSixtyPercentOfTheFrame() {
-        let metrics = AudioVolumeCapsuleMetrics(availableWidth: 100, widthRatio: 0.6)
+    func theCapsuleKeepsTheReferenceProportionsInATallFrame() {
+        let metrics = AudioVolumeCapsuleMetrics(availableWidth: 100, availableHeight: 200, widthRatio: 0.6)
 
-        #expect(metrics.width == 60)
-        #expect(metrics.cornerRadius == 30)
+        #expect(abs(metrics.width - 94) < 0.001)   // height-bound: 200 × 0.47
+        #expect(metrics.height == 200)
+        #expect(metrics.cornerRadius == 47)
+    }
+
+    @Test
+    func theCapsuleKeepsTheReferenceProportionsInAWideFrame() {
+        let metrics = AudioVolumeCapsuleMetrics(availableWidth: 47, availableHeight: 400, widthRatio: 0.6)
+
+        #expect(metrics.width == 47)               // width-bound: never stretched
+        #expect(abs(metrics.height - 100) < 0.001)
     }
 
     @Test
     func theIconAndTheTypeScaleWithTheCapsule() {
-        let metrics = AudioVolumeCapsuleMetrics(availableWidth: 100, widthRatio: 0.6)
+        let metrics = AudioVolumeCapsuleMetrics(availableWidth: 60, availableHeight: 400, widthRatio: 0.6)
 
         #expect(abs(metrics.iconSize - 29.4) < 0.001)
         #expect(abs(metrics.symbolFontSize - 29.4) < 0.001)
@@ -30,7 +39,7 @@ struct AudioVolumeCapsuleMetricsTests {
 
     @Test
     func aTinyFrameKeepsAUsableCapsule() {
-        let metrics = AudioVolumeCapsuleMetrics(availableWidth: 10, widthRatio: 0.6)
+        let metrics = AudioVolumeCapsuleMetrics(availableWidth: 10, availableHeight: 400, widthRatio: 0.6)
 
         #expect(metrics.width == 12)
         #expect(metrics.percentageFontSize == 9)
@@ -38,7 +47,7 @@ struct AudioVolumeCapsuleMetricsTests {
 
     @Test
     func aCollapsedFrameStillAnswersWithoutNegativeSizes() {
-        let metrics = AudioVolumeCapsuleMetrics(availableWidth: -5, widthRatio: 0.6)
+        let metrics = AudioVolumeCapsuleMetrics(availableWidth: -5, availableHeight: 400, widthRatio: 0.6)
 
         #expect(metrics.width == 12)
         #expect(metrics.cornerRadius == 6)
@@ -46,7 +55,7 @@ struct AudioVolumeCapsuleMetricsTests {
 
     @Test
     func aFullRatioFillsTheFrameAsItAlwaysDid() {
-        let metrics = AudioVolumeCapsuleMetrics(availableWidth: 80, widthRatio: 1)
+        let metrics = AudioVolumeCapsuleMetrics(availableWidth: 80, availableHeight: 200, widthRatio: 1)
 
         #expect(metrics.width == 80)
         #expect(metrics.cornerRadius == 40)
@@ -55,7 +64,7 @@ struct AudioVolumeCapsuleMetricsTests {
 
     @Test
     func aFullRatioIsNotRaisedToTheMinimum() {
-        let metrics = AudioVolumeCapsuleMetrics(availableWidth: 8, widthRatio: 1)
+        let metrics = AudioVolumeCapsuleMetrics(availableWidth: 8, availableHeight: 200, widthRatio: 1)
 
         #expect(metrics.width == 8)
     }

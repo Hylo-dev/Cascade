@@ -10,10 +10,12 @@ import CoreGraphics
 /// capsule fill the width it offers. Both are one ratio, and the icon and the type follow the
 /// capsule that is actually drawn, so a thin pill is not a fat pill's icon squeezed into it.
 ///
-/// A ratio below one is a thinning, and a pill thinner than `minimumWidth` is too narrow to hold
-/// an icon or to see, so it is floored there. A ratio of one or more means "fill the frame": the
-/// frame is the caller's decision and is taken as given, however small. It is a pure function of
-/// two numbers, so the proportions are tested without a view.
+/// A ratio below one means "keep the reference's proportions": the pill is the biggest one of
+/// `aspect` (width over height, measured on the reference) that fits the frame, centred, so a slot
+/// taller or wider than the reference never stretches it. A pill thinner than `minimumWidth` is
+/// too narrow to hold an icon or to see, so it is floored there. A ratio of one or more means
+/// "fill the frame": the frame is the caller's decision and is taken as given, however small. It
+/// is a pure function of three numbers, so the proportions are tested without a view.
 ///
 /// The icon's proportions are measured on the user's reference, in units of the capsule's width:
 /// the symbol is 0.49 wide and its visual centre sits 0.51 above the capsule's bottom edge. The
@@ -22,7 +24,11 @@ struct AudioVolumeCapsuleMetrics: Equatable {
 
     static let minimumWidth: CGFloat = 12
 
+    /// aspect is the reference pill's width over its height: 218 by 465 points.
+    static let aspect: CGFloat = 0.47
+
     let width             : CGFloat
+    let height            : CGFloat
     let cornerRadius      : CGFloat
     let iconSize          : CGFloat
     let symbolFontSize    : CGFloat
@@ -36,15 +42,17 @@ struct AudioVolumeCapsuleMetrics: Equatable {
     }
 
     init(
-        availableWidth: CGFloat,
-        widthRatio    : CGFloat
+        availableWidth : CGFloat,
+        availableHeight: CGFloat,
+        widthRatio     : CGFloat
     ) {
         let available = Swift.max(availableWidth, 0)
         let drawn     = widthRatio < 1
-            ? Swift.max(available * widthRatio, Self.minimumWidth)
+            ? Swift.max(Swift.min(available, Swift.max(availableHeight, 0) * Self.aspect), Self.minimumWidth)
             : available
 
         width              = drawn
+        height             = widthRatio < 1 ? drawn / Self.aspect : Swift.max(availableHeight, 0)
         cornerRadius       = drawn / 2
         iconSize           = drawn * 0.49
         symbolFontSize     = drawn * 0.49

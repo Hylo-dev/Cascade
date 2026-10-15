@@ -94,7 +94,29 @@ struct AudioMixerModelTests {
         #expect(AudioOutputIcon.resolve(output: television, level: 0.5, isMuted: false) == .symbol("tv"))
         #expect(AudioOutputIcon.resolve(output: airPlay, level: 0.5, isMuted: false) == .symbol("airplayaudio"))
         #expect(AudioOutputIcon.resolve(output: nil, level: 1.4, isMuted: false) == .speaker(level: 100))
-        #expect(AudioOutputIcon.resolve(output: nil, level: -0.2, isMuted: false) == .speaker(level: 0))
+        #expect(AudioOutputIcon.resolve(output: nil, level: -0.2, isMuted: false) == .muted)
+        #expect(AudioOutputIcon.resolve(output: airPods, level: 0, isMuted: false) == .muted)
+        #expect(AudioOutputIcon.resolve(output: builtIn, level: 0.004, isMuted: false) == .muted)
+    }
+
+    @Test
+    func theSpeakerShowsAWaveForEachThirdTheLevelReaches() {
+        #expect(AudioOutputIcon.speakerWaveCount(level: 0) == 0)
+        #expect(AudioOutputIcon.speakerWaveCount(level: 1) == 1)
+        #expect(AudioOutputIcon.speakerWaveCount(level: 33) == 1)
+        #expect(AudioOutputIcon.speakerWaveCount(level: 34) == 2)
+        #expect(AudioOutputIcon.speakerWaveCount(level: 66) == 2)
+        #expect(AudioOutputIcon.speakerWaveCount(level: 67) == 3)
+        #expect(AudioOutputIcon.speakerWaveCount(level: 100) == 3)
+    }
+
+    @Test
+    func eachWaveCountHasItsSymbol() {
+        #expect(AudioOutputIcon.speakerSymbol(waves: 0) == "speaker.fill")
+        #expect(AudioOutputIcon.speakerSymbol(waves: 1) == "speaker.wave.1.fill")
+        #expect(AudioOutputIcon.speakerSymbol(waves: 2) == "speaker.wave.2.fill")
+        #expect(AudioOutputIcon.speakerSymbol(waves: 3) == "speaker.wave.3.fill")
+        #expect(AudioOutputIcon.speakerSymbol(waves: 7) == "speaker.wave.3.fill")
     }
 
     @Test
@@ -158,9 +180,45 @@ struct AudioMixerModelTests {
         #expect(model.system?.level == 0.8)
 
         model.endAdjusting()
+        model.receive(state(level: 0.8))
         model.receive(state(level: 0.2))
 
-        #expect(model.system?.level == 0.2)
+        #expect(model.system?.level == 0.2) // confirmed, so the next reading is taken whole
+    }
+
+    @Test
+    func aLateEchoAfterTheDragDoesNotPullTheLevelBack() {
+        var time  = ContinuousClock.now
+        let model = AudioMixerModel(
+            controller: RecordingSystemAudioController(),
+            apps      : nil,
+            now       : { time }
+        )
+        model.receive(state(level: 0))
+
+        model.adjust(to: 0.4)
+        model.endAdjusting()
+        model.receive(state(level: 0))      // the echo of a level sent mid-drag
+
+        #expect(model.system?.level == 0.4)
+
+        time += AudioMixerModel.settleWindow
+        model.receive(state(level: 0.1))    // the window has closed: the system wins
+
+        #expect(model.system?.level == 0.1)
+    }
+
+    @Test
+    func aConfirmingReadingEndsTheSettleAtOnce() {
+        let model = AudioMixerModel(controller: RecordingSystemAudioController())
+        model.receive(state(level: 0))
+
+        model.adjust(to: 0.4)
+        model.endAdjusting()
+        model.receive(state(level: 0.41))   // rounded by the system, still a confirmation
+        model.receive(state(level: 0.7))    // a change made elsewhere, e.g. the keyboard
+
+        #expect(model.system?.level == 0.7)
     }
 
     @Test
@@ -189,6 +247,33 @@ struct AudioMixerModelTests {
         #expect(controller.mutes == [true])
         #expect(controller.muteTargets == [7])
         #expect(model.system?.isMuted == true)
+    }
+
+    @Test
+    func movingTheLevelOfAMutedSystemUnmutesItOnce() {
+        let controller = RecordingSystemAudioController()
+        let model      = AudioMixerModel(controller: controller)
+        model.receive(state(isMuted: true, deviceID: 7))
+
+        model.adjust(to: 0.6)
+        model.adjust(to: 0.7)
+
+        #expect(controller.mutes == [false])
+        #expect(controller.muteTargets == [7])
+        #expect(model.system?.isMuted == false)
+    }
+
+    @Test
+    func aLateMutedReadingDuringADragDoesNotMuteTheCapsuleAgain() {
+        let controller = RecordingSystemAudioController()
+        let model      = AudioMixerModel(controller: controller)
+        model.receive(state(isMuted: true, deviceID: 7))
+
+        model.adjust(to: 0.6)
+        model.receive(state(level: 0.2, isMuted: true, deviceID: 7))
+
+        #expect(model.system?.isMuted == false)
+        #expect(model.system?.level == 0.6)
     }
 
     @Test
@@ -335,6 +420,21 @@ struct AudioMixerModelTests {
         model.toggleMute(app: music)
 
         #expect(apps.intents.last == (try AudioAppFixture.intent(gain: 0.4)))
+    }
+
+    @Test
+    func movingTheGainOfAMutedAppUnmutesIt() async throws {
+        let music         = try AudioAppFixture.identity("com.apple.Music")
+        let (model, apps) = try appsModel(
+            [try AudioAppFixture.app("com.apple.Music", name: "Music", intent: try AudioAppFixture.intent(gain: 0.4, isMuted: true), enforcement: .applied)]
+        )
+
+        model.adjust(app: music, to: 0.6)
+        model.endAdjusting(app: music)
+        await settleMainQueue()
+
+        #expect(model.apps.first?.intent.isMuted == false)
+        #expect(apps.intents.last == (try AudioAppFixture.intent(gain: 0.6)))
     }
 
     @Test

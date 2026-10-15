@@ -300,6 +300,9 @@ struct PluginNodeViewTests {
     @Test
     func volumeBarFillsFromTheBottomWithTheLevel() throws {
         /// whitePixels counts the near-white pixels of a bar, which only its fill draws.
+        /// whitePixels counts the fill's pixels. The fill is a pearl white (about 0.82 to 0.96) in a
+        /// groove that stays under 0.2 and shades the fill's top when it is full, so the line
+        /// between them is drawn at 0.6, not at paper white.
         func whitePixels(level: Double) throws -> Int {
             let renderer = ImageRenderer(content: volumeBar(model: volumeModel(level: level)))
             let bitmap   = NSBitmapImageRep(cgImage: try #require(renderer.cgImage))
@@ -308,7 +311,7 @@ struct PluginNodeViewTests {
                 count + (0..<bitmap.pixelsHigh).count { y in
                     guard let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.sRGB) else { return false }
 
-                    return color.alphaComponent > 0.9 && color.redComponent > 0.9
+                    return color.alphaComponent > 0.9 && color.redComponent > 0.6
                 }
             }
         }

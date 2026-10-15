@@ -6,7 +6,9 @@
 import AppKit
 import Observation
 
-/// AudioAppIconCache gives the app columns their icons. Resolving a bundle identifier to an
+/// AudioAppIconCache gives the app columns their icons, and the colour each icon lights the
+/// notch's glass with (`AudioGlassTint`), read from the image on the same utility task that
+/// loads it. Resolving a bundle identifier to an
 /// application and reading its icon touches Launch Services and the disk, so it never runs on the
 /// main actor: `load` hands it to a utility task, once per bundle identifier, and publishes the
 /// finished image back on the main actor. Until it arrives, and for an app that cannot be found,
@@ -33,6 +35,8 @@ final class AudioAppIconCache {
 
     private var images: [String: NSImage] = [:]
 
+    private var tints: [String: AudioGlassTint] = [:]
+
     init(
         loader: @escaping Loader = { bundleID in
             AudioAppIconCache.workspaceIcon(for: bundleID)
@@ -47,18 +51,39 @@ final class AudioAppIconCache {
         images[bundleID]
     }
 
+    /// tint is the colour the app's capsule lights the glass with: its icon's, or the volume's
+    /// own light blue while the icon loads, when it has no colour, or when there is no icon.
+    func tint(for bundleID: String) -> AudioGlassTint {
+        tints[bundleID] ?? .volume
+    }
+
     /// load resolves the app's icon off the main actor, the first time it is asked for it.
     func load(_ bundleID: String) async {
         guard requested.insert(bundleID).inserted else { return }
 
         let loader = loader
-        let image  = await Task.detached(priority: .utility) {
-            loader(bundleID)
+        let loaded = await Task.detached(priority: .utility) { () -> sending LoadedIcon in
+            let image = loader(bundleID)
+            let tint  = image
+                .flatMap { $0.cgImage(forProposedRect: nil, context: nil, hints: nil) }
+                .flatMap(AudioGlassTint.dominant(in:))
+
+            return LoadedIcon(image: image, tint: tint)
         }.value
 
-        if let image {
+        if let image = loaded.image {
             images[bundleID] = image
         }
+        if let tint = loaded.tint {
+            tints[bundleID] = tint
+        }
+    }
+
+    /// LoadedIcon is what the utility task hands back: the image and the colour read from it.
+    private struct LoadedIcon {
+
+        let image: NSImage?
+        let tint : AudioGlassTint?
     }
 
     /// workspaceIcon is the real loader: the icon of the application the system associates with

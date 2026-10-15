@@ -72,4 +72,48 @@ struct VolumeGestureTests {
         #expect(VolumeGesture.scrolled(0.99, deltaY: 1, isPrecise: false) == 1.0)
         #expect(VolumeGesture.scrolled(0.01, deltaY: -40, isPrecise: true) == 0.0)
     }
+
+    @Test
+    func overshootIsThePointsDraggedPastEitherEnd() {
+        var gesture = VolumeGesture(startLevel: 0.9, travel: 100)
+
+        _ = gesture.move(to: CGSize(width: 0, height: -30), elapsed: .milliseconds(50))
+
+        #expect(abs(gesture.overshoot(at: CGSize(width: 0, height: -30)) - 20) < 0.001)  // past the top
+        #expect(abs(gesture.overshoot(at: CGSize(width: 0, height: 100)) + 10) < 0.001)  // past the bottom
+        #expect(gesture.overshoot(at: CGSize(width: 0, height: -5)) == 0)                // inside the range
+    }
+
+    @Test
+    func aPressThatIsNotADragNeverOvershoots() {
+        let gesture = VolumeGesture(startLevel: 1, travel: 100)
+
+        #expect(gesture.overshoot(at: CGSize(width: 0, height: -3)) == 0)
+    }
+
+    @Test
+    func aTrackpadPushingPastTheTopPilesIntoTheOvershoot() {
+        let step = VolumeGesture.scrolledPastEnds(0.95, overshoot: 0, deltaY: 30, isPrecise: true)
+
+        #expect(step.level == 1)
+        #expect(abs(step.overshoot - 20) < 0.001) // 10 points fill the level, 20 are left over
+    }
+
+    @Test
+    func scrollingBackUndoesTheOvershootBeforeTheLevel() {
+        let partial = VolumeGesture.scrolledPastEnds(1, overshoot: 20, deltaY: -15, isPrecise: true)
+        #expect(partial == VolumeGesture.ScrollStep(level: 1, overshoot: 5))
+
+        let through = VolumeGesture.scrolledPastEnds(1, overshoot: 20, deltaY: -40, isPrecise: true)
+        #expect(abs(through.level - 0.9) < 0.001)
+        #expect(through.overshoot == 0)
+    }
+
+    @Test
+    func aWheelNotchAgainstTheBottomKicks() {
+        let step = VolumeGesture.scrolledPastEnds(0, overshoot: 0, deltaY: -1, isPrecise: false)
+
+        #expect(step.level == 0)
+        #expect(step.overshoot == -VolumeGesture.wheelKick)
+    }
 }

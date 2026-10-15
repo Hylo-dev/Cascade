@@ -54,12 +54,29 @@ struct AudioMixerComponent: View {
     /// titleLeadingInset leaves the back button's room: its 4 pt inset, its 24 pt and a gap.
     static let titleLeadingInset: CGFloat = 30
 
+    /// titleMinimumScale lets the title shrink a little rather than truncate. The row ends at the
+    /// hardware notch, and "Audio 100%" only just fits beside it: a wider font setting or a
+    /// longer translation of "Audio" would otherwise cut the level to "1…".
+    static let titleMinimumScale: CGFloat = 0.85
+
     /// bandHeightWithoutObstruction is the title row's height where no notch covers the top: the
     /// back button and its insets.
     static let bandHeightWithoutObstruction: CGFloat = 32
 
-    private static let capsuleWidth: CGFloat = 28
     private static let buttonSize  : CGFloat = 20
+
+    /// litColumns is how many app columns light the glass. The glass takes eight lights from
+    /// the whole notch: one is the global volume's, up to three are the Music cover's, and four
+    /// app lights fill the rest without crowding it.
+    static let litColumns = 4
+
+    /// reveal is the fade and slide of the page around the capsule: short, and a beat after the
+    /// glide starts, so the eye follows the capsule.
+    private static let reveal = Animation.spring(response: 0.38, dampingFraction: 0.9).delay(0.06)
+
+    /// revealTravel is how far the controls beside the capsule slide out from it as they appear,
+    /// so the page opens from the capsule rather than popping in around it.
+    private static let revealTravel: CGFloat = 14
 
     @Environment(\.pluginComponentServices)
     private var services
@@ -70,8 +87,19 @@ struct AudioMixerComponent: View {
     @State
     private var picker: PickerTarget?
 
+    /// isRevealed fades in everything but the global capsule when the page opens from the
+    /// widget, so the capsule, gliding in, arrives first and the rest settles around it. Opened
+    /// any other way the page is simply there.
+    @State
+    private var isRevealed = true
+
     @State
     private var icons = AudioAppIconCache()
+
+    /// areColumnsOverflowing is whether the app columns are wider than their area, so the row
+    /// scrolls; it is read from the scroll view's geometry only when that changes.
+    @State
+    private var areColumnsOverflowing = false
 
     var body: some View {
         Group {
@@ -83,6 +111,7 @@ struct AudioMixerComponent: View {
         }
         .onAppear {
             services?.audio?.setMixerVisible(true)
+            reveal()
         }
         .onDisappear {
             services?.audio?.setMixerVisible(false)
@@ -103,36 +132,59 @@ struct AudioMixerComponent: View {
                 level: system.level,
                 band : band
             )
+            .opacity(isRevealed ? 1 : 0)
 
             HStack(spacing: 10) {
                 AudioGlobalVolumeControl(
+                    role           : .mixer,
                     widthRatio     : 1,
                     model          : model,
                     system         : system,
-                    isAdjusting    : false,
                     showsPercentage: false,
                     onClick        : {
                         picker = nil
                     }
                 )
-                .frame(width: Self.capsuleWidth)
-
-                VStack(spacing: 10) {
-                    outputButton(system: system)
-                    muteButton(model: model, system: system)
-                }
+                .aspectRatio(AudioVolumeCapsuleMetrics.aspect, contentMode: .fit)
                 .frame(maxHeight: .infinity)
 
-                Rectangle()
-                    .fill(Color(white: 0.2))
-                    .frame(width: 1)
-                    .padding(.vertical, 4)
+                Group {
+                    VStack(spacing: 10) {
+                        outputButton(system: system)
+                        muteButton(model: model, system: system)
+                    }
+                    .frame(maxHeight: .infinity)
 
-                appsArea(model: model, system: system)
+                    Rectangle()
+                        .fill(Color(white: 0.2))
+                        .frame(width: 1)
+                        .padding(.vertical, 4)
+
+                    appsArea(model: model, system: system)
+                }
+                .opacity(isRevealed ? 1 : 0)
+                .offset(x: isRevealed ? 0 : -Self.revealTravel)
             }
             .padding(.top, 4)
             .padding(.horizontal, 12)
             .padding(.bottom, 8)
+        }
+    }
+
+    /// reveal hides the page around the capsule and brings it back on the next main-actor turn,
+    /// once the hidden state has been drawn, when the capsule is arriving from the widget.
+    private func reveal() {
+        guard services?.audio?.capsuleHandoff.isArriving(.mixer) == true else { return }
+
+        var hidden = Transaction()
+        hidden.disablesAnimations = true
+        withTransaction(hidden) {
+            isRevealed = false
+        }
+        Task { @MainActor in
+            withAnimation(Self.reveal) {
+                isRevealed = true
+            }
         }
     }
 
@@ -156,12 +208,13 @@ struct AudioMixerComponent: View {
             Text(String(localized: "Audio", bundle: .module))
                 .foregroundStyle(.white)
 
-            Text("· \(Int((level * 100).rounded()))%")
+            Text("\(Int((level * 100).rounded()))%")
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
         }
         .font(.system(size: 12, weight: .semibold))
         .lineLimit(1)
+        .minimumScaleFactor(Self.titleMinimumScale)
         .padding(.leading, Self.titleLeadingInset)
         .frame(
             width    : Self.titleWidth(obstruction: obstruction).map { $0 + Self.titleLeadingInset },
@@ -282,19 +335,24 @@ struct AudioMixerComponent: View {
         }
     }
 
+    /// columns lays the apps side by side. It scrolls only when they do not fit: with room to
+    /// spare a horizontal swipe does nothing, not even the rubber band. The first `litColumns`
+    /// light the glass while nothing overflows; once the row scrolls the lights would stay where
+    /// the columns were, so none of them do.
     private func columns(
         model : AudioMixerModel,
         system: SystemAudioState
     ) -> some View {
         ScrollView(.horizontal) {
             LazyHStack(spacing: 6) {
-                ForEach(model.apps, id: \.identity) { app in
+                ForEach(Array(model.apps.enumerated()), id: \.element.identity) { index, app in
                     AudioAppColumn(
                         app         : app,
                         system      : system,
                         model       : model,
                         icons       : icons,
                         isPickerOpen: picker == .app(app.identity),
+                        isLit       : index < Self.litColumns && !areColumnsOverflowing,
                         onClick     : {
                             picker = nil
                         },
@@ -307,6 +365,12 @@ struct AudioMixerComponent: View {
             .padding(.horizontal, 2)
         }
         .scrollIndicators(.hidden)
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        .onScrollGeometryChange(for: Bool.self) { geometry in
+            geometry.contentSize.width > geometry.containerSize.width + 0.5
+        } action: { _, isOverflowing in
+            areColumnsOverflowing = isOverflowing
+        }
         .frame(maxHeight: .infinity)
     }
 

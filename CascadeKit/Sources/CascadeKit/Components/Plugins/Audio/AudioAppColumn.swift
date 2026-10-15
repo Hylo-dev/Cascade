@@ -7,9 +7,11 @@ import AppKit
 import CascadeContracts
 import SwiftUI
 
-/// AudioAppColumn is one app in the mixer's apps area: its icon, a capsule for its volume, and
-/// below it the mute button and the output button. It is thin on purpose, 34 pt, so several fit
-/// beside each other in the area's horizontal scroll view.
+/// AudioAppColumn is one app in the mixer's apps area: its icon with the level beside it, a
+/// capsule for its volume, and below it the mute button and the output button. It is thin on
+/// purpose, 44 pt, just wide enough for the icon and "100%", so several fit beside each other in
+/// the area's horizontal scroll view. The capsule is clear glass and, for the first few columns,
+/// lights the notch's glass in the colour of the app's icon.
 ///
 /// It owns no state. The app's reading comes in as a value, the user's gestures go out to the
 /// model, and what the picker is showing is the owner's business: the output button only says it
@@ -24,19 +26,24 @@ import SwiftUI
 /// silence the app.
 struct AudioAppColumn: View {
 
-    static let width       : CGFloat = 34
-    static let iconSize    : CGFloat = 18
+    static let width       : CGFloat = 44
+    static let iconSize    : CGFloat = 16
     static let capsuleWidth: CGFloat = 18
     static let buttonSize  : CGFloat = 16
 
     /// accessibilityStep is how far the VoiceOver increment and decrement move the level.
     private static let accessibilityStep = 1.0 / 16.0
 
+    /// lightStrength keeps the app lights under the global one: they are several, side by side.
+    private static let lightStrength = 0.7
+
     let app         : AudioAppState
     let system      : SystemAudioState
     let model       : AudioMixerModel
     let icons       : AudioAppIconCache
     let isPickerOpen: Bool
+    /// isLit says whether this column lights the glass; the mixer lights only its first few.
+    var isLit       : Bool = true
     let onClick     : () -> Void
     let onOutputTap : () -> Void
 
@@ -44,7 +51,7 @@ struct AudioAppColumn: View {
         let isReadOnly = model.areAppsReadOnly
 
         VStack(spacing: 5) {
-            appIcon
+            header(isReadOnly: isReadOnly)
 
             capsule(isReadOnly: isReadOnly)
 
@@ -69,6 +76,22 @@ struct AudioAppColumn: View {
 
     // MARK: - Pieces
 
+    /// header is the icon with the level beside it. The level is the capsule's, so it moves with
+    /// the drag; it dims while the app is muted, where the gain is kept but not heard.
+    private func header(isReadOnly: Bool) -> some View {
+        HStack(spacing: 3) {
+            appIcon
+
+            Text("\(Int((Self.level(of: app, isReadOnly: isReadOnly) * 100).rounded()))%")
+                .font(.system(size: 9, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(.white.opacity(Self.isMuted(app, isReadOnly: isReadOnly) ? 0.4 : 0.75))
+                .lineLimit(1)
+                .fixedSize()
+                .accessibilityHidden(true)
+        }
+    }
+
     private var appIcon: some View {
         Group {
             if let image = icons.icon(for: app.identity.bundleID) {
@@ -76,9 +99,15 @@ struct AudioAppColumn: View {
                     .resizable()
                     .interpolation(.high)
             } else {
-                Image(systemName: "app.dashed")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.white.opacity(0.5))
+                // A process with no app bundle (a command-line player such as afplay) has no
+                // icon to show: a quiet tile with a waveform says "something plays here".
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(.white.opacity(0.12))
+                    .overlay {
+                        Image(systemName: "waveform")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
             }
         }
         .frame(width: Self.iconSize, height: Self.iconSize)
@@ -106,7 +135,7 @@ struct AudioAppColumn: View {
             icon           : nil,
             iconOpacity    : 1,
             isDashed       : Self.isDashed(app, isReadOnly: isReadOnly),
-            isAdjusting    : model.adjustingApp == app.identity,
+            appearance     : .clearGlass,
             showsPercentage: false,
             onLevel        : { chosen in
                 model.adjust(app: app.identity, to: chosen)
@@ -118,6 +147,16 @@ struct AudioAppColumn: View {
         )
         .frame(width: Self.capsuleWidth)
         .frame(maxHeight: .infinity)
+        .background {
+            AudioVolumeGlassLight(
+                widthRatio: 1,
+                level     : level,
+                isMuted   : Self.isMuted(app, isReadOnly: isReadOnly),
+                tint      : icons.tint(for: app.identity.bundleID),
+                strength  : Self.lightStrength,
+                isLit     : isLit
+            )
+        }
         .background {
             ScrollWheelReader { deltaY, isPrecise, phase, momentum in
                 scroll(

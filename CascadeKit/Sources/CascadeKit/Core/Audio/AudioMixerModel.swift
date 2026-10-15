@@ -19,6 +19,12 @@ import Observation
 /// is paired with the device it was made for, and the flush drops it if the default output moved
 /// on meanwhile.
 ///
+/// The system confirms a level late, Bluetooth outputs most of all, and the readings of the levels
+/// sent during the drag can still be on their way when it ends. So after a drag or a scroll burst
+/// the model keeps showing the level it sent until a reading confirms it, or until `settleWindow`
+/// has passed, whichever comes first. It is a deadline checked when a reading arrives, not a
+/// timer: nothing wakes while it waits.
+///
 /// The optimistic state is a guess: the next `receive` replaces an optimistic mute or selection
 /// the system did not confirm, so a refused command heals itself without a rollback path.
 ///
@@ -35,6 +41,10 @@ import Observation
 @MainActor
 @Observable
 public final class AudioMixerModel {
+
+    /// capsuleHandoff lets the global capsule glide between the widget and the mixer. It lives
+    /// here because the model is the one thing both already share; it is not observed.
+    let capsuleHandoff = AudioCapsuleHandoff()
 
     public private(set) var system: SystemAudioState?
 
@@ -78,31 +88,89 @@ public final class AudioMixerModel {
     @ObservationIgnored
     private var isFlushQueued = false
 
-    public init(
+    /// settleWindow is how long, after a drag or a scroll burst, a reading that disagrees with the
+    /// level sent is taken for a late echo of the drag and ignored.
+    static let settleWindow = Duration.milliseconds(1500)
+
+    /// settleTolerance is how close a reading must be to the level sent to confirm it: the system
+    /// can round a level to its own steps.
+    static let settleTolerance = 0.02
+
+    /// settling is the level last sent and when its window closes, while a drag is settling.
+    @ObservationIgnored
+    private var settling: (level: Double, deviceID: UInt32, deadline: ContinuousClock.Instant)?
+
+    @ObservationIgnored
+    private var lastSentLevel: Double?
+
+    @ObservationIgnored
+    private let now: () -> ContinuousClock.Instant
+
+    public convenience init(
         controller: any SystemAudioControlling,
         apps      : (any AudioAppsControlling)? = nil
     ) {
+        self.init(
+            controller: controller,
+            apps      : apps,
+            now       : { ContinuousClock.now }
+        )
+    }
+
+    /// init(controller:apps:now:) takes the clock the settle window is read from, so a test can
+    /// move time instead of waiting for it.
+    init(
+        controller: any SystemAudioControlling,
+        apps      : (any AudioAppsControlling)?,
+        now       : @escaping () -> ContinuousClock.Instant
+    ) {
         self.controller     = controller
         self.appsController = apps
+        self.now            = now
     }
 
     /// receive takes the service's latest reading. While the user is adjusting and the reading is
-    /// for the same device, the optimistic level stays, or the thumb would jump back under the
-    /// finger; a reading for another device is taken whole, since the drag's target changed.
+    /// for the same device, the optimistic level and mute stay, or the thumb would jump back under
+    /// the finger and an unmuting drag would flash muted; a reading for another device is taken
+    /// whole, since the drag's target changed. After the drag, while it settles, a reading that
+    /// disagrees with the level sent is a late echo and keeps the optimistic level too; one that
+    /// agrees, or any after the window, ends it.
     public func receive(_ state: SystemAudioState) {
-        guard
-            isAdjusting,
-            let current = system,
-            current.defaultDeviceID == state.defaultDeviceID
-        else {
-            system = state
+        guard let current = system, current.defaultDeviceID == state.defaultDeviceID else {
+            settling = nil
+            system   = state
             return
         }
-        system = state.replacing(level: current.level)
+        if isAdjusting {
+            system = state
+                .replacing(level: current.level)
+                .replacing(isMuted: current.isMuted)
+            return
+        }
+        if let pending = settling {
+            let isConfirmed = Swift.abs(state.level - pending.level) <= Self.settleTolerance
+            let isExpired   = now() >= pending.deadline || pending.deviceID != state.defaultDeviceID
+
+            if !isConfirmed, !isExpired {
+                system = state.replacing(level: current.level)
+                return
+            }
+            settling = nil
+        }
+        system = state
     }
 
+    /// adjust moves the level at once on screen and queues it for the system. Moving the level
+    /// of a muted output unmutes it, once, at the first move: the user is asking to hear it.
+    /// While the drag lasts the capsule keeps that unmuted state even if a reading taken before
+    /// the system obeyed still says muted.
     public func adjust(to level: Double) {
-        guard let current = system else { return }
+        guard var current = system else { return }
+
+        if current.isMuted {
+            current = current.replacing(isMuted: false)
+            controller.setMuted(false, forDevice: current.defaultDeviceID)
+        }
 
         let clamped = Swift.min(Swift.max(level, 0), 1)
         isAdjusting   = true
@@ -117,6 +185,11 @@ public final class AudioMixerModel {
     public func endAdjusting() {
         flush()
         isAdjusting = false
+
+        if let level = lastSentLevel, let deviceID = system?.defaultDeviceID {
+            settling = (level, deviceID, now() + Self.settleWindow)
+        }
+        lastSentLevel = nil
     }
 
     public func toggleMute() {
@@ -209,6 +282,11 @@ public final class AudioMixerModel {
     ) {
         guard !areAppsReadOnly, let index = apps.firstIndex(where: { $0.identity == app }) else { return }
 
+        // Moving a muted app's gain unmutes it, as the system level does; the queued intent
+        // carries both, so one command says "this loud, and audible".
+        if apps[index].intent.isMuted {
+            apps[index] = apps[index].replacing(isMuted: false)
+        }
         adjustingApp = app
         apps[index]  = apps[index].replacing(gain: Swift.min(Swift.max(gain, 0), 1))
         pendingApps.insert(app)
@@ -326,5 +404,6 @@ public final class AudioMixerModel {
         guard pendingDevice == system?.defaultDeviceID else { return }
 
         controller.setLevel(level, forDevice: pendingDevice)
+        lastSentLevel = level
     }
 }
