@@ -12,7 +12,8 @@ import SwiftUI
 /// - `widgets` holds each instance once, keyed by id; an arrangement references
 ///   widgets by id, so one widget shown on several displays is never duplicated.
 /// - A display nobody edited shows the shared default arrangement, which
-///   auto-places every widget as it registers. The first edit on a display gives
+///   auto-places every widget placed by default as it registers; any other waits
+///   in the gallery until the user adds it. The first edit on a display gives
 ///   it its own copy, keyed by the display's stable identity. An edited
 ///   arrangement never auto-places a newly registered widget: it waits in the
 ///   gallery, as a new widget does on a phone's home screen.
@@ -68,7 +69,7 @@ final class WidgetHost {
 
         let saved = await store.load()
         for (display, saved) in saved where editedArrangements[display] == nil {
-            editedArrangements[display] = saved
+            editedArrangements[display] = outsideTheBand(saved)
         }
 
         var repaired = false
@@ -97,8 +98,9 @@ final class WidgetHost {
         }
     }
 
-    /// register adds a widget instance and, if it isn't placed yet, auto-places
-    /// it into the first free block of the default arrangement's main rows.
+    /// register adds a widget instance and, if it isn't placed yet and is placed by
+    /// default, auto-places it into the first free block of the default
+    /// arrangement's main rows.
     func register(_ widget: NotchWidget) {
         if widgets[widget.id] == nil { registrationOrder.append(widget.id) }
         widgets[widget.id] = widget
@@ -106,7 +108,7 @@ final class WidgetHost {
 
         if reconcileSizes(for: widget) { store?.save(editedArrangements) }
 
-        guard defaultArrangement[widget.id] == nil else { return }
+        guard defaultArrangement[widget.id] == nil, widget.isPlacedByDefault else { return }
 
         if let placement = autoPlacement(for: widget.size) {
             defaultArrangement[widget.id] = placement
@@ -530,6 +532,28 @@ final class WidgetHost {
         cachedViews.removeValue(forKey: id)
 
         if activeWidgets.remove(id) != nil { widgets[id]?.suspend() }
+    }
+
+    /// outsideTheBand moves every widget saved in the notch band to the first free block of the
+    /// main rows, in the band's leading-to-trailing order, when the grid no longer offers band
+    /// cells; one that fits nowhere is dropped rather than kept as a widget nobody can see.
+    /// The move is not saved: it comes out the same at every launch, and the next edit saves it.
+    private func outsideTheBand(
+        _ saved: [WidgetIdentifier: WidgetPlacement]
+    ) -> [WidgetIdentifier: WidgetPlacement] {
+        guard resolver.metrics.maxTrailingCells == 0 else { return saved }
+
+        let grid  = NotchGrid(columns: resolver.metrics.columns, bandColumns: 0 ..< 0)
+        let band  = saved
+            .filter { $0.value.position.row == 0 }
+            .sorted { $0.value.position.column < $1.value.position.column }
+        var moved = saved.filter { $0.value.position.row != 0 }
+
+        for (id, placement) in band {
+            moved[id] = grid.firstFit(for: placement.span, among: Array(moved.values))
+        }
+
+        return moved
     }
 
     /// autoPlacement finds the first-fit placement in the main rows (1 and 2),

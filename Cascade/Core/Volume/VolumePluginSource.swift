@@ -11,7 +11,9 @@ import Foundation
 /// because the two are one subsystem: the tap decides which changes replace the system HUD, falls
 /// silent when it forwards a key to macOS and forces feedback on a handled key at the limit. The
 /// source emits a baseline when it starts, then every change the monitor announced, numbered, and
-/// stops the monitor, and with it the tap, when the plugin releases it.
+/// every other change of the level with the number the monitor gave it, the last announcement's,
+/// so the volume alerts show nothing for it and the volume widget still draws it. It stops the
+/// monitor, and with it the tap, when the last plugin releases it.
 ///
 /// The engine calls it on its own queue; everything here runs on the main actor, reached through
 /// the main queue so a start and the stop that follows it keep their order.
@@ -57,7 +59,7 @@ final class VolumePluginSource: PluginEventSource {
                     case .status(let status):
                         statusHandler(status)
 
-                    case .changed(let change):
+                    case .changed(let change), .level(let change):
                         let state = PluginVolumeState(percentage: change.percentage, isMuted: change.isMuted, announcement: change.revision)
                         if let event = try? state.event() {
                             emit(event)

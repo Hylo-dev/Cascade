@@ -121,6 +121,37 @@ struct BluetoothConnectionReducerTests {
     }
 
     @Test
+    func audioComingBackToAKnownDeviceKeepsItsOwnNameAndSymbol() {
+        var reducer = BluetoothConnectionReducer()
+        let speaker = BluetoothConnectedDevice(deviceID: "AB-CD-EF-01-23-45", name: "Kitchen", symbolName: "speaker.wave.2")
+        reducer.replaceBaseline(with: [speaker])
+
+        let routed = reducer.recordAudioRoute(device(speaker.deviceID, name: "Kitchen Output"), eventID: 1, now: 100)
+
+        #expect(routed?.name == "Kitchen" && routed?.symbolName == "speaker.wave.2")
+        #expect(reducer.connectedDevices == [speaker])
+    }
+
+    @Test
+    func aListedDeviceTakesEveryReadAndSaysWhenItsLevelChanged() {
+        var reducer  = BluetoothConnectionReducer()
+        let phones   = device("BB-CC-DD-EE-FF-00")
+        let metadata = BluetoothDeviceMetadata(battery: BluetoothBatterySnapshot(level: 40))
+        reducer.replaceBaseline(with: [phones])
+
+        let changed   = reducer.enrichListedDevice(deviceID: phones.deviceID, metadata: metadata)
+        let unchanged = reducer.enrichListedDevice(deviceID: phones.deviceID, metadata: metadata)
+        let unknown   = reducer.enrichListedDevice(deviceID: "CC-DD-EE-FF-00-11", metadata: metadata)
+        let routed    = reducer.recordAudioRoute(phones, eventID: 1, now: 100)
+        let reread    = reducer.enrichListedDevice(deviceID: phones.deviceID, metadata: BluetoothDeviceMetadata(battery: BluetoothBatterySnapshot(level: 35)))
+
+        #expect(changed && !unchanged && !unknown && reread)
+        #expect(reducer.connectedDevices.first?.battery?.level == 35, "A device with an event of its own is listed with its latest read")
+        #expect(routed?.battery == nil, "The read changes the list, never an event already numbered")
+        #expect(reducer.enrichConnection(deviceID: phones.deviceID, eventID: 1, metadata: BluetoothDeviceMetadata())?.battery?.level == 35)
+    }
+
+    @Test
     func theFirstRouteAfterAFreshConnectionIsCoalescedOnly() {
         var reducer = BluetoothConnectionReducer()
         let phones  = device("77-88-99-AA-BB-CC")

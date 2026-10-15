@@ -69,6 +69,27 @@ struct BluetoothMetadataEnricherTests {
     }
 
     @Test
+    func aRefreshReadsOnlyADeviceWithNoReadPending() async throws {
+        let reader   = MetadataReaderProbe(samples: [complete], delay: 0.03)
+        let enricher = BluetoothMetadataEnricher(reader: reader, queue: queue, retryDelay: .milliseconds(1))
+        let received = Mutex<[String]>([])
+        queue.sync {
+            enricher.enrich(deviceID: "AA-BB-CC-DD-EE-FF") { _ in received.withLock { $0.append("connection") } }
+            enricher.refresh(deviceID: "AA-BB-CC-DD-EE-FF") { _ in received.withLock { $0.append("refresh") } }
+        }
+
+        #expect(try await eventually { received.withLock { $0 } == ["connection"] })
+        queue.sync {
+            enricher.refresh(deviceID: "AA-BB-CC-DD-EE-FF") { _ in received.withLock { $0.append("refresh") } }
+        }
+        #expect(try await eventually { received.withLock { $0.count } == 2 })
+        try await Task.sleep(for: .milliseconds(30))
+
+        #expect(received.withLock { $0 } == ["connection", "refresh"], "A pending read is not replaced, a finished one is read again")
+        #expect(reader.readCount == 2)
+    }
+
+    @Test
     func aReadInFlightForACancelledDeviceIsDropped() async throws {
         let reader   = MetadataReaderProbe(samples: [complete], delay: 0.03)
         let enricher = BluetoothMetadataEnricher(reader: reader, queue: queue, retryDelay: .milliseconds(1))

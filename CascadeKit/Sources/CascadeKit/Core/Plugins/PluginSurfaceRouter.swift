@@ -30,21 +30,25 @@ public typealias PluginAcceptedAction = @MainActor @Sendable (_ nativeEffect: @M
 /// A widget whose feature supports fullscreen may also publish an options page. Pressing an
 /// opener captures a host-owned origin first, then asks the broker; only the accepted click
 /// presents the page, and only the page's own controls, holding that origin, can act in it.
+///
+/// Which plugins' widgets a display nobody edited places by default is the app's policy, handed
+/// in as `placedByDefault`; every other plugin's widget waits in the gallery.
 @MainActor
 public final class PluginSurfaceRouter {
 
     /// components lists the tier-2 components these surfaces draw, for the engine's capabilities.
     public static let components: Set<String> = PluginComponentView.identifiers
 
-    private let host          : any PluginSurfaceHosting
-    private let sizes         : [PluginPublicationKey: [GridSpan]]
-    private let services      : PluginComponentServices
-    private let hasDetail     : Set<PluginPublicationKey>
-    private let submit        : (PluginActionRequest) -> Void
-    private let visibility    : (Bool, PluginPublicationKey) -> Void
-    private let submitAccepted: ((PluginActionRequest, @escaping PluginAcceptedAction) -> Void)?
-    private let fullscreen    : Set<PluginPublicationKey>
-    private var options       : OptionsBinding?
+    private let host           : any PluginSurfaceHosting
+    private let sizes          : [PluginPublicationKey: [GridSpan]]
+    private let placedByDefault: Set<PluginID>
+    private let services       : PluginComponentServices
+    private let hasDetail      : Set<PluginPublicationKey>
+    private let submit         : (PluginActionRequest) -> Void
+    private let visibility     : (Bool, PluginPublicationKey) -> Void
+    private let submitAccepted : ((PluginActionRequest, @escaping PluginAcceptedAction) -> Void)?
+    private let fullscreen     : Set<PluginPublicationKey>
+    private var options        : OptionsBinding?
 
     private struct OptionsBinding {
 
@@ -63,18 +67,20 @@ public final class PluginSurfaceRouter {
     private var openDetails: Set<PluginPublicationKey> = []
 
     public init(
-        host          : any PluginSurfaceHosting,
-        manifests     : [PluginManifest],
-        services      : PluginComponentServices? = nil,
-        submit        : @escaping (PluginActionRequest) -> Void,
-        visibility    : @escaping (Bool, PluginPublicationKey) -> Void,
-        submitAccepted: ((PluginActionRequest, @escaping PluginAcceptedAction) -> Void)? = nil
+        host           : any PluginSurfaceHosting,
+        manifests      : [PluginManifest],
+        placedByDefault: Set<PluginID>,
+        services       : PluginComponentServices? = nil,
+        submit         : @escaping (PluginActionRequest) -> Void,
+        visibility     : @escaping (Bool, PluginPublicationKey) -> Void,
+        submitAccepted : ((PluginActionRequest, @escaping PluginAcceptedAction) -> Void)? = nil
     ) {
-        self.host           = host
-        self.services       = services ?? PluginComponentServices()
-        self.submit         = submit
-        self.visibility     = visibility
-        self.submitAccepted = submitAccepted
+        self.host            = host
+        self.placedByDefault = placedByDefault
+        self.services        = services ?? PluginComponentServices()
+        self.submit          = submit
+        self.visibility      = visibility
+        self.submitAccepted  = submitAccepted
 
         var sizes     : [PluginPublicationKey: [GridSpan]] = [:]
         var hasDetail : Set<PluginPublicationKey> = []
@@ -299,6 +305,7 @@ public final class PluginSurfaceRouter {
             PluginWidget(
                 id                : Self.identifier(of: key),
                 sizes             : sizes[key] ?? [],
+                isPlacedByDefault : placedByDefault.contains(key.plugin),
                 store             : store,
                 services          : services,
                 openDetail        : openDetail,

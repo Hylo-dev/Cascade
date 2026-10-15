@@ -48,7 +48,7 @@ struct PluginSurfaceRouterTests {
         var surfaces  : PluginSurfaceRouter!
     }
 
-    private func rig() throws -> Rig {
+    private func rig(placedByDefault: Set<PluginID> = []) throws -> Rig {
         let rig      = Rig()
         let manifest = try PluginManifest(
             manifestVersion: 2,
@@ -72,10 +72,11 @@ struct PluginSurfaceRouterTests {
             resources      : PluginResources(profile: .eventDriven)
         )
         rig.surfaces = PluginSurfaceRouter(
-            host      : rig.host,
-            manifests : [manifest],
-            submit    : { [unowned rig] in rig.submitted.append($0) },
-            visibility: { [unowned rig] isVisible, key in rig.visibility.append((isVisible, key)) }
+            host           : rig.host,
+            manifests      : [manifest],
+            placedByDefault: placedByDefault,
+            submit         : { [unowned rig] in rig.submitted.append($0) },
+            visibility     : { [unowned rig] isVisible, key in rig.visibility.append((isVisible, key)) }
         )
         return rig
     }
@@ -122,6 +123,20 @@ struct PluginSurfaceRouterTests {
         let alarm = try #require(rig.host.widgets[WidgetIdentifier("plugin:com.cascade.clock/alarm")])
         #expect(alarm.sizes == [GridSpan(columns: 2, rows: 1), GridSpan(columns: 4, rows: 2)])
         #expect(alarm.size == GridSpan(columns: 2, rows: 1))
+    }
+
+    @Test
+    func onlyAPluginPlacedByDefaultRegistersAWidgetPlacedByDefault() throws {
+        let waiting   = try rig()
+        let placed    = try rig(placedByDefault: [clock])
+        var publisher = PluginPublicationStore()
+        let content   = publish(try PluginDocument(root: PluginNode(.clock)), in: &publisher)
+
+        waiting.surfaces.apply([content], rejected: [])
+        placed.surfaces.apply([content], rejected: [])
+
+        #expect(waiting.host.widgets[widgetID]?.isPlacedByDefault == false)
+        #expect(placed.host.widgets[widgetID]?.isPlacedByDefault == true)
     }
 
     @Test

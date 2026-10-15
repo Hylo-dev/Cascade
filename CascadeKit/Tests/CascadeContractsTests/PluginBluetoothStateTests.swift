@@ -119,6 +119,89 @@ struct PluginBluetoothStateTests {
     }
 
     @Test
+    func theConnectedDevicesRoundTripInTheirOrderAndAFifthIsLeftOut() throws {
+        let devices = [
+            PluginBluetoothDevice(name: "AirPods Pro", symbolName: "airpodspro", batteryLevel: 68),
+            PluginBluetoothDevice(name: "Keyboard", symbolName: "keyboard", batteryLevel: nil),
+            PluginBluetoothDevice(name: "Mouse", symbolName: "computermouse", batteryLevel: 140),
+            PluginBluetoothDevice(name: "Speaker", symbolName: "speaker.wave.2", batteryLevel: 12),
+            PluginBluetoothDevice(name: "Controller", symbolName: "gamecontroller", batteryLevel: 90),
+        ]
+        let three = PluginBluetoothState.baseline(isAvailable: true, connectedDevices: Array(devices.prefix(3)))
+        let five  = PluginBluetoothState.baseline(isAvailable: true, connectedDevices: devices)
+        let event = try three.event()
+
+        #expect(PluginBluetoothState(event) == three)
+        #expect(three.connectedDevices[2].batteryLevel == 100)
+        #expect(event.fields["deviceCount"] == .number(3))
+        #expect(event.fields["device1.name"] == .string("Keyboard"))
+        #expect(event.fields["device1.battery"] == nil)
+        #expect(five.connectedDevices == Array(devices.prefix(4)))
+        #expect(PluginBluetoothState(try five.event()) == five)
+    }
+
+    @Test
+    func aDeviceCountPastTheMaximumOrADeviceWithoutItsNameOrSymbolIsMalformed() throws {
+        let state  = PluginBluetoothState.baseline(isAvailable: true, connectedDevices: [PluginBluetoothDevice(name: "Keyboard", symbolName: "keyboard", batteryLevel: 50)])
+        var fields = try state.event().fields
+
+        fields["deviceCount"] = .number(5)
+        for index in 1..<5 {
+            fields["device\(index).name"]   = .string("Keyboard")
+            fields["device\(index).symbol"] = .string("keyboard")
+        }
+        #expect(PluginBluetoothState(try PluginSourceEvent(source: "bluetooth", fields: fields)) == nil)
+
+        fields = try state.event().fields
+        fields["device0.name"] = nil
+        #expect(PluginBluetoothState(try PluginSourceEvent(source: "bluetooth", fields: fields)) == nil)
+
+        fields = try state.event().fields
+        fields["device0.symbol"] = nil
+        #expect(PluginBluetoothState(try PluginSourceEvent(source: "bluetooth", fields: fields)) == nil)
+
+        fields = try state.event().fields
+        fields["deviceCount"] = .string("1")
+        #expect(PluginBluetoothState(try PluginSourceEvent(source: "bluetooth", fields: fields)) == nil)
+    }
+
+    @Test
+    func anEventWithoutADeviceCountListsNoDevices() throws {
+        var fields = try airPods.event().fields
+        fields["deviceCount"] = nil
+
+        #expect(PluginBluetoothState(try PluginSourceEvent(source: "bluetooth", fields: fields)) == airPods)
+        #expect(airPods.connectedDevices.isEmpty)
+    }
+
+    /// The longest names Bluetooth allows, 248 bytes, on the device of the event and on four
+    /// connected devices, every number known, still fit one source event.
+    @Test
+    func fourDevicesWithTheLongestNamesFitOneSourceEvent() throws {
+        let name   = String(repeating: "W", count: 248)
+        let device = PluginBluetoothDevice(name: name, symbolName: "speaker.wave.2", batteryLevel: 100)
+        let state  = PluginBluetoothState(
+            deviceID        : "AA-BB-CC-DD-EE-FF",
+            name            : name,
+            symbolName      : "airpodspro",
+            isConnected     : true,
+            battery         : PluginBluetoothBattery(level: 100, left: 100, right: 100, caseLevel: 100),
+            model           : .airPodsPro,
+            productID       : 0x200E,
+            colorID         : 19,
+            eventID         : 9_007_199_254_740_991,
+            revision        : 9_007_199_254_740_991,
+            kind            : .audioRoute,
+            isAvailable     : true,
+            connectedDevices: Array(repeating: device, count: PluginBluetoothDevice.maximumCount)
+        )
+        let event  = try state.event()
+
+        #expect(event.fields.count == 28)
+        #expect(PluginBluetoothState(event) == state)
+    }
+
+    @Test
     func theDeviceAndItsBatteryAreCatalogComponentsAndTheRimCanStayNeutral() throws {
         #expect(PluginCatalog.components["bluetooth.device"] == 1)
         #expect(PluginCatalog.components["bluetooth.battery"] == 1)

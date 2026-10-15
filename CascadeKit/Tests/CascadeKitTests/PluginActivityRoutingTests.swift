@@ -34,10 +34,11 @@ struct PluginActivityRoutingTests {
 
         init() {
             surfaces = PluginSurfaceRouter(
-                host      : host,
-                manifests : [],
-                submit    : { [unowned self] in submitted.append($0) },
-                visibility: { [unowned self] isVisible, _ in visibility.append(isVisible) }
+                host           : host,
+                manifests      : [],
+                placedByDefault: [],
+                submit         : { [unowned self] in submitted.append($0) },
+                visibility     : { [unowned self] isVisible, _ in visibility.append(isVisible) }
             )
         }
     }
@@ -186,7 +187,7 @@ struct PluginActivityRoutingTests {
     func aRenewedStartGetsAFreshSessionDeadlineInTheRealHost() throws {
         var now        = start
         let live       = LiveActivityHost(now: { now })
-        let surfaces   = PluginSurfaceRouter(host: LiveHost(live: live), manifests: [], submit: { _ in }, visibility: { _, _ in })
+        let surfaces   = PluginSurfaceRouter(host: LiveHost(live: live), manifests: [], placedByDefault: [], submit: { _ in }, visibility: { _, _ in })
         var publisher  = PluginPublicationStore()
         let id         = "plugin:com.cascade.caffeinate/caffeinate"
         func publish(startedAt: Date) throws {
@@ -217,7 +218,7 @@ struct PluginActivityRoutingTests {
     @Test
     func aMoreRelevantNativeActivityTakesTheCompact() throws {
         let live      = LiveActivityHost(now: { start })
-        let surfaces  = PluginSurfaceRouter(host: LiveHost(live: live), manifests: [], submit: { _ in }, visibility: { _, _ in })
+        let surfaces  = PluginSurfaceRouter(host: LiveHost(live: live), manifests: [], placedByDefault: [], submit: { _ in }, visibility: { _, _ in })
         var publisher = PluginPublicationStore()
         let id        = "plugin:com.cascade.caffeinate/caffeinate"
         let music     = LiveFixture("music", relevance: 0.5)

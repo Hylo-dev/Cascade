@@ -24,23 +24,25 @@ struct BluetoothPluginTests {
         battery    : PluginBluetoothBattery? = PluginBluetoothBattery(level: 68, left: 72, right: 68, caseLevel: 81),
         model      : PluginBluetoothDeviceModel = .airPodsPro,
         productID  : UInt16? = 0x200E,
-        kind       : PluginBluetoothEventKind = .connection
+        kind       : PluginBluetoothEventKind = .connection,
+        devices    : [PluginBluetoothDevice] = []
     ) throws -> PluginEvent {
         let state = eventID == 0
-            ? PluginBluetoothState.baseline(isAvailable: true)
+            ? PluginBluetoothState.baseline(isAvailable: true, connectedDevices: devices)
             : PluginBluetoothState(
-                deviceID   : "AA-BB-CC-DD-EE-FF",
-                name       : name,
-                symbolName : model == .generic ? "keyboard" : "airpodspro",
-                isConnected: isConnected,
-                battery    : battery,
-                model      : model,
-                productID  : productID,
-                colorID    : nil,
-                eventID    : eventID,
-                revision   : revision,
-                kind       : kind,
-                isAvailable: true
+                deviceID        : "AA-BB-CC-DD-EE-FF",
+                name            : name,
+                symbolName      : model == .generic ? "keyboard" : "airpodspro",
+                isConnected     : isConnected,
+                battery         : battery,
+                model           : model,
+                productID       : productID,
+                colorID         : nil,
+                eventID         : eventID,
+                revision        : revision,
+                kind            : kind,
+                isAvailable     : true,
+                connectedDevices: devices
             )
 
         return .source(try state.event())
@@ -131,6 +133,24 @@ struct BluetoothPluginTests {
     @Test
     func aBaselineForgetsTheLastEventSilently() throws {
         #expect(try deliveries(BluetoothPlugin(), [bluetooth(0), bluetooth(5), bluetooth(0), bluetooth(1)]) == [nil, .show, nil, .show])
+    }
+
+    @Test
+    func aStateThatChangesOnlyTheDeviceListShowsNothing() throws {
+        let keyboard = PluginBluetoothDevice(name: "Keyboard", symbolName: "keyboard", batteryLevel: 50)
+        let airPods  = PluginBluetoothDevice(name: "AirPods Pro", symbolName: "airpodspro", batteryLevel: 68)
+        let events   = [
+            try bluetooth(0),
+            try bluetooth(0, devices: [keyboard]),
+            try bluetooth(1, devices: [keyboard]),
+            try bluetooth(1, devices: [keyboard, airPods]),
+            try bluetooth(1, revision: 1, devices: [keyboard, airPods]),
+            try bluetooth(1, revision: 1, devices: [airPods]),
+        ]
+
+        let plugin = BluetoothPlugin()
+        #expect(try events.map { try publications(plugin, $0).count } == [0, 0, 1, 0, 1, 0])
+        #expect(try deliveries(BluetoothPlugin(), events) == [nil, nil, .show, nil, .update, nil])
     }
 
     @Test

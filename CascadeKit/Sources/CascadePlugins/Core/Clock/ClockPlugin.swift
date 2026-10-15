@@ -11,6 +11,8 @@ import CascadePluginSDK
 /// wake, so after its first refresh it never runs again until a restart asks for its content.
 struct ClockPlugin: PluginProvider {
 
+    static let id = PluginID(rawValue: "com.cascade.clock")!
+
     func handle(
         _ event: PluginEvent,
         context: PluginContext

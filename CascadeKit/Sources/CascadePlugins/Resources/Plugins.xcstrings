@@ -1,6 +1,39 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@, battery %lld percent": {
+      "comment": "Accessibility description of a device in the devices widget. %@ is the device name, %lld its charge from 0 to 100.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, batteria al %2$lld percento"
+          }
+        }
+      }
+    },
+    "Add five minutes": {
+      "comment": "Accessibility label of the timer widget's button that adds five minutes.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi cinque minuti"
+          }
+        }
+      }
+    },
+    "Add one minute": {
+      "comment": "Accessibility label of the timer widget's button that adds one minute.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi un minuto"
+          }
+        }
+      }
+    },
     "Battery": {
       "comment": "Settings name of the battery widget plugin.",
       "localizations": {
@@ -23,13 +56,13 @@
         }
       }
     },
-    "Charging alerts": {
-      "comment": "Settings name of the charging notice plugin.",
+    "Bluetooth is off": {
+      "comment": "Devices widget text when Bluetooth does not work on this Mac.",
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Avvisi di carica"
+            "value": "Bluetooth spento"
           }
         }
       }
@@ -45,6 +78,39 @@
         }
       }
     },
+    "Calendar": {
+      "comment": "Settings name of the calendar widget plugin.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calendario"
+          }
+        }
+      }
+    },
+    "Cellular": {
+      "comment": "Network widget word for a cellular link.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cellulare"
+          }
+        }
+      }
+    },
+    "Charging alerts": {
+      "comment": "Settings name of the charging notice plugin.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvisi di carica"
+          }
+        }
+      }
+    },
     "Clock": {
       "comment": "Settings name of the clock widget plugin.",
       "localizations": {
@@ -52,6 +118,281 @@
           "stringUnit": {
             "state": "translated",
             "value": "Orologio"
+          }
+        }
+      }
+    },
+    "Connected": {
+      "comment": "Network widget word for a link that is neither Wi-Fi, Ethernet nor cellular; the network is connected.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connessa"
+          }
+        }
+      }
+    },
+    "Devices": {
+      "comment": "Settings name of the devices widget plugin.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dispositivi"
+          }
+        }
+      }
+    },
+    "Done": {
+      "comment": "Shown in the notch when the timer widget's countdown reaches zero.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finito"
+          }
+        }
+      }
+    },
+    "Ethernet": {
+      "comment": "Network widget word for an Ethernet link.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ethernet"
+          }
+        }
+      }
+    },
+    "Limited": {
+      "comment": "Network widget mark for a constrained link, as in Low Data Mode.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limitata"
+          }
+        }
+      }
+    },
+    "London": {
+      "comment": "Name of London in the world clock widget.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Londra"
+          }
+        }
+      }
+    },
+    "Metered": {
+      "comment": "Network widget mark for an expensive link, such as a personal hotspot.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A consumo"
+          }
+        }
+      }
+    },
+    "Network": {
+      "comment": "Settings name of the network widget plugin.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rete"
+          }
+        }
+      }
+    },
+    "New York": {
+      "comment": "Name of New York in the world clock widget.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New York"
+          }
+        }
+      }
+    },
+    "No devices": {
+      "comment": "Devices widget text when no Bluetooth device is connected.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun dispositivo"
+          }
+        }
+      }
+    },
+    "Offline": {
+      "comment": "Network widget word when the Mac reaches no network.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offline"
+          }
+        }
+      }
+    },
+    "Pause": {
+      "comment": "Accessibility label of the timer and stopwatch widgets' pause button.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pausa"
+          }
+        }
+      }
+    },
+    "Progress": {
+      "comment": "Settings name of the progress widget plugin.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avanzamento"
+          }
+        }
+      }
+    },
+    "Reset": {
+      "comment": "Accessibility label of the timer and stopwatch widgets' button that clears them.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Azzera"
+          }
+        }
+      }
+    },
+    "Resume": {
+      "comment": "Accessibility label of the timer and stopwatch widgets' button that resumes them after a pause.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riprendi"
+          }
+        }
+      }
+    },
+    "Start": {
+      "comment": "Accessibility label of the timer and stopwatch widgets' button that starts them.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvia"
+          }
+        }
+      }
+    },
+    "Stopwatch": {
+      "comment": "Settings name of the stopwatch widget plugin.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cronometro"
+          }
+        }
+      }
+    },
+    "This month": {
+      "comment": "Progress widget label of the bar for how much of this month has gone.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo mese"
+          }
+        }
+      }
+    },
+    "This week": {
+      "comment": "Progress widget label of the bar for how much of this week has gone.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questa settimana"
+          }
+        }
+      }
+    },
+    "This year": {
+      "comment": "Progress widget label of the bar for how much of this year has gone.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quest'anno"
+          }
+        }
+      }
+    },
+    "Timer": {
+      "comment": "Settings name of the timer widget plugin.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer"
+          }
+        }
+      }
+    },
+    "Timer finished": {
+      "comment": "Accessibility label of the notice the timer widget shows when its countdown reaches zero.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timer terminato"
+          }
+        }
+      }
+    },
+    "Today": {
+      "comment": "Progress widget label of the bar for how much of today has gone.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oggi"
+          }
+        }
+      }
+    },
+    "Tokyo": {
+      "comment": "Name of Tokyo in the world clock widget.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tokyo"
+          }
+        }
+      }
+    },
+    "Tomorrow": {
+      "comment": "Day mark of a world clock city whose day is already the next one.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Domani"
           }
         }
       }
@@ -74,6 +415,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "Widget volume"
+          }
+        }
+      }
+    },
+    "Wi-Fi": {
+      "comment": "Network widget word for a Wi-Fi link.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fi"
+          }
+        }
+      }
+    },
+    "World clock": {
+      "comment": "Settings name of the world clock widget plugin.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orologio mondiale"
+          }
+        }
+      }
+    },
+    "Yesterday": {
+      "comment": "Day mark of a world clock city whose day is still the previous one.",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ieri"
           }
         }
       }

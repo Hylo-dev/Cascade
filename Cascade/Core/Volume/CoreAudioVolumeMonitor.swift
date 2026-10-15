@@ -8,16 +8,25 @@ import AppKit
 import Foundation
 
 /// CoreAudioVolumeMonitor owns one stream generation at a time. Cancellation,
-/// disable and deinitialization release listeners and the Quartz tap.
+/// disable and deinitialization release listeners and the Quartz tap. The
+/// observers only the tap needs run only while a session runs and may route
+/// keys; the level is observed without them.
 @MainActor
 final class CoreAudioVolumeMonitor: VolumeMonitoring {
 
-    private var worker            : VolumeMonitorWorker?
-    private var sessionID         : UInt64 = 0
-    private var workspaceObservers: [NSObjectProtocol] = []
-    private var activationObserver: NSObjectProtocol?
+    private var worker   : VolumeMonitorWorker?
+    private var sessionID: UInt64 = 0
 
-    private let permissionObserver = VolumeAccessibilityObserver()
+    private let tapObservers = VolumeTapObservers()
+
+    var routesKeys = true {
+        didSet {
+            guard routesKeys != oldValue else { return }
+
+            worker?.setRoutesKeys(routesKeys)
+            updateTapObservers()
+        }
+    }
 
     func start() -> AsyncStream<VolumeMonitorUpdate> {
         stop()
@@ -35,18 +44,22 @@ final class CoreAudioVolumeMonitor: VolumeMonitoring {
             }
         }
 
-        let worker = VolumeMonitorWorker(sessionID: currentSession, continuation: pair.continuation)
+        let worker = VolumeMonitorWorker(
+            sessionID   : currentSession,
+            routesKeys  : routesKeys,
+            continuation: pair.continuation
+        )
         self.worker = worker
-        observeLifecycle()
+        updateTapObservers()
         worker.start()
         return pair.stream
     }
 
     func stop() {
         sessionID &+= 1
-        removeLifecycleObservers()
         worker?.stop()
         worker = nil
+        updateTapObservers()
     }
 
     func refreshPermissions() {
@@ -60,55 +73,24 @@ final class CoreAudioVolumeMonitor: VolumeMonitoring {
         _ = AXIsProcessTrustedWithOptions(options)
     }
 
-    private func observeLifecycle() {
-        permissionObserver.start { [weak self] in self?.refreshPermissions() }
-
-        let center = NSWorkspace.shared.notificationCenter
-        for name in [NSWorkspace.willSleepNotification, NSWorkspace.sessionDidResignActiveNotification] {
-            workspaceObservers.append(
-                center.addObserver(
-                    forName: name,
-                    object : nil,
-                    queue  : .main
-                ) { [weak self] _ in
-                    MainActor.assumeIsolated { self?.worker?.suspend() }
-                }
-            )
+    /// updateTapObservers runs the tap's observers while a session may route
+    /// keys and stops them otherwise.
+    private func updateTapObservers() {
+        guard worker != nil, routesKeys else {
+            tapObservers.stop()
+            return
         }
-        for name in [NSWorkspace.didWakeNotification, NSWorkspace.sessionDidBecomeActiveNotification] {
-            workspaceObservers.append(
-                center.addObserver(
-                    forName: name,
-                    object : nil,
-                    queue  : .main
-                ) { [weak self] _ in
-                    MainActor.assumeIsolated { self?.worker?.resume() }
-                }
-            )
-        }
+        guard !tapObservers.isObserving else { return }
 
-        activationObserver = NotificationCenter.default.addObserver(
-            forName: NSApplication.didBecomeActiveNotification,
-            object : nil,
-            queue  : .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.refreshPermissions() }
-        }
-    }
-
-    private func removeLifecycleObservers() {
-        permissionObserver.stop()
-
-        let center = NSWorkspace.shared.notificationCenter
-        workspaceObservers.forEach { center.removeObserver($0) }
-        workspaceObservers.removeAll()
-
-        if let activationObserver { NotificationCenter.default.removeObserver(activationObserver) }
-        activationObserver = nil
+        tapObservers.start(
+            refresh: { [weak self] in self?.refreshPermissions() },
+            suspend: { [weak self] in self?.worker?.suspend() },
+            resume : { [weak self] in self?.worker?.resume() }
+        )
     }
 
     isolated deinit {
-        removeLifecycleObservers()
+        tapObservers.stop()
         worker?.stop()
     }
 }

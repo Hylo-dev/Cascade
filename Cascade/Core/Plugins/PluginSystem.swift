@@ -126,18 +126,19 @@ final class PluginSystem {
         requirement: String?
     ) {
         let surfaces = PluginSurfaceRouter(
-            host          : host,
-            manifests     : manifests,
-            services      : componentServices,
-            submit        : { [weak self] request in
+            host           : host,
+            manifests      : manifests,
+            placedByDefault: FirstPartyPlugins.placedByDefault,
+            services       : componentServices,
+            submit         : { [weak self] request in
                 self?.engine?.submit(request, onAccepted: { [weak self] accepted, event in
                     DispatchQueue.main.async {
                         MainActor.assumeIsolated { self?.actionHandler(accepted.key, event) }
                     }
                 })
             },
-            visibility    : { [weak self] isVisible, key in self?.engine?.setVisible(isVisible, for: key) },
-            submitAccepted: { [weak self] request, accepted in
+            visibility     : { [weak self] isVisible, key in self?.engine?.setVisible(isVisible, for: key) },
+            submitAccepted : { [weak self] request, accepted in
                 self?.engine?.submit(request, onAccepted: { [weak self] request, event in
                     DispatchQueue.main.async {
                         MainActor.assumeIsolated {

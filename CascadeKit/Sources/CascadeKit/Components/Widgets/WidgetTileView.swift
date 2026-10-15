@@ -8,8 +8,10 @@ import SwiftUI
 /// WidgetTileView is one widget on the board. At rest it is the widget's own content; a press
 /// held still for half a second starts editing (as does a named accessibility action), and the
 /// same press then moves the widget at once, without lifting, as on macOS and iOS. While editing
-/// the content stops taking clicks, every tile wiggles, picked up or not, and shows its block and
-/// its controls: a minus to remove it and, when it has more than one size, a corner handle.
+/// the content stops taking clicks and, told through `isEditingWidgets`, its controls send
+/// nothing, so the press that started editing over a button does not also press it. Every tile
+/// wiggles, picked up or not, and shows its block and its controls: a minus to remove it and,
+/// when it has more than one size, a corner handle.
 /// Clicking the handle steps to the next size; dragging it stretches the tile under the pointer
 /// and, on release, settles on the declared size nearest to where it was let go, keeping the
 /// tile's corner. While a tile moves or stretches, the board lights the cells it would take.
@@ -88,6 +90,7 @@ struct WidgetTileView: View {
     private var content: some View {
         tile.view
             .allowsHitTesting(!isEditing)
+            .environment(\.isEditingWidgets, isEditing)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background {
                 if isEditing {

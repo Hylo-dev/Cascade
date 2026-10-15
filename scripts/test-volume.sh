@@ -21,6 +21,7 @@ source_files=(
     "$project_directory/Cascade/Core/Volume/VolumeMonitorWorker.swift"
     "$project_directory/Cascade/Core/Volume/CoreAudioVolumeMonitor.swift"
     "$project_directory/Cascade/Core/Volume/VolumeAccessibilityObserver.swift"
+    "$project_directory/Cascade/Core/Volume/VolumeTapObservers.swift"
     "$project_directory/Cascade/Models/Volume/SystemVolumeSnapshot.swift"
     "$project_directory/Cascade/Models/Volume/VolumeChangeEvent.swift"
     "$project_directory/Cascade/Core/Volume/VolumeChangeReducer.swift"
@@ -36,6 +37,7 @@ source_files=(
     "$project_directory/Cascade/Checks/Volume/VolumeCheckFailure.swift"
     "$project_directory/Cascade/Checks/Volume/VolumeBehaviorChecks.swift"
     "$project_directory/Cascade/Checks/Volume/PermissionRefreshCounter.swift"
+    "$project_directory/Cascade/Checks/Volume/TapLifecycleCounter.swift"
     "$project_directory/Cascade/Checks/Volume/FakeVolumeController.swift"
     "$project_directory/Cascade/Checks/Volume/VolumeReadOnlyProbe.swift"
 )

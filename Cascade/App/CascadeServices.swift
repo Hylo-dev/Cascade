@@ -162,6 +162,7 @@ final class CascadeServices {
         didSet {
             preferences.set(volumeEnabled, forKey: "volumeEnabled")
             plugins.setEnabled(volumeEnabled, for: VolumePlugin.id)
+            updateVolumeRouting()
         }
     }
 
@@ -270,6 +271,8 @@ final class CascadeServices {
     private let systemAudio  : SystemAudioService
     @ObservationIgnored
     private let appAudio     : AppAudioService
+    @ObservationIgnored
+    private var suppressorArming = BluetoothSuppressorArming()
     @ObservationIgnored
     private let volumeSource = VolumePluginSource(monitor: CoreAudioVolumeMonitor())
     @ObservationIgnored
@@ -433,6 +436,7 @@ final class CascadeServices {
         plugins.statusHandler = { [weak self] status in
             self?.pluginStatus = status
             self?.updateCaffeinatePermission(from: status)
+            self?.updateVolumeRouting()
         }
 
         // Caffeinate's power assertion stays in Cascade: its widget's controls reach the service
@@ -450,6 +454,7 @@ final class CascadeServices {
         volumeSource.statusHandler = { [weak self] status in
             self?.volumeStatus = status
         }
+        updateVolumeRouting()
 
         // The mixer's model draws what AudioHost reports and what became of AudioHost itself.
         // Both arrive on the main actor, from the service's single hop per delivery.
@@ -800,6 +805,25 @@ final class CascadeServices {
         volumeSource.monitor.requestAccess()
     }
 
+    /// routesVolumeKeys says whether the volume keys may replace the system HUD: only while the
+    /// volume alerts are switched on and running, since they draw the replacement. The volume
+    /// widget leases the same source, so the source may run while the alerts are off, quarantined
+    /// or stopped after a hang, and macOS then keeps its own HUD. Before the engine reports any
+    /// state the alerts count as running, so the tap is in place from the source's first start.
+    static func routesVolumeKeys(
+        alertsEnabled: Bool,
+        alertsState  : PluginState?
+    ) -> Bool {
+        alertsEnabled && (alertsState ?? .active) == .active
+    }
+
+    private func updateVolumeRouting() {
+        volumeSource.monitor.routesKeys = Self.routesVolumeKeys(
+            alertsEnabled: volumeEnabled,
+            alertsState  : pluginStatus?.plugins[VolumePlugin.id]
+        )
+    }
+
     /// reenablePlugin brings back a plugin stopped after a hang or quarantined.
     func reenablePlugin(_ plugin: PluginID) {
         plugins.reenable(plugin)
@@ -836,8 +860,9 @@ final class CascadeServices {
 
     /// receiveBluetooth follows the Bluetooth source's states. Its availability is the menu's
     /// status, and a new connection, the moment macOS raises its own banner, arms the native
-    /// banner's suppressor for that device. A battery or model reading of the same event never
-    /// arms it again.
+    /// banner's suppressor for that device. A battery or model reading of the same event, or the
+    /// same state sent again with a new list of devices, never arms it again
+    /// (`BluetoothSuppressorArming`).
     private func receiveBluetooth(_ state: PluginBluetoothState) {
         guard isRunning, bluetoothEnabled else { return }
 
@@ -849,7 +874,7 @@ final class CascadeServices {
             updateNativeReplacement()
         }
 
-        guard state.isNewConnection, nativeReplacementEnabled else { return }
+        guard suppressorArming.arms(for: state), nativeReplacementEnabled else { return }
 
         // A real route or connection also refreshes AX trust and banner-host identity without
         // depending on the menu being open.

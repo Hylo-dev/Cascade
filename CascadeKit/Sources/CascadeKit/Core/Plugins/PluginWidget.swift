@@ -17,6 +17,7 @@ final class PluginWidget: NotchWidget {
 
     let id                : WidgetIdentifier
     let sizes             : [GridSpan]
+    let isPlacedByDefault : Bool
     let store             : PluginNodeStore
     let supportsFullscreen: Bool
 
@@ -29,13 +30,14 @@ final class PluginWidget: NotchWidget {
     private let services  : PluginComponentServices?
     private let visibility: (Bool) -> Void
 
-    /// init(id:sizes:store:services:openDetail:visibility:supportsFullscreen:) takes the sizes the
-    /// manifest declares, in its order; an empty list, which a valid manifest cannot produce,
-    /// falls back to the clock's 4×1. The services and `openDetail` reach the components through
-    /// the environment.
+    /// init(id:sizes:isPlacedByDefault:store:services:openDetail:visibility:supportsFullscreen:)
+    /// takes the sizes the manifest declares, in its order; an empty list, which a valid manifest
+    /// cannot produce, falls back to the clock's 4×1. The services and `openDetail` reach the
+    /// components through the environment.
     init(
         id                : WidgetIdentifier,
         sizes             : [GridSpan],
+        isPlacedByDefault : Bool,
         store             : PluginNodeStore,
         services          : PluginComponentServices? = nil,
         openDetail        : (@MainActor () -> Void)? = nil,
@@ -44,6 +46,7 @@ final class PluginWidget: NotchWidget {
     ) {
         self.id                 = id
         self.sizes              = sizes.isEmpty ? [GridSpan(columns: 4, rows: 1)] : sizes
+        self.isPlacedByDefault  = isPlacedByDefault
         self.store              = store
         self.services           = services
         self.openDetail         = openDetail
@@ -51,8 +54,12 @@ final class PluginWidget: NotchWidget {
         self.supportsFullscreen = supportsFullscreen
     }
 
+    /// makeContentView draws the publication in the dark scheme, as the notch's activities and
+    /// notices are drawn: the notch is black whatever the system appearance, so content that
+    /// names no colour, text or a timer's bar, is white on it rather than black.
     func makeContentView() -> AnyView {
         let content = PluginDocumentView(store: store)
+            .environment(\.colorScheme, .dark)
             .environment(\.pluginComponentServices, services)
             .environment(\.pluginOpenDetail, openDetail)
         guard supportsFullscreen else { return AnyView(content) }

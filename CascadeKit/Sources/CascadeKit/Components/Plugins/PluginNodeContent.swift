@@ -9,14 +9,20 @@ import SwiftUI
 
 /// PluginNodeContent draws a node without its modifiers: a `switch` over the tier-1 vocabulary,
 /// with children drawn as `PluginNodeView`s. Time is drawn by the kernel, so a timer or a
-/// relative date costs the plugin nothing, and a clock redraws itself at every minute boundary,
-/// only while it is on screen. A timer and a countdown roll the digits that change with
-/// `RollingDigitsLabel`, in the font and color of the node's own modifiers, redrawn only when
-/// their text changes; the font and color are resolved once per body, outside the timeline's
-/// closure, so a tick builds no `NSFont`. Controls read their optimistic value first and hand
-/// every change to the store; a toggle with two children shows the first while off and the
-/// second while on. An asset reserves its frame and draws nothing until the asset pipeline
-/// exists; a tier-2 component draws through `PluginComponentView`.
+/// relative date costs the plugin nothing, and a clock or a date of today, `PluginClockView` and
+/// `PluginTodayView`, redraws itself at every minute boundary, only while it is on screen, in
+/// the zone the `timeZone` modifier sets; no other node reads the zone or the locale. A timer
+/// and a countdown roll the digits that change with `RollingDigitsLabel`, in the font and color
+/// of the node's own modifiers, redrawn only when their text changes; the font and color are
+/// resolved once per body, outside the timeline's closure, so a tick builds no `NSFont`.
+/// A timer progress is the kernel's own bar, `PluginTimerProgressBar`, which steps instead of
+/// redrawing every frame as SwiftUI's does, and a linear progress the same bar standing still,
+/// its fraction safe to take because the contract keeps the value within a positive total.
+/// Controls read their optimistic value first and hand every change to the store, unless the
+/// widget board is editing, which `PluginControlGate` tells them; a toggle with two children
+/// shows the first while off and the second while on. An asset reserves its frame and draws
+/// nothing until the asset pipeline exists; a tier-2 component draws through
+/// `PluginComponentView`.
 struct PluginNodeContent: View {
 
     let model        : PluginNodeModel
@@ -72,15 +78,10 @@ struct PluginNodeContent: View {
                 Text(date, style: style.swiftUI)
 
             case .clock:
-                TimelineView(.everyMinute) { context in
-                    Text(context.date, format: .dateTime.hour().minute())
-                        .animation(.smooth, value: context.date)
-                }
+                PluginClockView()
 
             case .today:
-                TimelineView(.everyMinute) { context in
-                    Text(context.date, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated))
-                }
+                PluginTodayView()
 
             case .timer(let start, let end, let countsDown):
                 let font  = timeFont
@@ -127,77 +128,65 @@ struct PluginNodeContent: View {
                 }
 
             case .timerProgress(let start, let end):
-                ProgressView(timerInterval: start...end, countsDown: false)
+                PluginTimerProgressBar(start: start, end: end)
 
             case .progress(let value, let total, .linear):
-                ProgressView(value: value, total: total)
-                    .progressViewStyle(.linear)
+                PluginProgressBar(fraction: value / total)
 
             case .progress(let value, let total, .circular):
                 ProgressView(value: value, total: total)
                     .progressViewStyle(.circular)
 
             case .button:
-                Button { [optionsOrigin] in
-                    store.press(model, optionsOrigin: optionsOrigin)
-                } label: {
-                    children
-                        .contentShape(Rectangle())
+                PluginControlGate { isEditingWidgets in
+                    Button { [optionsOrigin] in
+                        if !isEditingWidgets {
+                            store.press(model, optionsOrigin: optionsOrigin)
+                        }
+                    } label: {
+                        children
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
 
             case .toggle(let isOn, _):
                 let shown = model.optimistic?.bool ?? isOn
 
-                Toggle(isOn: Binding(
-                    get: { shown },
-                    set: { [optionsOrigin] value in
-                        store.set(
-                            .bool(value),
-                            on           : model,
-                            optionsOrigin: optionsOrigin
-                        )
+                PluginControlGate { isEditingWidgets in
+                    Toggle(isOn: switched(shown, isEditingWidgets: isEditingWidgets)) {
+                        toggleLabel(isOn: shown)
                     }
-                )) {
-                    toggleLabel(isOn: shown)
+                    .toggleStyle(PluginToggleStyle())
                 }
-                .toggleStyle(PluginToggleStyle())
 
             case .slider(let value, let minimum, let maximum, let step, .ruler(let labelEvery, let labels), _) where step != nil:
-                PluginRulerSlider(
-                    value     : thumb(value),
-                    minimum   : minimum,
-                    maximum   : maximum,
-                    step      : step ?? 1,
-                    labelEvery: labelEvery,
-                    labels    : labels,
-                    tint      : Color(nsColor: timeColor),
-                    released  : { [optionsOrigin] animation in
-                        store.release(
-                            model,
-                            optionsOrigin: optionsOrigin,
-                            animation    : animation
-                        )
-                    },
-                    cancelled : {
-                        store.cancelDrag(model)
-                    }
-                )
+                PluginControlGate { isEditingWidgets in
+                    PluginRulerSlider(
+                        value     : thumb(value, isEditingWidgets: isEditingWidgets),
+                        minimum   : minimum,
+                        maximum   : maximum,
+                        step      : step ?? 1,
+                        labelEvery: labelEvery,
+                        labels    : labels,
+                        tint      : Color(nsColor: timeColor),
+                        released  : released(isEditingWidgets: isEditingWidgets),
+                        cancelled : {
+                            store.cancelDrag(model)
+                        }
+                    )
+                }
 
             case .slider(let value, let minimum, let maximum, let step, _, _):
-                PluginStandardSlider(
-                    value   : thumb(value),
-                    minimum : minimum,
-                    maximum : maximum,
-                    step    : step,
-                    released: { [optionsOrigin] animation in
-                        store.release(
-                            model,
-                            optionsOrigin: optionsOrigin,
-                            animation    : animation
-                        )
-                    }
-                )
+                PluginControlGate { isEditingWidgets in
+                    PluginStandardSlider(
+                        value   : thumb(value, isEditingWidgets: isEditingWidgets),
+                        minimum : minimum,
+                        maximum : maximum,
+                        step    : step,
+                        released: released(isEditingWidgets: isEditingWidgets)
+                    )
+                }
 
             case .sliderValue(let sliderID):
                 PluginSliderValueText(
@@ -264,18 +253,61 @@ struct PluginNodeContent: View {
         }
     }
 
+    /// switched is a toggle's state: the one shown, and a change sent to the store, unless the
+    /// widget board is editing.
+    private func switched(
+        _ shown         : Bool,
+        isEditingWidgets: Bool
+    ) -> Binding<Bool> {
+        Binding(
+            get: { shown },
+            set: { [optionsOrigin] isOn in
+                if !isEditingWidgets {
+                    store.set(
+                        .bool(isOn),
+                        on           : model,
+                        optionsOrigin: optionsOrigin
+                    )
+                }
+            }
+        )
+    }
+
     /// thumb is the slider's position: the optimistic one while dragged or awaiting
-    /// confirmation, the published one otherwise.
-    private func thumb(_ published: Double) -> Binding<Double> {
+    /// confirmation, the published one otherwise. While the widget board is editing, a drag
+    /// moves nothing.
+    private func thumb(
+        _ published     : Double,
+        isEditingWidgets: Bool
+    ) -> Binding<Double> {
         Binding(
             get: { model.optimistic?.number ?? published },
             set: { [optionsOrigin] value in
-                store.drag(
-                    value,
-                    on           : model,
-                    optionsOrigin: optionsOrigin
-                )
+                if !isEditingWidgets {
+                    store.drag(
+                        value,
+                        on           : model,
+                        optionsOrigin: optionsOrigin
+                    )
+                }
             }
         )
+    }
+
+    /// released sends the value a slider was let go at, with the animation it settles in. Let go
+    /// while the widget board is editing, a drag begun before sends nothing and its thumb goes
+    /// back to the published value.
+    private func released(isEditingWidgets: Bool) -> (Animation?) -> Void {
+        { [optionsOrigin] animation in
+            if isEditingWidgets {
+                store.cancelDrag(model)
+            } else {
+                store.release(
+                    model,
+                    optionsOrigin: optionsOrigin,
+                    animation    : animation
+                )
+            }
+        }
     }
 }

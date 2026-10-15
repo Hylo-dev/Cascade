@@ -12,15 +12,17 @@ enum VolumeBehaviorChecks {
 
     static func main() async throws {
         try checkVolumeChanges()
+        try checkLevelUpdates()
         try checkMediaKeys()
         try checkLevelKeepsChannelBalance()
         try checkMuteRepeat()
         try checkTapRecovery()
         try await checkPermissionObservation()
+        try await checkTapObservers()
         try checkFailOpenRouting()
         try await checkBackgroundEventDecoding()
 
-        print("Volume behavior tests: 43 passed")
+        print("Volume behavior tests: 56 passed")
     }
 
     /// checkVolumeChanges exercises startup, native fallback, duplicates and
@@ -117,6 +119,70 @@ enum VolumeBehaviorChecks {
         let single = CoreAudioSystemVolume.rebalanced([0.3], to: 0.8)
         try expect(abs(single[0] - 0.8) < 0.0001, "One control must reach the target")
         try expect(CoreAudioSystemVolume.rebalanced([], to: 0.5).isEmpty, "No controls, no writes")
+    }
+
+    /// checkLevelUpdates holds the reducer to what each snapshot reports: an
+    /// announcement for a change worth a notice, a level for any other change of
+    /// what the volume shows, the first of a session included, and nothing for
+    /// a level already reported. A level carries the last announcement's number,
+    /// so whichever update a full stream keeps carries the newest number.
+    private static func checkLevelUpdates() throws {
+        var reducer = VolumeChangeReducer()
+        let half    = SystemVolumeSnapshot(deviceID: 1, scalar: 0.5, isMuted: false)
+        let louder  = SystemVolumeSnapshot(deviceID: 1, scalar: 0.75, isMuted: false)
+        let quieter = SystemVolumeSnapshot(deviceID: 1, scalar: 0.25, isMuted: false)
+        let other   = SystemVolumeSnapshot(deviceID: 2, scalar: 0.6, isMuted: false)
+
+        reducer.beginSession(1)
+        try expect(
+            level(reducer.update(for: half, sessionID: 1, allowsNotice: true))
+                == VolumeChangeEvent(percentage: 50, isMuted: false, revision: 0),
+            "The first level of a session is a level, never a notice"
+        )
+        try expect(
+            reducer.update(for: half, sessionID: 1, allowsNotice: true) == nil,
+            "An equal level is not reported again"
+        )
+        try expect(
+            announcement(reducer.update(for: louder, sessionID: 1, allowsNotice: true))
+                == VolumeChangeEvent(percentage: 75, isMuted: false, revision: 1),
+            "A key-driven change is announced"
+        )
+        try expect(
+            reducer.update(for: louder, sessionID: 1, allowsNotice: true) == nil,
+            "An announced level is not reported again as a level"
+        )
+        try expect(
+            level(reducer.update(for: quieter, sessionID: 1, allowsNotice: false))
+                == VolumeChangeEvent(percentage: 25, isMuted: false, revision: 1),
+            "A change with no key is a level with the last announcement's number"
+        )
+        try expect(
+            level(reducer.update(for: other, sessionID: 1, allowsNotice: true))
+                == VolumeChangeEvent(percentage: 60, isMuted: false, revision: 1),
+            "An output switch reports its level without a notice"
+        )
+        try expect(
+            announcement(reducer.update(for: other, sessionID: 1, allowsNotice: true, forcesFeedback: true))
+                == VolumeChangeEvent(percentage: 60, isMuted: false, revision: 2),
+            "A handled key at a boundary is announced on an unchanged level"
+        )
+        try expect(
+            reducer.update(for: quieter, sessionID: 7, allowsNotice: true) == nil,
+            "A stopped session's callback reports nothing"
+        )
+    }
+
+    private static func level(_ update: VolumeMonitorUpdate?) -> VolumeChangeEvent? {
+        guard case .level(let event)? = update else { return nil }
+
+        return event
+    }
+
+    private static func announcement(_ update: VolumeMonitorUpdate?) -> VolumeChangeEvent? {
+        guard case .changed(let event)? = update else { return nil }
+
+        return event
     }
 
     private static func checkMediaKeys() throws {
@@ -227,6 +293,59 @@ enum VolumeBehaviorChecks {
         try expect(counter.count == 2, "Restart must own exactly one fresh observation")
 
         changes.stop()
+    }
+
+    /// checkTapObservers holds the observers only the key tap needs to their
+    /// switch: sleep, wake, activation and Accessibility changes reach the tap
+    /// while they observe, and nothing wakes the app once they stop.
+    private static func checkTapObservers() async throws {
+        let workspace   = NotificationCenter()
+        let application = NotificationCenter()
+        let permissions = NotificationCenter()
+        let observers   = VolumeTapObservers(
+            workspace  : workspace,
+            application: application,
+            permissions: VolumeAccessibilityObserver(
+                permissions: permissions,
+                workspace  : workspace,
+                settleDelay: .milliseconds(10)
+            )
+        )
+        let counter = TapLifecycleCounter()
+
+        try expect(!observers.isObserving, "Tap observers must not start on their own")
+
+        observers.start(
+            refresh: { counter.refreshes += 1 },
+            suspend: { counter.suspends += 1 },
+            resume : { counter.resumes += 1 }
+        )
+        try await postTapLifecycle(workspace: workspace, application: application, permissions: permissions)
+        try expect(observers.isObserving, "Starting the tap observers must observe")
+        try expect(
+            counter.suspends == 1 && counter.resumes == 1 && counter.refreshes == 2,
+            "Sleep, wake, activation and Accessibility changes must reach the tap"
+        )
+
+        observers.stop()
+        try await postTapLifecycle(workspace: workspace, application: application, permissions: permissions)
+        try expect(!observers.isObserving, "Stopping the tap observers must stop observing")
+        try expect(
+            counter.suspends == 1 && counter.resumes == 1 && counter.refreshes == 2,
+            "Stopped tap observers must not wake the app"
+        )
+    }
+
+    private static func postTapLifecycle(
+        workspace  : NotificationCenter,
+        application: NotificationCenter,
+        permissions: NotificationCenter
+    ) async throws {
+        workspace.post(name: NSWorkspace.willSleepNotification, object: nil)
+        workspace.post(name: NSWorkspace.didWakeNotification, object: nil)
+        application.post(name: NSApplication.didBecomeActiveNotification, object: nil)
+        permissions.post(name: Notification.Name("com.apple.accessibility.api"), object: nil)
+        try await Task.sleep(for: .milliseconds(80))
     }
 
     private static func checkFailOpenRouting() throws {

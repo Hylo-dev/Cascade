@@ -44,7 +44,7 @@ struct PluginNodeViewTests {
                         ]
                     ),
                     PluginNode(.date(now, style: .time), modifiers: [.font(PluginFont(size: 18, design: .rounded, monospacedDigit: true))]),
-                    PluginNode(.clock, modifiers: [.font(PluginFont(size: 18, weight: .semibold, design: .rounded, monospacedDigit: true))]),
+                    PluginNode(.clock, modifiers: [.font(PluginFont(size: 18, weight: .semibold, design: .rounded, monospacedDigit: true)), .timeZone("Asia/Tokyo")]),
                     PluginNode(.today, modifiers: [.foregroundStyle(.hierarchical(.secondary))]),
                     PluginNode(.timer(start: now, end: now.addingTimeInterval(60), countsDown: true), modifiers: [.contentTransition(.numericText(countsDown: true))]),
                     PluginNode(.timerProgress(start: now, end: now.addingTimeInterval(60))),
@@ -210,6 +210,82 @@ struct PluginNodeViewTests {
         let expected = NSHostingView(rootView: Text(Date.now, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated)))
 
         #expect(drawn.fittingSize == expected.fittingSize)
+    }
+
+    @Test
+    func aTimeZoneDrawsTheClockAndTheDateInThatZone() throws {
+        let rome   = try #require(TimeZone(identifier: "Europe/Rome"))
+        let tokyo  = try #require(TimeZone(identifier: "Asia/Tokyo"))
+        let locale = Locale(identifier: "en_GB")
+        /// image renders a view in Rome, so a node that names Tokyo matches Tokyo's time only
+        /// when the modifier reaches what the node draws.
+        func image(_ view: some View) throws -> Data {
+            let renderer = ImageRenderer(
+                content: view
+                    .frame(width: 120, height: 20)
+                    .environment(\.timeZone, rome)
+                    .environment(\.locale, locale)
+            )
+            let bitmap   = NSBitmapImageRep(cgImage: try #require(renderer.cgImage))
+
+            return try #require(bitmap.representation(using: .png, properties: [:]))
+        }
+        func drawn(_ node: PluginNode) throws -> Data {
+            var publisher = PluginRenderFixtures.Publisher()
+            let store     = PluginNodeStore(key: PluginRenderFixtures.key, submit: { _ in })
+            store.apply(publisher.publish(try PluginDocument(root: node)))
+
+            return try image(PluginDocumentView(store: store))
+        }
+        func clock(_ date: Date, in zone: TimeZone) throws -> Data {
+            try image(Text(verbatim: PluginTimeFormat.clock(date, in: zone, locale: locale)))
+        }
+
+        let before = Date.now
+        let shown  = try drawn(PluginNode(.clock, modifiers: [.timeZone("Asia/Tokyo")]))
+        let after  = Date.now
+        let fixed  = Date(timeIntervalSince1970: 1_790_983_800)
+
+        #expect(try [clock(before, in: tokyo), clock(after, in: tokyo)].contains(shown))
+        #expect(try shown != clock(after, in: rome))
+        #expect(
+            try drawn(PluginNode(.date(fixed, style: .time), modifiers: [.timeZone("Asia/Tokyo")]))
+                == image(Text(fixed, style: .time).environment(\.timeZone, tokyo))
+        )
+    }
+
+    @Test
+    func aNodeReadsTheZoneAndTheLocaleOnlyInsideAClockOrToday() throws {
+        var publisher = PluginRenderFixtures.Publisher()
+        let store     = PluginNodeStore(key: PluginRenderFixtures.key, submit: { _ in })
+        store.apply(publisher.publish(try PluginDocument(root: PluginNode(.text("Title")))))
+        let content   = PluginNodeContent(model: try #require(store.root), store: store)
+
+        let environment = Mirror(reflecting: content).children.filter { String(describing: type(of: $0.value)).hasPrefix("Environment<") }
+
+        #expect(environment.isEmpty, "A node that draws no time depends on no environment value")
+    }
+
+    @Test
+    func aLabelledNodeReadsAsOneElementOnlyWhenItHoldsNoControl() throws {
+        /// readsAsOneElement asks the renderer about the root of a document drawn by a store.
+        func readsAsOneElement(_ root: PluginNode) throws -> Bool {
+            var publisher = PluginRenderFixtures.Publisher()
+            let store     = PluginNodeStore(key: PluginRenderFixtures.key, submit: { _ in })
+            store.apply(publisher.publish(try PluginDocument(root: root)))
+
+            return PluginModifiedView.readsAsOneElement(try #require(store.root), in: store)
+        }
+        let label : [PluginModifier] = [.accessibilityLabel("Calendar")]
+        let row    = PluginNode(.hStack(alignment: .center, spacing: nil), children: [PluginNode(.symbol(name: "sun.max")), PluginNode(.text("Sunny"))])
+        let volume = PluginNode(.slider(value: 0.5, minimum: 0, maximum: 1, step: nil, action: "setVolume"))
+        let button = PluginNode(.button(action: "next"), children: [PluginNode(.symbol(name: "forward.fill"))])
+
+        #expect(try readsAsOneElement(PluginNode(.vStack(alignment: .leading, spacing: nil), modifiers: label, children: [PluginNode(.text("Mon")), row])))
+        #expect(try !readsAsOneElement(PluginNode(.vStack(alignment: .leading, spacing: nil), modifiers: label, children: [PluginNode(.text("Sound")), PluginNode(.hStack(alignment: .center, spacing: nil), children: [volume])])))
+        #expect(try !readsAsOneElement(PluginNode(.zStack(alignment: .center), modifiers: label + [.overlay(alignment: .topTrailing)], children: [row], layers: [button])))
+        #expect(try !readsAsOneElement(PluginNode(.toggle(isOn: true, action: "togglePlayback"), modifiers: label, children: [PluginNode(.symbol(name: "pause.fill"))])))
+        #expect(try !readsAsOneElement(PluginNode(.text("Mon"), modifiers: label)))
     }
 
     @Test

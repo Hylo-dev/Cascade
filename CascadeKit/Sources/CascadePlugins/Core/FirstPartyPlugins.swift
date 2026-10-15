@@ -18,9 +18,23 @@ public enum FirstPartyPlugins {
         "BatteryPlugin"   : BatteryPlugin(),
         "BluetoothPlugin" : BluetoothPlugin(),
         "CaffeinatePlugin": CaffeinatePlugin(),
+        "CalendarPlugin"  : CalendarPlugin(),
         "ChargingPlugin"  : ChargingPlugin(),
         "ClockPlugin"     : ClockPlugin(),
+        "DevicesPlugin"   : DevicesPlugin(),
+        "NetworkPlugin"   : NetworkPlugin(),
+        "ProgressPlugin"  : ProgressPlugin(),
+        "StopwatchPlugin" : StopwatchPlugin(),
+        "TimerPlugin"     : TimerPlugin(),
         "VolumePlugin"    : VolumePlugin(),
+        "WorldClockPlugin": WorldClockPlugin(),
+    ]
+
+    /// placedByDefault lists the plugins whose widgets a display nobody edited places as they
+    /// register. Every other widget waits in the gallery for the user to add it. The policy is
+    /// the host's, so it lives here rather than in a manifest.
+    public static let placedByDefault: Set<PluginID> = [
+        AudioPlugin.id, BatteryPlugin.id, CaffeinatePlugin.id, ClockPlugin.id,
     ]
 
     /// name is how settings call a bundled plugin, in the user's language. Manifests carry no
@@ -32,9 +46,16 @@ public enum FirstPartyPlugins {
             case "com.cascade.battery"   : String(localized: "Battery", table: "Plugins", bundle: .module)
             case "com.cascade.bluetooth" : String(localized: "Bluetooth alerts", table: "Plugins", bundle: .module)
             case "com.cascade.caffeinate": String(localized: "Caffeinate", table: "Plugins", bundle: .module)
+            case "com.cascade.calendar"  : String(localized: "Calendar", table: "Plugins", bundle: .module)
             case "com.cascade.clock"     : String(localized: "Clock", table: "Plugins", bundle: .module)
+            case "com.cascade.devices"   : String(localized: "Devices", table: "Plugins", bundle: .module)
+            case "com.cascade.network"   : String(localized: "Network", table: "Plugins", bundle: .module)
             case "com.cascade.power"     : String(localized: "Charging alerts", table: "Plugins", bundle: .module)
+            case "com.cascade.progress"  : String(localized: "Progress", table: "Plugins", bundle: .module)
+            case "com.cascade.stopwatch" : String(localized: "Stopwatch", table: "Plugins", bundle: .module)
+            case "com.cascade.timer"     : String(localized: "Timer", table: "Plugins", bundle: .module)
             case "com.cascade.volume"    : String(localized: "Volume alerts", table: "Plugins", bundle: .module)
+            case "com.cascade.worldclock": String(localized: "World clock", table: "Plugins", bundle: .module)
             default                      : plugin.rawValue
         }
     }

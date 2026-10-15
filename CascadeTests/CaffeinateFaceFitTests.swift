@@ -93,10 +93,11 @@ struct CaffeinateFaceFitTests {
 
             let host   = SurfaceFixture()
             let router = PluginSurfaceRouter(
-                host      : host,
-                manifests : [manifest],
-                submit    : { _ in },
-                visibility: { _, _ in }
+                host           : host,
+                manifests      : [manifest],
+                placedByDefault: [manifest.id],
+                submit         : { _ in },
+                visibility     : { _, _ in }
             )
             var store  = PluginPublicationStore()
             let change = store.apply(document, staleAfter: nil, for: Self.key, at: .now)

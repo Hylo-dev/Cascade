@@ -29,7 +29,7 @@ struct FirstPartyPluginsTests {
     func everyManifestHasAProvider() {
         let manifests = FirstPartyPlugins.manifests()
 
-        #expect(manifests.map(\.id.rawValue) == ["com.cascade.audio", "com.cascade.battery", "com.cascade.bluetooth", "com.cascade.caffeinate", "com.cascade.clock", "com.cascade.power", "com.cascade.volume"])
+        #expect(manifests.map(\.id.rawValue) == ["com.cascade.audio", "com.cascade.battery", "com.cascade.bluetooth", "com.cascade.caffeinate", "com.cascade.calendar", "com.cascade.clock", "com.cascade.devices", "com.cascade.network", "com.cascade.power", "com.cascade.progress", "com.cascade.stopwatch", "com.cascade.timer", "com.cascade.volume", "com.cascade.worldclock"])
         #expect(manifests.allSatisfy { FirstPartyPlugins.providers[$0.execution.entryPoint] != nil })
     }
 
@@ -40,6 +40,14 @@ struct FirstPartyPluginsTests {
         #expect(FirstPartyPlugins.providers[manifest.execution.entryPoint] != nil)
         #expect(manifest.features.first?.services == ["audio.system", "audio.apps"])
         #expect(manifest.features.first?.surfaces.detail != nil)
+    }
+
+    @Test
+    func theWidgetsThatShippedBeforeTheGalleryArePlacedByDefault() {
+        let bundled = Set(FirstPartyPlugins.manifests().map(\.id))
+
+        #expect(FirstPartyPlugins.placedByDefault.map(\.rawValue).sorted() == ["com.cascade.audio", "com.cascade.battery", "com.cascade.caffeinate", "com.cascade.clock"])
+        #expect(FirstPartyPlugins.placedByDefault.isSubset(of: bundled))
     }
 
     @Test

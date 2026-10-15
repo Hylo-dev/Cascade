@@ -271,6 +271,7 @@ struct PluginOptionsNavigationTests {
         if let view = value as? PluginNodeView { return renderedControl(in: view.body, as: type, depth: depth + 1) }
         if let view = value as? PluginModifiedView { return renderedControl(in: view.body, as: type, depth: depth + 1) }
         if let view = value as? PluginNodeContent { return renderedControl(in: view.body, as: type, depth: depth + 1) }
+        if let gate = value as? any RenderedControlGate { return renderedControl(in: gate.notEditing, as: type, depth: depth + 1) }
         for child in Mirror(reflecting: value).children {
             if let control = renderedControl(in: child.value, as: type, depth: depth + 1) { return control }
         }
@@ -313,17 +314,18 @@ struct PluginOptionsNavigationTests {
                 features       : [feature],
                 resources      : PluginResources(profile: .eventDriven)
             )
-            router = PluginSurfaceRouter(host: host, manifests: [manifest], submit: { _ in }, visibility: { _, _ in })
+            router = PluginSurfaceRouter(host: host, manifests: [manifest], placedByDefault: [owner], submit: { _ in }, visibility: { _, _ in })
             router = PluginSurfaceRouter(
-                host          : host,
-                manifests     : [manifest],
-                submit        : { [weak self] request in
+                host           : host,
+                manifests      : [manifest],
+                placedByDefault: [owner],
+                submit         : { [weak self] request in
                     guard let self, PluginActionAuthorizer.event(for: request, entry: publisher[key], feature: feature) != nil else { return }
                     submitted.append(request)
                     nativeDeliveries.append { [weak self] in self?.delivered.append(request) }
                 },
-                visibility    : { _, _ in },
-                submitAccepted: { [weak self] request, accepted in
+                visibility     : { _, _ in },
+                submitAccepted : { [weak self] request, accepted in
                     guard let self, PluginActionAuthorizer.event(for: request, entry: publisher[key], feature: feature) != nil else { return }
                     if request.node.rawValue.hasPrefix("#open") {
                         requests.append(request)
@@ -391,4 +393,18 @@ struct PluginOptionsNavigationTests {
         }
         func dismissDetail(id: String) { coordinator.dismissDetail(id: id) }
     }
+}
+
+/// RenderedControlGate lets the reflection above draw a control behind `PluginControlGate`, whose
+/// content is a closure the mirror cannot follow, as the control draws while the board is not
+/// being edited.
+@MainActor
+private protocol RenderedControlGate {
+
+    var notEditing: Any { get }
+}
+
+extension PluginControlGate: RenderedControlGate {
+
+    var notEditing: Any { content(false) }
 }

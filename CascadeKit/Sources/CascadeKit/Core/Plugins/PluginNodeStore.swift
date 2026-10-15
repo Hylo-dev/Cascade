@@ -231,14 +231,15 @@ final class PluginNodeStore {
         }
     }
 
-    /// cancelDrag ends a drag that will never be released, because its control left the screen
-    /// under the user's finger: nothing is sent, the thumb goes back to the published value
-    /// and the control takes publications again. A control that is not being dragged is left alone.
+    /// cancelDrag lets go of a drag without sending it, the thumb going back to the published
+    /// value and the control taking publications again: its control left the screen under the
+    /// user's finger, or the widget board began editing under the user's hand and the drag
+    /// became a move of the widget. A control that is not being dragged is left alone.
     func cancelDrag(_ model: PluginNodeModel) {
         guard models[model.id] === model, model.isDragging else { return }
-        generations[model.id, default: 0] += 1
+
         model.isDragging = false
-        model.optimistic = nil
+        revert(model)
     }
 
     /// reject reverts the control whose action the kernel refused, unless the user is dragging

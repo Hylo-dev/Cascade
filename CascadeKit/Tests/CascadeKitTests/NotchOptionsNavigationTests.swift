@@ -504,7 +504,7 @@ struct NotchOptionsNavigationTests {
         let store     = PluginNodeStore(key: key, submit: { _ in })
         let change    = publisher.apply(document, staleAfter: nil, for: key, at: .now)
         store.apply(try #require(change))
-        return PluginWidget(id: id, sizes: [], store: store, visibility: { _ in }, supportsFullscreen: true)
+        return PluginWidget(id: id, sizes: [], isPlacedByDefault: true, store: store, visibility: { _ in }, supportsFullscreen: true)
     }
 
     private func optionsWidgetID() -> WidgetIdentifier {

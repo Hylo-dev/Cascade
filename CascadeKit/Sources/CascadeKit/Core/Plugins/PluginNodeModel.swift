@@ -16,6 +16,11 @@ final class PluginNodeModel {
 
     let id: PluginNodeID
 
+    /// isControl is true for a button, a toggle or a slider. A node's identity carries the name
+    /// of its kind, so a model never becomes another kind and this is decided once, and read
+    /// without observing the kind's values.
+    let isControl: Bool
+
     private(set) var kind     : PluginNodeKind
     private(set) var modifiers: [PluginModifier]
     private(set) var children : [PluginNodeID]
@@ -29,6 +34,10 @@ final class PluginNodeModel {
         in table: PluginNodeTable
     ) {
         id        = entry.id
+        isControl = switch entry.kind {
+            case .button, .toggle, .slider: true
+            default                       : false
+        }
         kind      = entry.kind
         modifiers = entry.modifiers
         children  = entry.children.map { table.entries[$0].id }

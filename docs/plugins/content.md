@@ -52,9 +52,9 @@ HStack(spacing: 8) {
 | Kernel-drawn time | `Clock()`, `Today()`, `Text(_:style:)` with `.time`, `.date` or `.relative`, `Text(timerInterval:countsDown:)`, `Text(countdownTo:style:)`, `Text(valueOf:)`, `ProgressView(timerInterval:)` |
 | Progress | `ProgressView(value:total:style:)`, linear or circular |
 | Controls | `Button(action:label:)`, `Toggle(isOn:action:label:)`, `Slider(value:in:step:style:action:)` |
-| Modifiers | `font`, `foregroundStyle` (color, hierarchical level or gradient of two to four colors), `frame`, `padding`, `opacity`, `clipShape`, `lineLimit`, `minimumScaleFactor`, `contentTransition` (`numericText`, `symbolEffect`), `transition` (`opacity`, `scale`, `move`), `accessibilityLabel`, `overlay`, `background`, `id` |
+| Modifiers | `font`, `foregroundStyle` (color, hierarchical level or gradient of two to four colors), `frame`, `padding`, `opacity`, `clipShape`, `lineLimit`, `minimumScaleFactor`, `contentTransition` (`numericText`, `symbolEffect`), `transition` (`opacity`, `scale`, `move`), `accessibilityLabel`, `timeZone`, `overlay`, `background`, `id` |
 
-`overlay` and `background` take their content as the node's next layer, several nodes laid in a `ZStack`. `ViewThatFits` is how a widget, which cannot know the size the user gave it, offers a face per size, largest first, as `ClockPlugin` does. Kernel-drawn time is drawn and kept current by the kernel, so a clock or a countdown costs the plugin nothing while it ticks.
+`overlay` and `background` take their content as the node's next layer, several nodes laid in a `ZStack`. `ViewThatFits` is how a widget, which cannot know the size the user gave it, offers a face per size, largest first, as `ClockPlugin` does. Kernel-drawn time is drawn and kept current by the kernel, so a clock or a countdown costs the plugin nothing while it ticks. `timeZone(_:)` takes a zone identifier, one `TimeZone(identifier:)` knows, and draws every `Clock()`, `Today()` and `Text(_:style:)` beneath it in that zone, as SwiftUI's `\.timeZone` environment does; a timer counts the same in every zone. `ProgressView(timerInterval:)` is the kernel's own bar, not SwiftUI's, which redraws every frame: it steps every five hundredth of its interval and never more often than once a second, `max(1, span / 500)` seconds, so a minute's bar moves each second and a day's about every three minutes, and it stops once it has drawn the end.
 
 ### The ruler slider
 
@@ -83,7 +83,7 @@ Not in v1: `ForEach` and dynamic lists, grids and gestures. `Image(asset:)` draw
 `PluginDocument` enforces, in one depth-first walk that stops at the first violation, and then by encoding the document once to check its real size:
 
 - 64 KiB per document, 256 nodes, depth 12, 16 modifiers per node, eight glass lights;
-- 4 KiB per text, 512 bytes per accessibility label;
+- 4 KiB per text, 512 bytes per accessibility label, 64 bytes per time zone identifier;
 - a component takes at most 16 parameters, each a string of at most 256 bytes, a finite number or a bool;
 - lengths are finite, from 0 to 10,000 points; colors, opacity and progress stay in range; a slider's range and step make sense, and a ruler has a step, a label cadence of 1 to 96 and at most 2,048 ticks; a timer does not end before it starts; a slider value names a slider of the same document;
 - only containers and labelled controls take children, and `Regions` is the root of a notice or an activity, with three regions or four. The publication then fixes the number: a notice has exactly three and an activity three or four. An activity without the expanded region never takes over the opened notch.

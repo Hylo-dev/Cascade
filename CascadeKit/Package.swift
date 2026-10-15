@@ -111,7 +111,7 @@ let package = Package(
         ),
         .testTarget(
             name: "CascadePluginEngineTests",
-            dependencies: ["CascadePluginEngine", "CascadePluginHost", "CascadePluginSDK", "CascadeContracts"],
+            dependencies: ["CascadePluginEngine", "CascadePluginHost", "CascadePlugins", "CascadePluginSDK", "CascadeContracts"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .target(
@@ -140,7 +140,7 @@ let package = Package(
         ),
         .testTarget(
             name: "CascadeKitTests",
-            dependencies: ["CascadeKit", "CascadeContracts", "CascadePluginEngine"]
+            dependencies: ["CascadeKit", "CascadeContracts", "CascadePluginEngine", "CascadePlugins"]
         ),
     ],
     swiftLanguageModes: [.v5]

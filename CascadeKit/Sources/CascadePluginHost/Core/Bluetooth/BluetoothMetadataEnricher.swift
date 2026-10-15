@@ -5,15 +5,17 @@
 
 import Foundation
 
-/// BluetoothMetadataEnricher reads a device's battery and identity when it connects, and once
-/// more after `retryDelay` when the first read came before the device reported them. It owns no
-/// periodic timer: the retry is one deferred block, and cancelling a device drops both its read
-/// in flight and its retry, so a stop, a wake or a disconnection never publishes a late sample.
+/// BluetoothMetadataEnricher reads a device's battery and identity when it connects or the
+/// source re-reads the devices it lists, and once more after `retryDelay` when the first read
+/// came before the device reported them. It owns no periodic timer: the retry is one deferred
+/// block, and cancelling a device drops both its read in flight and its retry, so a stop, a
+/// wake or a disconnection never publishes a late sample.
 ///
-/// It lives on the Bluetooth source's queue: `enrich` and `cancel` are called there, snapshots
-/// are delivered there, and every stored property is read and written only there, which is what
-/// makes the type safe to share. The reads themselves, synchronous round trips to bluetoothd and
-/// IOKit, run one at a time on a queue of their own, so the source keeps answering callbacks.
+/// It lives on the Bluetooth source's queue: `enrich`, `refresh` and `cancel` are called there,
+/// snapshots are delivered there, and every stored property is read and written only there,
+/// which is what makes the type safe to share. The reads themselves, synchronous round trips to
+/// bluetoothd and IOKit, run one at a time on a queue of their own, so the source keeps
+/// answering callbacks.
 final class BluetoothMetadataEnricher: @unchecked Sendable {
 
     private let reader    : any BluetoothDeviceMetadataReading
@@ -49,6 +51,18 @@ final class BluetoothMetadataEnricher: @unchecked Sendable {
             isRetry   : false,
             onSnapshot: onSnapshot
         )
+    }
+
+    /// refresh reads the device as `enrich` does, unless a read of it is pending: that read
+    /// answers as fresh, and replacing it would drop the answer a connection is waiting for. A
+    /// burst of events therefore reads each device once.
+    func refresh(
+        deviceID  : String,
+        onSnapshot: @escaping @Sendable (BluetoothDeviceMetadata) -> Void
+    ) {
+        guard tokensByID[deviceID] == nil else { return }
+
+        enrich(deviceID: deviceID, onSnapshot: onSnapshot)
     }
 
     func cancel(deviceID: String) {

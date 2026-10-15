@@ -10,8 +10,14 @@
 ///
 /// The source numbers each real transition and never reuses a number within one PluginHost; a
 /// later battery or model reading of the same transition keeps the number and raises the
-/// revision. Event zero is a baseline, emitted when the source starts, with no device, which
-/// says only whether monitoring works on this Mac.
+/// revision. Event zero is a baseline, emitted when the source starts and after a wake that
+/// changed the connected devices, with no device of its own, which says whether monitoring works
+/// on this Mac.
+///
+/// Every state, the baseline included, also lists the devices connected at that moment, in the
+/// order they connected, since the kernel keeps only the latest state and a plugin that starts
+/// later would otherwise never learn what is connected. The list is state, not news: a state
+/// that differs from the last one only in it is no event to announce.
 public struct PluginBluetoothState: Equatable, Sendable {
 
     public static let source = "bluetooth"
@@ -29,49 +35,59 @@ public struct PluginBluetoothState: Equatable, Sendable {
     public let kind       : PluginBluetoothEventKind
     public let isAvailable: Bool
 
+    public let connectedDevices: [PluginBluetoothDevice]
+
+    /// init keeps the first `PluginBluetoothDevice.maximumCount` connected devices.
     public init(
-        deviceID   : String,
-        name       : String,
-        symbolName : String,
-        isConnected: Bool,
-        battery    : PluginBluetoothBattery?,
-        model      : PluginBluetoothDeviceModel,
-        productID  : UInt16?,
-        colorID    : UInt8?,
-        eventID    : UInt64,
-        revision   : UInt64,
-        kind       : PluginBluetoothEventKind,
-        isAvailable: Bool
+        deviceID        : String,
+        name            : String,
+        symbolName      : String,
+        isConnected     : Bool,
+        battery         : PluginBluetoothBattery?,
+        model           : PluginBluetoothDeviceModel,
+        productID       : UInt16?,
+        colorID         : UInt8?,
+        eventID         : UInt64,
+        revision        : UInt64,
+        kind            : PluginBluetoothEventKind,
+        isAvailable     : Bool,
+        connectedDevices: [PluginBluetoothDevice] = []
     ) {
-        self.deviceID    = deviceID
-        self.name        = name
-        self.symbolName  = symbolName
-        self.isConnected = isConnected
-        self.battery     = battery
-        self.model       = model
-        self.productID   = productID
-        self.colorID     = colorID
-        self.eventID     = eventID
-        self.revision    = revision
-        self.kind        = kind
-        self.isAvailable = isAvailable
+        self.deviceID         = deviceID
+        self.name             = name
+        self.symbolName       = symbolName
+        self.isConnected      = isConnected
+        self.battery          = battery
+        self.model            = model
+        self.productID        = productID
+        self.colorID          = colorID
+        self.eventID          = eventID
+        self.revision         = revision
+        self.kind             = kind
+        self.isAvailable      = isAvailable
+        self.connectedDevices = Array(connectedDevices.prefix(PluginBluetoothDevice.maximumCount))
     }
 
-    /// baseline is event zero: no device, only whether monitoring works.
-    public static func baseline(isAvailable: Bool) -> PluginBluetoothState {
+    /// baseline is event zero: no device of its own, only whether monitoring works and the
+    /// devices already connected.
+    public static func baseline(
+        isAvailable     : Bool,
+        connectedDevices: [PluginBluetoothDevice] = []
+    ) -> PluginBluetoothState {
         PluginBluetoothState(
-            deviceID   : "",
-            name       : "",
-            symbolName : "",
-            isConnected: false,
-            battery    : nil,
-            model      : .generic,
-            productID  : nil,
-            colorID    : nil,
-            eventID    : 0,
-            revision   : 0,
-            kind       : .connection,
-            isAvailable: isAvailable
+            deviceID        : "",
+            name            : "",
+            symbolName      : "",
+            isConnected     : false,
+            battery         : nil,
+            model           : .generic,
+            productID       : nil,
+            colorID         : nil,
+            eventID         : 0,
+            revision        : 0,
+            kind            : .connection,
+            isAvailable     : isAvailable,
+            connectedDevices: connectedDevices
         )
     }
 
@@ -97,7 +113,8 @@ public struct PluginBluetoothState: Equatable, Sendable {
               let eventKind                 = PluginBluetoothEventKind(rawValue: kind),
               case .bool(let isAvailable)?  = event.fields["isAvailable"],
               let eventID                   = Self.counter(event.fields["eventID"]),
-              let revision                  = Self.counter(event.fields["revision"])
+              let revision                  = Self.counter(event.fields["revision"]),
+              let connectedDevices          = Self.devices(in: event.fields)
         else { return nil }
 
         let level     = Self.percentage(event.fields["batteryLevel"])
@@ -119,18 +136,19 @@ public struct PluginBluetoothState: Equatable, Sendable {
         }
 
         self.init(
-            deviceID   : deviceID,
-            name       : name,
-            symbolName : symbolName,
-            isConnected: isConnected,
-            battery    : battery,
-            model      : deviceModel,
-            productID  : productID,
-            colorID    : colorID,
-            eventID    : eventID,
-            revision   : revision,
-            kind       : eventKind,
-            isAvailable: isAvailable
+            deviceID        : deviceID,
+            name            : name,
+            symbolName      : symbolName,
+            isConnected     : isConnected,
+            battery         : battery,
+            model           : deviceModel,
+            productID       : productID,
+            colorID         : colorID,
+            eventID         : eventID,
+            revision        : revision,
+            kind            : eventKind,
+            isAvailable     : isAvailable,
+            connectedDevices: connectedDevices
         )
     }
 
@@ -161,7 +179,44 @@ public struct PluginBluetoothState: Equatable, Sendable {
             }
         }
 
+        fields["deviceCount"] = .number(Double(connectedDevices.count))
+        for (index, device) in connectedDevices.enumerated() {
+            fields["device\(index).name"]   = .string(device.name)
+            fields["device\(index).symbol"] = .string(device.symbolName)
+            if let level = device.batteryLevel {
+                fields["device\(index).battery"] = .number(Double(level))
+            }
+        }
+
         return try PluginSourceEvent(source: Self.source, fields: fields)
+    }
+
+    /// devices reads the connected devices. An event without `deviceCount` comes from a source
+    /// that did not list them yet and lists none; a count past the maximum, or a device without
+    /// its name or symbol, makes the whole event malformed.
+    private static func devices(in fields: [String: PluginValue]) -> [PluginBluetoothDevice]? {
+        guard let deviceCount = fields["deviceCount"] else { return [] }
+        guard case .number(let number) = deviceCount,
+              let count = Int(exactly: number),
+              (0...PluginBluetoothDevice.maximumCount).contains(count)
+        else { return nil }
+
+        var devices: [PluginBluetoothDevice] = []
+        for index in 0..<count {
+            guard case .string(let name)?       = fields["device\(index).name"],
+                  case .string(let symbolName)? = fields["device\(index).symbol"]
+            else { return nil }
+
+            devices.append(
+                PluginBluetoothDevice(
+                    name        : name,
+                    symbolName  : symbolName,
+                    batteryLevel: percentage(fields["device\(index).battery"])
+                )
+            )
+        }
+
+        return devices
     }
 
     private static func percentage(_ value: PluginValue?) -> Int? {
